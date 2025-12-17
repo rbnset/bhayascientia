@@ -21,7 +21,7 @@ class MethodResource extends Resource
 {
     protected static ?string $model = Method::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBeaker;
 
     protected static string|UnitEnum|null $navigationGroup = 'Metadata';
 

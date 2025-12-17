@@ -5,8 +5,8 @@ namespace App\Filament\Resources\Users\Tables;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
 class UsersTable
@@ -27,48 +27,63 @@ class UsersTable
                         fn($record) =>
                         'https://ui-avatars.com/api/?name=' .
                             urlencode($record->name)
-                    ),
+                    )
+                    ->toggleable(),
 
                 // =====================
-                // NAME
+                // NAME (PRIMARY)
                 // =====================
                 TextColumn::make('name')
+                    ->label('User')
                     ->searchable()
                     ->sortable()
-                    ->weight('medium'),
+                    ->weight('medium')
+                    ->description(fn($record) => $record->email),
 
                 // =====================
-                // EMAIL
+                // EMAIL (SECONDARY)
                 // =====================
                 TextColumn::make('email')
                     ->label('Email')
                     ->searchable()
-                    ->icon('heroicon-o-envelope'),
+                    ->copyable()
+                    ->copyMessage('Email disalin')
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 // =====================
-                // VERIFIED
+                // VERIFIED STATUS
                 // =====================
                 TextColumn::make('email_verified_at')
                     ->label('Verified')
                     ->date()
-                    ->sortable()
                     ->badge()
-                    ->color(fn($state) => $state ? 'success' : 'gray'),
+                    ->sortable()
+                    ->color(fn($state) => $state ? 'success' : 'gray')
+                    ->formatStateUsing(
+                        fn($state) =>
+                        $state ? 'Verified' : 'Unverified'
+                    ),
 
                 // =====================
-                // CREATED AT (OPTIONAL)
+                // CREATED AT
                 // =====================
                 TextColumn::make('created_at')
-                    ->date()
+                    ->label('Created')
+                    ->date('d M Y')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
+            ->defaultSort('name')
             ->recordActions([
-                EditAction::make(),
+                EditAction::make()
+                    ->label('Edit')
+                    ->icon('heroicon-o-pencil-square'),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->label('Delete Selected')
+                        ->icon('heroicon-o-trash'),
                 ]),
             ]);
     }

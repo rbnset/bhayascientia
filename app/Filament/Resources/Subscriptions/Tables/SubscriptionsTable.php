@@ -15,31 +15,76 @@ class SubscriptionsTable
     {
         return $table
             ->columns([
-                TextColumn::make('user_id')
-                    ->numeric()
-                    ->sortable(),
+
+                // =====================
+                // USER (PRIMARY)
+                // =====================
+                TextColumn::make('user.name')
+                    ->label('User')
+                    ->searchable()
+                    ->sortable()
+                    ->weight('medium')
+                    ->description(fn($record) => $record->user?->email),
+
+                // =====================
+                // EMAIL NOTIFICATION
+                // =====================
                 IconColumn::make('notify_email')
-                    ->boolean(),
+                    ->label('Email')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-envelope')
+                    ->falseIcon('heroicon-o-envelope-open')
+                    ->tooltip(
+                        fn($state) =>
+                        $state
+                            ? 'Email notification aktif'
+                            : 'Email notification nonaktif'
+                    ),
+
+                // =====================
+                // WHATSAPP NOTIFICATION
+                // =====================
                 IconColumn::make('notify_whatsapp')
-                    ->boolean(),
+                    ->label('WhatsApp')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-chat-bubble-left-right')
+                    ->falseIcon('heroicon-o-chat-bubble-oval-left')
+                    ->tooltip(
+                        fn($state) =>
+                        $state
+                            ? 'WhatsApp notification aktif'
+                            : 'WhatsApp notification nonaktif'
+                    ),
+
+                // =====================
+                // CREATED AT
+                // =====================
                 TextColumn::make('created_at')
-                    ->dateTime()
+                    ->label('Subscribed At')
+                    ->date('d M Y')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
+
                 TextColumn::make('updated_at')
-                    ->dateTime()
+                    ->label('Updated')
+                    ->since()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
+            ->defaultSort('created_at', 'desc')
             ->filters([
-                //
+                // future: channel filters
             ])
             ->recordActions([
-                EditAction::make(),
+                EditAction::make()
+                    ->label('Edit')
+                    ->icon('heroicon-o-pencil-square'),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->label('Delete Selected')
+                        ->icon('heroicon-o-trash'),
                 ]),
             ]);
     }

@@ -20,7 +20,7 @@ class DownloadLogResource extends Resource
 {
     protected static ?string $model = DownloadLog::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowDownTray;
 
     protected static string|UnitEnum|null $navigationGroup = 'User Management';
 

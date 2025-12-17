@@ -4,7 +4,6 @@ namespace App\Filament\Resources\DownloadLogs\Tables;
 
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -14,33 +13,57 @@ class DownloadLogsTable
     {
         return $table
             ->columns([
-                TextColumn::make('publication_id')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('user_id')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('downloaded_at')
-                    ->dateTime()
-                    ->sortable(),
-                TextColumn::make('created_at')
-                    ->dateTime()
+
+                // =====================
+                // PUBLICATION (PRIMARY)
+                // =====================
+                TextColumn::make('publication.title')
+                    ->label('Publication')
+                    ->searchable()
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
+                    ->weight('medium')
+                    ->description(fn($record) => $record->publication?->slug),
+
+                // =====================
+                // USER
+                // =====================
+                TextColumn::make('user.name')
+                    ->label('Downloaded By')
+                    ->placeholder('Guest')
+                    ->searchable()
+                    ->sortable()
+                    ->description(fn($record) => $record->user?->email),
+
+                // =====================
+                // DOWNLOADED AT (PRIMARY META)
+                // =====================
+                TextColumn::make('downloaded_at')
+                    ->label('Downloaded At')
+                    ->dateTime('d M Y, H:i')
+                    ->sortable()
+                    ->since(),
+
+                // =====================
+                // CREATED AT (SYSTEM)
+                // =====================
+                TextColumn::make('created_at')
+                    ->label('Logged At')
+                    ->dateTime('d M Y, H:i')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
+            ->defaultSort('downloaded_at', 'desc')
             ->filters([
-                //
+                // future: date / publication filters
             ])
             ->recordActions([
-                EditAction::make(),
+                // ❌ log seharusnya tidak diedit
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->label('Delete Selected')
+                        ->icon('heroicon-o-trash'),
                 ]),
             ]);
     }
