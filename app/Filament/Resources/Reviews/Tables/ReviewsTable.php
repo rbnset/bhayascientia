@@ -14,25 +14,48 @@ class ReviewsTable
     {
         return $table
             ->columns([
-                TextColumn::make('publication_version_id')
-                    ->numeric()
+
+                // =====================
+                // PUBLICATION VERSION
+                // =====================
+                TextColumn::make('publicationVersion.display_label')
+                    ->label('Version')
+                    ->sortable()
+                    ->searchable(),
+
+                // =====================
+                // REVIEWER
+                // =====================
+                TextColumn::make('reviewer.name')
+                    ->label('Reviewer')
+                    ->searchable()
                     ->sortable(),
-                TextColumn::make('reviewer_id')
-                    ->numeric()
-                    ->sortable(),
+
+                // =====================
+                // DECISION
+                // =====================
                 TextColumn::make('decision')
-                    ->badge(),
+                    ->label('Decision')
+                    ->badge()
+                    ->colors([
+                        'warning' => 'revision_required',
+                        'success' => 'accepted',
+                        'danger'  => 'rejected',
+                    ])
+                    ->formatStateUsing(fn($state) => match ($state) {
+                        'revision_required' => 'Revision Required',
+                        'accepted' => 'Accepted',
+                        'rejected' => 'Rejected',
+                        default => '-',
+                    }),
+
+                // =====================
+                // CREATED AT
+                // =====================
                 TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-            ])
-            ->filters([
-                //
+                    ->label('Reviewed At')
+                    ->date()
+                    ->sortable(),
             ])
             ->recordActions([
                 EditAction::make(),

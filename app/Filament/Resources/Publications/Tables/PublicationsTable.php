@@ -9,6 +9,7 @@ use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 
@@ -18,47 +19,121 @@ class PublicationsTable
     {
         return $table
             ->columns([
-                TextColumn::make('publication_type_id')
-                    ->numeric()
-                    ->sortable(),
+
+                // =====================
+                // COVER
+                // =====================
+                ImageColumn::make('cover_image_path')
+                    ->label('')
+                    ->circular()
+                    ->size(40)
+                    ->defaultImageUrl('/images/placeholder-publication.png'),
+
+                // =====================
+                // TITLE (PRIMARY)
+                // =====================
                 TextColumn::make('title')
-                    ->searchable(),
-                ImageColumn::make('cover_image_path'),
-                TextColumn::make('category_id')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('method_id')
-                    ->numeric()
-                    ->sortable(),
+                    ->searchable()
+                    ->sortable()
+                    ->weight('medium')
+                    ->description(
+                        fn($record) =>
+                        $record->publicationType?->name
+                    ),
+
+                // =====================
+                // AUTHORS (PREVIEW)
+                // =====================
+                TextColumn::make('authors')
+                    ->label('Authors')
+                    ->getStateUsing(
+                        fn($record) =>
+                        $record->authors
+                            ->take(3)
+                            ->pluck('name')
+                            ->join(', ')
+                    )
+                    ->placeholder('—'),
+
+                // =====================
+                // CATEGORIES
+                // =====================
+                TextColumn::make('categories.name')
+                    ->label('Categories')
+                    ->badge()
+                    ->separator(', ')
+                    ->color('primary'),
+
+                // =====================
+                // METHOD
+                // =====================
+                TextColumn::make('method.name')
+                    ->label('Method')
+                    ->badge()
+                    ->color('gray'),
+
+                // =====================
+                // STATUS
+                // =====================
                 TextColumn::make('status')
-                    ->badge(),
+                    ->badge()
+                    ->colors([
+                        'gray' => 'draft',
+                        'warning' => 'submitted',
+                        'info' => 'in_review',
+                        'danger' => 'revision_required',
+                        'success' => ['accepted', 'published'],
+                        'danger' => 'rejected',
+                    ])
+                    ->formatStateUsing(fn($state) => str($state)->headline()),
+
+                // =====================
+                // PUBLISHED AT
+                // =====================
                 TextColumn::make('published_at')
-                    ->dateTime()
-                    ->sortable(),
+                    ->label('Published')
+                    ->date('d M Y')
+                    ->sortable()
+                    ->placeholder('—'),
+
+                // =====================
+                // SYSTEM
+                // =====================
                 TextColumn::make('created_at')
-                    ->dateTime()
+                    ->label('Created')
+                    ->date()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+
                 TextColumn::make('deleted_at')
+                    ->label('Deleted')
                     ->dateTime()
-                    ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
+            ->defaultSort('created_at', 'desc')
             ->filters([
                 TrashedFilter::make(),
+
+                SelectFilter::make('status')
+                    ->options([
+                        'draft' => 'Draft',
+                        'submitted' => 'Submitted',
+                        'in_review' => 'In Review',
+                        'revision_required' => 'Revision Required',
+                        'accepted' => 'Accepted',
+                        'rejected' => 'Rejected',
+                        'published' => 'Published',
+                    ]),
             ])
             ->recordActions([
-                EditAction::make(),
+                EditAction::make()
+                    ->icon('heroicon-o-pencil-square'),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
-                    ForceDeleteBulkAction::make(),
                     RestoreBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
                 ]),
             ]);
     }

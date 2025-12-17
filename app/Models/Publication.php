@@ -11,21 +11,84 @@ class Publication extends Model
 
     protected $fillable = [
         'publication_type_id',
+        'method_id',
         'title',
         'abstract',
-        'category_id',
-        'method_id',
-        'status'
+        'status',
+        'published_at',
+        'cover_image_path',
     ];
 
+    protected $casts = [
+        'published_at' => 'datetime',
+    ];
+
+    /*
+    |--------------------------------------------------------------------------
+    | Relationships
+    |--------------------------------------------------------------------------
+    */
+
+    // =====================
+    // PUBLICATION TYPE
+    // =====================
+    public function publicationType()
+    {
+        return $this->belongsTo(PublicationType::class);
+    }
+
+    // =====================
+    // AUTHORS
+    // =====================
     public function authors()
     {
         return $this->belongsToMany(Author::class)
-            ->withPivot('order', 'is_corresponding');
+            ->withPivot('order', 'is_corresponding')
+            ->withTimestamps()
+            ->orderByPivot('order');
     }
 
+    // =====================
+    // CATEGORIES (MANY TO MANY)
+    // =====================
+    public function categories()
+    {
+        return $this->belongsToMany(Category::class)
+            ->withTimestamps();
+    }
+
+    // =====================
+    // RESEARCH METHOD
+    // =====================
+    public function method()
+    {
+        return $this->belongsTo(Method::class);
+    }
+
+    // =====================
+    // VERSIONS
+    // =====================
     public function versions()
     {
         return $this->hasMany(PublicationVersion::class);
+    }
+
+    // =====================
+    // DOWNLOAD LOGS
+    // =====================
+    public function downloadLogs()
+    {
+        return $this->hasMany(DownloadLog::class);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Scopes
+    |--------------------------------------------------------------------------
+    */
+
+    public function scopePublished($query)
+    {
+        return $query->where('status', 'published');
     }
 }

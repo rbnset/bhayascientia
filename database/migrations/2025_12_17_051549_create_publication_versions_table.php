@@ -13,12 +13,21 @@ return new class extends Migration
     {
         Schema::create('publication_versions', function (Blueprint $table) {
             $table->id();
+
             $table->foreignId('publication_id')
-                ->constrained()->cascadeOnDelete();
+                ->constrained()
+                ->cascadeOnDelete();
+
             $table->string('pdf_file_path');
+
             $table->unsignedInteger('version_number')->default(1);
+
             $table->timestamp('submitted_at')->nullable();
+
             $table->timestamps();
+            $table->softDeletes();
+
+            $table->unique(['publication_id', 'version_number']);
         });
     }
 
