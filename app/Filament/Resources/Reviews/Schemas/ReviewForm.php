@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Reviews\Schemas;
 
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -77,7 +78,7 @@ class ReviewForm
                     ->schema([
 
                         Repeater::make('notes')
-                            ->relationship() // otomatis ke Review::notes()
+                            ->relationship() // Review::notes()
                             ->schema([
 
                                 Select::make('section')
@@ -107,10 +108,37 @@ class ReviewForm
                     ]),
 
                 // =========================
+                // REVIEW ATTACHMENTS
+                // =========================
+                Section::make('Annotated Manuscript')
+                    ->description('Unggah PDF yang telah diberi catatan oleh reviewer (opsional)')
+                    ->icon('heroicon-o-paper-clip')
+                    ->schema([
+
+                        Repeater::make('attachments')
+                            ->relationship() // Review::attachments()
+                            ->schema([
+
+                                FileUpload::make('file_path')
+                                    ->label('Reviewed PDF')
+                                    ->acceptedFileTypes(['application/pdf'])
+                                    ->directory('review-attachments')
+                                    ->preserveFilenames()
+                                    ->downloadable()
+                                    ->openable()
+                                    ->required()
+                                    ->maxSize(10240), // 10 MB
+                            ])
+                            ->addActionLabel('Add PDF')
+                            ->collapsed()
+                            ->columnSpanFull(),
+                    ]),
+
+                // =========================
                 // REVIEW COMMENT
                 // =========================
                 Section::make('Reviewer Comments')
-                    ->description('Catatan dan masukan untuk penulis')
+                    ->description('Catatan umum untuk penulis')
                     ->icon('heroicon-o-chat-bubble-left-right')
                     ->schema([
 

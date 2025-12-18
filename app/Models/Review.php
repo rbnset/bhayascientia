@@ -44,6 +44,11 @@ class Review extends Model
         return $this->hasMany(ReviewNote::class);
     }
 
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(ReviewAttachment::class);
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Scopes
