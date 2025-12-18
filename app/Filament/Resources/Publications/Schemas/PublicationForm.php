@@ -36,15 +36,12 @@ class PublicationForm
                         TextInput::make('title')
                             ->label('Title')
                             ->required()
-                            ->maxLength(255)
-                            ->live()
-                            ->placeholder('Contoh: Analisis Dampak AI dalam Pendidikan'),
+                            ->maxLength(255),
 
                         Textarea::make('abstract')
                             ->label('Abstract')
                             ->rows(6)
                             ->required()
-                            ->placeholder('Tuliskan ringkasan karya ilmiah...')
                             ->columnSpanFull(),
                     ]),
 
@@ -83,8 +80,7 @@ class PublicationForm
                             ->image()
                             ->directory('publications/covers')
                             ->imagePreviewHeight('200')
-                            ->maxSize(2048)
-                            ->helperText('Opsional · JPG/PNG · Maks 2MB'),
+                            ->maxSize(2048),
                     ]),
 
                 // =========================

@@ -19,6 +19,7 @@ return new class extends Migration
             $table->unsignedInteger('order')->default(1);
             $table->boolean('is_corresponding')->default(false);
             $table->primary(['publication_id', 'author_id']);
+            $table->timestamps();
         });
     }
 

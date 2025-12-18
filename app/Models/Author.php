@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Author extends Model
 {
@@ -19,9 +20,18 @@ class Author extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function publications()
+    public function publications(): BelongsToMany
     {
-        return $this->belongsToMany(Publication::class)
-            ->withPivot('order', 'is_corresponding');
+        return $this->belongsToMany(
+            Publication::class,
+            'author_publication',
+            'author_id',
+            'publication_id'
+        )
+            ->withPivot([
+                'order',
+                'is_corresponding',
+            ])
+            ->withTimestamps();
     }
 }

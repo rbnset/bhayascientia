@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Publication extends Model
@@ -40,12 +41,20 @@ class Publication extends Model
     // =====================
     // AUTHORS
     // =====================
-    public function authors()
+    public function authors(): BelongsToMany
     {
-        return $this->belongsToMany(Author::class)
-            ->withPivot('order', 'is_corresponding')
+        return $this->belongsToMany(
+            Author::class,
+            'author_publication',
+            'publication_id',
+            'author_id'
+        )
+            ->withPivot([
+                'order',
+                'is_corresponding',
+            ])
             ->withTimestamps()
-            ->orderByPivot('order');
+            ->orderBy('pivot_order');
     }
 
     // =====================
