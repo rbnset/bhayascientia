@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Review extends Model
 {
@@ -33,6 +34,14 @@ class Review extends Model
     public function reviewer()
     {
         return $this->belongsTo(User::class, 'reviewer_id');
+    }
+
+    // =====================
+    // REVIEW NOTES
+    // =====================
+    public function notes(): HasMany
+    {
+        return $this->hasMany(ReviewNote::class);
     }
 
     /*

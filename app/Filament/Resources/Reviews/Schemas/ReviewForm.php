@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Reviews\Schemas;
 
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Schemas\Components\Section;
@@ -65,6 +66,44 @@ class ReviewForm
                             ])
                             ->native(false)
                             ->helperText('Keputusan akhir reviewer terhadap versi ini'),
+                    ]),
+
+                // =========================
+                // REVIEW NOTES
+                // =========================
+                Section::make('Detailed Review Notes')
+                    ->description('Catatan per bagian naskah')
+                    ->icon('heroicon-o-pencil-square')
+                    ->schema([
+
+                        Repeater::make('notes')
+                            ->relationship() // otomatis ke Review::notes()
+                            ->schema([
+
+                                Select::make('section')
+                                    ->label('Section')
+                                    ->options([
+                                        'title' => 'Title',
+                                        'abstract' => 'Abstract',
+                                        'introduction' => 'Introduction',
+                                        'methods' => 'Methods',
+                                        'results' => 'Results',
+                                        'discussion' => 'Discussion',
+                                        'conclusion' => 'Conclusion',
+                                        'references' => 'References',
+                                    ])
+                                    ->required(),
+
+                                Textarea::make('note')
+                                    ->label('Reviewer Note')
+                                    ->rows(4)
+                                    ->required()
+                                    ->placeholder('Catatan spesifik untuk bagian ini...'),
+                            ])
+                            ->addActionLabel('Add Note')
+                            ->reorderable()
+                            ->collapsed()
+                            ->columnSpanFull(),
                     ]),
 
                 // =========================
