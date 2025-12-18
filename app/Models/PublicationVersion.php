@@ -20,6 +20,8 @@ class PublicationVersion extends Model
         'submitted_at' => 'datetime',
     ];
 
+    protected $appends = ['display_label'];
+
     /*
     |--------------------------------------------------------------------------
     | Relationships
@@ -54,10 +56,11 @@ class PublicationVersion extends Model
      */
     public function getDisplayLabelAttribute(): string
     {
-        $date = $this->submitted_at
-            ? $this->submitted_at->format('d M Y')
-            : $this->created_at->format('d M Y');
-
-        return "Version {$this->version_number} · {$date}";
+        return sprintf(
+            '%s | v%d | %s',
+            $this->publication?->title ?? 'Unknown Publication',
+            $this->version_number,
+            $this->created_at->translatedFormat('d M Y')
+        );
     }
 }

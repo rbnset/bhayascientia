@@ -25,7 +25,13 @@ class ReviewForm
 
                         Select::make('publication_version_id')
                             ->label('Publication Version')
-                            ->relationship('publicationVersion', 'id')
+                            ->relationship(
+                                name: 'publicationVersion',
+                                modifyQueryUsing: fn($query) =>
+                                $query
+                                    ->with('publication')
+                                    ->orderByDesc('created_at')
+                            )
                             ->getOptionLabelFromRecordUsing(
                                 fn($record) => $record->display_label
                             )
