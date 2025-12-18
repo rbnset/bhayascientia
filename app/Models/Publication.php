@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Pivots\PublicationKeyword;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -36,6 +37,18 @@ class Publication extends Model
     public function publicationType()
     {
         return $this->belongsTo(PublicationType::class);
+    }
+
+    // =====================
+    // KEYWORDS (MANY TO MANY)
+    // =====================
+    public function keywords()
+    {
+        return $this->belongsToMany(
+            Keyword::class,
+            'publication_keyword'
+        )
+            ->using(PublicationKeyword::class);
     }
 
     // =====================
