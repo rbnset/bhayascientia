@@ -6,7 +6,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\View;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\DateTimePicker;
-use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\FileUpload;
 use Filament\Schemas\Schema;
 
 class UserForm
@@ -18,48 +18,96 @@ class UserForm
             ->components([
 
                 // =========================
-                // PREVIEW (ATAS)
+                // PREVIEW USER (REACTIVE)
                 // =========================
-                Section::make('User Preview')
-                    ->description('Pratinjau data user')
+                Section::make('Pratinjau Pengguna')
+                    ->description('Pratinjau profil pengguna secara langsung')
                     ->icon('heroicon-o-eye')
                     ->schema([
-                        View::make('filament.users.preview-card'),
+                        View::make('filament.users.preview-card')
+                            ->live(), // 🔥 WAJIB
                     ]),
 
                 // =========================
-                // FORM INPUT (BAWAH)
+                // DETAIL USER
                 // =========================
-                Section::make('User Details')
+                Section::make('Detail Pengguna')
                     ->description('Informasi akun pengguna')
                     ->icon('heroicon-o-user')
                     ->schema([
+
+                        FileUpload::make('profile_photo')
+                            ->label('Foto Profil')
+                            ->placeholder('Unggah foto profil')
+                            ->image()
+                            ->directory('users/profile-photos')
+                            ->imageEditor()
+                            ->imageCropAspectRatio('1:1')
+                            ->maxSize(2048)
+                            ->live()      // 🔥
+                            ->reactive(), // 🔥
+
                         TextInput::make('name')
                             ->label('Nama Lengkap')
+                            ->placeholder('Contoh: Robin Setiyawan')
                             ->required()
-                            ->maxLength(255)
-                            ->live(),
+                            ->live()
+                            ->maxLength(255),
 
                         TextInput::make('email')
-                            ->label('Email Address')
+                            ->label('Alamat Email')
+                            ->placeholder('contoh@email.com')
                             ->email()
                             ->required()
-                            ->maxLength(255)
-                            ->live(),
+                            ->live()
+                            ->maxLength(255),
+
+                        TextInput::make('whatsapp_number')
+                            ->label('Nomor WhatsApp')
+                            ->placeholder('08xxxxxxxxxx atau 628xxxxxxxxxx')
+                            ->tel()
+                            ->live()
+                            ->afterStateUpdated(function ($state, callable $set) {
+                                if (str_starts_with($state, '08')) {
+                                    $set('whatsapp_number', '628' . substr($state, 2));
+                                }
+                            })
+                            ->maxLength(20),
+
+                        TextInput::make('job_title')
+                            ->label('Pekerjaan / Jabatan')
+                            ->placeholder('Contoh: Mahasiswa, Admin')
+                            ->live()
+                            ->maxLength(255),
 
                         DateTimePicker::make('email_verified_at')
-                            ->label('Email Verified At'),
+                            ->label('Email Terverifikasi Pada')
+                            ->placeholder('Pilih tanggal & waktu'),
 
+                        // =========================
+                        // PASSWORD
+                        // =========================
                         TextInput::make('password')
                             ->label('Password')
+                            ->placeholder('Masukkan password')
                             ->password()
+                            ->revealable()
                             ->required(fn($operation) => $operation === 'create')
+                            ->confirmed()
                             ->dehydrated(fn($state) => filled($state))
                             ->maxLength(255),
+
+                        TextInput::make('password_confirmation')
+                            ->label('Konfirmasi Password')
+                            ->placeholder('Ulangi password')
+                            ->password()
+                            ->revealable()
+                            ->required(fn($operation) => $operation === 'create')
+                            ->dehydrated(false),
                     ])
                     ->columns([
                         'default' => 1,
-                        'md' => 1,
+                        'md' => 2,
                     ]),
             ]);
     }

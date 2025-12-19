@@ -1,128 +1,141 @@
 @php
+use Livewire\TemporaryUploadedFile;
+
 $name = $get('name') ?: 'Nama User';
 $email = $get('email') ?: 'email@example.com';
+$job = $get('job_title');
+$wa = $get('whatsapp_number');
+
+$photoState = $get('profile_photo');
+$photoUrl = null;
+
+// Upload langsung
+if ($photoState instanceof TemporaryUploadedFile) {
+$photoUrl = $photoState->temporaryUrl();
+}
+// Image editor (array)
+elseif (is_array($photoState) && isset($photoState['path'])) {
+$photoUrl = asset('storage/' . $photoState['path']);
+}
+// Sudah tersimpan
+elseif (is_string($photoState)) {
+$photoUrl = asset('storage/' . $photoState);
+}
 @endphp
 
+<div class="profile-preview">
+    <div class="profile-card">
+
+        {{-- FOTO --}}
+        @if ($photoUrl)
+        <img src="{{ $photoUrl }}" class="profile-avatar-img" alt="Foto Profil">
+        @else
+        <div class="profile-avatar">
+            {{ strtoupper(substr($name, 0, 1)) }}
+        </div>
+        @endif
+
+        <div class="profile-info">
+            <h3 class="profile-name">{{ $name }}</h3>
+            <p class="profile-role">{{ $job ?: 'System User' }}</p>
+            <p class="profile-email">{{ $email }}</p>
+            @if ($wa)
+            <p class="profile-wa">📱 {{ $wa }}</p>
+            @endif
+        </div>
+    </div>
+</div>
+
 <style>
-    /* ===== Profile Preview (Inline) ===== */
     .profile-preview {
         padding: 16px;
-        border-radius: 16px;
+        border-radius: 16px
     }
 
     .profile-card {
         display: flex;
-        flex-direction: column;
+        gap: 16px;
         align-items: center;
-        gap: 12px;
         padding: 20px;
-        border-radius: 14px;
-        text-align: center;
+        border-radius: 14px
+    }
+
+    .profile-avatar,
+    .profile-avatar-img {
+        width: 72px;
+        height: 72px;
+        border-radius: 999px;
+        flex-shrink: 0
     }
 
     .profile-avatar {
-        width: 64px;
-        height: 64px;
-        border-radius: 999px;
         background: #6366f1;
         color: #fff;
-        font-size: 22px;
+        font-size: 24px;
         font-weight: 600;
         display: flex;
         align-items: center;
-        justify-content: center;
+        justify-content: center
     }
 
-    .profile-info {
-        width: 100%;
+    .profile-avatar-img {
+        object-fit: cover
     }
 
     .profile-name {
-        margin: 0;
         font-size: 16px;
-        font-weight: 600;
+        font-weight: 600
     }
 
     .profile-role {
-        margin-top: 4px;
         font-size: 14px;
-        font-weight: 500;
+        font-weight: 500
     }
 
-    .profile-email {
-        margin-top: 2px;
-        font-size: 13px;
-        word-break: break-word;
+    .profile-email,
+    .profile-wa {
+        font-size: 13px
     }
 
-    /* ===== Desktop ===== */
-    @media (min-width: 640px) {
-        .profile-card {
-            flex-direction: row;
-            align-items: center;
-            text-align: left;
-            gap: 16px;
-        }
-
-        .profile-avatar {
-            width: 72px;
-            height: 72px;
-            font-size: 24px;
-            flex-shrink: 0;
-        }
-    }
-
-    /* ===== Light Mode ===== */
+    /* Light */
     .profile-preview {
-        background: #f8fafc;
+        background: #f8fafc
     }
 
     .profile-card {
-        background: #ffffff;
-        box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+        background: #fff;
+        box-shadow: 0 10px 25px rgba(15, 23, 42, .08)
     }
 
     .profile-role {
-        color: #4f46e5;
+        color: #4f46e5
     }
 
-    .profile-email {
-        color: #64748b;
+    .profile-email,
+    .profile-wa {
+        color: #64748b
     }
 
-    /* ===== Dark Mode (Filament) ===== */
+    /* Dark */
     .dark .profile-preview {
-        background: #020617;
+        background: #020617
     }
 
     .dark .profile-card {
         background: #020617;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, .6);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, .6)
     }
 
     .dark .profile-name {
-        color: #f8fafc;
+        color: #f8fafc
     }
 
     .dark .profile-role {
-        color: #a5b4fc;
+        color: #a5b4fc
     }
 
-    .dark .profile-email {
-        color: #94a3b8;
+    .dark .profile-email,
+    .dark .profile-wa {
+        color: #94a3b8
     }
 </style>
-
-<div class="profile-preview">
-    <div class="profile-card">
-        <div class="profile-avatar">
-            {{ strtoupper(substr($name, 0, 1)) }}
-        </div>
-
-        <div class="profile-info">
-            <h3 class="profile-name">{{ $name }}</h3>
-            <p class="profile-role">System User</p>
-            <p class="profile-email">{{ $email }}</p>
-        </div>
-    </div>
-</div>

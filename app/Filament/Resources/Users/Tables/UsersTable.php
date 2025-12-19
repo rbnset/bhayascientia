@@ -17,9 +17,9 @@ class UsersTable
             ->columns([
 
                 // =====================
-                // AVATAR
+                // FOTO PROFIL
                 // =====================
-                ImageColumn::make('avatar_url')
+                ImageColumn::make('profile_photo')
                     ->label('')
                     ->circular()
                     ->size(40)
@@ -31,17 +31,17 @@ class UsersTable
                     ->toggleable(),
 
                 // =====================
-                // NAME (PRIMARY)
+                // NAMA
                 // =====================
                 TextColumn::make('name')
-                    ->label('User')
+                    ->label('Pengguna')
                     ->searchable()
                     ->sortable()
                     ->weight('medium')
                     ->description(fn($record) => $record->email),
 
                 // =====================
-                // EMAIL (SECONDARY)
+                // EMAIL
                 // =====================
                 TextColumn::make('email')
                     ->label('Email')
@@ -51,24 +51,39 @@ class UsersTable
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 // =====================
-                // VERIFIED STATUS
+                // PEKERJAAN
+                // =====================
+                TextColumn::make('job_title')
+                    ->label('Pekerjaan')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                // =====================
+                // WHATSAPP
+                // =====================
+                TextColumn::make('whatsapp_number')
+                    ->label('WhatsApp')
+                    ->copyable()
+                    ->copyMessage('Nomor WhatsApp disalin')
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                // =====================
+                // STATUS VERIFIKASI
                 // =====================
                 TextColumn::make('email_verified_at')
-                    ->label('Verified')
-                    ->date()
+                    ->label('Status Verifikasi')
                     ->badge()
                     ->sortable()
                     ->color(fn($state) => $state ? 'success' : 'gray')
                     ->formatStateUsing(
-                        fn($state) =>
-                        $state ? 'Verified' : 'Unverified'
+                        fn($state) => $state ? 'Terverifikasi' : 'Belum Terverifikasi'
                     ),
 
                 // =====================
-                // CREATED AT
+                // DIBUAT PADA
                 // =====================
                 TextColumn::make('created_at')
-                    ->label('Created')
+                    ->label('Dibuat Pada')
                     ->date('d M Y')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -76,13 +91,13 @@ class UsersTable
             ->defaultSort('name')
             ->recordActions([
                 EditAction::make()
-                    ->label('Edit')
+                    ->label('Ubah')
                     ->icon('heroicon-o-pencil-square'),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make()
-                        ->label('Delete Selected')
+                        ->label('Hapus Terpilih')
                         ->icon('heroicon-o-trash'),
                 ]),
             ]);
