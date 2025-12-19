@@ -24,6 +24,12 @@ class AuthorResource extends Resource
 
     protected static string|UnitEnum|null $navigationGroup = 'Content';
 
+    protected static ?string $navigationLabel = 'Daftar Author';
+
+    protected static ?string $modelLabel = 'Author';
+
+    protected static ?string $pluralModelLabel = 'Author';
+
     public static function form(Schema $schema): Schema
     {
         return AuthorForm::configure($schema);

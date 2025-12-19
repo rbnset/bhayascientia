@@ -54,7 +54,7 @@ class AdminPanelProvider extends PanelProvider
                     ->formPanelPosition('right')
                     ->formPanelWidth('40%')
                     ->emptyPanelBackgroundImageOpacity('70%')
-                    ->emptyPanelBackgroundImageUrl('https://images.pexels.com/photos/29996971/pexels-photo-29996971.jpeg'),
+                    ->emptyPanelBackgroundImageUrl('https://images.pexels.com/photos/3646172/pexels-photo-3646172.jpeg'),
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([
