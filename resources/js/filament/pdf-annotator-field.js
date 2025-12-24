@@ -1,10 +1,3 @@
-import * as pdfjsLib from 'pdfjs-dist';
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-    'pdfjs-dist/build/pdf.worker.min.mjs',
-    import.meta.url
-).toString();
-
 window.pdfAnnotatorField = function ({ state, fileUrl }) {
     return {
         state,
@@ -21,8 +14,18 @@ window.pdfAnnotatorField = function ({ state, fileUrl }) {
         tool: 'pan',
         isDragging: false,
         dragStart: null,
+        tempBox: null,
 
         init() {
+            if (!window.pdfjsLib) {
+                console.error('pdfjsLib is missing. CDN not loaded.');
+                return;
+            }
+
+            // Worker dari CDN juga
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+                'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.js';
+
             if (!this.state) this.state = { version: 1, byPage: {} };
             if (!this.state.byPage) this.state.byPage = {};
 
@@ -43,10 +46,14 @@ window.pdfAnnotatorField = function ({ state, fileUrl }) {
         },
 
         async loadPdf(url) {
-            this.pdf = await pdfjsLib.getDocument(url).promise;
-            this.pageCount = this.pdf.numPages;
-            this.page = 1;
-            await this.renderPage();
+            try {
+                this.pdf = await window.pdfjsLib.getDocument(url).promise;
+                this.pageCount = this.pdf.numPages;
+                this.page = 1;
+                await this.renderPage();
+            } catch (e) {
+                console.error('PDF load failed:', e);
+            }
         },
 
         async renderPage() {
@@ -90,7 +97,7 @@ window.pdfAnnotatorField = function ({ state, fileUrl }) {
         pushAnnotation(ann) {
             const list = this.getPageAnnotations();
             list.push(ann);
-            this.state = { ...this.state }; // trigger entangle update
+            this.state = { ...this.state };
             this.renderAnnotationsOverlay();
         },
 
@@ -181,7 +188,7 @@ window.pdfAnnotatorField = function ({ state, fileUrl }) {
                 });
             });
 
-            overlay.addEventListener('mouseup', (e) => {
+            overlay.addEventListener('mouseup', () => {
                 if (!this.isDragging || this.tool !== 'highlight') return;
 
                 this.isDragging = false;
@@ -194,7 +201,6 @@ window.pdfAnnotatorField = function ({ state, fileUrl }) {
                 this.tempBox.remove();
                 this.tempBox = null;
 
-                // ignore small drags
                 if (w < 6 || h < 6) return;
 
                 this.pushAnnotation({
