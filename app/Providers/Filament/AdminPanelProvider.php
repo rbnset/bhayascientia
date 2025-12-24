@@ -23,8 +23,6 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Filament\Support\Facades\FilamentAsset;
 use Filament\Support\Assets\Css;
 use Filament\Support\Facades\FilamentColor;
-use Filament\Support\Assets\Js;
-
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -44,9 +42,6 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->viteTheme('resources/css/filament/admin/theme.css')
-            ->assets([
-                Js::make('pdf-annotator-field', resource_path('js/filament/pdf-annotator-field.js')),
-            ])
             ->login()
             ->registration()
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')

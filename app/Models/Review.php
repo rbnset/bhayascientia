@@ -12,11 +12,6 @@ class Review extends Model
         'reviewer_id',
         'decision',
         'overall_comment',
-        'annotations',
-    ];
-
-    protected $casts = [
-        'annotations' => 'array',
     ];
 
     /*

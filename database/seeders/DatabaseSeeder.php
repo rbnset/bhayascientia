@@ -3,8 +3,8 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-use Illuminate\Database\Seeder;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
@@ -15,12 +15,8 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // 1) Buat user super admin + role
-        $this->call([
-            SuperAdminSeeder::class,
-        ]);
+        // User::factory(10)->create();
 
-        // 2) (Opsional) tetap buat test user seperti bawaan Laravel
         User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',

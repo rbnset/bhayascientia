@@ -1,10 +1,6 @@
 {
-  "node_modules/pdfjs-dist/build/pdf.worker.min.mjs": {
-    "file": "assets/pdf.worker.min-CXgfMxHN.mjs",
-    "src": "node_modules/pdfjs-dist/build/pdf.worker.min.mjs"
-  },
   "resources/css/app.css": {
-    "file": "assets/app-dETUBeIC.css",
+    "file": "assets/app-DnTkNPj6.css",
     "src": "resources/css/app.css",
     "isEntry": true,
     "name": "app",
@@ -13,7 +9,7 @@
     ]
   },
   "resources/css/filament/admin/theme.css": {
-    "file": "assets/theme-N3p7yDEj.css",
+    "file": "assets/theme-DEStN-uI.css",
     "src": "resources/css/filament/admin/theme.css",
     "isEntry": true,
     "name": "theme",
@@ -22,12 +18,9 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-BchCxsfz.js",
+    "file": "assets/app-CAiCLEjY.js",
     "name": "app",
     "src": "resources/js/app.js",
-    "isEntry": true,
-    "assets": [
-      "assets/pdf.worker.min-CXgfMxHN.mjs"
-    ]
+    "isEntry": true
   }
 }
