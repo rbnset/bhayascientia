@@ -1,3 +1,6 @@
+{{-- PDF.js CDN (UMD) --}}
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.js"></script>
+
 @php
 /** @var \Filament\Forms\Components\Component $component */
 $statePath = $getStatePath();
