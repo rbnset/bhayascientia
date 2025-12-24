@@ -17,13 +17,7 @@ class DatabaseSeeder extends Seeder
     {
         // 1) Buat user super admin + role
         $this->call([
-            SuperAdminSeeder::class,
-        ]);
-
-        // 2) (Opsional) tetap buat test user seperti bawaan Laravel
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+            RolesAndUsersSeeder::class,
         ]);
     }
 }
