@@ -12,7 +12,7 @@ class SuperAdminSeeder extends Seeder
     public function run(): void
     {
         // Reset cached roles and permissions
-        app(PermissionRegistrar::class)->forgetCachedPermissions(); // [web:454]
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         // Create role (set guard_name explicitly to avoid guard mismatch)
         $role = Role::firstOrCreate([
@@ -22,14 +22,14 @@ class SuperAdminSeeder extends Seeder
 
         // Create or update user
         $user = User::updateOrCreate(
-            ['email' => 'super_admin@admin.com'], // jangan pakai [ ] [web:455]
+            ['email' => 'super_admin@admin.com'],
             [
                 'name' => 'Super Admin',
-                'password' => 'password', // akan di-hash otomatis karena casts() = 'hashed'
+                'password' => 'password',
             ]
         ); // [web:455]
 
         // Assign role to user
-        $user->syncRoles([$role]); // lebih aman daripada assignRole berulang-ulang [web:431]
+        $user->syncRoles([$role]);
     }
 }
