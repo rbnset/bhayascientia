@@ -6,6 +6,7 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\ViewField;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
@@ -16,6 +17,20 @@ class ReviewForm
         return $schema
             ->columns(1)
             ->components([
+                Section::make('Manuscript Annotator')
+                    ->description('Preview PDF + highlight + notes (tersimpan sebagai JSON)')
+                    ->icon('heroicon-o-document-text')
+                    ->schema([
+                        // ini yang nyimpen JSON annotation ke kolom reviews.annotations
+                        ViewField::make('annotations')
+                            ->view('filament.forms.components.pdf-annotator')
+                            ->viewData([
+                                'fileUrl' => fn($get) => $get('publication_version_id')
+                                    ? route('manuscripts.view', $get('publication_version_id'))
+                                    : null,
+                            ])
+                            ->columnSpanFull(),
+                    ]),
 
                 // =========================
                 // REVIEW CONTEXT
@@ -24,22 +39,17 @@ class ReviewForm
                     ->description('Informasi publikasi dan reviewer')
                     ->icon('heroicon-o-document-magnifying-glass')
                     ->schema([
-
                         Select::make('publication_version_id')
                             ->label('Publication Version')
                             ->relationship(
                                 name: 'publicationVersion',
-                                modifyQueryUsing: fn($query) =>
-                                $query
-                                    ->with('publication')
-                                    ->orderByDesc('created_at')
+                                modifyQueryUsing: fn($query) => $query->with('publication')->orderByDesc('created_at')
                             )
-                            ->getOptionLabelFromRecordUsing(
-                                fn($record) => $record->display_label
-                            )
+                            ->getOptionLabelFromRecordUsing(fn($record) => $record->display_label)
                             ->searchable()
                             ->preload()
-                            ->required(),
+                            ->required()
+                            ->live(),
 
                         Select::make('reviewer_id')
                             ->label('Reviewer')
@@ -56,7 +66,6 @@ class ReviewForm
                     ->description('Keputusan hasil peninjauan')
                     ->icon('heroicon-o-clipboard-document-check')
                     ->schema([
-
                         Select::make('decision')
                             ->label('Decision')
                             ->required()
@@ -76,11 +85,9 @@ class ReviewForm
                     ->description('Catatan per bagian naskah')
                     ->icon('heroicon-o-pencil-square')
                     ->schema([
-
                         Repeater::make('notes')
                             ->relationship() // Review::notes()
                             ->schema([
-
                                 Select::make('section')
                                     ->label('Section')
                                     ->options([
@@ -114,11 +121,9 @@ class ReviewForm
                     ->description('Unggah PDF yang telah diberi catatan oleh reviewer (opsional)')
                     ->icon('heroicon-o-paper-clip')
                     ->schema([
-
                         Repeater::make('attachments')
                             ->relationship() // Review::attachments()
                             ->schema([
-
                                 FileUpload::make('file_path')
                                     ->label('Reviewed PDF')
                                     ->acceptedFileTypes(['application/pdf'])
@@ -127,7 +132,7 @@ class ReviewForm
                                     ->downloadable()
                                     ->openable()
                                     ->required()
-                                    ->maxSize(10240), // 10 MB
+                                    ->maxSize(10240),
                             ])
                             ->addActionLabel('Add PDF')
                             ->collapsed()
@@ -141,7 +146,6 @@ class ReviewForm
                     ->description('Catatan umum untuk penulis')
                     ->icon('heroicon-o-chat-bubble-left-right')
                     ->schema([
-
                         Textarea::make('overall_comment')
                             ->label('Overall Comment')
                             ->rows(6)
