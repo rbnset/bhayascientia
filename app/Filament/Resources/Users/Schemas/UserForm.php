@@ -7,6 +7,7 @@ use Filament\Schemas\Components\View;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Select;
 use Filament\Schemas\Schema;
 
 class UserForm
@@ -104,6 +105,16 @@ class UserForm
                             ->revealable()
                             ->required(fn($operation) => $operation === 'create')
                             ->dehydrated(false),
+
+                        // =========================
+                        // PERAN
+                        // =========================
+                        Select::make('roles')
+                            ->relationship('roles', 'name')
+                            ->required()
+                            ->hiddenOn('edit')
+                            ->preload()
+                            ->searchable(),
                     ])
                     ->columns([
                         'default' => 1,
