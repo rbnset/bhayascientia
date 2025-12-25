@@ -7,6 +7,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
+use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -19,41 +20,35 @@ class PublicationsTable
     {
         return $table
             ->columns([
-
                 // =====================
-                // COVER
+                // COVER (SQUARE)
                 // =====================
                 ImageColumn::make('cover_image_path')
                     ->label('')
-                    ->circular()
-                    ->size(40)
-                    ->defaultImageUrl('/images/placeholder-publication.png'),
+                    ->disk('public')
+                    ->square() // kotak 1:1 [web:499]
+                    ->size(44)
+                    ->defaultImageUrl(url('/images/placeholder-publication.png')),
 
                 // =====================
                 // TITLE (PRIMARY)
                 // =====================
                 TextColumn::make('title')
+                    ->label('Title')
                     ->searchable()
                     ->sortable()
-                    ->weight('medium')
-                    ->description(
-                        fn($record) =>
-                        $record->publicationType?->name
-                    ),
+                    ->weight('semibold')
+                    ->wrap()
+                    ->description(fn($record) => $record->publicationType?->name),
 
                 // =====================
-                // AUTHORS (PREVIEW)
+                // AUTHORS (RELATION)
                 // =====================
-                TextColumn::make('authors')
+                TextColumn::make('authors.name')
                     ->label('Authors')
-                    ->getStateUsing(
-                        fn($record) =>
-                        $record->authors
-                            ->take(3)
-                            ->pluck('name')
-                            ->join(', ')
-                    )
-                    ->placeholder('—'),
+                    ->listWithLineBreaks()
+                    ->limitList(3)
+                    ->searchable(),
 
                 // =====================
                 // CATEGORIES
@@ -62,7 +57,9 @@ class PublicationsTable
                     ->label('Categories')
                     ->badge()
                     ->separator(', ')
-                    ->color('primary'),
+                    ->color('primary')
+                    ->limitList(3)
+                    ->listWithLineBreaks(),
 
                 // =====================
                 // METHOD
@@ -70,12 +67,14 @@ class PublicationsTable
                 TextColumn::make('method.name')
                     ->label('Method')
                     ->badge()
-                    ->color('gray'),
+                    ->color('gray')
+                    ->toggleable(),
 
                 // =====================
                 // STATUS
                 // =====================
                 TextColumn::make('status')
+                    ->label('Status')
                     ->badge()
                     ->colors([
                         'gray' => 'draft',
@@ -85,20 +84,19 @@ class PublicationsTable
                         'success' => ['accepted', 'published'],
                         'danger' => 'rejected',
                     ])
-                    ->formatStateUsing(fn($state) => str($state)->headline()),
+                    ->formatStateUsing(fn($state) => str($state)->headline())
+                    ->sortable(),
 
                 // =====================
-                // PUBLISHED AT
+                // DATES
                 // =====================
                 TextColumn::make('published_at')
                     ->label('Published')
                     ->date('d M Y')
                     ->sortable()
-                    ->placeholder('—'),
+                    ->placeholder('—')
+                    ->toggleable(),
 
-                // =====================
-                // SYSTEM
-                // =====================
                 TextColumn::make('created_at')
                     ->label('Created')
                     ->date()
@@ -115,6 +113,7 @@ class PublicationsTable
                 TrashedFilter::make(),
 
                 SelectFilter::make('status')
+                    ->label('Status')
                     ->options([
                         'draft' => 'Draft',
                         'submitted' => 'Submitted',
@@ -123,11 +122,31 @@ class PublicationsTable
                         'accepted' => 'Accepted',
                         'rejected' => 'Rejected',
                         'published' => 'Published',
-                    ]),
+                    ])
+                    ->preload(),
+
+                // filter relasi (lebih enak untuk admin)
+                SelectFilter::make('publication_type_id')
+                    ->label('Publication Type')
+                    ->relationship('publicationType', 'name')
+                    ->searchable()
+                    ->preload(), // preload opsi relasi untuk UX [web:500]
+
+                SelectFilter::make('method_id')
+                    ->label('Method')
+                    ->relationship('method', 'name')
+                    ->searchable()
+                    ->preload(), // preload opsi relasi untuk UX [web:500]
             ])
             ->recordActions([
+                ViewAction::make()
+                    ->icon('heroicon-o-eye')
+                    ->label('View')
+                    ->slideOver(), // cepat, tidak pindah halaman [web:265]
+
                 EditAction::make()
-                    ->icon('heroicon-o-pencil-square'),
+                    ->icon('heroicon-o-pencil-square')
+                    ->label('Edit'),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
