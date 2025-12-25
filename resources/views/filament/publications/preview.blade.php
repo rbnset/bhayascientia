@@ -1,4 +1,6 @@
 @php
+use Illuminate\Support\Facades\Storage;
+
 $title = $get('title') ?? '-';
 $status = $get('status') ?? '-';
 $abstract = $get('abstract');
@@ -21,95 +23,108 @@ $keywordNames = $keywordIds->isEmpty()
 ? collect()
 : \App\Models\Keyword::whereIn('id', $keywordIds)->pluck('name', 'id');
 
-$authorsOrdered = $authorIds->map(fn ($id) => $authorNames[$id] ?? 'Unknown')->all();
-
 $uploaderAuthorId = \App\Models\Author::where('user_id', auth()->id())->value('id');
 
 $statusLabel = strtoupper(str_replace('_', ' ', $status));
+
+$coverPath = $get('cover_image_path');
+$coverUrl = $coverPath ? Storage::disk('public')->url($coverPath) : null; // public url via filesystem [web:409]
 @endphp
 
-<div class="pub-preview-wrapper">
-    <div class="pub-preview-card pub-preview-card--amber">
-        <div class="pub-preview-header">
-            <div class="pub-preview-badge">
+<div class="bookx">
+    <div class="bookx-wrap">
+        {{-- Book Cover --}}
+        <div class="bookx-cover">
+            @if($coverUrl)
+            <img src="{{ $coverUrl }}" alt="Cover image preview" loading="lazy" />
+            @else
+            <div class="bookx-cover-fallback">
+                <div class="bookx-fallback-icon">
+                    <x-heroicon-o-photo class="w-10 h-10 text-orange-600" />
+                </div>
+                <div class="bookx-fallback-text">
+                    Upload cover untuk melihat preview seperti buku.
+                </div>
+            </div>
+            @endif
+
+            <div class="bookx-cover-badge">
                 {{ $statusLabel }}
             </div>
-
-            <div class="pub-preview-icon">
-                <x-heroicon-o-document-text class="w-10 h-10 text-white" />
-            </div>
-
-            <h2 class="pub-preview-title">
-                {{ $title }}
-            </h2>
-
-            @if($authorsOrdered)
-            <p class="pub-preview-subtitle">
-                @foreach($authorIds as $id)
-                @php $name = $authorNames[$id] ?? 'Unknown'; @endphp
-                <span class="pub-author-chip">
-                    {{ $name }}
-                    @if($uploaderAuthorId && (int) $uploaderAuthorId === (int) $id)
-                    <span class="pub-corresponding">(Corresponding)</span>
-                    @endif
-                </span>
-                @endforeach
-            </p>
-            @else
-            <p class="pub-preview-subtitle text-white/80">
-                Belum ada author dipilih.
-            </p>
-            @endif
         </div>
 
-        <div class="pub-preview-body">
-            <div class="pub-preview-grid">
-                <div class="pub-preview-stat">
-                    <div class="pub-preview-stat-value">{{ $categoryIds->count() }}</div>
-                    <div class="pub-preview-stat-label">Categories</div>
+        {{-- Book Content --}}
+        <div class="bookx-body">
+            <div class="bookx-kicker">Publication Preview</div>
+
+            <h2 class="bookx-title">{{ $title }}</h2>
+
+            <div class="bookx-authors">
+                @if($authorIds->count())
+                @foreach($authorIds as $id)
+                @php $name = $authorNames[$id] ?? 'Unknown'; @endphp
+                <span class="bookx-author">
+                    {{ $name }}
+                    @if($uploaderAuthorId && (int) $uploaderAuthorId === (int) $id)
+                    <span class="bookx-corresponding">• corresponding</span>
+                    @endif
+                </span>
+                @if(! $loop->last)
+                <span class="bookx-sep">/</span>
+                @endif
+                @endforeach
+                @else
+                <span class="bookx-muted">Belum ada author dipilih.</span>
+                @endif
+            </div>
+
+            <div class="bookx-meta">
+                <div class="bookx-meta-item">
+                    <div class="bookx-meta-label">Categories</div>
+                    <div class="bookx-meta-value">{{ $categoryIds->count() }}</div>
                 </div>
 
-                <div class="pub-preview-stat">
-                    <div class="pub-preview-stat-value">{{ $keywordIds->count() }}</div>
-                    <div class="pub-preview-stat-label">Keywords</div>
+                <div class="bookx-meta-item">
+                    <div class="bookx-meta-label">Keywords</div>
+                    <div class="bookx-meta-value">{{ $keywordIds->count() }}</div>
                 </div>
 
-                <div class="pub-preview-stat">
-                    <div class="pub-preview-stat-value">{{ $authorIds->count() }}</div>
-                    <div class="pub-preview-stat-label">Authors</div>
+                <div class="bookx-meta-item">
+                    <div class="bookx-meta-label">Authors</div>
+                    <div class="bookx-meta-value">{{ $authorIds->count() }}</div>
                 </div>
 
-                <div class="pub-preview-stat">
-                    <div class="pub-preview-stat-value">{{ $get('method_id') ? 'Yes' : 'No' }}</div>
-                    <div class="pub-preview-stat-label">Method</div>
+                <div class="bookx-meta-item">
+                    <div class="bookx-meta-label">Method</div>
+                    <div class="bookx-meta-value">{{ $get('method_id') ? 'Yes' : 'No' }}</div>
                 </div>
             </div>
 
-            <div class="pub-preview-section">
-                <div class="pub-preview-section-title">Categories</div>
-                <div class="pub-preview-tags">
+            <div class="bookx-section">
+                <div class="bookx-section-title">Categories</div>
+                <div class="bookx-tags">
                     @forelse($categoryIds as $id)
-                    <span class="pub-tag">{{ $categoryNames[$id] ?? 'Unknown' }}</span>
+                    <span class="bookx-tag">{{ $categoryNames[$id] ?? 'Unknown' }}</span>
                     @empty
-                    <span class="pub-tag pub-tag-muted">-</span>
+                    <span class="bookx-muted">-</span>
                     @endforelse
                 </div>
             </div>
 
-            <div class="pub-preview-section">
-                <div class="pub-preview-section-title">Keywords</div>
-                <div class="pub-preview-tags">
+            <div class="bookx-section">
+                <div class="bookx-section-title">Keywords</div>
+                <div class="bookx-tags">
                     @forelse($keywordIds as $id)
-                    <span class="pub-tag">{{ $keywordNames[$id] ?? 'Unknown' }}</span>
+                    <span class="bookx-tag">{{ $keywordNames[$id] ?? 'Unknown' }}</span>
                     @empty
-                    <span class="pub-tag pub-tag-muted">-</span>
+                    <span class="bookx-muted">-</span>
                     @endforelse
                 </div>
             </div>
 
-            <div class="pub-preview-section">
-                <div class="pub-preview-section-title">Abstract / Summary</div>
-                <div class="pub-preview-abstract">
+            <div class="bookx-section">
+                <div class="bookx-section-title">Abstract / Summary</div>
+                <div class="bookx-abstract">
                     {{ filled($abstract) ? $abstract : '-' }}
                 </div>
             </div>
@@ -118,157 +133,215 @@ $statusLabel = strtoupper(str_replace('_', ' ', $status));
 </div>
 
 <style>
-    /* ORANGE/AMBER style (selaras dengan default primary Filament = amber) */
-    .pub-preview-wrapper {
+    /* Minimal “book layout”: cover kiri, konten kanan (desktop); stacked di mobile */
+    .bookx {
         display: flex;
         justify-content: center;
     }
 
-    .pub-preview-card {
-        border-radius: 20px;
-        overflow: hidden;
-        max-width: 720px;
+    .bookx-wrap {
         width: 100%;
-        color: white;
+        max-width: 980px;
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        gap: 1.5rem;
+        align-items: start;
     }
 
-    .pub-preview-card--amber {
-        background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
-        /* amber -> orange */
-        box-shadow: 0 10px 30px rgba(245, 158, 11, 0.25);
-    }
-
-    .pub-preview-header {
-        padding: 1.75rem;
-        text-align: center;
+    /* Cover: proporsi seperti cover buku */
+    .bookx-cover {
         position: relative;
+        border-radius: 18px;
+        overflow: hidden;
+        background: #fff7ed;
+        /* orange-50 feel */
+        border: 1px solid #fed7aa;
+        /* orange-200 */
+        box-shadow: 0 18px 40px rgba(17, 24, 39, 0.12);
     }
 
-    .pub-preview-body {
-        background: white;
-        color: #111827;
-        padding: 1.75rem;
-        border-radius: 20px 20px 0 0;
-        margin-top: -18px;
+    .bookx-cover img {
+        width: 100%;
+        height: 460px;
+        object-fit: cover;
+        display: block;
     }
 
-    .pub-preview-icon {
-        width: 72px;
-        height: 72px;
-        background: rgba(255, 255, 255, 0.18);
-        border-radius: 50%;
+    .bookx-cover-badge {
+        position: absolute;
+        top: 0.9rem;
+        left: 0.9rem;
+        background: rgba(249, 115, 22, 0.95);
+        color: white;
+        padding: 0.35rem 0.7rem;
+        border-radius: 999px;
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+    }
+
+    /* Fallback cover */
+    .bookx-cover-fallback {
+        height: 460px;
+        display: grid;
+        place-content: center;
+        text-align: center;
+        padding: 1.25rem;
+        gap: 0.75rem;
+    }
+
+    .bookx-fallback-icon {
+        width: 64px;
+        height: 64px;
+        margin: 0 auto;
+        border-radius: 16px;
+        background: #ffedd5;
+        /* orange-100 */
         display: flex;
         align-items: center;
         justify-content: center;
-        margin: 0 auto 0.75rem;
-        backdrop-filter: blur(10px);
+        border: 1px solid #fed7aa;
     }
 
-    .pub-preview-badge {
-        position: absolute;
-        top: 1rem;
-        right: 1rem;
-        background: rgba(255, 255, 255, 0.18);
-        padding: 0.5rem 0.9rem;
-        border-radius: 999px;
-        font-size: 0.75rem;
-        font-weight: 800;
-        backdrop-filter: blur(10px);
-    }
-
-    .pub-preview-title {
-        font-size: 1.25rem;
-        font-weight: 900;
-        margin: 0.25rem 0 0.5rem;
-    }
-
-    .pub-preview-subtitle {
+    .bookx-fallback-text {
+        color: #9a3412;
         font-size: 0.9rem;
-        line-height: 1.4;
     }
 
-    .pub-author-chip {
-        display: inline-block;
-        background: rgba(255, 255, 255, 0.18);
-        padding: 0.25rem 0.6rem;
-        border-radius: 999px;
-        margin: 0.15rem 0.2rem;
+    /* Body */
+    .bookx-body {
+        background: #ffffff;
+        border: 1px solid #f3f4f6;
+        border-radius: 18px;
+        padding: 1.5rem 1.5rem;
+        box-shadow: 0 12px 30px rgba(17, 24, 39, 0.06);
     }
 
-    .pub-corresponding {
+    .bookx-kicker {
+        color: #9a3412;
+        /* orange-800 */
         font-weight: 800;
-        opacity: 0.95;
+        font-size: 0.78rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 0.5rem;
     }
 
-    .pub-preview-grid {
+    .bookx-title {
+        color: #111827;
+        font-size: 1.6rem;
+        font-weight: 900;
+        line-height: 1.2;
+        margin: 0 0 0.75rem;
+    }
+
+    .bookx-authors {
+        color: #6b7280;
+        font-size: 0.95rem;
+        line-height: 1.6;
+        margin-bottom: 1rem;
+    }
+
+    .bookx-author {
+        font-weight: 700;
+        color: #374151;
+    }
+
+    .bookx-corresponding {
+        font-weight: 700;
+        color: #f97316;
+    }
+
+    .bookx-sep {
+        opacity: 0.35;
+        margin: 0 0.35rem;
+    }
+
+    .bookx-muted {
+        color: #9ca3af;
+    }
+
+    /* Meta grid */
+    .bookx-meta {
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 0.75rem;
         margin-bottom: 1.25rem;
     }
 
-    .pub-preview-stat {
-        background: #f9fafb;
-        border-radius: 12px;
-        padding: 0.9rem;
-        text-align: center;
+    .bookx-meta-item {
+        background: #fff7ed;
+        border: 1px solid #fed7aa;
+        border-radius: 14px;
+        padding: 0.75rem 0.8rem;
     }
 
-    .pub-preview-stat-value {
-        font-size: 1.25rem;
+    .bookx-meta-label {
+        font-size: 0.72rem;
+        font-weight: 800;
+        color: #9a3412;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+    }
+
+    .bookx-meta-value {
+        margin-top: 0.25rem;
+        font-size: 1.1rem;
         font-weight: 900;
-        color: #f59e0b;
+        color: #111827;
     }
 
-    /* amber */
-    .pub-preview-stat-label {
-        font-size: 0.75rem;
-        color: #6b7280;
-        margin-top: 0.2rem;
-    }
-
-    .pub-preview-section {
+    /* Sections */
+    .bookx-section {
         margin-top: 1rem;
     }
 
-    .pub-preview-section-title {
+    .bookx-section-title {
         font-size: 0.85rem;
         font-weight: 900;
         color: #111827;
         margin-bottom: 0.5rem;
     }
 
-    .pub-preview-tags {
+    .bookx-tags {
         display: flex;
         flex-wrap: wrap;
-        gap: 0.4rem;
+        gap: 0.45rem;
     }
 
-    .pub-tag {
+    .bookx-tag {
         background: #fffbeb;
-        color: #92400e;
+        border: 1px solid rgba(249, 115, 22, 0.20);
+        color: #9a3412;
         padding: 0.25rem 0.6rem;
         border-radius: 999px;
-        font-size: 0.8rem;
+        font-size: 0.82rem;
     }
 
-    /* amber-50 bg + amber-800 text */
-    .pub-tag-muted {
-        background: #f3f4f6;
-        color: #9ca3af;
-    }
-
-    .pub-preview-abstract {
-        background: #fffbeb;
-        border-radius: 12px;
-        padding: 0.9rem;
-        font-size: 0.9rem;
-        color: #92400e;
+    .bookx-abstract {
+        background: #fff7ed;
+        border: 1px solid #fed7aa;
+        border-radius: 14px;
+        padding: 1rem;
+        color: #111827;
+        font-size: 0.95rem;
+        line-height: 1.65;
+        /* readability lebih enak [web:452] */
         white-space: pre-wrap;
     }
 
-    @media (max-width: 640px) {
-        .pub-preview-grid {
+    /* Responsive */
+    @media (max-width: 860px) {
+        .bookx-wrap {
+            grid-template-columns: 1fr;
+        }
+
+        .bookx-cover img,
+        .bookx-cover-fallback {
+            height: 320px;
+        }
+
+        .bookx-meta {
             grid-template-columns: repeat(2, minmax(0, 1fr));
         }
     }

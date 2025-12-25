@@ -283,9 +283,11 @@ class PublicationForm
                                     FileUpload::make('cover_image_path')
                                         ->label('Cover Image')
                                         ->image()
+                                        ->disk('public')
                                         ->directory('publications/covers')
                                         ->imagePreviewHeight('200')
                                         ->maxSize(2048),
+
                                 ]),
 
                             Section::make('Publication Status')
