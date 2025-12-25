@@ -31,4 +31,15 @@ class EditReview extends EditRecord
                 ),
         ];
     }
+
+    protected function afterSave(): void
+    {
+        $review = $this->record;
+
+        if ($review->decision === 'revision_required') {
+            $review->publicationVersion?->publication?->update([
+                'status' => 'revision_required',
+            ]);
+        }
+    }
 }

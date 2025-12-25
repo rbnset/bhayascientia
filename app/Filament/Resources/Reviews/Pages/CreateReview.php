@@ -17,4 +17,15 @@ class CreateReview extends CreateRecord
             ->title('Review berhasil dibuat')
             ->body('Data review berhasil ditambahkan.');
     }
+
+    protected function afterCreate(): void
+    {
+        $review = $this->record;
+
+        if ($review->decision === 'revision_required') {
+            $review->publicationVersion?->publication?->update([
+                'status' => 'revision_required',
+            ]);
+        }
+    }
 }

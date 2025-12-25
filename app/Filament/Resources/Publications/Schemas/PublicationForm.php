@@ -20,6 +20,10 @@ use Filament\Schemas\Components\Wizard\Step;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Str;
 use Filament\Schemas\Components\View;
+use Filament\Forms\Get;
+use Filament\Forms\Set;
+
+
 
 class PublicationForm
 {
@@ -290,6 +294,7 @@ class PublicationForm
 
                                 ]),
 
+
                             Section::make('Publication Status')
                                 ->description('Status proses publikasi')
                                 ->icon('heroicon-o-clipboard-document-check')
@@ -306,11 +311,15 @@ class PublicationForm
                                             'published' => 'Published',
                                         ])
                                         ->default('draft')
-                                        ->required(),
+                                        ->required()
+                                        // author hanya bisa lihat (tidak bisa ubah)
+                                        ->disabled(fn() => auth()->user()?->hasRole('author')) // cek role [web:574]
+                                        // biar nilai status existing tetap ikut tersubmit walau disabled (untuk edit page)
+                                        ->dehydrated(), // pola disabled+dehydrated umum di Filament [web:723]
 
                                     DateTimePicker::make('published_at')
                                         ->label('Published At')
-                                        ->visible(fn($get) => $get('status') === 'published'),
+                                        ->visible(fn($get) => $get('status') === 'published')
                                 ]),
                         ]),
 

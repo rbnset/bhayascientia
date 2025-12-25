@@ -30,17 +30,36 @@ class ReviewForm
                             ->label('Publication Version')
                             ->relationship(
                                 name: 'publicationVersion',
-                                modifyQueryUsing: fn($query) =>
-                                $query
+                                modifyQueryUsing: fn($query) => $query
                                     ->with('publication')
+                                    // hanya publication yang sedang proses review / minta revisi
+                                    ->whereHas('publication', fn($q) => $q->whereIn('status', [
+                                        'in_review',
+                                        'revision_required',
+                                    ]))
+                                    // wajib sudah upload PDF
+                                    ->whereNotNull('pdf_file_path')
+                                    ->where('pdf_file_path', '!=', '')
+                                    // hanya versi TERBARU per publication (asumsi id makin besar = versi makin baru)
+                                    ->whereIn('id', function ($sub) {
+                                        $sub->from('publication_versions as pv')
+                                            ->selectRaw('MAX(pv.id)')
+                                            ->groupBy('pv.publication_id');
+                                    })
+                                    // EXCLUDE: versi yang sudah pernah direview oleh user login
+                                    ->whereNotExists(function ($sub) {
+                                        $sub->selectRaw(1)
+                                            ->from('reviews as r')
+                                            ->whereColumn('r.publication_version_id', 'publication_versions.id')
+                                            ->where('r.reviewer_id', auth()->id());
+                                    })
                                     ->orderByDesc('created_at')
                             )
-                            ->getOptionLabelFromRecordUsing(
-                                fn($record) => $record->display_label
-                            )
+                            ->getOptionLabelFromRecordUsing(fn($record) => $record->display_label)
                             ->searchable()
                             ->preload()
                             ->required(),
+
 
                         Select::make('reviewer_id')
                             ->label('Reviewer')
