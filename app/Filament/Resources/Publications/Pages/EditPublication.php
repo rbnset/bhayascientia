@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Publications\Pages;
 
 use App\Filament\Resources\Publications\PublicationResource;
+use App\Filament\Resources\PublicationVersionResource;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
@@ -92,11 +93,11 @@ class EditPublication extends EditRecord
                 ->icon('heroicon-o-eye')
                 ->color('gray')
                 ->visible(fn() => $this->record->versions()->exists())
-                ->url(fn() => route(
-                    'manuscripts.view',
-                    $this->record->versions()->latest('version_number')->first()
-                ))
+                ->url(fn() => PublicationVersionResource::getUrl('pdf', [
+                    'record' => $this->record->versions()->latest('version_number')->first(),
+                ]))
                 ->openUrlInNewTab(),
+
 
             /*
             |--------------------------------------------------------------------------
