@@ -8,6 +8,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Filament\Forms\Get;
 
 class ReviewForm
 {
@@ -43,10 +44,16 @@ class ReviewForm
 
                         Select::make('reviewer_id')
                             ->label('Reviewer')
-                            ->relationship('reviewer', 'name')
-                            ->searchable()
-                            ->preload()
+                            ->relationship(
+                                name: 'reviewer',
+                                titleAttribute: 'name',
+                                modifyQueryUsing: fn($query) => $query->role('reviewer')
+                            )
+                            ->default(fn() => auth()->id())
+                            ->disabled(fn() => auth()->user()?->hasRole('reviewer'))
+                            ->dehydrated()
                             ->required(),
+
                     ]),
 
                 // =========================
