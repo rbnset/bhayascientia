@@ -18,6 +18,10 @@ class DatabaseSeeder extends Seeder
         // 1) Buat user super admin + role
         $this->call([
             RolesAndUsersSeeder::class,
+            CategorySeeder::class,
+            PublicationTypeSeeder::class,
+            MethodSeeder::class,
+            KeywordSeeder::class,
         ]);
     }
 }
