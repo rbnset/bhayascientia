@@ -41,7 +41,7 @@ class PublicationVersion extends Model
     // =====================
     public function reviews()
     {
-        return $this->hasMany(Review::class);
+        return $this->hasMany(\App\Models\Review::class, 'publication_version_id');
     }
 
     /*

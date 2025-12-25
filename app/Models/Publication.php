@@ -7,6 +7,7 @@ use App\Models\Pivots\PublicationKeyword;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Publication extends Model
@@ -74,6 +75,23 @@ class Publication extends Model
     public function authorPublications(): HasMany
     {
         return $this->hasMany(AuthorPublication::class, 'publication_id');
+    }
+
+
+
+    // =====================
+    // REVIEWS
+    // =====================
+    public function reviews(): HasManyThrough
+    {
+        return $this->hasManyThrough(
+            \App\Models\Review::class,
+            \App\Models\PublicationVersion::class,
+            'publication_id',          // FK di publication_versions ke publications
+            'publication_version_id',  // FK di reviews ke publication_versions
+            'id',                      // local key publications
+            'id'                       // local key publication_versions
+        );
     }
 
 

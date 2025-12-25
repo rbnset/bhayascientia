@@ -6,6 +6,7 @@ use App\Filament\Resources\Publications\Pages\CreatePublication;
 use App\Filament\Resources\Publications\Pages\EditPublication;
 use App\Filament\Resources\Publications\Pages\ListPublications;
 use App\Filament\Resources\Publications\RelationManagers\PublicationVersionsRelationManager;
+use App\Filament\Resources\Publications\RelationManagers\ReviewsRelationManager;
 use App\Filament\Resources\Publications\Schemas\PublicationForm;
 use App\Filament\Resources\Publications\Tables\PublicationsTable;
 use App\Models\Publication;
@@ -49,6 +50,7 @@ class PublicationResource extends Resource
     {
         return [
             PublicationVersionsRelationManager::class,
+            ReviewsRelationManager::class,
         ];
     }
 
