@@ -37,7 +37,7 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         ];
     }
 
-    // Wajib untuk avatar di user menu Filament [web:146]
+
     public function getFilamentAvatarUrl(): ?string
     {
         return filled($this->profile_photo)
@@ -45,7 +45,6 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
             : null;
     }
 
-    // Wajib kalau kamu implement FilamentUser (boleh kamu batasi akses panel) [web:146]
     public function canAccessPanel(Panel $panel): bool
     {
         return true;
