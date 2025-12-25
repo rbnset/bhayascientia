@@ -5,7 +5,6 @@ namespace App\Filament\Resources\Publications\RelationManagers;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Support\Facades\Storage;
 
 class PublicationVersionsRelationManager extends RelationManager
 {
@@ -28,13 +27,18 @@ class PublicationVersionsRelationManager extends RelationManager
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('pdf_file_path')
-                    ->label('PDF File')
+                    ->label('Manuscript')
                     ->formatStateUsing(fn() => 'View PDF')
                     ->url(fn($record) => route('manuscripts.view', $record))
                     ->openUrlInNewTab(),
 
+                Tables\Columns\TextColumn::make('download_link')
+                    ->label('Download')
+                    ->state(fn() => 'Download')
+                    ->url(fn($record) => route('manuscripts.download', $record))
+                    ->openUrlInNewTab(),
             ])
-            ->actions([])       // read-only
-            ->bulkActions([]);  // read-only
+            ->actions([])
+            ->bulkActions([]);
     }
 }

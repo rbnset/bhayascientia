@@ -52,3 +52,19 @@ Route::get('/manuscripts/{version}', function (PublicationVersion $version) {
         'Content-Disposition' => 'inline; filename="manuscript.pdf"',
     ]);
 })->name('manuscripts.view');
+
+
+/**
+ * NEW: download asli file PDF (tanpa watermark/rotation), langsung download.
+ */
+Route::get('/manuscripts/{version}/download', function (PublicationVersion $version) {
+
+    abort_unless(auth()->check(), 403);
+
+    abort_unless($version->pdf_file_path, 404);
+
+    return Storage::disk('public')->download(
+        $version->pdf_file_path,
+        'manuscript-v' . $version->version_number . '.pdf'
+    );
+})->name('manuscripts.download');

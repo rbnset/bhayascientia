@@ -27,13 +27,31 @@ $uploaderAuthorId = \App\Models\Author::where('user_id', auth()->id())->value('i
 
 $statusLabel = strtoupper(str_replace('_', ' ', $status));
 
+/**
+* Cover dari publication (bukan version).
+*/
 $coverPath = $get('cover_image_path');
-$coverUrl = $coverPath ? Storage::disk('public')->url($coverPath) : null; // public url via filesystem [web:409]
+$coverUrl = $coverPath ? Storage::disk('public')->url($coverPath) : null; // url publik storage [web:409]
+
+/**
+* Manuscript: ambil dari versi terbaru publication.
+* Asumsi Publication punya relasi: versions() dan order by desc version_number/created_at.
+* Di Blade ini kita ambil record publication dari resource (edit/view).
+*/
+$publication = $record ?? null;
+
+$latestVersion = $publication?->versions()
+->orderByDesc('version_number')
+->first();
+
+$downloadUrl = $latestVersion
+? route('manuscripts.download', $latestVersion)
+: null;
 @endphp
 
 <div class="bookx">
     <div class="bookx-wrap">
-        {{-- Book Cover --}}
+        {{-- Cover --}}
         <div class="bookx-cover">
             @if($coverUrl)
             <img src="{{ $coverUrl }}" alt="Cover image preview" loading="lazy" />
@@ -51,9 +69,22 @@ $coverUrl = $coverPath ? Storage::disk('public')->url($coverPath) : null; // pub
             <div class="bookx-cover-badge">
                 {{ $statusLabel }}
             </div>
+
+            {{-- Download manuscript button (di bawah cover) --}}
+            <div class="bookx-cover-actions">
+                @if($downloadUrl)
+                <a class="bookx-download" href="{{ $downloadUrl }}" target="_blank" rel="noopener">
+                    Download manuscript (latest version)
+                </a>
+                @else
+                <div class="bookx-download-disabled">
+                    Manuscript belum ada (upload dulu di Publication Versions).
+                </div>
+                @endif
+            </div>
         </div>
 
-        {{-- Book Content --}}
+        {{-- Content --}}
         <div class="bookx-body">
             <div class="bookx-kicker">Publication Preview</div>
 
@@ -133,7 +164,6 @@ $coverUrl = $coverPath ? Storage::disk('public')->url($coverPath) : null; // pub
 </div>
 
 <style>
-    /* Minimal “book layout”: cover kiri, konten kanan (desktop); stacked di mobile */
     .bookx {
         display: flex;
         justify-content: center;
@@ -148,15 +178,12 @@ $coverUrl = $coverPath ? Storage::disk('public')->url($coverPath) : null; // pub
         align-items: start;
     }
 
-    /* Cover: proporsi seperti cover buku */
     .bookx-cover {
         position: relative;
         border-radius: 18px;
         overflow: hidden;
         background: #fff7ed;
-        /* orange-50 feel */
         border: 1px solid #fed7aa;
-        /* orange-200 */
         box-shadow: 0 18px 40px rgba(17, 24, 39, 0.12);
     }
 
@@ -180,7 +207,6 @@ $coverUrl = $coverPath ? Storage::disk('public')->url($coverPath) : null; // pub
         letter-spacing: 0.04em;
     }
 
-    /* Fallback cover */
     .bookx-cover-fallback {
         height: 460px;
         display: grid;
@@ -196,7 +222,6 @@ $coverUrl = $coverPath ? Storage::disk('public')->url($coverPath) : null; // pub
         margin: 0 auto;
         border-radius: 16px;
         background: #ffedd5;
-        /* orange-100 */
         display: flex;
         align-items: center;
         justify-content: center;
@@ -208,7 +233,46 @@ $coverUrl = $coverPath ? Storage::disk('public')->url($coverPath) : null; // pub
         font-size: 0.9rem;
     }
 
-    /* Body */
+    /* NEW: actions under cover */
+    .bookx-cover-actions {
+        padding: 0.85rem;
+        background: #ffffff;
+        border-top: 1px solid #fed7aa;
+    }
+
+    .bookx-download {
+        display: inline-flex;
+        width: 100%;
+        justify-content: center;
+        align-items: center;
+        text-decoration: none;
+        background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+        color: #ffffff;
+        font-weight: 900;
+        border-radius: 12px;
+        padding: 0.75rem 1rem;
+        box-shadow: 0 10px 22px rgba(249, 115, 22, 0.25);
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .bookx-download:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 14px 26px rgba(249, 115, 22, 0.30);
+        color: #ffffff;
+    }
+
+    .bookx-download-disabled {
+        width: 100%;
+        text-align: center;
+        padding: 0.75rem 1rem;
+        border-radius: 12px;
+        background: #fff7ed;
+        border: 1px dashed #fed7aa;
+        color: #9a3412;
+        font-weight: 700;
+        font-size: 0.9rem;
+    }
+
     .bookx-body {
         background: #ffffff;
         border: 1px solid #f3f4f6;
@@ -219,7 +283,6 @@ $coverUrl = $coverPath ? Storage::disk('public')->url($coverPath) : null; // pub
 
     .bookx-kicker {
         color: #9a3412;
-        /* orange-800 */
         font-weight: 800;
         font-size: 0.78rem;
         letter-spacing: 0.08em;
@@ -261,7 +324,6 @@ $coverUrl = $coverPath ? Storage::disk('public')->url($coverPath) : null; // pub
         color: #9ca3af;
     }
 
-    /* Meta grid */
     .bookx-meta {
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -291,7 +353,6 @@ $coverUrl = $coverPath ? Storage::disk('public')->url($coverPath) : null; // pub
         color: #111827;
     }
 
-    /* Sections */
     .bookx-section {
         margin-top: 1rem;
     }
@@ -326,11 +387,9 @@ $coverUrl = $coverPath ? Storage::disk('public')->url($coverPath) : null; // pub
         color: #111827;
         font-size: 0.95rem;
         line-height: 1.65;
-        /* readability lebih enak [web:452] */
         white-space: pre-wrap;
     }
 
-    /* Responsive */
     @media (max-width: 860px) {
         .bookx-wrap {
             grid-template-columns: 1fr;
