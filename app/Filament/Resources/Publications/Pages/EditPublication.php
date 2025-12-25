@@ -7,11 +7,28 @@ use Filament\Resources\Pages\EditRecord;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Checkbox;
-use Illuminate\Support\Facades\Storage;
+use Filament\Notifications\Notification;
+use Illuminate\Support\Str;
 
 class EditPublication extends EditRecord
 {
     protected static string $resource = PublicationResource::class;
+
+    protected function shortTitle(): string
+    {
+        return Str::of((string) $this->record->title)
+            ->squish()
+            ->words(8, '…')
+            ->toString();
+    }
+
+    protected function getSavedNotification(): ?Notification
+    {
+        return Notification::make()
+            ->success()
+            ->title('Publikasi berhasil diubah')
+            ->body('Judul: ' . $this->shortTitle());
+    }
 
     protected function getHeaderActions(): array
     {
@@ -36,7 +53,7 @@ class EditPublication extends EditRecord
                 ->form([
                     FileUpload::make('pdf_file_path')
                         ->label('Manuscript (PDF)')
-                        ->disk('public') // ⬅️ WAJIB
+                        ->disk('public')
                         ->directory('publications/versions')
                         ->acceptedFileTypes(['application/pdf'])
                         ->required()
@@ -48,7 +65,6 @@ class EditPublication extends EditRecord
                         ->accepted(),
                 ])
                 ->action(function (array $data) {
-
                     $this->record->versions()->create([
                         'pdf_file_path' => $data['pdf_file_path'],
                         'version_number' => 1,
@@ -58,6 +74,12 @@ class EditPublication extends EditRecord
                     $this->record->update([
                         'status' => 'submitted',
                     ]);
+
+                    Notification::make()
+                        ->success()
+                        ->title('Manuskrip berhasil dikirim')
+                        ->body('Judul: ' . $this->shortTitle())
+                        ->send();
                 }),
 
             /*
@@ -97,7 +119,6 @@ class EditPublication extends EditRecord
                         ->required(),
                 ])
                 ->action(function (array $data) {
-
                     $nextVersion = ($this->record->versions()->max('version_number') ?? 0) + 1;
 
                     $this->record->versions()->create([
@@ -109,6 +130,12 @@ class EditPublication extends EditRecord
                     $this->record->update([
                         'status' => 'submitted',
                     ]);
+
+                    Notification::make()
+                        ->success()
+                        ->title('Revisi berhasil diunggah')
+                        ->body('Judul: ' . $this->shortTitle() . " (v{$nextVersion})")
+                        ->send();
                 }),
         ];
     }
