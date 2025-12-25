@@ -2,15 +2,18 @@
 
 namespace App\Filament\Resources\Publications\Schemas;
 
+use App\Models\Author;
 use App\Models\Category;
 use App\Models\Keyword;
 use App\Models\Method;
 use App\Models\PublicationType;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Str;
@@ -263,6 +266,73 @@ class PublicationForm
                             ->imagePreviewHeight('200')
                             ->maxSize(2048),
                     ]),
+
+
+                // =========================
+                // AUTHOR
+                // =========================
+                Section::make('Authors')
+                    ->description('Tambah penulis dan atur urutan dengan drag & drop')
+                    ->icon('heroicon-o-users')
+                    ->schema([
+                        Repeater::make('authorPublications')
+                            ->label('Authors')
+                            ->relationship('authorPublications')
+                            // Ini yang bikin urutan tersimpan saat drag & drop (ke kolom "order"). [web:119]
+                            ->orderColumn('order')
+                            ->reorderable() // drag & drop handle muncul
+                            ->collapsed()   // biar ringkas kalau author banyak (opsional)
+                            ->defaultItems(1)
+                            ->schema([
+                                Select::make('author_id')
+                                    ->label('Author')
+                                    ->relationship('author', 'name')
+                                    ->searchable()
+                                    ->preload()
+                                    ->required()
+                                    // UX: bikin author baru langsung dari sini (tanpa ID)
+                                    ->createOptionForm([
+                                        TextInput::make('name')
+                                            ->label('Name')
+                                            ->required()
+                                            ->maxLength(255),
+
+                                        TextInput::make('email')
+                                            ->label('Email')
+                                            ->email()
+                                            ->required()
+                                            ->maxLength(255)
+                                            ->unique(table: 'authors', column: 'email', ignoreRecord: true),
+
+                                        TextInput::make('affiliation')
+                                            ->label('Affiliation')
+                                            ->maxLength(255)
+                                            ->nullable(),
+                                    ])
+                                    ->createOptionUsing(fn(array $data) => Author::create($data)->getKey()),
+
+                                // Tidak ada input "order" (angka) sama sekali.
+                                // "Corresponding author" juga tidak ditampilkan, karena akan di-set otomatis.
+                            ])
+                            // Set corresponding otomatis: author yang user login (yang upload)
+                            ->mutateDehydratedStateUsing(function (array $state): array {
+                                $authorId = \App\Models\Author::query()
+                                    ->where('user_id', auth()->id())
+                                    ->value('id');
+
+                                // Kalau user login belum punya Author record, ya tidak ada yang bisa di-set.
+                                if (! $authorId) {
+                                    return $state;
+                                }
+
+                                foreach ($state as $i => $item) {
+                                    $state[$i]['is_corresponding'] = ((int) ($item['author_id'] ?? 0) === (int) $authorId);
+                                }
+
+                                return $state;
+                            }),
+                    ])
+                    ->columnSpanFull(),
 
                 // =========================
                 // PUBLICATION STATUS

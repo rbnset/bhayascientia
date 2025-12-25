@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use App\Models\Pivots\AuthorPublication;
 use App\Models\Pivots\PublicationKeyword;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Publication extends Model
@@ -57,18 +59,23 @@ class Publication extends Model
     public function authors(): BelongsToMany
     {
         return $this->belongsToMany(
-            Author::class,
+            \App\Models\Author::class,
             'author_publication',
             'publication_id',
             'author_id'
         )
-            ->withPivot([
-                'order',
-                'is_corresponding',
-            ])
+            ->using(AuthorPublication::class)
+            ->withPivot(['order', 'is_corresponding'])
             ->withTimestamps()
-            ->orderBy('pivot_order');
+            ->orderBy('author_publication.order');
     }
+
+
+    public function authorPublications(): HasMany
+    {
+        return $this->hasMany(AuthorPublication::class, 'publication_id');
+    }
+
 
     // =====================
     // CATEGORIES (MANY TO MANY)

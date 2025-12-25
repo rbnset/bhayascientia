@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use App\Models\Pivots\AuthorPublication;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Author extends Model
 {
@@ -33,5 +35,10 @@ class Author extends Model
                 'is_corresponding',
             ])
             ->withTimestamps();
+    }
+
+    public function authorPublications(): HasMany
+    {
+        return $this->hasMany(AuthorPublication::class, 'author_id');
     }
 }
