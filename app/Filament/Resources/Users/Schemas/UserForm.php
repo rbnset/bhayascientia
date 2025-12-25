@@ -2,12 +2,12 @@
 
 namespace App\Filament\Resources\Users\Schemas;
 
-use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\View;
-use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
 
 class UserForm
@@ -17,7 +17,6 @@ class UserForm
         return $schema
             ->columns(1)
             ->components([
-
                 // =========================
                 // PREVIEW USER (REACTIVE)
                 // =========================
@@ -26,7 +25,7 @@ class UserForm
                     ->icon('heroicon-o-eye')
                     ->schema([
                         View::make('filament.users.preview-card')
-                            ->live(), // 🔥 WAJIB
+                            ->live(),
                     ]),
 
                 // =========================
@@ -36,17 +35,17 @@ class UserForm
                     ->description('Informasi akun pengguna')
                     ->icon('heroicon-o-user')
                     ->schema([
-
                         FileUpload::make('profile_photo')
                             ->label('Foto Profil')
                             ->placeholder('Unggah foto profil')
                             ->image()
+                            ->disk('public')
                             ->directory('users/profile-photos')
                             ->imageEditor()
                             ->imageCropAspectRatio('1:1')
                             ->maxSize(2048)
-                            ->live()      // 🔥
-                            ->reactive(), // 🔥
+                            ->live()
+                            ->reactive(),
 
                         TextInput::make('name')
                             ->label('Nama Lengkap')
@@ -69,7 +68,7 @@ class UserForm
                             ->tel()
                             ->live()
                             ->afterStateUpdated(function ($state, callable $set) {
-                                if (str_starts_with($state, '08')) {
+                                if (filled($state) && str_starts_with($state, '08')) {
                                     $set('whatsapp_number', '628' . substr($state, 2));
                                 }
                             })
@@ -107,12 +106,12 @@ class UserForm
                             ->dehydrated(false),
 
                         // =========================
-                        // PERAN
+                        // PERAN (roles = BelongsToMany, wajib multiple)
                         // =========================
                         Select::make('roles')
+                            ->label('Peran')
+                            ->multiple() // penting untuk BelongsToMany supaya state array valid
                             ->relationship('roles', 'name')
-                            ->required()
-                            ->hiddenOn('edit')
                             ->preload()
                             ->searchable(),
                     ])

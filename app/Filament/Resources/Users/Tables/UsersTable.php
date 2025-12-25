@@ -8,6 +8,7 @@ use Filament\Actions\EditAction;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Storage;
 
 class UsersTable
 {
@@ -15,24 +16,21 @@ class UsersTable
     {
         return $table
             ->columns([
-
-                // =====================
-                // FOTO PROFIL
-                // =====================
                 ImageColumn::make('profile_photo')
                     ->label('')
                     ->circular()
-                    ->size(40)
-                    ->defaultImageUrl(
-                        fn($record) =>
-                        'https://ui-avatars.com/api/?name=' .
-                            urlencode($record->name)
-                    )
+                    ->imageSize(40) // v4 method; kalau error, ganti ->size(40)
+                    ->disk('public')
+                    ->visibility('public')
+                    ->defaultImageUrl(fn($record) => 'https://ui-avatars.com/api/?name=' . urlencode($record->name))
+                    ->url(function ($record) {
+                        // Optional: klik avatar buka gambar penuh
+                        return filled($record->profile_photo)
+                            ? Storage::disk('public')->url($record->profile_photo)
+                            : null;
+                    }, shouldOpenInNewTab: true)
                     ->toggleable(),
 
-                // =====================
-                // NAMA
-                // =====================
                 TextColumn::make('name')
                     ->label('Pengguna')
                     ->searchable()
@@ -40,9 +38,6 @@ class UsersTable
                     ->weight('medium')
                     ->description(fn($record) => $record->email),
 
-                // =====================
-                // EMAIL
-                // =====================
                 TextColumn::make('email')
                     ->label('Email')
                     ->searchable()
@@ -50,38 +45,24 @@ class UsersTable
                     ->copyMessage('Email disalin')
                     ->toggleable(isToggledHiddenByDefault: true),
 
-                // =====================
-                // PEKERJAAN
-                // =====================
                 TextColumn::make('job_title')
                     ->label('Pekerjaan')
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
 
-                // =====================
-                // WHATSAPP
-                // =====================
                 TextColumn::make('whatsapp_number')
                     ->label('WhatsApp')
                     ->copyable()
                     ->copyMessage('Nomor WhatsApp disalin')
                     ->toggleable(isToggledHiddenByDefault: true),
 
-                // =====================
-                // STATUS VERIFIKASI
-                // =====================
                 TextColumn::make('email_verified_at')
                     ->label('Status Verifikasi')
                     ->badge()
                     ->sortable()
                     ->color(fn($state) => $state ? 'success' : 'gray')
-                    ->formatStateUsing(
-                        fn($state) => $state ? 'Terverifikasi' : 'Belum Terverifikasi'
-                    ),
+                    ->formatStateUsing(fn($state) => $state ? 'Terverifikasi' : 'Belum Terverifikasi'),
 
-                // =====================
-                // DIBUAT PADA
-                // =====================
                 TextColumn::make('created_at')
                     ->label('Dibuat Pada')
                     ->date('d M Y')
