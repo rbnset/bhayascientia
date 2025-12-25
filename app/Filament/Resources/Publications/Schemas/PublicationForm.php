@@ -20,8 +20,13 @@ use Filament\Schemas\Components\Wizard\Step;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Str;
 use Filament\Schemas\Components\View;
-use Filament\Forms\Get;
 use Filament\Forms\Set;
+use App\Models\User;
+use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Checkbox;
+use Filament\Schemas\Components\Utilities\Get;
+
+
 
 
 
@@ -202,38 +207,86 @@ class PublicationForm
                     // STEP 3: AUTHORS
                     // =========================
                     Step::make('Penulis')
-                        ->description('Tambah penulis & urutkan dengan drag & drop')
+                        ->description('Penulis utama otomatis + tambah penulis lain (tanpa dobel)')
                         ->icon('heroicon-o-users')
                         ->schema([
                             Section::make('Authors')
-                                ->description('Tambah penulis dan atur urutan dengan drag & drop')
+                                ->description('Pembuat publikasi otomatis menjadi corresponding author (tidak bisa diubah/hapus)')
                                 ->icon('heroicon-o-users')
                                 ->schema([
                                     Repeater::make('authorPublications')
                                         ->label('Authors')
+                                        ->deletable(false) // hilangkan icon delete [web:672]
                                         ->relationship('authorPublications')
                                         ->orderColumn('order')
                                         ->reorderable()
-                                        ->collapsed()
-                                        ->defaultItems(1)
+                                        ->defaultItems(0)
+                                        ->minItems(1)
                                         ->addActionLabel('Tambah penulis')
-                                        ->itemLabel(function (array $state): ?string {
-                                            if (! isset($state['author_id'])) {
-                                                return 'Penulis';
+                                        ->collapsed()
+                                        ->afterStateHydrated(function (?array $state, callable $set) {
+                                            $currentUser = auth()->user();
+                                            if (! $currentUser) {
+                                                return;
                                             }
 
-                                            $author = Author::query()->find($state['author_id']);
+                                            $currentAuthor = Author::query()->firstOrCreate(
+                                                ['user_id' => $currentUser->id],
+                                                [
+                                                    'name' => $currentUser->name,
+                                                    'email' => $currentUser->email,
+                                                    'affiliation' => null,
+                                                ]
+                                            );
 
-                                            return $author?->name ?: 'Penulis';
+                                            $state ??= [];
+                                            $state = array_values($state); // reset key UUID -> index numerik [web:672]
+
+                                            $exists = collect($state)->contains(
+                                                fn($row) => (int) ($row['author_id'] ?? 0) === (int) $currentAuthor->id
+                                            );
+
+                                            if (! $exists) {
+                                                array_unshift($state, [
+                                                    'author_id' => $currentAuthor->id,
+                                                    'is_corresponding' => true,
+                                                    'order' => 1,
+                                                ]);
+                                            }
+
+                                            $state = array_values($state);
+                                            foreach ($state as $i => $row) {
+                                                $state[$i]['order'] = $i + 1;
+                                                $state[$i]['is_corresponding'] =
+                                                    (int) ($row['author_id'] ?? 0) === (int) $currentAuthor->id;
+                                            }
+
+                                            $set('authorPublications', $state);
                                         })
                                         ->schema([
                                             Select::make('author_id')
                                                 ->label('Author')
-                                                ->relationship('author', 'name')
-                                                ->searchable()
-                                                ->preload()
                                                 ->required()
-                                                ->helperText('Urutkan penulis dengan drag & drop pada item author.')
+                                                ->searchable(['name', 'email'])
+                                                ->preload()
+                                                ->live()
+                                                // cegah dobel: option yang sudah dipilih di item lain jadi tidak bisa dipilih [web:672]
+                                                ->disableOptionsWhenSelectedInSiblingRepeaterItems()
+                                                ->relationship('author', 'name')
+                                                // kunci author utama (creator)
+                                                ->disabled(function (Get $get): bool {
+                                                    $currentUser = auth()->user();
+                                                    if (! $currentUser) {
+                                                        return false;
+                                                    }
+
+                                                    $currentAuthorId = Author::query()
+                                                        ->where('user_id', $currentUser->id)
+                                                        ->value('id');
+
+                                                    return (int) $get('author_id') === (int) $currentAuthorId;
+                                                })
+                                                ->dehydrated()
                                                 ->createOptionForm([
                                                     TextInput::make('name')
                                                         ->label('Name')
@@ -253,25 +306,50 @@ class PublicationForm
                                                         ->nullable(),
                                                 ])
                                                 ->createOptionUsing(fn(array $data) => Author::create($data)->getKey()),
+
+                                            Checkbox::make('is_corresponding')
+                                                ->label('Corresponding author')
+                                                ->disabled()
+                                                ->dehydrated(),
                                         ])
                                         ->mutateDehydratedStateUsing(function (array $state): array {
-                                            $authorId = Author::query()
-                                                ->where('user_id', auth()->id())
-                                                ->value('id');
-
-                                            if (! $authorId) {
+                                            $currentUser = auth()->user();
+                                            if (! $currentUser) {
                                                 return $state;
                                             }
 
-                                            foreach ($state as $i => $item) {
-                                                $state[$i]['is_corresponding'] = ((int) ($item['author_id'] ?? 0) === (int) $authorId);
+                                            $currentAuthorId = Author::query()
+                                                ->where('user_id', $currentUser->id)
+                                                ->value('id');
+
+                                            $state = array_values(array_filter($state, fn($row) => ! empty($row['author_id'])));
+
+                                            // pastikan author utama tidak bisa hilang walau diakali request
+                                            $exists = collect($state)->contains(
+                                                fn($row) => (int) ($row['author_id'] ?? 0) === (int) $currentAuthorId
+                                            );
+
+                                            if (! $exists && $currentAuthorId) {
+                                                array_unshift($state, [
+                                                    'author_id' => $currentAuthorId,
+                                                    'is_corresponding' => true,
+                                                    'order' => 1,
+                                                ]);
+                                            }
+
+                                            $state = array_values($state);
+                                            foreach ($state as $i => $row) {
+                                                $state[$i]['order'] = $i + 1;
+                                                $state[$i]['is_corresponding'] =
+                                                    (int) ($row['author_id'] ?? 0) === (int) $currentAuthorId;
                                             }
 
                                             return $state;
-                                        }),
-                                ])
-                                ->columnSpanFull(),
+                                        })
+                                        ->columnSpanFull(),
+                                ]),
                         ]),
+
 
                     // =========================
                     // STEP 4: FINALISASI
@@ -312,15 +390,14 @@ class PublicationForm
                                         ])
                                         ->default('draft')
                                         ->required()
-                                        // author hanya bisa lihat (tidak bisa ubah)
-                                        ->disabled(fn() => auth()->user()?->hasRole('author')) // cek role [web:574]
-                                        // biar nilai status existing tetap ikut tersubmit walau disabled (untuk edit page)
-                                        ->dehydrated(), // pola disabled+dehydrated umum di Filament [web:723]
+                                        ->disabled(fn() => auth()->user()?->hasRole('author')) // Spatie role check [web:574]
+                                        ->dehydrated(),
 
                                     DateTimePicker::make('published_at')
                                         ->label('Published At')
-                                        ->visible(fn($get) => $get('status') === 'published')
+                                        ->visible(fn($get) => $get('status') === 'published'),
                                 ]),
+
                         ]),
 
                     // =========================

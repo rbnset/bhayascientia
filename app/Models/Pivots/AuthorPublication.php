@@ -11,9 +11,9 @@ class AuthorPublication extends Pivot
 {
     protected $table = 'author_publication';
 
-    // Jika tabel pivot kamu pakai kolom "id", biarkan true.
-    // Kalau pivot kamu TIDAK punya kolom id, ubah ke false.
-    public $incrementing = true;
+    protected $primaryKey = 'id';
+
+    public $incrementing = true; // sesuai docs custom pivot + auto-increment [web:248]
 
     protected $fillable = [
         'publication_id',

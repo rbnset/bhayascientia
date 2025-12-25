@@ -15,44 +15,40 @@ class AuthorsTable
     {
         return $table
             ->columns([
-
-                // =====================
-                // AVATAR
-                // =====================
                 ImageColumn::make('avatar_url')
                     ->label('')
                     ->circular()
                     ->size(40)
-                    ->defaultImageUrl(
-                        fn($record) =>
-                        'https://ui-avatars.com/api/?name=' .
-                            urlencode($record->name)
-                    )
+                    ->defaultImageUrl(fn($record) => 'https://ui-avatars.com/api/?name=' . urlencode(
+                        $record->name ?: ($record->user?->name ?? 'Author')
+                    ))
                     ->toggleable(),
 
-                // =====================
-                // NAME (PRIMARY)
-                // =====================
-                TextColumn::make('name')
+                // Nama utama: kalau authors.name kosong, pakai user.name [web:861]
+                TextColumn::make('display_name')
                     ->label('Author')
-                    ->searchable()
-                    ->sortable()
+                    ->state(fn($record) => $record->name ?: ($record->user?->name ?? '—'))
+                    ->searchable(query: function ($query, string $search) {
+                        // cari di authors.name dan users.name (relasi) [web:861]
+                        $query
+                            ->where('name', 'like', "%{$search}%")
+                            ->orWhereHas('user', fn($q) => $q->where('name', 'like', "%{$search}%"));
+                    })
+                    ->sortable(query: function ($query, string $direction) {
+                        // sorting tetap pakai authors.name sebagai default
+                        $query->orderBy('name', $direction);
+                    })
                     ->weight('medium')
-                    ->description(fn($record) => $record->email),
+                    ->description(fn($record) => $record->email ?: ($record->user?->email ?? null)),
 
-                // =====================
-                // EMAIL (SECONDARY)
-                // =====================
                 TextColumn::make('email')
                     ->label('Email')
+                    ->state(fn($record) => $record->email ?: ($record->user?->email ?? '—'))
                     ->searchable()
                     ->copyable()
                     ->copyMessage('Email disalin')
                     ->toggleable(isToggledHiddenByDefault: true),
 
-                // =====================
-                // AFFILIATION
-                // =====================
                 TextColumn::make('affiliation')
                     ->label('Affiliation')
                     ->badge()
@@ -60,9 +56,14 @@ class AuthorsTable
                     ->searchable()
                     ->placeholder('—'),
 
-                // =====================
-                // CREATED AT
-                // =====================
+                // Optional: indikator apakah terhubung ke User
+                TextColumn::make('user_id')
+                    ->label('Account')
+                    ->state(fn($record) => $record->user_id ? 'Linked' : 'External')
+                    ->badge()
+                    ->color(fn($record) => $record->user_id ? 'success' : 'gray')
+                    ->toggleable(isToggledHiddenByDefault: true),
+
                 TextColumn::make('created_at')
                     ->label('Created')
                     ->date('d M Y')

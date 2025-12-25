@@ -74,9 +74,9 @@ class Publication extends Model
 
     public function authorPublications(): HasMany
     {
-        return $this->hasMany(AuthorPublication::class, 'publication_id');
+        return $this->hasMany(\App\Models\Pivots\AuthorPublication::class)
+            ->orderBy('order');
     }
-
 
 
     // =====================

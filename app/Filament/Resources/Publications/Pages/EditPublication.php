@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Publications\Pages;
 
 use App\Filament\Resources\Publications\PublicationResource;
 use App\Filament\Resources\PublicationVersionResource;
+use App\Models\Author;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
@@ -14,6 +15,32 @@ use Illuminate\Support\Str;
 class EditPublication extends EditRecord
 {
     protected static string $resource = PublicationResource::class;
+
+    protected function afterSave(): void
+    {
+        $user = auth()->user();
+
+        if (! $user?->hasRole('author')) {
+            return;
+        }
+
+        $author = Author::query()->firstOrCreate(
+            ['user_id' => $user->id],
+            [
+                'name' => $user->name,
+                'email' => $user->email,
+                'affiliation' => null,
+            ]
+        );
+
+        // Pastikan corresponding author pembuat tidak pernah hilang [web:891]
+        $this->record->authors()->syncWithoutDetaching([
+            $author->id => [
+                'order' => 1,
+                'is_corresponding' => true,
+            ],
+        ]);
+    }
 
     protected function shortTitle(): string
     {
@@ -34,12 +61,7 @@ class EditPublication extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-
-            /*
-            |--------------------------------------------------------------------------
-            | SUBMIT FIRST MANUSCRIPT
-            |--------------------------------------------------------------------------
-            */
+            // --- (isi actions kamu tetap seperti yang sudah ada) ---
             Action::make('submitManuscript')
                 ->label('Submit Manuscript')
                 ->icon('heroicon-o-paper-airplane')
@@ -83,11 +105,6 @@ class EditPublication extends EditRecord
                         ->send();
                 }),
 
-            /*
-            |--------------------------------------------------------------------------
-            | PREVIEW PDF (SETELAH SUBMIT)
-            |--------------------------------------------------------------------------
-            */
             Action::make('previewPdf')
                 ->label('Lihat Manuskrip (PDF)')
                 ->icon('heroicon-o-eye')
@@ -98,12 +115,6 @@ class EditPublication extends EditRecord
                 ]))
                 ->openUrlInNewTab(),
 
-
-            /*
-            |--------------------------------------------------------------------------
-            | UPLOAD REVISION (SETELAH REVIEW)
-            |--------------------------------------------------------------------------
-            */
             Action::make('uploadNewVersion')
                 ->label('Upload Revisi')
                 ->icon('heroicon-o-arrow-up-tray')

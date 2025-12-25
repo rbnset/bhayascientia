@@ -12,13 +12,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('author_publication', function (Blueprint $table) {
+            $table->id();
             $table->foreignId('publication_id')
                 ->constrained()->cascadeOnDelete();
             $table->foreignId('author_id')
                 ->constrained()->cascadeOnDelete();
             $table->unsignedInteger('order')->default(1);
             $table->boolean('is_corresponding')->default(false);
-            $table->primary(['publication_id', 'author_id']);
+            $table->unique(['publication_id', 'author_id']);
             $table->timestamps();
         });
     }
