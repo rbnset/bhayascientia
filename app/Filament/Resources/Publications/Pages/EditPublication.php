@@ -18,28 +18,34 @@ class EditPublication extends EditRecord
 
     protected function afterSave(): void
     {
-        $user = auth()->user();
+        $creator = $this->record->creator;
 
-        if (! $user?->hasRole('author')) {
+        // Kalau belum ada creator (data lama), jangan paksa pakai auth user.
+        if (! $creator) {
             return;
         }
 
-        $author = Author::query()->firstOrCreate(
-            ['user_id' => $user->id],
+        $author = \App\Models\Author::query()->firstOrCreate(
+            ['user_id' => $creator->id],
             [
-                'name' => $user->name,
-                'email' => $user->email,
+                'name' => $creator->name,
+                'email' => $creator->email,
                 'affiliation' => null,
             ]
         );
 
-        // Pastikan corresponding author pembuat tidak pernah hilang [web:891]
+        // Pastikan creator tetap corresponding
         $this->record->authors()->syncWithoutDetaching([
             $author->id => [
                 'order' => 1,
                 'is_corresponding' => true,
             ],
         ]);
+
+        \App\Models\Pivots\AuthorPublication::query()
+            ->where('publication_id', $this->record->id)
+            ->where('author_id', '!=', $author->id)
+            ->update(['is_corresponding' => false]);
     }
 
     protected function shortTitle(): string

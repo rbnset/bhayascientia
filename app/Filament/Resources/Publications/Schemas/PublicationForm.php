@@ -211,12 +211,12 @@ class PublicationForm
                         ->icon('heroicon-o-users')
                         ->schema([
                             Section::make('Authors')
-                                ->description('Pembuat publikasi otomatis menjadi corresponding author (tidak bisa diubah/hapus)')
+                                ->description('Penulis corresponding mengikuti data publication (tidak ikut user yang sedang login)')
                                 ->icon('heroicon-o-users')
                                 ->schema([
                                     Repeater::make('authorPublications')
                                         ->label('Authors')
-                                        ->deletable(false) // hilangkan icon delete [web:672]
+                                        ->deletable(false)
                                         ->relationship('authorPublications')
                                         ->orderColumn('order')
                                         ->reorderable()
@@ -225,6 +225,25 @@ class PublicationForm
                                         ->addActionLabel('Tambah penulis')
                                         ->collapsed()
                                         ->afterStateHydrated(function (?array $state, callable $set) {
+                                            $state ??= [];
+                                            $state = array_values($state); // reset key UUID -> index numerik [web:672]
+
+                                            // =========
+                                            // EDIT MODE: kalau sudah ada data, jangan override corresponding
+                                            // =========
+                                            if (count($state) > 0) {
+                                                // rapikan order saja, tidak mengubah is_corresponding
+                                                foreach ($state as $i => $row) {
+                                                    $state[$i]['order'] = $i + 1;
+                                                }
+
+                                                $set('authorPublications', $state);
+                                                return;
+                                            }
+
+                                            // =========
+                                            // CREATE MODE: state masih kosong -> inject author dari user login sebagai corresponding
+                                            // =========
                                             $currentUser = auth()->user();
                                             if (! $currentUser) {
                                                 return;
@@ -239,27 +258,11 @@ class PublicationForm
                                                 ]
                                             );
 
-                                            $state ??= [];
-                                            $state = array_values($state); // reset key UUID -> index numerik [web:672]
-
-                                            $exists = collect($state)->contains(
-                                                fn($row) => (int) ($row['author_id'] ?? 0) === (int) $currentAuthor->id
-                                            );
-
-                                            if (! $exists) {
-                                                array_unshift($state, [
-                                                    'author_id' => $currentAuthor->id,
-                                                    'is_corresponding' => true,
-                                                    'order' => 1,
-                                                ]);
-                                            }
-
-                                            $state = array_values($state);
-                                            foreach ($state as $i => $row) {
-                                                $state[$i]['order'] = $i + 1;
-                                                $state[$i]['is_corresponding'] =
-                                                    (int) ($row['author_id'] ?? 0) === (int) $currentAuthor->id;
-                                            }
+                                            $state = [[
+                                                'author_id' => $currentAuthor->id,
+                                                'is_corresponding' => true,
+                                                'order' => 1,
+                                            ]];
 
                                             $set('authorPublications', $state);
                                         })
@@ -270,22 +273,14 @@ class PublicationForm
                                                 ->searchable(['name', 'email'])
                                                 ->preload()
                                                 ->live()
-                                                // cegah dobel: option yang sudah dipilih di item lain jadi tidak bisa dipilih [web:672]
                                                 ->disableOptionsWhenSelectedInSiblingRepeaterItems()
-                                                ->relationship('author', 'name')
-                                                // kunci author utama (creator)
+                                                // penting: di docs, disabled() dipanggil sebelum relationship() supaya dehydrated tidak ketiban
                                                 ->disabled(function (Get $get): bool {
-                                                    $currentUser = auth()->user();
-                                                    if (! $currentUser) {
-                                                        return false;
-                                                    }
-
-                                                    $currentAuthorId = Author::query()
-                                                        ->where('user_id', $currentUser->id)
-                                                        ->value('id');
-
-                                                    return (int) $get('author_id') === (int) $currentAuthorId;
+                                                    // Kunci hanya jika item ini memang corresponding (berdasarkan data pivot),
+                                                    // bukan berdasarkan user login.
+                                                    return (bool) $get('is_corresponding');
                                                 })
+                                                ->relationship('author', 'name')
                                                 ->dehydrated()
                                                 ->createOptionForm([
                                                     TextInput::make('name')
@@ -313,35 +308,29 @@ class PublicationForm
                                                 ->dehydrated(),
                                         ])
                                         ->mutateDehydratedStateUsing(function (array $state): array {
-                                            $currentUser = auth()->user();
-                                            if (! $currentUser) {
-                                                return $state;
-                                            }
-
-                                            $currentAuthorId = Author::query()
-                                                ->where('user_id', $currentUser->id)
-                                                ->value('id');
-
+                                            // Jangan mengubah corresponding berdasarkan auth user.
+                                            // Cuma enforce: harus ada tepat 1 corresponding.
                                             $state = array_values(array_filter($state, fn($row) => ! empty($row['author_id'])));
 
-                                            // pastikan author utama tidak bisa hilang walau diakali request
-                                            $exists = collect($state)->contains(
-                                                fn($row) => (int) ($row['author_id'] ?? 0) === (int) $currentAuthorId
-                                            );
+                                            // kalau tidak ada corresponding, jadikan item pertama corresponding (fallback aman)
+                                            $hasCorresponding = collect($state)->contains(fn($row) => (bool) ($row['is_corresponding'] ?? false));
 
-                                            if (! $exists && $currentAuthorId) {
-                                                array_unshift($state, [
-                                                    'author_id' => $currentAuthorId,
-                                                    'is_corresponding' => true,
-                                                    'order' => 1,
-                                                ]);
+                                            if (! $hasCorresponding && count($state) > 0) {
+                                                $state[0]['is_corresponding'] = true;
                                             }
 
-                                            $state = array_values($state);
+                                            // pastikan cuma 1 corresponding
+                                            $already = false;
                                             foreach ($state as $i => $row) {
                                                 $state[$i]['order'] = $i + 1;
-                                                $state[$i]['is_corresponding'] =
-                                                    (int) ($row['author_id'] ?? 0) === (int) $currentAuthorId;
+
+                                                $isCorr = (bool) ($row['is_corresponding'] ?? false);
+                                                if ($isCorr && ! $already) {
+                                                    $already = true;
+                                                    $state[$i]['is_corresponding'] = true;
+                                                } else {
+                                                    $state[$i]['is_corresponding'] = false;
+                                                }
                                             }
 
                                             return $state;
@@ -349,6 +338,7 @@ class PublicationForm
                                         ->columnSpanFull(),
                                 ]),
                         ]),
+
 
 
                     // =========================

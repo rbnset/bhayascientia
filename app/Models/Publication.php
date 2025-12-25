@@ -78,6 +78,11 @@ class Publication extends Model
             ->orderBy('order');
     }
 
+    public function creator()
+    {
+        return $this->belongsTo(\App\Models\User::class, 'created_by');
+    }
+
 
     // =====================
     // REVIEWS

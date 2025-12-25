@@ -5,12 +5,21 @@ $title = $get('title') ?? '-';
 $status = $get('status') ?? '-';
 $abstract = $get('abstract');
 
-$authors = $get('authorPublications') ?? [];
-$authorIds = collect($authors)->pluck('author_id')->filter()->values();
+// Repeater state (pivot-like)
+$authorPubs = collect($get('authorPublications') ?? [])
+->filter(fn ($row) => is_array($row) && ! empty($row['author_id']))
+->values();
+
+// Urutkan sesuai order pivot bila ada [web:917]
+$authorPubs = $authorPubs->sortBy(fn ($row) => (int) ($row['order'] ?? 999))->values();
+
+// IDs author
+$authorIds = $authorPubs->pluck('author_id')->filter()->unique()->values();
 
 $categoryIds = collect($get('categories') ?? [])->filter()->values();
 $keywordIds = collect($get('keywords') ?? [])->filter()->values();
 
+// Map nama
 $authorNames = $authorIds->isEmpty()
 ? collect()
 : \App\Models\Author::whereIn('id', $authorIds)->pluck('name', 'id');
@@ -23,21 +32,12 @@ $keywordNames = $keywordIds->isEmpty()
 ? collect()
 : \App\Models\Keyword::whereIn('id', $keywordIds)->pluck('name', 'id');
 
-$uploaderAuthorId = \App\Models\Author::where('user_id', auth()->id())->value('id');
-
 $statusLabel = strtoupper(str_replace('_', ' ', $status));
 
-/**
-* Cover dari publication (bukan version).
-*/
 $coverPath = $get('cover_image_path');
-$coverUrl = $coverPath ? Storage::disk('public')->url($coverPath) : null; // url publik storage [web:409]
+$coverUrl = $coverPath ? Storage::disk('public')->url($coverPath) : null;
 
-/**
-* Manuscript: ambil dari versi terbaru publication.
-* Asumsi Publication punya relasi: versions() dan order by desc version_number/created_at.
-* Di Blade ini kita ambil record publication dari resource (edit/view).
-*/
+// Manuscript (dari record publication saat edit/view)
 $publication = $record ?? null;
 
 $latestVersion = $publication?->versions()
@@ -70,7 +70,6 @@ $downloadUrl = $latestVersion
                 {{ $statusLabel }}
             </div>
 
-            {{-- Download manuscript button (di bawah cover) --}}
             <div class="bookx-cover-actions">
                 @if($downloadUrl)
                 <a class="bookx-download" href="{{ $downloadUrl }}" target="_blank" rel="noopener">
@@ -91,15 +90,21 @@ $downloadUrl = $latestVersion
             <h2 class="bookx-title">{{ $title }}</h2>
 
             <div class="bookx-authors">
-                @if($authorIds->count())
-                @foreach($authorIds as $id)
-                @php $name = $authorNames[$id] ?? 'Unknown'; @endphp
+                @if($authorPubs->count())
+                @foreach($authorPubs as $row)
+                @php
+                $id = $row['author_id'];
+                $name = $authorNames[$id] ?? 'Unknown';
+                $isCorresponding = (bool) ($row['is_corresponding'] ?? false);
+                @endphp
+
                 <span class="bookx-author">
                     {{ $name }}
-                    @if($uploaderAuthorId && (int) $uploaderAuthorId === (int) $id)
+                    @if($isCorresponding)
                     <span class="bookx-corresponding">• corresponding</span>
                     @endif
                 </span>
+
                 @if(! $loop->last)
                 <span class="bookx-sep">/</span>
                 @endif
@@ -122,7 +127,7 @@ $downloadUrl = $latestVersion
 
                 <div class="bookx-meta-item">
                     <div class="bookx-meta-label">Authors</div>
-                    <div class="bookx-meta-value">{{ $authorIds->count() }}</div>
+                    <div class="bookx-meta-value">{{ $authorPubs->count() }}</div>
                 </div>
 
                 <div class="bookx-meta-item">
