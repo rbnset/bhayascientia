@@ -2,12 +2,13 @@
 
 namespace App\Filament\Resources\Publications\RelationManagers;
 
-use Filament\Actions\ViewAction as ActionsViewAction;
+use Filament\Actions\Action;
+use Filament\Actions\ViewAction;
+use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Resources\RelationManagers\RelationManager;
-use Filament\Tables\Actions\ViewAction;
 use Illuminate\Contracts\View\View as ViewContract;
+use Illuminate\Support\Facades\Storage;
 
 class ReviewsRelationManager extends RelationManager
 {
@@ -43,22 +44,50 @@ class ReviewsRelationManager extends RelationManager
                     ->dateTime()
                     ->sortable(),
 
+                // UX: batasi jadi beberapa kata + tooltip biar bisa dibaca full saat hover
                 Tables\Columns\TextColumn::make('overall_comment')
                     ->label('Overall comment')
-                    ->limit(60),
+                    ->words(12) // batasi beberapa kata saja. [web:113]
+                    ->tooltip(fn($record) => filled($record->overall_comment) ? $record->overall_comment : null)
+                    ->wrap(),
             ])
             ->actions([
-                ActionsViewAction::make()
+                ViewAction::make()
                     ->label('Lihat')
+                    ->icon('heroicon-o-eye')
                     ->slideOver()
                     ->modalHeading('Review detail')
-                    ->modalSubmitAction(false)   // hilangkan tombol submit
+                    ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Tutup')
                     ->modalContent(function ($record): ViewContract {
-                        // $record = Review model
                         return view('filament.reviews.preview', [
                             'review' => $record,
                         ]);
+                    }),
+
+                // ACTION BARU: download revisi (annotated PDF) dari reviewer
+                Action::make('download_revision')
+                    ->label('Download revisi')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('success')
+                    ->visible(function ($record): bool {
+                        $attachment = $record->attachments()->latest()->first();
+                        return filled($attachment?->file_path);
+                    })
+                    ->action(function ($record) {
+                        $attachment = $record->attachments()->latest()->first();
+                        abort_unless($attachment && filled($attachment->file_path), 404);
+
+                        // Kalau mau dibatasi hanya author/reviewer tertentu, taruh policy di sini:
+                        // abort_unless(auth()->user()->can('downloadReviewAttachment', $record));
+
+                        return Storage::disk('local')->download(
+                            $attachment->file_path,
+                            'review-revision-' . $record->id . '.pdf'
+                        );
+
+                        // Jika file ada di public:
+                        // return Storage::disk('public')->download($attachment->file_path, 'review-revision-' . $record->id . '.pdf');
                     }),
             ])
             ->headerActions([])

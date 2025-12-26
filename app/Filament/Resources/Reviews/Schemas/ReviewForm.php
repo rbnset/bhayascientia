@@ -198,7 +198,7 @@ class ReviewForm
                                                 abort_unless($attachment && filled($attachment->file_path), 404);
 
                                                 // TODO: tambahkan policy/authorization di sini:
-                                                // abort_unless(auth()->user()->can('downloadReviewAttachment', $record), 403);
+                                                // abort_unless(auth()->user()->can('downloadReviewAttachment', $record),
 
                                                 return Storage::disk('local')->download($attachment->file_path);
                                             }),
