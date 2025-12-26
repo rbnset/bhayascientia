@@ -5,16 +5,13 @@ namespace App\Filament\Resources\Publications\Pages;
 use App\Filament\Resources\Publications\PublicationResource;
 use App\Filament\Resources\Publications\Widgets\PublicationStatusBanner;
 use App\Filament\Resources\PublicationVersionResource;
+use App\Filament\Resources\Reviews\ReviewResource;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\FileUpload;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Support\Str;
-use App\Models\User;
-use App\Notifications\PublicationSubmitted;
-use Illuminate\Support\Facades\Notification as NotificationFacade;
-
 
 class EditPublication extends EditRecord
 {
@@ -45,7 +42,6 @@ class EditPublication extends EditRecord
             'status' => $data['status'] ?? $this->record->status,
         ];
 
-        // Kalau status = published, izinkan published_at ikut tersimpan.
         if (($filtered['status'] ?? null) === 'published') {
             $filtered['published_at'] = $data['published_at'] ?? $this->record->published_at;
         }
@@ -60,7 +56,10 @@ class EditPublication extends EditRecord
             return;
         }
 
-        $creator = $this->record->creator;
+        // NOTE:
+        // Di model Publication Anda yang terakhir Anda kirim, TIDAK ADA relasi creator / kolom created_by.
+        // Jika Anda masih memakai $this->record->creator di project, pastikan relasinya memang ada.
+        $creator = $this->record->creator ?? null;
 
         if (! $creator) {
             return;
@@ -144,7 +143,7 @@ class EditPublication extends EditRecord
                     ]);
 
                     // =========================
-                    // Notify all reviewers
+                    // Notify all reviewers (submit pertama kali)
                     // =========================
                     $reviewers = \App\Models\User::role('reviewer')->get();
 
@@ -153,7 +152,7 @@ class EditPublication extends EditRecord
                         new \App\Notifications\PublicationSubmitted($this->record)
                     );
 
-                    \Filament\Notifications\Notification::make()
+                    Notification::make()
                         ->success()
                         ->title('Manuskrip berhasil dikirim')
                         ->body('Judul: ' . $this->shortTitle())
@@ -197,6 +196,42 @@ class EditPublication extends EditRecord
                     $this->record->update([
                         'status' => 'submitted',
                     ]);
+
+                    // =========================
+                    // Notify reviewers (author submit revisi)
+                    // Penerima = reviewer yang pernah membuat review untuk publication ini
+                    // Action notif diarahkan ke review MILIK reviewer penerima
+                    // =========================
+                    $publication = $this->record;
+
+                    $reviewerIds = $publication->reviews()
+                        ->pluck('reviews.reviewer_id')
+                        ->filter()
+                        ->unique()
+                        ->values();
+
+                    if ($reviewerIds->isNotEmpty()) {
+                        $reviewers = \App\Models\User::query()
+                            ->whereIn('id', $reviewerIds)
+                            ->get();
+
+                        foreach ($reviewers as $reviewer) {
+                            $reviewIdToOpen = $publication->reviews()
+                                ->where('reviews.reviewer_id', $reviewer->id)
+                                ->orderByDesc('reviews.id')
+                                ->value('reviews.id');
+
+
+                            // Safety: kalau reviewer belum punya review (harusnya tidak), skip action URL
+                            $reviewer->notify(
+                                new \App\Notifications\AuthorSubmittedRevision(
+                                    publication: $publication,
+                                    newVersionNumber: $nextVersion,
+                                    reviewIdToOpen: $reviewIdToOpen,
+                                )
+                            );
+                        }
+                    }
 
                     Notification::make()
                         ->success()
