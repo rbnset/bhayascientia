@@ -101,7 +101,7 @@ class ReviewsTable
 
                         abort_unless($attachment && filled($attachment->file_path), 404);
 
-                        return Storage::disk('local')->download(
+                        return \Illuminate\Support\Facades\Storage::disk('local')->download(
                             $attachment->file_path,
                             'review-revision-' . $record->id . '.pdf'
                         );
@@ -109,11 +109,13 @@ class ReviewsTable
 
                 EditAction::make()
                     ->icon('heroicon-o-pencil-square')
-                    ->label('Edit'),
+                    ->label('Edit')
+                    ->visible(fn($record) => auth()->user()?->can('update', $record) ?? false),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->visible(fn() => ! (auth()->user()?->hasRole('reviewer'))),
                 ]),
             ]);
     }

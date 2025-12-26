@@ -4,23 +4,52 @@ namespace App\Filament\Resources\Publications\Pages;
 
 use App\Filament\Resources\Publications\PublicationResource;
 use App\Filament\Resources\PublicationVersionResource;
-use App\Models\Author;
-use Filament\Resources\Pages\EditRecord;
 use Filament\Actions\Action;
-use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Checkbox;
+use Filament\Forms\Components\FileUpload;
 use Filament\Notifications\Notification;
+use Filament\Resources\Pages\EditRecord;
 use Illuminate\Support\Str;
 
 class EditPublication extends EditRecord
 {
     protected static string $resource = PublicationResource::class;
 
+    protected function isReviewer(): bool
+    {
+        return (bool) auth()->user()?->hasRole('reviewer');
+    }
+
+    /**
+     * Reviewer hanya boleh update field status (dan published_at jika diperlukan).
+     */
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        if (! $this->isReviewer()) {
+            return $data;
+        }
+
+        $filtered = [
+            'status' => $data['status'] ?? $this->record->status,
+        ];
+
+        // Kalau status = published, izinkan published_at ikut tersimpan.
+        if (($filtered['status'] ?? null) === 'published') {
+            $filtered['published_at'] = $data['published_at'] ?? $this->record->published_at;
+        }
+
+        return $filtered;
+    }
+
     protected function afterSave(): void
     {
+        // Reviewer tidak perlu menjalankan logika relasi authors setelah save
+        if ($this->isReviewer()) {
+            return;
+        }
+
         $creator = $this->record->creator;
 
-        // Kalau belum ada creator (data lama), jangan paksa pakai auth user.
         if (! $creator) {
             return;
         }
@@ -34,7 +63,6 @@ class EditPublication extends EditRecord
             ]
         );
 
-        // Pastikan creator tetap corresponding
         $this->record->authors()->syncWithoutDetaching([
             $author->id => [
                 'order' => 1,
@@ -67,12 +95,11 @@ class EditPublication extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            // --- (isi actions kamu tetap seperti yang sudah ada) ---
             Action::make('submitManuscript')
                 ->label('Submit Manuscript')
                 ->icon('heroicon-o-paper-airplane')
                 ->color('success')
-                ->visible(fn() => $this->record->status === 'draft')
+                ->visible(fn() => $this->record->status === 'draft' && ! $this->isReviewer())
                 ->modalHeading('Submit Manuscript')
                 ->modalDescription(
                     'Pastikan manuskrip yang Anda unggah sudah benar dan final.
@@ -125,7 +152,7 @@ class EditPublication extends EditRecord
                 ->label('Upload Revisi')
                 ->icon('heroicon-o-arrow-up-tray')
                 ->color('primary')
-                ->visible(fn() => $this->record->status === 'revision_required')
+                ->visible(fn() => $this->record->status === 'revision_required' && ! $this->isReviewer())
                 ->modalHeading('Upload Revisi Manuskrip')
                 ->modalSubmitActionLabel('Kirim Revisi')
                 ->form([
