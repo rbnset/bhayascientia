@@ -119,5 +119,4 @@ $versionNumber = $version->version_number ?? '-';
     }
 </style>
 
-{{-- Pakai style pvx kamu yang lama (boleh paste di sini atau import CSS) --}}
 @endif

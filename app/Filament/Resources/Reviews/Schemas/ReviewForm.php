@@ -11,6 +11,7 @@ use Filament\Schemas\Components\View;
 use Filament\Schemas\Components\Wizard;
 use Filament\Schemas\Components\Wizard\Step;
 use Filament\Schemas\Schema;
+use Illuminate\Database\Eloquent\Builder;
 
 class ReviewForm
 {
@@ -35,26 +36,42 @@ class ReviewForm
                                         ->label('Publication Version')
                                         ->relationship(
                                             name: 'publicationVersion',
-                                            modifyQueryUsing: fn($query) => $query
-                                                ->with('publication')
-                                                ->whereHas('publication', fn($q) => $q->whereIn('status', [
-                                                    'in_review',
-                                                    'revision_required',
-                                                ]))
-                                                ->whereNotNull('pdf_file_path')
-                                                ->where('pdf_file_path', '!=', '')
-                                                ->whereIn('id', function ($sub) {
-                                                    $sub->from('publication_versions as pv')
-                                                        ->selectRaw('MAX(pv.id)')
-                                                        ->groupBy('pv.publication_id');
-                                                })
-                                                ->whereNotExists(function ($sub) {
-                                                    $sub->selectRaw(1)
-                                                        ->from('reviews as r')
-                                                        ->whereColumn('r.publication_version_id', 'publication_versions.id')
-                                                        ->where('r.reviewer_id', auth()->id());
-                                                })
-                                                ->orderByDesc('created_at')
+                                            // penting: operasi create vs edit dibedakan di sini
+                                            modifyQueryUsing: function (Builder $query, string $operation) {
+                                                // Selalu eager load supaya label/preview enak
+                                                $query->with('publication');
+
+                                                // Filter ketat hanya untuk CREATE
+                                                if ($operation === 'create') {
+                                                    $query
+                                                        ->whereHas('publication', fn($q) => $q->whereIn('status', [
+                                                            'in_review',
+                                                            'revision_required',
+                                                        ]))
+                                                        ->whereNotNull('pdf_file_path')
+                                                        ->where('pdf_file_path', '!=', '')
+                                                        ->whereIn('id', function ($sub) {
+                                                            $sub->from('publication_versions as pv')
+                                                                ->selectRaw('MAX(pv.id)')
+                                                                ->groupBy('pv.publication_id');
+                                                        })
+                                                        ->whereNotExists(function ($sub) {
+                                                            $sub->selectRaw(1)
+                                                                ->from('reviews as r')
+                                                                ->whereColumn('r.publication_version_id', 'publication_versions.id')
+                                                                ->where('r.reviewer_id', auth()->id());
+                                                        })
+                                                        ->orderByDesc('created_at');
+                                                }
+
+                                                // EDIT: jangan filter terlalu ketat,
+                                                // supaya nilai yang sudah tersimpan tetap ada di options
+                                                if ($operation === 'edit') {
+                                                    $query->orderByDesc('created_at');
+                                                }
+
+                                                return $query;
+                                            }
                                         )
                                         ->getOptionLabelFromRecordUsing(fn($record) => $record->display_label)
                                         ->searchable()
@@ -75,7 +92,6 @@ class ReviewForm
                                         ->required(),
                                 ]),
 
-                            // Preview publikasi (bookx)
                             Section::make('Preview publikasi')
                                 ->description('Ringkasan metadata sebelum review')
                                 ->icon('heroicon-o-eye')
@@ -105,7 +121,7 @@ class ReviewForm
                                 ->icon('heroicon-o-clipboard-document-list')
                                 ->schema([
                                     Repeater::make('notes')
-                                        ->relationship() // Review::notes()
+                                        ->relationship()
                                         ->schema([
                                             Select::make('section')
                                                 ->label('Section')
@@ -159,7 +175,7 @@ class ReviewForm
                                 ->icon('heroicon-o-paper-clip')
                                 ->schema([
                                     Repeater::make('attachments')
-                                        ->relationship() // Review::attachments()
+                                        ->relationship()
                                         ->schema([
                                             FileUpload::make('file_path')
                                                 ->label('Reviewed PDF')
@@ -193,7 +209,7 @@ class ReviewForm
                                 ]),
                         ]),
                 ])
-                    ->persistStepInQueryString(),
+                    ->persistStepInQueryString(), // ini OK, bukan penyebab invalid [web:66]
             ]);
     }
 }
