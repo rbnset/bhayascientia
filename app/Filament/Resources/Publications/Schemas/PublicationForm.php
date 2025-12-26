@@ -25,9 +25,7 @@ use App\Models\User;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Checkbox;
 use Filament\Schemas\Components\Utilities\Get;
-
-
-
+use Filament\Forms\Components\RichEditor;
 
 
 class PublicationForm
@@ -87,8 +85,7 @@ class PublicationForm
                                         ->maxLength(255)
                                         ->placeholder('Tulis judul yang jelas dan ringkas.'),
 
-                                    Textarea::make('abstract')
-                                        ->rows(6)
+                                    RichEditor::make('abstract')
                                         ->columnSpanFull()
                                         ->label(fn($get) => match (self::publicationTypeSlug($get)) {
                                             'jurnal' => 'Abstrak',
@@ -97,6 +94,11 @@ class PublicationForm
                                         })
                                         ->visible(fn($get) => self::publicationTypeSlug($get) !== 'opini')
                                         ->required(fn($get) => self::publicationTypeSlug($get) === 'jurnal')
+                                        ->toolbarButtons([
+                                            ['bold', 'italic', 'underline', 'strike', 'link'],
+                                            ['bulletList', 'orderedList', 'blockquote'],
+                                            ['undo', 'redo'],
+                                        ])
                                         ->helperText(fn($get) => match (self::publicationTypeSlug($get)) {
                                             'jurnal' => 'Abstrak wajib sesuai standar artikel jurnal ilmiah.',
                                             'buku'   => 'Ringkasan isi buku (opsional).',
@@ -357,9 +359,9 @@ class PublicationForm
                                         ->image()
                                         ->disk('public')
                                         ->directory('publications/covers')
+                                        ->visibility('public')
                                         ->imagePreviewHeight('200')
-                                        ->maxSize(2048),
-
+                                        ->maxSize(2048)
                                 ]),
 
 

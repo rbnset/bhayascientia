@@ -1,25 +1,22 @@
 @php
 use Illuminate\Support\Facades\Storage;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 $title = $get('title') ?? '-';
 $status = $get('status') ?? '-';
 $abstract = $get('abstract');
 
-// Repeater state (pivot-like)
 $authorPubs = collect($get('authorPublications') ?? [])
 ->filter(fn ($row) => is_array($row) && ! empty($row['author_id']))
+->values()
+->sortBy(fn ($row) => (int) ($row['order'] ?? 999))
 ->values();
 
-// Urutkan sesuai order pivot bila ada [web:917]
-$authorPubs = $authorPubs->sortBy(fn ($row) => (int) ($row['order'] ?? 999))->values();
-
-// IDs author
 $authorIds = $authorPubs->pluck('author_id')->filter()->unique()->values();
 
 $categoryIds = collect($get('categories') ?? [])->filter()->values();
 $keywordIds = collect($get('keywords') ?? [])->filter()->values();
 
-// Map nama
 $authorNames = $authorIds->isEmpty()
 ? collect()
 : \App\Models\Author::whereIn('id', $authorIds)->pluck('name', 'id');
@@ -34,8 +31,33 @@ $keywordNames = $keywordIds->isEmpty()
 
 $statusLabel = strtoupper(str_replace('_', ' ', $status));
 
-$coverPath = $get('cover_image_path');
-$coverUrl = $coverPath ? Storage::disk('public')->url($coverPath) : null;
+/**
+* COVER URL RESOLVER:
+* - Create mode (belum submit): biasanya TemporaryUploadedFile => pakai temporaryUrl()
+* - Edit mode / sudah tersimpan: string path => Storage::disk('public')->url()
+* - Kalau state berupa array (mis. multiple): ambil item pertama
+*/
+$coverState = $get('cover_image_path');
+
+$coverUrl = null;
+
+$resolveCoverUrl = function ($value) {
+if ($value instanceof TemporaryUploadedFile) {
+return $value->temporaryUrl();
+}
+
+if (is_string($value) && filled($value)) {
+return Storage::disk('public')->url($value);
+}
+
+return null;
+};
+
+if (is_array($coverState)) {
+$coverUrl = $resolveCoverUrl($coverState[0] ?? null);
+} else {
+$coverUrl = $resolveCoverUrl($coverState);
+}
 
 // Manuscript (dari record publication saat edit/view)
 $publication = $record ?? null;
