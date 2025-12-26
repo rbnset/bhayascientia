@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Pivots\AuthorPublication;
 use App\Models\Pivots\PublicationKeyword;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
@@ -22,22 +23,18 @@ class Publication extends Model
         'status',
         'published_at',
         'cover_image_path',
+        // penting: kalau Anda memang punya kolom created_by, biasanya ini juga perlu fillable
+        // 'created_by',
     ];
 
     protected $casts = [
         'published_at' => 'datetime',
     ];
 
-    /*
-    |--------------------------------------------------------------------------
-    | Relationships
-    |--------------------------------------------------------------------------
-    */
-
     // =====================
     // PUBLICATION TYPE
     // =====================
-    public function publicationType()
+    public function publicationType(): BelongsTo
     {
         return $this->belongsTo(PublicationType::class);
     }
@@ -45,13 +42,12 @@ class Publication extends Model
     // =====================
     // KEYWORDS (MANY TO MANY)
     // =====================
-    public function keywords()
+    public function keywords(): BelongsToMany
     {
         return $this->belongsToMany(
             Keyword::class,
             'publication_keyword'
-        )
-            ->using(PublicationKeyword::class);
+        )->using(PublicationKeyword::class);
     }
 
     // =====================
@@ -71,18 +67,11 @@ class Publication extends Model
             ->orderBy('author_publication.order');
     }
 
-
     public function authorPublications(): HasMany
     {
         return $this->hasMany(\App\Models\Pivots\AuthorPublication::class)
             ->orderBy('order');
     }
-
-    public function creator()
-    {
-        return $this->belongsTo(\App\Models\User::class, 'created_by');
-    }
-
 
     // =====================
     // REVIEWS
@@ -92,52 +81,33 @@ class Publication extends Model
         return $this->hasManyThrough(
             \App\Models\Review::class,
             \App\Models\PublicationVersion::class,
-            'publication_id',          // FK di publication_versions ke publications
-            'publication_version_id',  // FK di reviews ke publication_versions
-            'id',                      // local key publications
-            'id'                       // local key publication_versions
+            'publication_id',
+            'publication_version_id',
+            'id',
+            'id'
         );
     }
 
-
-    // =====================
-    // CATEGORIES (MANY TO MANY)
-    // =====================
-    public function categories()
+    public function categories(): BelongsToMany
     {
         return $this->belongsToMany(Category::class)
             ->withTimestamps();
     }
 
-    // =====================
-    // RESEARCH METHOD
-    // =====================
-    public function method()
+    public function method(): BelongsTo
     {
         return $this->belongsTo(Method::class);
     }
 
-    // =====================
-    // VERSIONS
-    // =====================
-    public function versions()
+    public function versions(): HasMany
     {
         return $this->hasMany(PublicationVersion::class);
     }
 
-    // =====================
-    // DOWNLOAD LOGS
-    // =====================
-    public function downloadLogs()
+    public function downloadLogs(): HasMany
     {
         return $this->hasMany(DownloadLog::class);
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Scopes
-    |--------------------------------------------------------------------------
-    */
 
     public function scopePublished($query)
     {

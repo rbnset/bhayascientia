@@ -17,10 +17,37 @@ class ReviewPolicy
         return method_exists($user, 'hasRole') && $user->hasRole('reviewer');
     }
 
+    private function isAuthor(AuthUser $user): bool
+    {
+        return method_exists($user, 'hasRole') && $user->hasRole('author');
+    }
+
+    /**
+     * Author boleh melihat review jika review itu milik publikasi di mana
+     * user login tercantum sebagai author (authors.user_id = user_id login).
+     */
+    private function isReviewForThisAuthor(AuthUser $user, Review $review): bool
+    {
+        $publication = $review->publicationVersion?->publication;
+
+        if (! $publication) {
+            return false;
+        }
+
+        return $publication->authors()
+            ->where('authors.user_id', $user->getAuthIdentifier())
+            ->exists();
+    }
+
     public function viewAny(AuthUser $authUser): bool
     {
-        // Reviewer boleh buka halaman list, tapi nanti datanya difilter cuma miliknya.
+        // Reviewer boleh buka halaman list, nanti difilter only mine
         if ($this->isReviewer($authUser)) {
+            return true;
+        }
+
+        // Author boleh buka halaman list, nanti difilter only assigned-to-me
+        if ($this->isAuthor($authUser)) {
             return true;
         }
 
@@ -29,9 +56,12 @@ class ReviewPolicy
 
     public function view(AuthUser $authUser, Review $review): bool
     {
-        // Reviewer hanya boleh lihat review miliknya
         if ($this->isReviewer($authUser)) {
             return (int) $review->reviewer_id === (int) $authUser->getAuthIdentifier();
+        }
+
+        if ($this->isAuthor($authUser)) {
+            return $this->isReviewForThisAuthor($authUser, $review);
         }
 
         return $authUser->can('View:Review');
@@ -39,9 +69,9 @@ class ReviewPolicy
 
     public function create(AuthUser $authUser): bool
     {
-        // Reviewer boleh create jika punya permission, atau Anda bisa return true khusus reviewer
-        if ($this->isReviewer($authUser)) {
-            return $authUser->can('Create:Review');
+        // Umumnya author TIDAK create review, hanya reviewer/editor.
+        if ($this->isAuthor($authUser)) {
+            return false;
         }
 
         return $authUser->can('Create:Review');
@@ -55,15 +85,25 @@ class ReviewPolicy
                 && $authUser->can('Update:Review');
         }
 
+        // Author tidak boleh edit review (hanya baca)
+        if ($this->isAuthor($authUser)) {
+            return false;
+        }
+
         return $authUser->can('Update:Review');
     }
 
     public function delete(AuthUser $authUser, Review $review): bool
     {
-        // Reviewer hanya boleh delete review miliknya (kalau Anda ingin reviewer tidak boleh delete sama sekali, return false)
+        // Reviewer hanya boleh delete review miliknya (opsional)
         if ($this->isReviewer($authUser)) {
             return ((int) $review->reviewer_id === (int) $authUser->getAuthIdentifier())
                 && $authUser->can('Delete:Review');
+        }
+
+        // Author tidak boleh delete review
+        if ($this->isAuthor($authUser)) {
+            return false;
         }
 
         return $authUser->can('Delete:Review');
@@ -71,7 +111,7 @@ class ReviewPolicy
 
     public function restore(AuthUser $authUser, Review $review): bool
     {
-        if ($this->isReviewer($authUser)) {
+        if ($this->isReviewer($authUser) || $this->isAuthor($authUser)) {
             return false;
         }
 
@@ -80,7 +120,7 @@ class ReviewPolicy
 
     public function forceDelete(AuthUser $authUser, Review $review): bool
     {
-        if ($this->isReviewer($authUser)) {
+        if ($this->isReviewer($authUser) || $this->isAuthor($authUser)) {
             return false;
         }
 
@@ -89,7 +129,7 @@ class ReviewPolicy
 
     public function forceDeleteAny(AuthUser $authUser): bool
     {
-        if ($this->isReviewer($authUser)) {
+        if ($this->isReviewer($authUser) || $this->isAuthor($authUser)) {
             return false;
         }
 
@@ -98,7 +138,7 @@ class ReviewPolicy
 
     public function restoreAny(AuthUser $authUser): bool
     {
-        if ($this->isReviewer($authUser)) {
+        if ($this->isReviewer($authUser) || $this->isAuthor($authUser)) {
             return false;
         }
 
@@ -107,7 +147,7 @@ class ReviewPolicy
 
     public function replicate(AuthUser $authUser, Review $review): bool
     {
-        if ($this->isReviewer($authUser)) {
+        if ($this->isReviewer($authUser) || $this->isAuthor($authUser)) {
             return false;
         }
 
@@ -116,7 +156,7 @@ class ReviewPolicy
 
     public function reorder(AuthUser $authUser): bool
     {
-        if ($this->isReviewer($authUser)) {
+        if ($this->isReviewer($authUser) || $this->isAuthor($authUser)) {
             return false;
         }
 

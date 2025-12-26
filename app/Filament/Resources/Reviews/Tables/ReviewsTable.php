@@ -6,10 +6,15 @@ use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Storage;
 
 class ReviewsTable
@@ -18,11 +23,6 @@ class ReviewsTable
     {
         return $table
             ->columns([
-                // =====================
-                // COVER (ambil dari publication via publicationVersion)
-                // UBAH relasinya jika berbeda:
-                // publicationVersion.publication.cover_image_path
-                // =====================
                 ImageColumn::make('publicationVersion.publication.cover_image_path')
                     ->label('')
                     ->disk('public')
@@ -33,7 +33,6 @@ class ReviewsTable
                         'class' => 'object-cover rounded-md ring-1 ring-gray-200 dark:ring-gray-700',
                     ]),
 
-                // VERSION
                 TextColumn::make('publicationVersion.display_label')
                     ->label('Version')
                     ->sortable()
@@ -43,7 +42,6 @@ class ReviewsTable
                     ->words(8, end: '...')
                     ->tooltip(fn(TextColumn $column): ?string => (string) $column->getState()),
 
-                // REVIEWER
                 TextColumn::make('reviewer.name')
                     ->label('Reviewer')
                     ->searchable()
@@ -53,7 +51,6 @@ class ReviewsTable
                     ->words(6, end: '...')
                     ->tooltip(fn(TextColumn $column): ?string => (string) $column->getState()),
 
-                // DECISION
                 TextColumn::make('decision')
                     ->label('Decision')
                     ->badge()
@@ -71,13 +68,61 @@ class ReviewsTable
                     })
                     ->sortable(),
 
-                // REVIEWED AT
                 TextColumn::make('created_at')
                     ->label('Reviewed At')
                     ->date('d M Y')
                     ->sortable(),
+
+                TextColumn::make('deleted_at')
+                    ->label('Deleted')
+                    ->dateTime()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->defaultSort('created_at', 'desc')
+
+            ->filters([
+                TrashedFilter::make(), // tampilkan: Without trashed / With trashed / Only trashed [web:176]
+
+                SelectFilter::make('decision')
+                    ->label('Decision')
+                    ->options([
+                        'revision_required' => 'Revision Required',
+                        'accepted' => 'Accepted',
+                        'rejected' => 'Rejected',
+                    ])
+                    ->preload(),
+
+                // Filter reviewer (relasi)
+                SelectFilter::make('reviewer_id')
+                    ->label('Reviewer')
+                    ->relationship('reviewer', 'name')
+                    ->searchable()
+                    ->preload(),
+
+                // Filter by publication status (relasi jauh)
+                // ini pakai whereHas karena status ada di publication
+                SelectFilter::make('publication_status')
+                    ->label('Publication Status')
+                    ->options([
+                        'draft' => 'Draft',
+                        'submitted' => 'Submitted',
+                        'in_review' => 'In Review',
+                        'revision_required' => 'Revision Required',
+                        'accepted' => 'Accepted',
+                        'rejected' => 'Rejected',
+                        'published' => 'Published',
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        $value = $data['value'] ?? null;
+
+                        if (blank($value)) {
+                            return $query;
+                        }
+
+                        return $query->whereHas('publicationVersion.publication', fn(Builder $q) => $q->where('status', $value));
+                    }),
+            ])
+
             ->recordActions([
                 ViewAction::make('preview')
                     ->label('View')
@@ -101,7 +146,7 @@ class ReviewsTable
 
                         abort_unless($attachment && filled($attachment->file_path), 404);
 
-                        return \Illuminate\Support\Facades\Storage::disk('local')->download(
+                        return Storage::disk('local')->download(
                             $attachment->file_path,
                             'review-revision-' . $record->id . '.pdf'
                         );
@@ -112,10 +157,15 @@ class ReviewsTable
                     ->label('Edit')
                     ->visible(fn($record) => auth()->user()?->can('update', $record) ?? false),
             ])
+
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make()
+                        // biasanya reviewer boleh delete miliknya, tapi Anda sebelumnya matikan untuk reviewer
                         ->visible(fn() => ! (auth()->user()?->hasRole('reviewer'))),
+
+                    RestoreBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
                 ]),
             ]);
     }

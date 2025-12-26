@@ -23,6 +23,7 @@ class EditReview extends EditRecord
     {
         return [
             DeleteAction::make()
+                ->visible(fn() => ! (auth()->user()?->hasRole('author'))) // author tidak boleh delete
                 ->successNotification(
                     Notification::make()
                         ->success()
@@ -34,6 +35,11 @@ class EditReview extends EditRecord
 
     protected function afterSave(): void
     {
+        // Jika author somehow bisa masuk, jangan jalankan logic ini
+        if (auth()->user()?->hasRole('author')) {
+            return;
+        }
+
         $review = $this->record;
 
         if ($review->decision === 'revision_required') {

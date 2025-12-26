@@ -14,10 +14,16 @@ class ListReviews extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            CreateAction::make(),
+            // Author tidak boleh membuat review
+            CreateAction::make()
+                ->visible(fn() => ! (auth()->user()?->hasRole('author'))),
         ];
     }
 
+    /**
+     * Reviewer: hanya review miliknya (reviewer_id).
+     * Author: hanya review untuk publication yang memiliki authors.user_id = auth user.
+     */
     protected function getTableQuery(): Builder
     {
         $query = parent::getTableQuery();
@@ -25,8 +31,13 @@ class ListReviews extends ListRecords
         $user = auth()->user();
 
         if ($user?->hasRole('reviewer')) {
-            // Hanya tampilkan review yang reviewer_id = user login
-            $query->where('reviewer_id', $user->id);
+            return $query->where('reviewer_id', $user->id);
+        }
+
+        if ($user?->hasRole('author')) {
+            return $query->whereHas('publicationVersion.publication.authors', function (Builder $q) use ($user) {
+                $q->where('authors.user_id', $user->id);
+            });
         }
 
         return $query;

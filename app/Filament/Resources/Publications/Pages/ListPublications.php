@@ -19,6 +19,25 @@ class ListPublications extends ListRecords
         ];
     }
 
+    /**
+     * Author (role) hanya boleh melihat publication yang punya author.user_id = user login.
+     * Ini sesuai konsep Anda: Author adalah entitas penulis milik user. [web:138]
+     */
+    protected function getTableQuery(): Builder
+    {
+        $query = parent::getTableQuery();
+
+        $user = auth()->user();
+
+        if ($user?->hasRole('author')) {
+            $query->whereHas('authors', function (Builder $q) use ($user) {
+                $q->where('authors.user_id', $user->id);
+            });
+        }
+
+        return $query;
+    }
+
     public function getTabs(): array
     {
         return [
