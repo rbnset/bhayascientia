@@ -4,7 +4,7 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 $title = $get('title') ?? '-';
 $status = $get('status') ?? '-';
-$abstract = $get('abstract');
+$abstract = $get('abstract'); // dari RichEditor (default: HTML string)
 
 $authorPubs = collect($get('authorPublications') ?? [])
 ->filter(fn ($row) => is_array($row) && ! empty($row['author_id']))
@@ -33,13 +33,10 @@ $statusLabel = strtoupper(str_replace('_', ' ', $status));
 
 /**
 * COVER URL RESOLVER:
-* - Create mode (belum submit): biasanya TemporaryUploadedFile => pakai temporaryUrl()
-* - Edit mode / sudah tersimpan: string path => Storage::disk('public')->url()
-* - Kalau state berupa array (mis. multiple): ambil item pertama
+* - Create mode: TemporaryUploadedFile => temporaryUrl()
+* - Edit mode: string path => Storage::disk('public')->url()
 */
 $coverState = $get('cover_image_path');
-
-$coverUrl = null;
 
 $resolveCoverUrl = function ($value) {
 if ($value instanceof TemporaryUploadedFile) {
@@ -53,11 +50,9 @@ return Storage::disk('public')->url($value);
 return null;
 };
 
-if (is_array($coverState)) {
-$coverUrl = $resolveCoverUrl($coverState[0] ?? null);
-} else {
-$coverUrl = $resolveCoverUrl($coverState);
-}
+$coverUrl = is_array($coverState)
+? $resolveCoverUrl($coverState[0] ?? null)
+: $resolveCoverUrl($coverState);
 
 // Manuscript (dari record publication saat edit/view)
 $publication = $record ?? null;
@@ -69,6 +64,9 @@ $latestVersion = $publication?->versions()
 $downloadUrl = $latestVersion
 ? route('manuscripts.download', $latestVersion)
 : null;
+
+// Render abstract: tampilkan HTML (bold/italic/list) + sanitasi
+$abstractHtml = filled($abstract) ? str($abstract)->sanitizeHtml() : null;
 @endphp
 
 <div class="bookx">
@@ -182,8 +180,14 @@ $downloadUrl = $latestVersion
 
             <div class="bookx-section">
                 <div class="bookx-section-title">Abstract / Summary</div>
-                <div class="bookx-abstract">
-                    {{ filled($abstract) ? $abstract : '-' }}
+
+                {{-- Penting: pakai {!! !!} supaya bold/italic/list dirender sebagai HTML --}}
+                <div class="bookx-abstract fi-prose">
+                    @if($abstractHtml)
+                    {!! $abstractHtml !!}
+                    @else
+                    <span class="bookx-muted">-</span>
+                    @endif
                 </div>
             </div>
         </div>
@@ -260,7 +264,6 @@ $downloadUrl = $latestVersion
         font-size: 0.9rem;
     }
 
-    /* NEW: actions under cover */
     .bookx-cover-actions {
         padding: 0.85rem;
         background: #ffffff;
@@ -406,15 +409,42 @@ $downloadUrl = $latestVersion
         font-size: 0.82rem;
     }
 
+    /* Abstract: render HTML + justify + spacing proporsional */
     .bookx-abstract {
         background: #fff7ed;
         border: 1px solid #fed7aa;
         border-radius: 14px;
-        padding: 1rem;
+        padding: 1rem 1.1rem;
         color: #111827;
         font-size: 0.95rem;
-        line-height: 1.65;
-        white-space: pre-wrap;
+        line-height: 1.8;
+        text-align: justify;
+        text-justify: inter-word;
+    }
+
+    /* Rapikan jarak elemen RichEditor (p, ul, ol, headings) */
+    .bookx-abstract :where(p, ul, ol, blockquote, h1, h2, h3, h4, pre, table) {
+        margin-top: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .bookx-abstract :where(ul, ol) {
+        padding-left: 1.25rem;
+    }
+
+    .bookx-abstract :where(li) {
+        margin: 0.25rem 0;
+    }
+
+    .bookx-abstract :where(blockquote) {
+        border-left: 3px solid rgba(249, 115, 22, 0.35);
+        padding-left: 0.9rem;
+        color: #374151;
+    }
+
+    .bookx-abstract :where(a) {
+        color: #c2410c;
+        text-decoration: underline;
     }
 
     @media (max-width: 860px) {
