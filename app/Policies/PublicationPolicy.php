@@ -17,18 +17,33 @@ class PublicationPolicy
         return method_exists($user, 'hasRole') && $user->hasRole('author');
     }
 
-    private function isOwner(AuthUser $user, Publication $publication): bool
+    private function isReviewerRole(AuthUser $user): bool
     {
-        // Sesuai model Anda: creator() pakai FK created_by
-        return (int) ($publication->created_by ?? 0) === (int) $user->getAuthIdentifier();
+        return method_exists($user, 'hasRole') && $user->hasRole('reviewer');
+    }
+
+    /**
+     * Ownership versi opsi A:
+     * user login dianggap "pemilik" publication kalau dia punya Author record (authors.user_id = user_id login)
+     * yang terhubung ke publication lewat pivot author_publication.
+     */
+    private function isOwnerViaAuthors(AuthUser $user, Publication $publication): bool
+    {
+        return $publication->authors()
+            ->where('authors.user_id', $user->getAuthIdentifier())
+            ->exists();
     }
 
     public function viewAny(AuthUser $authUser): bool
     {
-        // Role author boleh masuk halaman index,
-        // tapi record yang tampil dibatasi oleh query di ListPublications.
+        // Author boleh masuk halaman index, data difilter lewat ListPublications.
         if ($this->isAuthorRole($authUser)) {
             return true;
+        }
+
+        // Reviewer biasanya boleh lihat list (tergantung permission Anda).
+        if ($this->isReviewerRole($authUser)) {
+            return $authUser->can('ViewAny:Publication');
         }
 
         return $authUser->can('ViewAny:Publication');
@@ -36,9 +51,8 @@ class PublicationPolicy
 
     public function view(AuthUser $authUser, Publication $publication): bool
     {
-        // Author hanya boleh lihat publication milik user sendiri
         if ($this->isAuthorRole($authUser)) {
-            return $this->isOwner($authUser, $publication);
+            return $this->isOwnerViaAuthors($authUser, $publication);
         }
 
         return $authUser->can('View:Publication');
@@ -51,20 +65,22 @@ class PublicationPolicy
 
     public function update(AuthUser $authUser, Publication $publication): bool
     {
-        // Author hanya boleh update publication milik sendiri
+        // Author boleh edit publication miliknya sendiri (versi opsi A)
         if ($this->isAuthorRole($authUser)) {
-            return $this->isOwner($authUser, $publication)
+            return $this->isOwnerViaAuthors($authUser, $publication)
                 && $authUser->can('Update:Publication');
         }
 
+        // Reviewer logic update Anda sudah dibatasi di EditPublication (mutateFormDataBeforeSave),
+        // tapi tetap perlu permission Update:Publication agar bisa akses halaman edit.
         return $authUser->can('Update:Publication');
     }
 
     public function delete(AuthUser $authUser, Publication $publication): bool
     {
-        // Kalau Anda ingin author juga dibatasi hanya bisa delete miliknya:
+        // Jika ingin author boleh delete publication miliknya sendiri:
         if ($this->isAuthorRole($authUser)) {
-            return $this->isOwner($authUser, $publication)
+            return $this->isOwnerViaAuthors($authUser, $publication)
                 && $authUser->can('Delete:Publication');
         }
 
