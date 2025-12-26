@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Publications\Pages;
 
 use App\Filament\Resources\Publications\PublicationResource;
+use App\Filament\Resources\Publications\Widgets\PublicationStatusBanner;
 use App\Filament\Resources\PublicationVersionResource;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Checkbox;
@@ -18,6 +19,13 @@ class EditPublication extends EditRecord
     protected function isReviewer(): bool
     {
         return (bool) auth()->user()?->hasRole('reviewer');
+    }
+
+    protected function getHeaderWidgets(): array
+    {
+        return [
+            PublicationStatusBanner::class,
+        ];
     }
 
     /**
