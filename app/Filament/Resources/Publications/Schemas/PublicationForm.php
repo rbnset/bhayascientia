@@ -20,6 +20,7 @@ use Filament\Schemas\Components\Wizard\Step;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components\Utilities\Get;
 use Illuminate\Support\Str;
+use Filament\Schemas\Components\Utilities\Set;
 
 class PublicationForm
 {
@@ -360,15 +361,30 @@ class PublicationForm
                                         ])
                                         ->default('draft')
                                         ->required()
-                                        // author tidak boleh ubah status (sesuai kode Anda)
+                                        ->live() // penting: supaya published_at langsung muncul saat status berubah [web:436]
+                                        ->afterStateUpdated(function (Set $set, Get $get, ?string $state) {
+                                            // Kalau status jadi published dan published_at masih kosong, isi otomatis.
+                                            if ($state === 'published' && blank($get('published_at'))) {
+                                                $set('published_at', now());
+                                            }
+
+                                            // Optional: kalau status berubah dari published ke selain published, kosongkan tanggalnya.
+                                            if ($state !== 'published') {
+                                                $set('published_at', null);
+                                            }
+                                        })
+                                        // author tidak boleh ubah status (sesuai kebutuhan Anda)
                                         ->disabled(fn() => auth()->user()?->hasRole('author'))
                                         ->dehydrated(),
 
                                     DateTimePicker::make('published_at')
                                         ->label('Published At')
-                                        ->visible(fn($get) => $get('status') === 'published')
-                                        ->disabled(fn() => self::isReviewer()),
-                                ]),
+                                        // lebih aman pakai hidden/visible yang bergantung pada Get
+                                        ->visible(fn(Get $get) => $get('status') === 'published')
+                                        // reviewer boleh mengisi published_at, author tidak
+                                        ->disabled(fn() => auth()->user()?->hasRole('author'))
+                                        ->dehydrated(fn(Get $get) => $get('status') === 'published'),
+                                ])
                         ]),
 
                     Step::make('Preview')

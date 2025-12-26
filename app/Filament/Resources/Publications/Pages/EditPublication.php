@@ -5,7 +5,6 @@ namespace App\Filament\Resources\Publications\Pages;
 use App\Filament\Resources\Publications\PublicationResource;
 use App\Filament\Resources\Publications\Widgets\PublicationStatusBanner;
 use App\Filament\Resources\PublicationVersionResource;
-use App\Filament\Resources\Reviews\ReviewResource;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\FileUpload;
@@ -51,14 +50,48 @@ class EditPublication extends EditRecord
 
     protected function afterSave(): void
     {
-        // Reviewer tidak perlu menjalankan logika relasi authors setelah save
+        /**
+         * =========================
+         * 1) Reviewer flow: kirim notif published ke author terkait
+         * =========================
+         */
         if ($this->isReviewer()) {
+            // Kirim notifikasi hanya jika status published dan ada perubahan status/published_at
+            if (
+                $this->record->status === 'published'
+                && ($this->record->wasChanged('status') || $this->record->wasChanged('published_at')) // after-save change check [web:157]
+            ) {
+                $authorUserIds = $this->record->authors()
+                    ->pluck('authors.user_id')
+                    ->filter()
+                    ->unique()
+                    ->values();
+
+                if ($authorUserIds->isNotEmpty()) {
+                    $authors = \App\Models\User::query()
+                        ->whereIn('id', $authorUserIds)
+                        ->get();
+
+                    \Illuminate\Support\Facades\Notification::send(
+                        $authors,
+                        new \App\Notifications\PublicationScheduledToPublish($this->record)
+                    );
+                }
+            }
+
+            // Reviewer tidak perlu menjalankan logika relasi authors setelah save
             return;
         }
 
-        // NOTE:
-        // Di model Publication Anda yang terakhir Anda kirim, TIDAK ADA relasi creator / kolom created_by.
-        // Jika Anda masih memakai $this->record->creator di project, pastikan relasinya memang ada.
+        /**
+         * =========================
+         * 2) Non-reviewer flow: sync authors (kode Anda)
+         * =========================
+         *
+         * NOTE:
+         * Di model Publication yang Anda kirim, TIDAK ADA relasi creator / created_by.
+         * Jika di project Anda memang ada $this->record->creator, berarti aman.
+         */
         $creator = $this->record->creator ?? null;
 
         if (! $creator) {
@@ -142,9 +175,7 @@ class EditPublication extends EditRecord
                         'status' => 'submitted',
                     ]);
 
-                    // =========================
                     // Notify all reviewers (submit pertama kali)
-                    // =========================
                     $reviewers = \App\Models\User::role('reviewer')->get();
 
                     \Illuminate\Support\Facades\Notification::send(
@@ -197,11 +228,7 @@ class EditPublication extends EditRecord
                         'status' => 'submitted',
                     ]);
 
-                    // =========================
                     // Notify reviewers (author submit revisi)
-                    // Penerima = reviewer yang pernah membuat review untuk publication ini
-                    // Action notif diarahkan ke review MILIK reviewer penerima
-                    // =========================
                     $publication = $this->record;
 
                     $reviewerIds = $publication->reviews()
@@ -221,8 +248,6 @@ class EditPublication extends EditRecord
                                 ->orderByDesc('reviews.id')
                                 ->value('reviews.id');
 
-
-                            // Safety: kalau reviewer belum punya review (harusnya tidak), skip action URL
                             $reviewer->notify(
                                 new \App\Notifications\AuthorSubmittedRevision(
                                     publication: $publication,
