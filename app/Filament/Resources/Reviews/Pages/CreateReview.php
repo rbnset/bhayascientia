@@ -22,10 +22,25 @@ class CreateReview extends CreateRecord
     {
         $review = $this->record;
 
-        if ($review->decision === 'revision_required') {
-            $review->publicationVersion?->publication?->update([
-                'status' => 'revision_required',
-            ]);
+        $publication = $review->publicationVersion?->publication;
+
+        if (! $publication) {
+            return;
         }
+
+        $newStatus = match ($review->decision) {
+            'revision_required' => 'revision_required',
+            'accepted' => 'accepted',
+            'rejected' => 'rejected',
+            default => null,
+        };
+
+        if (! $newStatus) {
+            return;
+        }
+
+        $publication->update([
+            'status' => $newStatus,
+        ]);
     }
 }
