@@ -2,11 +2,12 @@
 
 namespace App\Filament\Resources\Reviews\Tables;
 
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
-use Filament\Actions\Action;
+use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Storage;
@@ -17,53 +18,81 @@ class ReviewsTable
     {
         return $table
             ->columns([
+                // =====================
+                // COVER (ambil dari publication via publicationVersion)
+                // UBAH relasinya jika berbeda:
+                // publicationVersion.publication.cover_image_path
+                // =====================
+                ImageColumn::make('publicationVersion.publication.cover_image_path')
+                    ->label('')
+                    ->disk('public')
+                    ->defaultImageUrl(url('/images/placeholder-publication.png'))
+                    ->width(44)
+                    ->height(64)
+                    ->extraImgAttributes([
+                        'class' => 'object-cover rounded-md ring-1 ring-gray-200 dark:ring-gray-700',
+                    ]),
+
+                // VERSION
                 TextColumn::make('publicationVersion.display_label')
                     ->label('Version')
                     ->sortable()
-                    ->searchable(),
+                    ->searchable()
+                    ->wrap()
+                    ->lineClamp(2)
+                    ->words(8, end: '...')
+                    ->tooltip(fn(TextColumn $column): ?string => (string) $column->getState()),
 
+                // REVIEWER
                 TextColumn::make('reviewer.name')
                     ->label('Reviewer')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->wrap()
+                    ->lineClamp(2)
+                    ->words(6, end: '...')
+                    ->tooltip(fn(TextColumn $column): ?string => (string) $column->getState()),
 
+                // DECISION
                 TextColumn::make('decision')
                     ->label('Decision')
                     ->badge()
-                    ->colors([
-                        'warning' => 'revision_required',
-                        'success' => 'accepted',
-                        'danger'  => 'rejected',
-                    ])
+                    ->color(fn(?string $state): string => match ($state) {
+                        'revision_required' => 'warning',
+                        'accepted' => 'success',
+                        'rejected' => 'danger',
+                        default => 'gray',
+                    })
                     ->formatStateUsing(fn($state) => match ($state) {
                         'revision_required' => 'Revision Required',
                         'accepted' => 'Accepted',
                         'rejected' => 'Rejected',
-                        default => '-',
-                    }),
+                        default => '—',
+                    })
+                    ->sortable(),
 
+                // REVIEWED AT
                 TextColumn::make('created_at')
                     ->label('Reviewed At')
-                    ->date()
+                    ->date('d M Y')
                     ->sortable(),
             ])
+            ->defaultSort('created_at', 'desc')
             ->recordActions([
                 ViewAction::make('preview')
-                    ->label('Lihat')
+                    ->label('View')
                     ->icon('heroicon-o-eye')
                     ->slideOver()
                     ->modalHeading('Review detail')
                     ->modalSubmitAction(false)
-                    ->modalCancelActionLabel('Tutup')
+                    ->modalCancelActionLabel('Close')
                     ->modalContent(fn($record) => view('filament.reviews.preview', ['review' => $record])),
 
-                // ACTION BARU: download revisi / annotated PDF dari reviewer
                 Action::make('download_revision')
-                    ->label('Download Revisi')
+                    ->label('Download revision')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('success')
                     ->visible(function ($record): bool {
-                        // ambil attachment terbaru (atau first, terserah aturanmu)
                         $attachment = $record->attachments()->latest()->first();
                         return filled($attachment?->file_path);
                     })
@@ -72,14 +101,10 @@ class ReviewsTable
 
                         abort_unless($attachment && filled($attachment->file_path), 404);
 
-                        // Jika file kamu disimpan di disk 'local' (private):
                         return Storage::disk('local')->download(
                             $attachment->file_path,
                             'review-revision-' . $record->id . '.pdf'
                         );
-
-                        // Kalau ternyata file disimpan di disk public, pakai ini:
-                        // return Storage::disk('public')->download($attachment->file_path, 'review-revision-' . $record->id . '.pdf');
                     }),
 
                 EditAction::make()

@@ -21,17 +21,20 @@ class PublicationsTable
         return $table
             ->columns([
                 // =====================
-                // COVER (SQUARE)
+                // COVER (BOOK PORTRAIT)
                 // =====================
                 ImageColumn::make('cover_image_path')
                     ->label('')
                     ->disk('public')
-                    ->square() // kotak 1:1 [web:499]
-                    ->size(44)
-                    ->defaultImageUrl(url('/images/placeholder-publication.png')),
+                    ->defaultImageUrl(url('/images/placeholder-publication.png'))
+                    ->width(44)
+                    ->height(64)
+                    ->extraImgAttributes([
+                        'class' => 'object-cover rounded-md ring-1 ring-gray-200 dark:ring-gray-700',
+                    ]),
 
                 // =====================
-                // TITLE (PRIMARY)
+                // TITLE + TYPE (below)
                 // =====================
                 TextColumn::make('title')
                     ->label('Title')
@@ -39,10 +42,15 @@ class PublicationsTable
                     ->sortable()
                     ->weight('semibold')
                     ->wrap()
+                    ->lineClamp(3) // max 3 baris [page:8]
+                    ->words(14, end: '...') // potong per kata + "..." [page:8]
+                    // hover: tampilkan judul lengkap (tanpa syarat) [page:8]
+                    ->tooltip(fn(TextColumn $column): ?string => (string) $column->getState())
+                    // type publication tetap tampil
                     ->description(fn($record) => $record->publicationType?->name),
 
                 // =====================
-                // AUTHORS (RELATION)
+                // AUTHORS
                 // =====================
                 TextColumn::make('authors.name')
                     ->label('Authors')
@@ -71,20 +79,21 @@ class PublicationsTable
                     ->toggleable(),
 
                 // =====================
-                // STATUS
+                // STATUS (OWN COLUMN AGAIN)
                 // =====================
                 TextColumn::make('status')
                     ->label('Status')
-                    ->badge()
-                    ->colors([
-                        'gray' => 'draft',
-                        'warning' => 'submitted',
-                        'info' => 'in_review',
-                        'danger' => 'revision_required',
-                        'success' => ['accepted', 'published'],
-                        'danger' => 'rejected',
-                    ])
-                    ->formatStateUsing(fn($state) => str($state)->headline())
+                    ->badge() // badge untuk status [page:8]
+                    ->color(fn(string $state): string => match ($state) {
+                        'draft' => 'gray',
+                        'submitted' => 'warning',
+                        'in_review' => 'info',
+                        'revision_required' => 'danger',
+                        'accepted', 'published' => 'success',
+                        'rejected' => 'danger',
+                        default => 'gray',
+                    })
+                    ->formatStateUsing(fn($state) => str($state)->headline()) // formatting teks [page:8]
                     ->sortable(),
 
                 // =====================
@@ -125,24 +134,23 @@ class PublicationsTable
                     ])
                     ->preload(),
 
-                // filter relasi (lebih enak untuk admin)
                 SelectFilter::make('publication_type_id')
                     ->label('Publication Type')
                     ->relationship('publicationType', 'name')
                     ->searchable()
-                    ->preload(), // preload opsi relasi untuk UX [web:500]
+                    ->preload(),
 
                 SelectFilter::make('method_id')
                     ->label('Method')
                     ->relationship('method', 'name')
                     ->searchable()
-                    ->preload(), // preload opsi relasi untuk UX [web:500]
+                    ->preload(),
             ])
             ->recordActions([
                 ViewAction::make()
                     ->icon('heroicon-o-eye')
                     ->label('View')
-                    ->slideOver(), // cepat, tidak pindah halaman [web:265]
+                    ->slideOver(),
 
                 EditAction::make()
                     ->icon('heroicon-o-pencil-square')
