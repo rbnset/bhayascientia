@@ -11,6 +11,10 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Support\Str;
+use App\Models\User;
+use App\Notifications\PublicationSubmitted;
+use Illuminate\Support\Facades\Notification as NotificationFacade;
+
 
 class EditPublication extends EditRecord
 {
@@ -139,7 +143,17 @@ class EditPublication extends EditRecord
                         'status' => 'submitted',
                     ]);
 
-                    Notification::make()
+                    // =========================
+                    // Notify all reviewers
+                    // =========================
+                    $reviewers = \App\Models\User::role('reviewer')->get();
+
+                    \Illuminate\Support\Facades\Notification::send(
+                        $reviewers,
+                        new \App\Notifications\PublicationSubmitted($this->record)
+                    );
+
+                    \Filament\Notifications\Notification::make()
                         ->success()
                         ->title('Manuskrip berhasil dikirim')
                         ->body('Judul: ' . $this->shortTitle())
