@@ -3,6 +3,8 @@
 namespace App\Filament\Resources\Reviews\Pages;
 
 use App\Filament\Resources\Reviews\ReviewResource;
+use App\Models\User;
+use App\Notifications\ReviewDecisionForAuthor;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 
@@ -28,6 +30,7 @@ class CreateReview extends CreateRecord
             return;
         }
 
+        // 1) Sync status publication dari decision
         $newStatus = match ($review->decision) {
             'revision_required' => 'revision_required',
             'accepted' => 'accepted',
@@ -35,12 +38,30 @@ class CreateReview extends CreateRecord
             default => null,
         };
 
-        if (! $newStatus) {
+        if ($newStatus) {
+            $publication->update([
+                'status' => $newStatus,
+            ]);
+        }
+
+        // 2) Notify author user terkait publication
+        $authorUserIds = $publication->authors()
+            ->pluck('authors.user_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($authorUserIds->isEmpty()) {
             return;
         }
 
-        $publication->update([
-            'status' => $newStatus,
-        ]);
+        $recipients = User::query()
+            ->whereIn('id', $authorUserIds)
+            ->get();
+
+        \Illuminate\Support\Facades\Notification::send(
+            $recipients,
+            new ReviewDecisionForAuthor($review)
+        );
     }
 }
