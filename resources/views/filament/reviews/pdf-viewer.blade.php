@@ -33,13 +33,31 @@ $versionNumber = $version->version_number ?? '-';
             <a class="pvx-btn" href="{{ $downloadUrl }}" target="_blank" rel="noopener">
                 Download PDF
             </a>
+
+            <button class="pvx-btn" type="button" onclick="pvxFullscreen()">
+                Fullscreen
+            </button>
         </div>
     </div>
 
     <div class="pvx-frame">
-        <iframe src="{{ $pdfUrl }}" title="Manuscript PDF" loading="lazy"></iframe>
+        <iframe id="pvx-iframe" src="{{ $pdfUrl }}" title="Manuscript PDF" loading="lazy" allowfullscreen></iframe>
     </div>
 </div>
+
+<script>
+    function pvxFullscreen() {
+            const iframe = document.getElementById('pvx-iframe');
+
+            if (iframe.requestFullscreen) {
+                iframe.requestFullscreen();
+            } else if (iframe.webkitRequestFullscreen) {
+                iframe.webkitRequestFullscreen();
+            } else if (iframe.msRequestFullscreen) {
+                iframe.msRequestFullscreen();
+            }
+        }
+</script>
 
 <style>
     .pvx {
@@ -98,6 +116,7 @@ $versionNumber = $version->version_number ?? '-';
         background: #ffffff;
         border: 1px solid rgba(255, 255, 255, 0.25);
         transition: transform 0.15s ease;
+        cursor: pointer;
     }
 
     .pvx-btn:hover {
@@ -114,9 +133,9 @@ $versionNumber = $version->version_number ?? '-';
 
     .pvx-frame iframe {
         width: 100%;
-        height: 75vh;
+        height: 85vh;
+        /* lebih tinggi */
         border: 0;
     }
 </style>
-
 @endif

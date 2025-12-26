@@ -2,16 +2,19 @@
 
 namespace App\Filament\Resources\Reviews\Schemas;
 
+use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
+use Filament\Schemas\Components\Actions;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\View;
 use Filament\Schemas\Components\Wizard;
 use Filament\Schemas\Components\Wizard\Step;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Storage;
 
 class ReviewForm
 {
@@ -21,9 +24,6 @@ class ReviewForm
             ->columns(1)
             ->components([
                 Wizard::make([
-                    // =========================
-                    // STEP 1: PICK & PREVIEW
-                    // =========================
                     Step::make('Pilih naskah')
                         ->description('Pilih versi publikasi & lihat preview')
                         ->icon('heroicon-o-document-magnifying-glass')
@@ -36,12 +36,9 @@ class ReviewForm
                                         ->label('Publication Version')
                                         ->relationship(
                                             name: 'publicationVersion',
-                                            // penting: operasi create vs edit dibedakan di sini
                                             modifyQueryUsing: function (Builder $query, string $operation) {
-                                                // Selalu eager load supaya label/preview enak
                                                 $query->with('publication');
 
-                                                // Filter ketat hanya untuk CREATE
                                                 if ($operation === 'create') {
                                                     $query
                                                         ->whereHas('publication', fn($q) => $q->whereIn('status', [
@@ -64,8 +61,6 @@ class ReviewForm
                                                         ->orderByDesc('created_at');
                                                 }
 
-                                                // EDIT: jangan filter terlalu ketat,
-                                                // supaya nilai yang sudah tersimpan tetap ada di options
                                                 if ($operation === 'edit') {
                                                     $query->orderByDesc('created_at');
                                                 }
@@ -101,9 +96,6 @@ class ReviewForm
                                 ]),
                         ]),
 
-                    // =========================
-                    // STEP 2: READ & WRITE REVIEW
-                    // =========================
                     Step::make('Tulis review')
                         ->description('Baca PDF + isi catatan & komentar')
                         ->icon('heroicon-o-pencil-square')
@@ -163,33 +155,54 @@ class ReviewForm
                                 ]),
                         ]),
 
-                    // =========================
-                    // STEP 3: ATTACHMENTS & DECISION
-                    // =========================
                     Step::make('Finalisasi')
                         ->description('Upload anotasi & keputusan')
                         ->icon('heroicon-o-clipboard-document-check')
                         ->schema([
                             Section::make('Annotated Manuscript')
-                                ->description('Unggah PDF yang telah diberi catatan oleh reviewer (opsional)')
+                                ->description('Unggah PDF yang telah diberi catatan oleh reviewer (maksimal 1 file)')
                                 ->icon('heroicon-o-paper-clip')
                                 ->schema([
                                     Repeater::make('attachments')
                                         ->relationship()
+                                        ->maxItems(1)
+                                        ->defaultItems(0)
+                                        ->reorderable(false)
+                                        ->addActionLabel('Upload PDF (1x)')
+                                        ->collapsed()
+                                        ->columnSpanFull()
                                         ->schema([
                                             FileUpload::make('file_path')
                                                 ->label('Reviewed PDF')
                                                 ->acceptedFileTypes(['application/pdf'])
+                                                // SARAN: simpan private agar hanya bisa diakses lewat tombol/route yang terproteksi
+                                                ->disk('local')
+                                                ->visibility('private')
                                                 ->directory('review-attachments')
                                                 ->preserveFilenames()
-                                                ->downloadable()
-                                                ->openable()
-                                                ->required()
-                                                ->maxSize(10240),
-                                        ])
-                                        ->addActionLabel('Add PDF')
-                                        ->collapsed()
-                                        ->columnSpanFull(),
+                                                ->maxSize(10240)
+                                                // Jangan mengandalkan openable/downloadable kalau private
+                                                ->openable(false)
+                                                ->downloadable(false)
+                                                ->required(),
+                                        ]),
+
+                                    Actions::make([
+                                        Action::make('downloadAnnotatedPdf')
+                                            ->label('Download PDF reviewer')
+                                            ->icon('heroicon-o-arrow-down-tray')
+                                            ->visible(fn($record) => filled($record?->attachments?->first()?->file_path))
+                                            ->action(function ($record) {
+                                                $attachment = $record->attachments()->latest()->first();
+
+                                                abort_unless($attachment && filled($attachment->file_path), 404);
+
+                                                // TODO: tambahkan policy/authorization di sini:
+                                                // abort_unless(auth()->user()->can('downloadReviewAttachment', $record), 403);
+
+                                                return Storage::disk('local')->download($attachment->file_path);
+                                            }),
+                                    ])->columnSpanFull(),
                                 ]),
 
                             Section::make('Review Decision')
@@ -209,7 +222,7 @@ class ReviewForm
                                 ]),
                         ]),
                 ])
-                    ->persistStepInQueryString(), // ini OK, bukan penyebab invalid [web:66]
+                    ->persistStepInQueryString(),
             ]);
     }
 }

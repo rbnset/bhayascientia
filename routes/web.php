@@ -3,68 +3,65 @@
 use App\Models\PublicationVersion;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
-use App\Support\PdfWithRotation;
 
 Route::get('/manuscripts/{version}', function (PublicationVersion $version) {
-
     abort_unless(auth()->check(), 403);
 
+    $version->loadMissing('publication');
+
+    abort_unless(filled($version->pdf_file_path), 404);
+
+    // Pastikan path di DB itu RELATIF terhadap disk public, mis: "manuscripts/abc.pdf"
+    $absolutePath = Storage::disk('public')->path($version->pdf_file_path);
+
+    abort_unless(is_file($absolutePath), 404);
+
     $publication = $version->publication;
-    $path = Storage::disk('public')->path($version->pdf_file_path);
 
-    abort_unless(file_exists($path), 404);
+    // Buat PDF hasil watermark/rotation lalu ambil sebagai STRING
+    $pdf = new \App\Support\PdfWithRotation();
+    $pageCount = $pdf->setSourceFile($absolutePath);
 
-    return response()->stream(function () use ($path, $publication) {
+    for ($pageNo = 1; $pageNo <= $pageCount; $pageNo++) {
+        $tplId = $pdf->importPage($pageNo);
+        $size = $pdf->getTemplateSize($tplId);
 
-        $pdf = new \App\Support\PdfWithRotation();
-        $pageCount = $pdf->setSourceFile($path);
+        $pdf->AddPage($size['orientation'], [$size['width'], $size['height']]);
+        $pdf->useTemplate($tplId);
 
-        for ($pageNo = 1; $pageNo <= $pageCount; $pageNo++) {
+        if (in_array($publication->status, ['submitted', 'revision_required'])) {
+            $pdf->SetFont('Helvetica', 'B', 40);
+            $pdf->SetTextColor(210, 210, 210);
 
-            $tplId = $pdf->importPage($pageNo);
-            $size = $pdf->getTemplateSize($tplId);
+            $text = strtoupper(str_replace('_', ' ', $publication->status));
 
-            $pdf->AddPage($size['orientation'], [$size['width'], $size['height']]);
-            $pdf->useTemplate($tplId);
-
-            if (in_array($publication->status, [
-                'submitted',
-                'revision_required',
-            ])) {
-
-                $pdf->SetFont('Helvetica', 'B', 40);
-                $pdf->SetTextColor(210, 210, 210);
-
-                $text = strtoupper(str_replace('_', ' ', $publication->status));
-
-                $pdf->RotatedText(
-                    $size['width'] / 2 - 80,
-                    $size['height'] / 2,
-                    $text,
-                    45
-                );
-            }
+            $pdf->RotatedText(
+                $size['width'] / 2 - 80,
+                $size['height'] / 2,
+                $text,
+                45
+            );
         }
+    }
 
-        $pdf->Output('I');
-    }, 200, [
+    // 'S' = return as string (lebih aman untuk Laravel response)
+    $content = $pdf->Output('S');
+
+    return response($content, 200, [
         'Content-Type' => 'application/pdf',
         'Content-Disposition' => 'inline; filename="manuscript.pdf"',
+        'Content-Length' => strlen($content),
+        'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
     ]);
 })->name('manuscripts.view');
 
-
-/**
- * NEW: download asli file PDF (tanpa watermark/rotation), langsung download.
- */
 Route::get('/manuscripts/{version}/download', function (PublicationVersion $version) {
-
     abort_unless(auth()->check(), 403);
 
-    abort_unless($version->pdf_file_path, 404);
+    abort_unless(filled($version->pdf_file_path), 404);
 
     return Storage::disk('public')->download(
         $version->pdf_file_path,
-        'manuscript-v' . $version->version_number . '.pdf'
+        'manuscript-v' . ($version->version_number ?? 'x') . '.pdf'
     );
 })->name('manuscripts.download');
