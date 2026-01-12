@@ -10,5 +10,6 @@
     <x-sections.featured-tabs />
     <x-sections.testimoni />
     <x-sections.coming-soon />
+    <x-sections.faq />
 </section>
 @endsection

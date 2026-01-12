@@ -5,6 +5,7 @@ import { initVideoModal } from "./modal-video";
 import { initStepsSection } from "./steps";
 import { initFeaturedTabs } from "./featured-tabs";
 import { initComingSoon } from "./coming-soon";
+import { initFaqAccordion } from "./faq";
 
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -13,4 +14,5 @@ document.addEventListener("DOMContentLoaded", () => {
     initStepsSection();
     initFeaturedTabs();
     initComingSoon();
+    initFaqAccordion();
 });
