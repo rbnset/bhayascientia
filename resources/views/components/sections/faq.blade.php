@@ -109,9 +109,10 @@ if ($defaultOpen < 0 || $defaultOpen>= count($items)) $defaultOpen = -1;
                     $open = ($defaultOpen === $i);
                     @endphp
 
-                    <div class="rounded-2xl bg-white border border-[#EEF0F7]">
-                        <button type="button" id="{{ $btnId }}"
-                            class="accordion-button gap-4 p-5 sm:p-6 rounded-2xl flex w-full items-center justify-between text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]"
+                    <div
+                        class="accordion-item rounded-2xl bg-white border border-[#EEF0F7] {{ $open ? 'is-open' : '' }}">
+                        <button type="button" id="{{ $btnId }}" class="accordion-button gap-4 p-5 sm:p-6 rounded-2xl flex w-full items-center justify-between text-left
+               focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]"
                             aria-expanded="{{ $open ? 'true' : 'false' }}" aria-controls="{{ $panelId }}"
                             data-accordion="{{ $panelId }}" data-index="{{ $i }}">
                             <span class="font-bold text-base sm:text-lg text-[#111827]">
@@ -119,22 +120,26 @@ if ($defaultOpen < 0 || $defaultOpen>= count($items)) $defaultOpen = -1;
                             </span>
 
                             <span
-                                class="arrow h-9 w-9 flex shrink-0 items-center justify-center rounded-full bg-[#F4F6FB]">
+                                class="accordion-arrow h-9 w-9 flex shrink-0 items-center justify-center rounded-full bg-[#F4F6FB]">
                                 <img src="{{ asset($arrowIcon) }}" alt="" aria-hidden="true"
                                     class="h-5 w-5 transition-transform duration-300 {{ $open ? 'rotate-180' : '' }}" />
                             </span>
                         </button>
 
+                        {{-- Animated panel wrapper (grid trick) --}}
                         <div id="{{ $panelId }}"
                             class="accordion-content px-5 sm:px-6 pb-5 sm:pb-6 {{ $open ? '' : 'hidden' }}"
                             role="region" aria-labelledby="{{ $btnId }}">
-                            <p class="text-sm sm:text-base leading-7 text-[#6B7280]">
-                                {{ $it['a'] ?? '' }}
-                            </p>
+                            <div class="accordion-inner">
+                                <p class="text-sm sm:text-base leading-7 text-[#6B7280]">
+                                    {{ $it['a'] ?? '' }}
+                                </p>
+                            </div>
                         </div>
                     </div>
                     @endforeach
                 </div>
+
             </div>
         </div>
 

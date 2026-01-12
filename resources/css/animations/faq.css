@@ -1,0 +1,61 @@
+@layer utilities {
+    /* Panel animation pakai grid-rows (smooth) */
+    .accordion-content {
+        display: grid;
+        grid-template-rows: 0fr;
+        overflow: hidden;
+    }
+    .accordion-content .accordion-inner {
+        overflow: hidden;
+    }
+
+    /* state open */
+    .accordion-item.is-open .accordion-content {
+        grid-template-rows: 1fr;
+    }
+
+    /* microinteraction: hover/focus */
+    .accordion-item {
+        transition: border-color 200ms ease, box-shadow 200ms ease,
+            transform 120ms ease;
+    }
+    .accordion-item:hover {
+        border-color: rgba(255, 107, 24, 0.35);
+    }
+    .accordion-item:focus-within {
+        border-color: rgba(255, 107, 24, 0.6);
+        box-shadow: 0 0 0 3px rgba(255, 107, 24, 0.18);
+    }
+
+    /* pressed feedback (dari JS) */
+    .accordion-button.is-pressing {
+        transform: translateY(1px);
+    }
+
+    /* arrow microanimation */
+    .accordion-arrow {
+        transition: background-color 200ms ease, transform 200ms ease;
+    }
+    .accordion-item.is-open .accordion-arrow {
+        background-color: rgba(255, 107, 24, 0.12); /* subtle */
+    }
+
+    /* Motion preferences: matikan animasi jika reduce motion */
+    @media (prefers-reduced-motion: reduce) {
+        .accordion-item,
+        .accordion-content,
+        .accordion-arrow,
+        .accordion-button,
+        .accordion-button * {
+            transition: none !important;
+            animation: none !important;
+            transform: none !important;
+        }
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+        .accordion-content {
+            transition: grid-template-rows 260ms ease;
+        }
+    }
+}
