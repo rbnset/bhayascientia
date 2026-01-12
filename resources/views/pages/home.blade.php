@@ -6,5 +6,7 @@
 <section class="mt-10 sm:mt-12">
     <x-hero.home badge-icon="assets/images/icons/crown.svg" badge-text="Bantu Naskahmu Naik Kelas."
         youtube-id="rJQOQCe30EY" />
+    <x-sections.steps />
+
 </section>
 @endsection

@@ -1,0 +1,60 @@
+@layer utilities {
+    /* Microinteraction hover/focus (selalu boleh aktif) */
+    .step-card {
+        transition: transform 200ms ease, box-shadow 200ms ease,
+            border-color 200ms ease;
+        will-change: transform;
+    }
+    .step-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 18px 45px rgba(17, 24, 39, 0.12);
+        border-color: rgba(255, 107, 24, 0.25);
+    }
+    .step-card:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 4px rgba(255, 107, 24, 0.18),
+            0 18px 45px rgba(17, 24, 39, 0.1);
+        border-color: rgba(255, 107, 24, 0.35);
+        transform: translateY(-2px);
+    }
+    .step-icon {
+        transition: transform 200ms ease, filter 200ms ease;
+    }
+    .step-card:hover .step-icon,
+    .step-card:focus-visible .step-icon {
+        transform: scale(1.04);
+        filter: drop-shadow(0 10px 20px rgba(255, 107, 24, 0.25));
+    }
+
+    /* Reveal: hanya berjalan setelah "armed" dan saat sudah inview */
+    @media (prefers-reduced-motion: no-preference) {
+        /* default: tampil normal */
+        [data-step-item] {
+            opacity: 1;
+            transform: none;
+            transition: none;
+        }
+
+        /* armed: disiapkan untuk animasi (baru disembunyikan) */
+        [data-steps-section].is-armed [data-step-item] {
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 450ms ease, transform 450ms ease;
+            transition-delay: calc(var(--stagger, 0) * 90ms);
+        }
+
+        /* inview: tampil */
+        [data-steps-section].is-inview [data-step-item] {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        [data-step-item] {
+            opacity: 1 !important;
+            transform: none !important;
+            transition: none !important;
+        }
+    }
+}
