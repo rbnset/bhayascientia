@@ -51,7 +51,7 @@ $defaultOpen = is_numeric($defaultOpen) ? (int) $defaultOpen : -1;
 if ($defaultOpen < 0 || $defaultOpen>= count($items)) $defaultOpen = -1;
     @endphp
 
-    <section id="faq" class="pt-12 mt-10 sm:mt-12" data-faq="{{ $uid }}">
+    <section id="faq" class="pt-12 pb-16 mt-10 sm:mt-12 sm:pb-16" data-faq="{{ $uid }}">
         <div class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px]">
             <div class="text-center">
                 <p

@@ -22,9 +22,11 @@
 <body class="m-0 bg-F8F9FC font-Poppins text-0B0B0B">
     <x-navbar />
 
-    <main class="pb-16 mt-10 sm:mt-14 sm:pb-20">
+    <main class="mt-10 sm:mt-14">
         @yield('content')
     </main>
+
+    <x-layouts.footer />
 
     @stack('scripts')
 </body>
