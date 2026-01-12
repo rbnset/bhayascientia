@@ -1,0 +1,65 @@
+@layer utilities {
+    @media (prefers-reduced-motion: no-preference) {
+        .nav-hover-lift {
+            transition: transform 200ms ease, filter 200ms ease;
+        }
+        .nav-hover-lift:hover {
+            transform: translateY(-1px);
+            filter: drop-shadow(0 10px 20px rgba(255, 107, 24, 0.2));
+        }
+
+        .nav-overlay-enter {
+            animation: navOverlayEnter 160ms ease-out both;
+        }
+
+        .nav-menu-enter {
+            animation: navMenuEnter 220ms ease-out both;
+            transform-origin: top;
+        }
+
+        .nav-mobile-item-enter {
+            animation: navItemEnter 240ms ease-out both;
+        }
+
+        @keyframes navOverlayEnter {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes navMenuEnter {
+            from {
+                opacity: 0;
+                transform: translateY(-6px) scale(0.98);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        @keyframes navItemEnter {
+            from {
+                opacity: 0;
+                transform: translateY(-6px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .nav-hover-lift,
+        .nav-overlay-enter,
+        .nav-menu-enter,
+        .nav-mobile-item-enter {
+            animation: none !important;
+            transition: none !important;
+        }
+    }
+}
