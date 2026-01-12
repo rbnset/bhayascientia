@@ -4,14 +4,17 @@
 platform kami.',
 'primaryLabel' => 'Mulai gratis',
 'primaryUrl' => '#',
+
+// Demo video
 'secondaryLabel' => 'Lihat demo',
-'secondaryUrl' => '#',
+'youtubeId' => 'ZWZfwmObdvc',
 
 // Badge
 'badgeText' => 'Bantu naskahmu naik kelas.',
 'badgeIcon' => 'assets/icons/crown.svg',
-'imageMain'=>
-'assets/images/thumbnails/overview.png',
+
+// Thumbnails
+'imageMain' => 'assets/images/thumbnails/overview.png',
 'imageBottomLeft' => 'assets/images/thumbnails/review.png',
 'imageTopRight' => 'assets/images/thumbnails/sitasi.png',
 ])
@@ -20,25 +23,21 @@ platform kami.',
     <x-slot:text>
         <div class="flex flex-col gap-6 anim-hero-fade-up">
 
-            {{-- BADGE dengan icon (icon dari props) --}}
+            {{-- BADGE --}}
             <div class="flex items-center bg-white p-[8px_16px] gap-[10px] rounded-full w-fit ring-1 ring-[#EEF0F7]">
                 <div class="flex w-5 h-5 overflow-hidden shrink-0">
-                    <img src="{{ asset($badgeIcon) }}" class="object-contain w-full h-full" alt="Badge icon" />
+                    <img src="{{ asset($badgeIcon) }}" class="object-contain w-full h-full" alt="Badge icon">
                 </div>
-                <p class="font-semibold text-sm text-[#111827]">
-                    {{ $badgeText }}
-                </p>
+                <p class="font-semibold text-sm text-[#111827]">{{ $badgeText }}</p>
             </div>
 
-            {{-- TITLE dengan highlight --}}
+            {{-- TITLE --}}
             <h1 class="text-[34px] font-extrabold leading-[1.25] text-[#111827] sm:text-[44px] lg:text-[52px]">
-                <mark class="inline-block rounded-md bg-[#FF6B18] px-2 py-[2px] text-white align-baseline">
-                    BHAYASCIENTIA
-                </mark>
+                <mark
+                    class="inline-block rounded-md bg-[#FF6B18] px-2 py-[2px] text-white align-baseline">BHAYASCIENTIA</mark>
                 jembatan menuju
-                <mark class="inline-block rounded-md bg-[#FF6B18] px-2 py-[2px] text-white align-baseline">
-                    publikasi
-                </mark>
+                <mark
+                    class="inline-block rounded-md bg-[#FF6B18] px-2 py-[2px] text-white align-baseline">publikasi</mark>
             </h1>
 
             <p class="max-w-prose text-sm leading-6 text-[#6B7280] sm:text-base sm:leading-7 lg:text-lg lg:leading-8">
@@ -51,10 +50,13 @@ platform kami.',
                     {{ $primaryLabel }}
                 </a>
 
-                <a href="{{ $secondaryUrl }}"
-                    class="inline-flex items-center justify-center rounded-full border border-[#111827] px-6 py-3 text-sm font-bold text-[#111827] transition-all duration-300 hover:border-[#FF6B18] hover:bg-[#FF6B18] hover:text-white sm:text-[16px]">
+                {{-- Trigger modal video --}}
+                <button type="button" data-video-open data-youtube-id="{{ $youtubeId }}"
+                    class="inline-flex items-center justify-center rounded-full border border-[#111827] px-6 py-3 text-sm font-bold text-[#111827]
+                 transition-all duration-300 hover:border-[#FF6B18] hover:bg-[#FF6B18] hover:text-white sm:text-[16px]
+                 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F8F9FC]">
                     {{ $secondaryLabel }}
-                </a>
+                </button>
             </div>
         </div>
     </x-slot:text>
@@ -80,3 +82,33 @@ platform kami.',
         </div>
     </x-slot:media>
 </x-hero.base>
+
+{{-- MODAL--}}
+<div id="video-modal" class="fixed inset-0 z-50 items-center justify-center hidden p-4">
+    {{-- overlay --}}
+    <button type="button" data-video-close class="absolute inset-0 bg-black/60" aria-label="Tutup video"></button>
+
+    {{-- dialog --}}
+    <div class="relative w-full max-w-3xl overflow-hidden rounded-[20px] bg-white shadow">
+        <div class="flex items-center justify-between p-4 border-b">
+            <h3 id="video-modal-title" class="text-base sm:text-lg font-bold text-[#111827]">
+                Demo BHAYASCIENTIA
+            </h3>
+
+            <button type="button" data-video-close class="h-10 w-10 inline-flex items-center justify-center rounded-lg hover:bg-gray-100
+                     focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2">
+                <span class="sr-only">Close modal</span>
+                <svg class="w-4 h-4" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6" />
+                </svg>
+            </button>
+        </div>
+
+        <div class="bg-black">
+            <iframe id="videoFrame" class="aspect-[16/9] w-full" src="" title="Demo BHAYASCIENTIA" frameborder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+        </div>
+    </div>
+</div>
