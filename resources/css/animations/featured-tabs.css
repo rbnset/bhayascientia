@@ -1,0 +1,44 @@
+@layer utilities {
+    @media (prefers-reduced-motion: no-preference) {
+        /* microanimation panel */
+        [data-featured-tabs] .tab-img img,
+        [data-featured-tabs] .tab-title,
+        [data-featured-tabs] .tab-description,
+        [data-featured-tabs] .tab-features,
+        [data-featured-tabs] .tab-cta {
+            transition: opacity 180ms ease, transform 180ms ease,
+                filter 180ms ease;
+            will-change: opacity, transform;
+        }
+
+        [data-featured-tabs].is-switching .tab-img img {
+            opacity: 0.6;
+            transform: scale(0.995);
+            filter: saturate(0.98);
+        }
+
+        [data-featured-tabs].is-switching .tab-title,
+        [data-featured-tabs].is-switching .tab-description,
+        [data-featured-tabs].is-switching .tab-features,
+        [data-featured-tabs].is-switching .tab-cta {
+            opacity: 0.75;
+            transform: translateY(2px);
+        }
+
+        /* microinteraction pressed via JS (optional) */
+        [data-featured-tabs] .tab-menu.is-pressing {
+            transform: scale(0.99);
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        [data-featured-tabs] .tab-img img,
+        [data-featured-tabs] .tab-title,
+        [data-featured-tabs] .tab-description,
+        [data-featured-tabs] .tab-features,
+        [data-featured-tabs] .tab-cta,
+        [data-featured-tabs] .tab-menu {
+            transition: none !important;
+        }
+    }
+}

@@ -8,5 +8,7 @@
         youtube-id="rJQOQCe30EY" />
     <x-sections.steps />
     <x-sections.testimoni />
+    <x-sections.featured-tabs />
+
 </section>
 @endsection
