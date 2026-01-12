@@ -7,6 +7,6 @@
     <x-hero.home badge-icon="assets/images/icons/crown.svg" badge-text="Bantu Naskahmu Naik Kelas."
         youtube-id="rJQOQCe30EY" />
     <x-sections.steps />
-
+    <x-sections.testimoni />
 </section>
 @endsection
