@@ -65,3 +65,17 @@ Route::get('/manuscripts/{version}/download', function (PublicationVersion $vers
         'manuscript-v' . ($version->version_number ?? 'x') . '.pdf'
     );
 })->name('manuscripts.download');
+
+
+
+
+
+
+
+
+Route::view('/', 'pages.home')->name('home');
+
+Route::view('/publikasi', 'pages.publication')->name('publikasi');
+Route::view('/event', 'pages.event')->name('event');
+Route::view('/tentang', 'pages.about')->name('tentang');
+Route::view('/kontak', 'pages.contact')->name('kontak');
