@@ -6,7 +6,7 @@ import { initStepsSection } from "./steps";
 import { initFeaturedTabs } from "./featured-tabs";
 import { initComingSoon } from "./coming-soon";
 import { initFaqAccordion } from "./faq";
-
+import { initFeaturedCarousel } from "./featured-carousel";
 
 document.addEventListener("DOMContentLoaded", () => {
     initNavbar();
@@ -15,4 +15,5 @@ document.addEventListener("DOMContentLoaded", () => {
     initFeaturedTabs();
     initComingSoon();
     initFaqAccordion();
+    initFeaturedCarousel();
 });

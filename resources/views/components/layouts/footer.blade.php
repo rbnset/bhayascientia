@@ -1,6 +1,6 @@
 @props([
 'brandHref' => 'index.html',
-'brandLogo' => 'assets/images/logos/logo.svg',
+'brandLogo' => 'assets/images/logos/logo.png',
 'brandAlt' => 'BHAYASCIENTIA',
 'brandDesc' => 'Publikasi akademik non-formal untuk penulis yang ingin naskahnya lebih rapi, risetnya lebih kuat, dan
 prosesnya lebih jelas.',
@@ -54,7 +54,7 @@ $year = $year ?? now()->year;
                 <div class="lg:col-span-5">
                     <a href="{{ $brandHref }}" class="inline-flex items-center gap-3"
                         aria-label="Beranda {{ $brandAlt }}">
-                        <img src="{{ asset($brandLogo) }}" alt="{{ $brandAlt }}" class="w-auto h-8" />
+                        <img src="{{ asset($brandLogo) }}" alt="{{ $brandAlt }}" class="w-auto h-16" />
                     </a>
 
                     <p class="mt-4 text-sm leading-7 sm:text-base text-white/70 max-w-prose">
