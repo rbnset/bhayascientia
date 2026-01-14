@@ -37,7 +37,7 @@
                 <div class="flex items-center gap-[10px] rounded-full bg-[#E64627] px-4 py-3">
                     <img src="{{ asset($item['iconActive'] ?? $item['icon']) }}" class="w-6 h-6" alt=""
                         aria-hidden="true">
-                    <span class="text-sm font-bold leading-[21px] text-white">{{ $item['label'] }}</span>
+                    <span class="text-sm font-bold leading-[21px] text-black">{{ $item['label'] }}</span>
                 </div>
             </a>
             @else
