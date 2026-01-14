@@ -19,11 +19,17 @@
 <body class="m-0 bg-F8F9FC font-Poppins text-0B0B0B">
     <x-navbar />
 
+    {{-- TIDAK ADA pb global --}}
     <main class="@yield('main_class', 'mt-10 sm:mt-14')">
         @yield('content')
     </main>
 
+    @if (trim($__env->yieldContent('hide_footer')) !== 'true')
     <x-layouts.footer />
+    @endif
+
+    {{-- Slot optional: hanya muncul jika halaman melakukan @push('bottom_nav') --}}
+    @stack('bottom_nav')
 
     @stack('scripts')
 </body>
