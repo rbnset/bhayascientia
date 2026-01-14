@@ -8,9 +8,9 @@
 ],
 'ctaLabel' => 'Buka publikasi',
 'ctaRoute' => 'publikasi',
-'ctaIcon' => 'book', // NEW: book, bell, sparkles, etc
-'ctaSubtext' => null, // NEW: Optional subtext
-'ctaVariant' => 'primary', // NEW: primary, secondary, premium
+'ctaIcon' => 'book',
+'ctaSubtext' => null,
+'ctaVariant' => 'primary',
 ])
 
 {{-- Detect if we're on home page --}}
@@ -45,7 +45,8 @@ $ctaClasses = [
             class="absolute inset-0 -z-10 backdrop-blur-xl bg-white/80 rounded-2xl opacity-0 transition-opacity duration-300 shadow-[0_2px_20px_0_rgba(0,0,0,0.08)]">
         </div>
 
-        <div class="flex items-center justify-between gap-4 py-4 {{ $isHomePage ? 'pt-6' : 'pt-4' }}">
+        {{-- FIXED: Consistent padding across all pages --}}
+        <div class="flex items-center justify-between gap-4 py-5">
             {{-- Logo --}}
             <a href="{{ route('home') }}" class="flex items-center shrink-0 nav-hover-lift focus-primary"
                 aria-label="BHAYASCIENTIA - Kembali ke beranda">
@@ -101,7 +102,7 @@ $ctaClasses = [
                     </svg>
 
                     {{-- Text --}}
-                    @if($ctaSubtext)
+                    @if ($ctaSubtext)
                     <div class="relative z-10 text-left">
                         <div class="font-bold leading-tight">{{ $ctaLabel }}</div>
                         <div class="text-xs font-normal opacity-90">{{ $ctaSubtext }}</div>
@@ -140,9 +141,10 @@ $ctaClasses = [
     <div id="mobileOverlay" class="fixed inset-0 z-40 hidden bg-black/20 backdrop-blur-sm xl:hidden" aria-hidden="true">
     </div>
 
-    {{-- Mobile Menu Panel --}}
-    <div id="mobileMenu" class="fixed inset-x-4 top-24 z-50 hidden xl:hidden max-h-[calc(100vh-7rem)] overflow-y-auto"
-        role="dialog" aria-modal="true" aria-labelledby="mobile-menu-title">
+    {{-- Mobile Menu Panel - FIXED: Consistent top position --}}
+    <div id="mobileMenu"
+        class="fixed inset-x-4 top-[88px] z-50 hidden xl:hidden max-h-[calc(100vh-7rem)] overflow-y-auto" role="dialog"
+        aria-modal="true" aria-labelledby="mobile-menu-title">
         <div class="rounded-2xl bg-white border border-[#EEF0F7] shadow-2xl overflow-hidden">
 
             {{-- Mobile Menu Header --}}
@@ -208,47 +210,46 @@ $ctaClasses = [
                     </div>
                 </div>
 
-                {{-- Divider (only on home) --}}
-                @if ($isHomePage)
+                {{-- Divider --}}
                 <div class="border-t border-[#EEF0F7] pt-3 mb-3">
                     <p class="text-xs font-bold text-[#737373] uppercase tracking-wide mb-2.5 px-2">Aksi Cepat</p>
                 </div>
-                @endif
 
-                {{-- CTA Section --}}
+                {{-- CTA Section - FIXED: Consistent styling --}}
                 <div class="space-y-2.5">
                     {{-- Primary CTA --}}
                     <a href="{{ route($ctaRoute) }}"
-                        class="js-mobile-item nav-mobile-item-enter group flex items-center justify-between rounded-xl px-4 text-sm font-bold text-white bg-gradient-to-r from-[#FF6B18] to-[#E64627] transition-all duration-200 hover:shadow-[0_10px_20px_0_#FF6B1880] active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 focus-visible:ring-offset-white relative overflow-hidden {{ $isHomePage ? 'py-4' : 'py-3.5' }}"
+                        class="js-mobile-item nav-mobile-item-enter group flex items-center justify-between rounded-xl px-4 py-3.5 text-sm font-bold text-white {{ $ctaClasses[$ctaVariant] }} transition-all duration-200 hover:shadow-[0_10px_20px_0_#FF6B1880] active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 focus-visible:ring-offset-white relative overflow-hidden"
                         style="animation-delay: {{ count($items) * 60 }}ms;">
-                        {{-- Shimmer effect (only on home) --}}
-                        @if ($isHomePage)
+
+                        {{-- Shimmer effect --}}
                         <span
                             class="absolute inset-0 transition-transform duration-700 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:translate-x-full"></span>
-                        @endif
 
                         <div class="relative z-10 flex items-center gap-3">
-                            @if ($isHomePage)
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                                    d="{{ $iconPaths[$ctaIcon] ?? $iconPaths['book'] }}" />
                             </svg>
+
+                            @if ($ctaSubtext)
                             <div class="text-left">
                                 <div class="font-bold">{{ $ctaLabel }}</div>
-                                <div class="text-xs font-normal opacity-90">Akses ribuan karya ilmiah</div>
+                                <div class="text-xs font-normal opacity-90">{{ $ctaSubtext }}</div>
                             </div>
                             @else
                             <span>{{ $ctaLabel }}</span>
                             @endif
                         </div>
-                        <svg class="w-{{ $isHomePage ? '5' : '4' }} h-{{ $isHomePage ? '5' : '4' }} transition-transform group-hover:translate-x-1 relative z-10"
-                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+
+                        <svg class="relative z-10 w-4 h-4 transition-transform group-hover:translate-x-1" fill="none"
+                            stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M13 7l5 5m0 0l-5 5m5-5H6" />
                         </svg>
                     </a>
 
-                    {{-- Secondary CTA (only on home) --}}
+                    {{-- Secondary CTA (optional for home) --}}
                     @if ($isHomePage)
                     <a href="{{ route('publikasi') }}#get-started"
                         class="js-mobile-item nav-mobile-item-enter group flex items-center justify-between rounded-xl px-4 py-3.5 text-sm font-semibold border-2 border-[#FF6B18] text-[#FF6B18] bg-[#FFF7F2] transition-all duration-200 hover:bg-[#FF6B18] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 focus-visible:ring-offset-white"
@@ -268,8 +269,7 @@ $ctaClasses = [
                     @endif
                 </div>
 
-                {{-- Feature Teaser (only on home) --}}
-                @if ($isHomePage)
+                {{-- Feature Teaser --}}
                 <div
                     class="mt-4 p-3.5 bg-gradient-to-br from-[#FFF7F2] to-[#F8F9FC] rounded-xl border border-[#EEF0F7]">
                     <p class="text-xs font-bold text-[#1A1A1A] mb-2.5">✨ Fitur Platform:</p>
@@ -312,7 +312,6 @@ $ctaClasses = [
                         </li>
                     </ul>
                 </div>
-                @endif
             </div>
         </div>
     </div>
