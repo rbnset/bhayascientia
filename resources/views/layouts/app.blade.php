@@ -4,8 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>@yield('title', 'BHAYASCIENTIA')</title>
+    <title>@yield('title', 'BHAYASCIENTIA') - Platform Publikasi Ilmiah Indonesia</title>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
@@ -17,6 +18,7 @@
 </head>
 
 <body class="m-0 bg-F8F9FC font-Poppins text-0B0B0B">
+    {{-- Single navbar untuk semua page --}}
     <x-navbar />
 
     {{-- TIDAK ADA pb global --}}

@@ -1,39 +1,118 @@
+/**
+ * BHAYASCIENTIA - Ultimate Navbar Animations
+ *
+ * Enhanced animation system dengan:
+ * - Smooth micro-interactions
+ * - GPU-accelerated transforms
+ * - Reduced motion support
+ * - Performance optimizations
+ *
+ * @version 3.0.0
+ */
+
 @layer utilities {
     @media (prefers-reduced-motion: no-preference) {
+        /* ========================================
+           NAVBAR BASE TRANSITIONS
+        ======================================== */
+        #mainHeader {
+            transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 300ms ease;
+            will-change: transform, opacity;
+            backface-visibility: hidden;
+        }
+
+        #stickyBg {
+            transition: opacity 300ms cubic-bezier(0.4, 0, 0.2, 1);
+            will-change: opacity;
+            backface-visibility: hidden;
+        }
+
+        /* ========================================
+           DESKTOP HOVER EFFECTS
+        ======================================== */
         .nav-hover-lift {
-            transition: transform 200ms ease, filter 200ms ease;
+            transition: transform 250ms cubic-bezier(0.34, 1.56, 0.64, 1),
+                filter 250ms ease;
+            will-change: transform, filter;
         }
+
         .nav-hover-lift:hover {
+            transform: translateY(-3px);
+            filter: drop-shadow(0 12px 24px rgba(255, 107, 24, 0.25));
+        }
+
+        .nav-hover-lift:active {
             transform: translateY(-1px);
-            filter: drop-shadow(0 10px 20px rgba(255, 107, 24, 0.2));
+            transition-duration: 100ms;
         }
 
+        /* Active link pulse indicator */
+        @keyframes navPulse {
+            0%,
+            100% {
+                opacity: 1;
+                transform: translateX(-50%) scale(1);
+            }
+            50% {
+                opacity: 0.7;
+                transform: translateX(-50%) scale(1.4);
+            }
+        }
+
+        /* Underline hover effect */
+        .nav-menu-item {
+            position: relative;
+        }
+
+        .nav-menu-item::after {
+            content: "";
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #ff6b18, #e64627);
+            transform: scaleX(0);
+            transform-origin: center;
+            transition: transform 250ms cubic-bezier(0.34, 1.56, 0.64, 1);
+            border-radius: 2px;
+        }
+
+        .nav-menu-item:hover::after {
+            transform: scaleX(1);
+        }
+
+        /* ========================================
+           MOBILE MENU ANIMATIONS
+        ======================================== */
+
+        /* Overlay fade in with blur */
         .nav-overlay-enter {
-            animation: navOverlayEnter 160ms ease-out both;
-        }
-
-        .nav-menu-enter {
-            animation: navMenuEnter 220ms ease-out both;
-            transform-origin: top;
-        }
-
-        .nav-mobile-item-enter {
-            animation: navItemEnter 240ms ease-out both;
+            animation: navOverlayEnter 250ms cubic-bezier(0.4, 0, 0.2, 1) both;
         }
 
         @keyframes navOverlayEnter {
             from {
                 opacity: 0;
+                backdrop-filter: blur(0px);
             }
             to {
                 opacity: 1;
+                backdrop-filter: blur(8px);
             }
+        }
+
+        /* Menu panel elastic slide */
+        .nav-menu-enter {
+            animation: navMenuEnter 350ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+            transform-origin: top center;
         }
 
         @keyframes navMenuEnter {
             from {
                 opacity: 0;
-                transform: translateY(-6px) scale(0.98);
+                transform: translateY(-30px) scale(0.92);
             }
             to {
                 opacity: 1;
@@ -41,25 +120,304 @@
             }
         }
 
+        /* Menu items stagger with bounce */
+        .nav-mobile-item-enter {
+            animation: navItemEnter 400ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+        }
+
         @keyframes navItemEnter {
             from {
                 opacity: 0;
-                transform: translateY(-6px);
+                transform: translateY(-15px) scale(0.95);
             }
             to {
                 opacity: 1;
-                transform: translateY(0);
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* ========================================
+           MOBILE MENU ITEM INTERACTIONS
+        ======================================== */
+        .js-mobile-item {
+            position: relative;
+            overflow: hidden;
+            transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Left border accent on hover */
+        .js-mobile-item::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 4px;
+            background: linear-gradient(to bottom, #ff6b18, #e64627);
+            transform: scaleY(0);
+            transition: transform 250ms cubic-bezier(0.34, 1.56, 0.64, 1);
+            border-radius: 0 2px 2px 0;
+        }
+
+        .js-mobile-item:hover::before,
+        .js-mobile-item:focus::before {
+            transform: scaleY(1);
+        }
+
+        /* Shimmer effect on hover */
+        .js-mobile-item::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.15),
+                transparent
+            );
+            transition: left 500ms ease;
+        }
+
+        .js-mobile-item:hover::after {
+            left: 100%;
+        }
+
+        /* ========================================
+           HAMBURGER ICON ANIMATIONS
+        ======================================== */
+        #iconBurger,
+        #iconClose {
+            transition: transform 250ms cubic-bezier(0.34, 1.56, 0.64, 1),
+                opacity 200ms ease;
+        }
+
+        #hamburgerBtn:hover #iconBurger {
+            transform: scale(1.15) rotate(90deg);
+        }
+
+        #hamburgerBtn:hover #iconClose {
+            transform: scale(1.15) rotate(180deg);
+        }
+
+        #hamburgerBtn:active {
+            transform: scale(0.95);
+        }
+
+        /* ========================================
+           CTA BUTTON ANIMATIONS
+        ======================================== */
+
+        /* Gradient shift on hover */
+        .nav-cta-btn {
+            position: relative;
+            background-size: 200% 100%;
+            background-position: 0% 0%;
+            transition: background-position 400ms ease,
+                transform 250ms cubic-bezier(0.34, 1.56, 0.64, 1),
+                box-shadow 250ms ease;
+            overflow: hidden;
+        }
+
+        .nav-cta-btn:hover {
+            background-position: 100% 0%;
+            transform: translateY(-2px);
+        }
+
+        .nav-cta-btn:active {
+            transform: translateY(0);
+            transition-duration: 100ms;
+        }
+
+        /* Shimmer effect */
+        .nav-cta-shimmer {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.3),
+                transparent
+            );
+            transform: translateX(-100%);
+            transition: transform 700ms ease;
+        }
+
+        .nav-cta-btn:hover .nav-cta-shimmer {
+            transform: translateX(100%);
+        }
+
+        /* ========================================
+           FOCUS STYLES (Accessibility)
+        ======================================== */
+        .focus-primary:focus-visible {
+            outline: 3px solid #ff6b18;
+            outline-offset: 4px;
+            border-radius: 12px;
+            box-shadow: 0 0 0 6px rgba(255, 107, 24, 0.15);
+        }
+
+        /* ========================================
+           SCROLL PROGRESS INDICATOR (Optional)
+        ======================================== */
+        .scroll-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #ff6b18, #e64627);
+            transform-origin: left;
+            transform: scaleX(0);
+            transition: transform 100ms ease;
+        }
+
+        /* ========================================
+           PERFORMANCE OPTIMIZATIONS
+        ======================================== */
+        .nav-hover-lift,
+        #mainHeader,
+        #stickyBg,
+        .nav-overlay-enter,
+        .nav-menu-enter,
+        .nav-mobile-item-enter,
+        .js-mobile-item {
+            backface-visibility: hidden;
+            perspective: 1000px;
+            transform: translateZ(0);
+        }
+
+        /* GPU acceleration for smooth animations */
+        @supports (will-change: transform) {
+            .nav-hover-lift,
+            .js-mobile-item,
+            #hamburgerBtn {
+                will-change: transform;
             }
         }
     }
 
+    /* ========================================
+       ACCESSIBILITY: REDUCED MOTION
+    ======================================== */
     @media (prefers-reduced-motion: reduce) {
+        /* Disable all animations */
+        *,
+        *::before,
+        *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+        }
+
         .nav-hover-lift,
         .nav-overlay-enter,
         .nav-menu-enter,
-        .nav-mobile-item-enter {
+        .nav-mobile-item-enter,
+        #mainHeader,
+        #stickyBg,
+        #iconBurger,
+        #iconClose,
+        .js-mobile-item::before,
+        .js-mobile-item::after,
+        .nav-cta-shimmer {
             animation: none !important;
             transition: none !important;
+        }
+
+        /* Allow basic state changes without animation */
+        .nav-hover-lift:hover {
+            transform: none;
+            filter: none;
+        }
+
+        #mainHeader {
+            transition: none !important;
+        }
+    }
+
+    /* ========================================
+       RESPONSIVE OPTIMIZATIONS
+    ======================================== */
+    @media (max-width: 1279px) {
+        /* Mobile menu optimizations */
+        #mobileMenu {
+            max-width: calc(100vw - 2rem);
+        }
+
+        .js-mobile-item {
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+    }
+
+    @media (max-height: 600px) {
+        /* Landscape mode optimizations */
+        #mobileMenu {
+            max-height: calc(100vh - 4rem);
+            overflow-y: auto;
+        }
+
+        .js-mobile-item {
+            padding-top: 0.625rem;
+            padding-bottom: 0.625rem;
+        }
+
+        /* Compact mobile menu header */
+        #mobile-menu-title {
+            font-size: 0.875rem;
+        }
+    }
+
+    /* High contrast mode support */
+    @media (prefers-contrast: high) {
+        .focus-primary:focus-visible {
+            outline-width: 4px;
+            outline-offset: 6px;
+        }
+
+        .js-mobile-item::before {
+            width: 6px;
+        }
+    }
+
+    /* Dark mode support (optional) */
+    @media (prefers-color-scheme: dark) {
+        #stickyBg {
+            background-color: rgba(11, 11, 11, 0.95);
+        }
+
+        .nav-hover-lift:hover {
+            filter: drop-shadow(0 12px 24px rgba(255, 107, 24, 0.4));
+        }
+    }
+
+    /* Enhanced backdrop blur styling */
+    #stickyBg {
+        background: linear-gradient(
+            to bottom,
+            rgba(255, 255, 255, 0.85),
+            rgba(255, 255, 255, 0.75)
+        );
+        backdrop-filter: blur(24px) saturate(180%);
+        -webkit-backdrop-filter: blur(24px) saturate(180%);
+        border: 1px solid rgba(238, 240, 247, 0.8);
+    }
+
+    /* iOS Safari backdrop blur optimization */
+    @supports (-webkit-backdrop-filter: none) or (backdrop-filter: none) {
+        #stickyBg {
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            backdrop-filter: blur(24px) saturate(180%);
+        }
+    }
+
+    /* Fallback untuk browser yang tidak support backdrop-filter */
+    @supports not ((-webkit-backdrop-filter: none) or (backdrop-filter: none)) {
+        #stickyBg {
+            background: rgba(255, 255, 255, 0.95);
         }
     }
 }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\PublikasiController;
 use App\Models\PublicationVersion;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
@@ -73,9 +74,37 @@ Route::get('/manuscripts/{version}/download', function (PublicationVersion $vers
 
 
 
+/*
+|--------------------------------------------------------------------------
+| Static Pages Routes
+|--------------------------------------------------------------------------
+*/
 Route::view('/', 'pages.home')->name('home');
-
-Route::view('/publikasi', 'pages.publication')->name('publikasi');
 Route::view('/event', 'pages.event')->name('event');
 Route::view('/tentang', 'pages.about')->name('tentang');
 Route::view('/kontak', 'pages.contact')->name('kontak');
+
+/*
+|--------------------------------------------------------------------------
+| Publikasi Routes
+|--------------------------------------------------------------------------
+*/
+Route::prefix('publikasi')->name('publikasi.')->group(function () {
+    Route::get('/', [PublikasiController::class, 'index'])->name('index');
+    Route::get('/categories', [PublikasiController::class, 'categories'])->name('categories');
+    Route::get('/trending', [PublikasiController::class, 'trending'])->name('trending');
+    Route::get('/library', [PublikasiController::class, 'library'])->name('library');
+    Route::get('/{id}', [PublikasiController::class, 'show'])->name('show');
+});
+
+// Alias untuk publikasi.index
+Route::get('/publikasi', [PublikasiController::class, 'index'])->name('publikasi');
+
+/*
+|--------------------------------------------------------------------------
+| Profile Routes (untuk nanti)
+|--------------------------------------------------------------------------
+*/
+Route::middleware('auth')->group(function () {
+    Route::view('/profile', 'pages.profile')->name('profile');
+});

@@ -1,4 +1,21 @@
-/* 1) Global motion rules (reduce motion) */
+/**
+ * BHAYASCIENTIA ANIMATION LIBRARY
+ *
+ * Central import untuk semua animasi custom
+ * Organized by component/section
+ *
+ * @structure
+ * ├── Global motion rules (accessibility)
+ * ├── Component-specific animations
+ * └── Utility animations
+ *
+ * @author BHAYASCIENTIA Team
+ * @version 1.0.0
+ */
+
+/* ========================================
+   1. GLOBAL MOTION RULES
+======================================== */
 @layer utilities {
     @media (prefers-reduced-motion: reduce) {
         .motion-safe-only {
@@ -11,10 +28,60 @@
     }
 }
 
-/* 2) Import animasi per-section / per-component */
-@import "./hero.css";
+/* ========================================
+   2. COMPONENT ANIMATIONS
+======================================== */
+
+/* Navigation & Header */
 @import "./navbar.css";
+
+/* Hero Section */
+@import "./hero.css";
+
+/* Content Sections */
 @import "./steps.css";
 @import "./testimoni.css";
 @import "./featured-tabs.css";
 @import "./faq.css";
+
+/* Publication Pages (New) */
+@import "./publication.css";
+
+/* ========================================
+   3. UTILITY ANIMATIONS
+======================================== */
+
+/* Generic slide animations */
+@layer utilities {
+    @media (prefers-reduced-motion: no-preference) {
+        .animate-fade-in {
+            animation: fadeIn 500ms ease-out forwards;
+        }
+
+        .animate-slide-up {
+            animation: slideUp 400ms ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    }
+}
