@@ -18,21 +18,29 @@
 </head>
 
 <body class="m-0 bg-F8F9FC font-Poppins text-0B0B0B">
-    {{-- Single navbar untuk semua page --}}
+    {{-- Navbar: Conditional rendering untuk custom navbar --}}
+    @hasSection('custom_navbar')
+    {{-- Jika page define custom navbar, render dari section --}}
+    @yield('custom_navbar')
+    @else
+    {{-- Default navbar untuk semua page lainnya --}}
     <x-navbar />
+    @endif
 
-    {{-- TIDAK ADA pb global --}}
+    {{-- Main content --}}
     <main class="@yield('main_class', 'mt-10 sm:mt-14')">
         @yield('content')
     </main>
 
+    {{-- Footer: Hidden jika ada section 'hide_footer' --}}
     @if (trim($__env->yieldContent('hide_footer')) !== 'true')
     <x-layouts.footer />
     @endif
 
-    {{-- Slot optional: hanya muncul jika halaman melakukan @push('bottom_nav') --}}
+    {{-- Bottom navigation stack (untuk mobile bottom nav di publikasi) --}}
     @stack('bottom_nav')
 
+    {{-- Additional scripts --}}
     @stack('scripts')
 </body>
 

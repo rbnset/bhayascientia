@@ -4,7 +4,15 @@
 @section('main_class', 'mt-0 pb-[120px] sm:pb-0')
 @section('hide_footer', 'true')
 
+{{-- Custom Navbar untuk halaman publikasi --}}
+@section('custom_navbar')
+<x-navbar ctaLabel="Mulai Berlangganan" ctaRoute="publikasi.library" ctaIcon="sparkles" ctaSubtext="Gratis"
+    ctaVariant="premium" />
+@endsection
+
 @section('content')
+
+{{-- Sub Navigation --}}
 <x-publication.navigation :subItems="[
         [
             'label' => 'Browse',
@@ -65,8 +73,10 @@
         ],
     ]" />
 
+{{-- Hero Section --}}
 <x-hero.publication />
 
+{{-- Main Content --}}
 <section class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px] mt-10 sm:mt-12">
 
     {{-- Quick Search & Filter Bar --}}
