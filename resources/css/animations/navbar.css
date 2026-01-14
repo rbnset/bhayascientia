@@ -7,7 +7,7 @@
  * - Reduced motion support
  * - Performance optimizations
  *
- * @version 3.0.0
+ * @version 3.1.0
  */
 
 @layer utilities {
@@ -145,27 +145,8 @@
             transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        /* Left border accent on hover */
-        .js-mobile-item::before {
-            content: "";
-            position: absolute;
-            left: 0;
-            top: 0;
-            height: 100%;
-            width: 4px;
-            background: linear-gradient(to bottom, #ff6b18, #e64627);
-            transform: scaleY(0);
-            transition: transform 250ms cubic-bezier(0.34, 1.56, 0.64, 1);
-            border-radius: 0 2px 2px 0;
-        }
-
-        .js-mobile-item:hover::before,
-        .js-mobile-item:focus::before {
-            transform: scaleY(1);
-        }
-
-        /* Shimmer effect on hover */
-        .js-mobile-item::after {
+        /* Shimmer effect on hover - HANYA untuk non-active items */
+        .js-mobile-item:not([aria-current="page"])::after {
             content: "";
             position: absolute;
             top: 0;
@@ -175,14 +156,31 @@
             background: linear-gradient(
                 90deg,
                 transparent,
-                rgba(255, 255, 255, 0.15),
+                rgba(255, 107, 24, 0.1),
                 transparent
             );
             transition: left 500ms ease;
         }
 
-        .js-mobile-item:hover::after {
+        .js-mobile-item:not([aria-current="page"]):hover::after {
             left: 100%;
+        }
+
+        /* Vertical bar slide animation untuk active state */
+        .js-mobile-item[aria-current="page"] .absolute {
+            animation: verticalBarEnter 400ms cubic-bezier(0.34, 1.56, 0.64, 1)
+                both;
+        }
+
+        @keyframes verticalBarEnter {
+            from {
+                transform: scaleY(0);
+                opacity: 0;
+            }
+            to {
+                transform: scaleY(1);
+                opacity: 1;
+            }
         }
 
         /* ========================================
@@ -320,7 +318,6 @@
         #stickyBg,
         #iconBurger,
         #iconClose,
-        .js-mobile-item::before,
         .js-mobile-item::after,
         .nav-cta-shimmer {
             animation: none !important;
@@ -378,7 +375,7 @@
             outline-offset: 6px;
         }
 
-        .js-mobile-item::before {
+        .js-mobile-item[aria-current="page"] .absolute {
             width: 6px;
         }
     }

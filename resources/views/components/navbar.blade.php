@@ -41,18 +41,21 @@ $isHomePage = request()->routeIs('home');
                         @foreach ($items as $item)
                         @php
                         $isActive = request()->routeIs($item['route']) ||
-                        (request()->routeIs('publikasi.*') && $item['route'] === 'publikasi');
+                        (request()->routeIs('publikasi.*') && $item['route'] === 'publikasi') ||
+                        (request()->routeIs('event.*') && $item['route'] === 'event') ||
+                        (request()->routeIs('tentang.*') && $item['route'] === 'tentang') ||
+                        (request()->routeIs('kontak.*') && $item['route'] === 'kontak');
                         @endphp
                         <a href="{{ route($item['route']) }}"
                             @class([ 'group relative px-5 py-2.5 text-sm font-bold rounded-full transition-all duration-200 hover:bg-[#F4F6FB] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 focus-visible:ring-offset-white'
                             , 'bg-[#FFF7F2] text-[#FF6B18]'=> $isActive,
+                            'text-[#1A1A1A]' => !$isActive,
                             ])
-                            aria-current="{{ $isActive ? 'page' : 'false' }}"
-                            >
+                            aria-current="{{ $isActive ? 'page' : 'false' }}">
                             {{ $item['label'] }}
 
                             {{-- Active indicator dot --}}
-                            @if($isActive)
+                            @if ($isActive)
                             <span
                                 class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1 w-1.5 h-1.5 bg-[#FF6B18] rounded-full animate-pulse"></span>
                             @endif
@@ -66,16 +69,16 @@ $isHomePage = request()->routeIs('home');
                 </nav>
 
                 {{-- Desktop CTA: Enhanced untuk Home --}}
-                <a href="{{ route($ctaRoute) }}" class="group text-sm font-bold text-white xl:flex hidden h-[48px] shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-[#FF6B18] to-[#E64627] transition-all duration-200 hover:-translate-y-[1px] hover:shadow-[0_10px_20px_0_#FF6B1880] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 focus-visible:ring-offset-white relative overflow-hidden
-                    {{ $isHomePage ? 'px-6 gap-2.5' : 'px-5 gap-2' }}">
+                <a href="{{ route($ctaRoute) }}"
+                    class="group text-sm font-bold text-white xl:flex hidden h-[48px] shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-[#FF6B18] to-[#E64627] transition-all duration-200 hover:-translate-y-[1px] hover:shadow-[0_10px_20px_0_#FF6B1880] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 focus-visible:ring-offset-white relative overflow-hidden {{ $isHomePage ? 'px-6 gap-2.5' : 'px-5 gap-2' }}">
                     {{-- Shimmer effect (only on home) --}}
-                    @if($isHomePage)
+                    @if ($isHomePage)
                     <span
                         class="absolute inset-0 transition-transform duration-1000 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:translate-x-full"></span>
                     @endif
 
                     {{-- Icon (only on home) --}}
-                    @if($isHomePage)
+                    @if ($isHomePage)
                     <svg class="relative z-10 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
@@ -142,15 +145,27 @@ $isHomePage = request()->routeIs('home');
                         @foreach ($items as $item)
                         @php
                         $isActive = request()->routeIs($item['route']) ||
-                        (request()->routeIs('publikasi.*') && $item['route'] === 'publikasi');
+                        (request()->routeIs('publikasi.*') && $item['route'] === 'publikasi') ||
+                        (request()->routeIs('event.*') && $item['route'] === 'event') ||
+                        (request()->routeIs('tentang.*') && $item['route'] === 'tentang') ||
+                        (request()->routeIs('kontak.*') && $item['route'] === 'kontak');
                         @endphp
                         <a href="{{ route($item['route']) }}"
-                            class="js-mobile-item nav-mobile-item-enter group rounded-xl px-4 py-3.5 text-sm font-semibold border transition-all duration-200 hover:border-[#FF6B18] hover:bg-[#FFF7F2] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 focus-visible:ring-offset-white {{ $isActive ? 'border-[#FF6B18] bg-[#FFF7F2] text-[#FF6B18]' : 'border-[#EEF0F7]' }}"
+                            @class([ 'js-mobile-item nav-mobile-item-enter group rounded-xl px-4 py-3.5 text-sm font-semibold border transition-all duration-200 hover:border-[#FF6B18] hover:bg-[#FFF7F2] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 focus-visible:ring-offset-white relative'
+                            , 'border-[#FF6B18] bg-[#FFF7F2] text-[#FF6B18]'=> $isActive,
+                            'border-[#EEF0F7] text-[#1A1A1A]' => !$isActive,
+                            ])
                             style="animation-delay: {{ $loop->index * 60 }}ms;"
                             aria-current="{{ $isActive ? 'page' : 'false' }}">
-                            <div class="flex items-center justify-between">
+
+                            {{-- Vertical indicator bar untuk active state --}}
+                            @if ($isActive)
+                            <span class="absolute left-0 top-0 bottom-0 w-1 bg-[#FF6B18] rounded-r-full"></span>
+                            @endif
+
+                            <div class="flex items-center justify-between {{ $isActive ? 'pl-2' : '' }}">
                                 <span>{{ $item['label'] }}</span>
-                                @if($isActive)
+                                @if ($isActive)
                                 <svg class="w-5 h-5 text-[#FF6B18]" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd"
                                         d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
@@ -170,7 +185,7 @@ $isHomePage = request()->routeIs('home');
                 </div>
 
                 {{-- Divider (only on home) --}}
-                @if($isHomePage)
+                @if ($isHomePage)
                 <div class="border-t border-[#EEF0F7] pt-3 mb-3">
                     <p class="text-xs font-bold text-[#737373] uppercase tracking-wide mb-2.5 px-2">Aksi Cepat</p>
                 </div>
@@ -179,16 +194,17 @@ $isHomePage = request()->routeIs('home');
                 {{-- CTA Section --}}
                 <div class="space-y-2.5">
                     {{-- Primary CTA --}}
-                    <a href="{{ route($ctaRoute) }}" class="js-mobile-item nav-mobile-item-enter group flex items-center justify-between rounded-xl px-4 text-sm font-bold text-white bg-gradient-to-r from-[#FF6B18] to-[#E64627] transition-all duration-200 hover:shadow-[0_10px_20px_0_#FF6B1880] active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 focus-visible:ring-offset-white relative overflow-hidden
-                        {{ $isHomePage ? 'py-4' : 'py-3.5' }}" style="animation-delay: {{ count($items) * 60 }}ms;">
+                    <a href="{{ route($ctaRoute) }}"
+                        class="js-mobile-item nav-mobile-item-enter group flex items-center justify-between rounded-xl px-4 text-sm font-bold text-white bg-gradient-to-r from-[#FF6B18] to-[#E64627] transition-all duration-200 hover:shadow-[0_10px_20px_0_#FF6B1880] active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 focus-visible:ring-offset-white relative overflow-hidden {{ $isHomePage ? 'py-4' : 'py-3.5' }}"
+                        style="animation-delay: {{ count($items) * 60 }}ms;">
                         {{-- Shimmer effect (only on home) --}}
-                        @if($isHomePage)
+                        @if ($isHomePage)
                         <span
                             class="absolute inset-0 transition-transform duration-700 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:translate-x-full"></span>
                         @endif
 
                         <div class="relative z-10 flex items-center gap-3">
-                            @if($isHomePage)
+                            @if ($isHomePage)
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
@@ -209,7 +225,7 @@ $isHomePage = request()->routeIs('home');
                     </a>
 
                     {{-- Secondary CTA (only on home) --}}
-                    @if($isHomePage)
+                    @if ($isHomePage)
                     <a href="{{ route('publikasi') }}#get-started"
                         class="js-mobile-item nav-mobile-item-enter group flex items-center justify-between rounded-xl px-4 py-3.5 text-sm font-semibold border-2 border-[#FF6B18] text-[#FF6B18] bg-[#FFF7F2] transition-all duration-200 hover:bg-[#FF6B18] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 focus-visible:ring-offset-white"
                         style="animation-delay: {{ (count($items) + 1) * 60 }}ms;">
@@ -229,7 +245,7 @@ $isHomePage = request()->routeIs('home');
                 </div>
 
                 {{-- Feature Teaser (only on home) --}}
-                @if($isHomePage)
+                @if ($isHomePage)
                 <div
                     class="mt-4 p-3.5 bg-gradient-to-br from-[#FFF7F2] to-[#F8F9FC] rounded-xl border border-[#EEF0F7]">
                     <p class="text-xs font-bold text-[#1A1A1A] mb-2.5">✨ Fitur Platform:</p>
