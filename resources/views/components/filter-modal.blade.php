@@ -1,3 +1,4 @@
+{{-- resources/views/components/filter-modal.blade.php --}}
 @props(['categories' => ['Technology', 'Science', 'Health', 'Education', 'Engineering', 'Business']])
 
 {{-- Modal Backdrop --}}
@@ -23,7 +24,7 @@
         </div>
 
         {{-- Modal Body --}}
-        <form action="{{ route('publikasi') }}" method="GET" class="p-6 space-y-6">
+        <form action="{{ route('publikasi.index') }}" method="GET" class="p-6 space-y-6">
 
             {{-- Search Keywords --}}
             <div class="space-y-2">
@@ -154,7 +155,7 @@
                     class="flex-1 px-6 py-4 font-bold text-white transition-all duration-200 rounded-xl bg-[#FF6B18] hover:-translate-y-1 hover:shadow-[0_10px_20px_0_#FF6B1880] focus:outline-none focus:ring-2 focus:ring-[#FF6B18] focus:ring-offset-2">
                     Terapkan Filter
                 </button>
-                <a href="{{ route('publikasi') }}"
+                <a href="{{ route('publikasi.index') }}"
                     class="px-6 py-4 font-bold text-center transition-all duration-200 bg-white border rounded-xl text-[#1A1A1A] border-[#EEF0F7] hover:border-[#FF6B18] hover:text-[#FF6B18] focus:outline-none focus:ring-2 focus:ring-[#FF6B18] focus:ring-offset-2">
                     Reset
                 </a>

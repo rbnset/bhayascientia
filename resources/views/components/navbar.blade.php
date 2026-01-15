@@ -1,13 +1,14 @@
+{{-- resources/views/components/navbar.blade.php --}}
 @props([
 'items' => [
 ['label' => 'Beranda', 'route' => 'home'],
-['label' => 'Publikasi', 'route' => 'publikasi'],
+['label' => 'Publikasi', 'route' => 'publikasi.index'], // ✅ FIXED
 ['label' => 'Event', 'route' => 'event'],
 ['label' => 'Tentang', 'route' => 'tentang'],
 ['label' => 'Kontak', 'route' => 'kontak'],
 ],
 'ctaLabel' => 'Buka publikasi',
-'ctaRoute' => 'publikasi',
+'ctaRoute' => 'publikasi.index', // ✅ FIXED
 'ctaIcon' => 'book',
 'ctaSubtext' => null,
 'ctaVariant' => 'primary',
@@ -45,7 +46,6 @@ $ctaClasses = [
             class="absolute inset-0 -z-10 backdrop-blur-xl bg-white/80 rounded-2xl opacity-0 transition-opacity duration-300 shadow-[0_2px_20px_0_rgba(0,0,0,0.08)]">
         </div>
 
-        {{-- FIXED: Consistent padding across all pages --}}
         <div class="flex items-center justify-between gap-4 py-5">
             {{-- Logo --}}
             <a href="{{ route('home') }}" class="flex items-center shrink-0 nav-hover-lift focus-primary"
@@ -61,8 +61,9 @@ $ctaClasses = [
                         class="gap-1 bg-white p-1.5 inline-flex flex-wrap items-center rounded-full ring-1 ring-[#EEF0F7] shadow-sm">
                         @foreach ($items as $item)
                         @php
+                        // ✅ FIXED: Update logic untuk publikasi.index
                         $isActive = request()->routeIs($item['route']) ||
-                        (request()->routeIs('publikasi.*') && $item['route'] === 'publikasi') ||
+                        (request()->routeIs('publikasi.*') && $item['route'] === 'publikasi.index') ||
                         (request()->routeIs('event.*') && $item['route'] === 'event') ||
                         (request()->routeIs('tentang.*') && $item['route'] === 'tentang') ||
                         (request()->routeIs('kontak.*') && $item['route'] === 'kontak');
@@ -87,7 +88,7 @@ $ctaClasses = [
                     </div>
                 </nav>
 
-                {{-- Desktop CTA: Context-Aware --}}
+                {{-- Desktop CTA --}}
                 <a href="{{ route($ctaRoute) }}"
                     class="group text-sm font-bold text-white xl:flex hidden h-[48px] shrink-0 items-center justify-center rounded-full {{ $ctaClasses[$ctaVariant] }} transition-all duration-200 hover:-translate-y-[1px] hover:shadow-[0_10px_20px_0_#FF6B1880] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 focus-visible:ring-offset-white relative overflow-hidden {{ $ctaSubtext ? 'px-6 gap-2.5' : 'px-5 gap-2' }}">
 
@@ -137,11 +138,11 @@ $ctaClasses = [
         </div>
     </div>
 
-    {{-- Mobile Overlay dengan subtle backdrop --}}
+    {{-- Mobile Overlay --}}
     <div id="mobileOverlay" class="fixed inset-0 z-40 hidden bg-black/20 backdrop-blur-sm xl:hidden" aria-hidden="true">
     </div>
 
-    {{-- Mobile Menu Panel - FIXED: Consistent top position --}}
+    {{-- Mobile Menu Panel --}}
     <div id="mobileMenu"
         class="fixed inset-x-4 top-[88px] z-50 hidden xl:hidden max-h-[calc(100vh-7rem)] overflow-y-auto" role="dialog"
         aria-modal="true" aria-labelledby="mobile-menu-title">
@@ -159,7 +160,6 @@ $ctaClasses = [
                     </h2>
                     <p class="text-xs opacity-90 mt-1.5">Platform Publikasi Ilmiah Indonesia</p>
                 </div>
-                {{-- Decorative circles --}}
                 <div class="absolute w-24 h-24 rounded-full -right-6 -top-6 bg-white/10"></div>
                 <div class="absolute w-16 h-16 rounded-full -right-2 -bottom-2 bg-white/10"></div>
             </div>
@@ -170,8 +170,9 @@ $ctaClasses = [
                     <div class="grid grid-cols-1 gap-2.5">
                         @foreach ($items as $item)
                         @php
+                        // ✅ FIXED: Update logic untuk publikasi.index
                         $isActive = request()->routeIs($item['route']) ||
-                        (request()->routeIs('publikasi.*') && $item['route'] === 'publikasi') ||
+                        (request()->routeIs('publikasi.*') && $item['route'] === 'publikasi.index') ||
                         (request()->routeIs('event.*') && $item['route'] === 'event') ||
                         (request()->routeIs('tentang.*') && $item['route'] === 'tentang') ||
                         (request()->routeIs('kontak.*') && $item['route'] === 'kontak');
@@ -184,7 +185,6 @@ $ctaClasses = [
                             style="animation-delay: {{ $loop->index * 60 }}ms;"
                             aria-current="{{ $isActive ? 'page' : 'false' }}">
 
-                            {{-- Vertical indicator bar untuk active state --}}
                             @if ($isActive)
                             <span class="absolute left-0 top-0 bottom-0 w-1 bg-[#FF6B18] rounded-r-full"></span>
                             @endif
@@ -215,14 +215,13 @@ $ctaClasses = [
                     <p class="text-xs font-bold text-[#737373] uppercase tracking-wide mb-2.5 px-2">Aksi Cepat</p>
                 </div>
 
-                {{-- CTA Section - FIXED: Consistent styling --}}
+                {{-- CTA Section --}}
                 <div class="space-y-2.5">
                     {{-- Primary CTA --}}
                     <a href="{{ route($ctaRoute) }}"
                         class="js-mobile-item nav-mobile-item-enter group flex items-center justify-between rounded-xl px-4 py-3.5 text-sm font-bold text-white {{ $ctaClasses[$ctaVariant] }} transition-all duration-200 hover:shadow-[0_10px_20px_0_#FF6B1880] active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 focus-visible:ring-offset-white relative overflow-hidden"
                         style="animation-delay: {{ count($items) * 60 }}ms;">
 
-                        {{-- Shimmer effect --}}
                         <span
                             class="absolute inset-0 transition-transform duration-700 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:translate-x-full"></span>
 
@@ -249,9 +248,9 @@ $ctaClasses = [
                         </svg>
                     </a>
 
-                    {{-- Secondary CTA (optional for home) --}}
+                    {{-- Secondary CTA for home --}}
                     @if ($isHomePage)
-                    <a href="{{ route('publikasi') }}#get-started"
+                    <a href="{{ route('publikasi.index') }}#get-started"
                         class="js-mobile-item nav-mobile-item-enter group flex items-center justify-between rounded-xl px-4 py-3.5 text-sm font-semibold border-2 border-[#FF6B18] text-[#FF6B18] bg-[#FFF7F2] transition-all duration-200 hover:bg-[#FF6B18] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 focus-visible:ring-offset-white"
                         style="animation-delay: {{ (count($items) + 1) * 60 }}ms;">
                         <div class="flex items-center gap-3">

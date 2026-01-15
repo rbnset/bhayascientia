@@ -73,7 +73,6 @@ Route::get('/manuscripts/{version}/download', function (PublicationVersion $vers
 
 
 
-
 /*
 |--------------------------------------------------------------------------
 | Static Pages Routes
@@ -96,9 +95,6 @@ Route::prefix('publikasi')->name('publikasi.')->group(function () {
     Route::get('/library', [PublikasiController::class, 'library'])->name('library');
     Route::get('/{id}', [PublikasiController::class, 'show'])->name('show');
 });
-
-// Alias untuk publikasi.index
-Route::get('/publikasi', [PublikasiController::class, 'index'])->name('publikasi');
 
 /*
 |--------------------------------------------------------------------------

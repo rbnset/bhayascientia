@@ -1,3 +1,4 @@
+{{-- resources/views/pages/publikasi/library.blade.php --}}
 @extends('layouts.app')
 
 @section('title', 'My Library')
@@ -5,65 +6,10 @@
 @section('hide_footer', 'true')
 
 @section('content')
-<x-publication.navigation :subItems="[
-        [
-            'label' => 'Browse',
-            'icon' => 'assets/images/icons/3dcube.svg',
-            'href' => route('publikasi'),
-            'active' => false,
-        ],
-        [
-            'label' => 'Categories',
-            'icon' => 'assets/images/icons/grid-dark.svg',
-            'href' => route('publikasi.categories'),
-            'active' => false,
-        ],
-        [
-            'label' => 'Trending',
-            'icon' => 'assets/images/icons/fire-dark.svg',
-            'href' => route('publikasi.trending'),
-            'active' => false,
-            'new' => true,
-        ],
-        [
-            'label' => 'My Library',
-            'icon' => 'assets/images/icons/book-dark.svg',
-            'href' => route('publikasi.library'),
-            'active' => true,
-            'badge' => 24,
-        ],
-    ]" :bottomItems="[
-        [
-            'label' => 'Browse',
-            'href' => route('publikasi'),
-            'active' => false,
-            'icon' => 'assets/images/icons/3dcube-white.svg',
-            'iconActive' => 'assets/images/icons/3dcube.svg',
-        ],
-        [
-            'label' => 'Categories',
-            'href' => route('publikasi.categories'),
-            'active' => false,
-            'icon' => 'assets/images/icons/grid-white.svg',
-            'iconActive' => 'assets/images/icons/grid-dark.svg',
-        ],
-        [
-            'label' => 'Trending',
-            'href' => route('publikasi.trending'),
-            'active' => false,
-            'icon' => 'assets/images/icons/fire-white.svg',
-            'iconActive' => 'assets/images/icons/fire-dark.svg',
-            'new' => true,
-        ],
-        [
-            'label' => 'Library',
-            'href' => route('publikasi.library'),
-            'active' => true,
-            'icon' => 'assets/images/icons/book-white.svg',
-            'iconActive' => 'assets/images/icons/book-dark.svg',
-            'badge' => 24,
-        ],
-    ]" />
+
+{{-- Sub Navigation - GUNAKAN CONFIG --}}
+<x-publication.navigation :subItems="config('publication.sub_navigation')"
+    :bottomItems="config('publication.bottom_navigation')" />
 
 <section class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px] mt-10 sm:mt-12">
 

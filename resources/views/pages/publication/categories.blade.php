@@ -1,3 +1,4 @@
+{{-- resources/views/pages/publikasi/categories.blade.php --}}
 @extends('layouts.app')
 
 @section('title', 'Kategori Publikasi')
@@ -5,65 +6,10 @@
 @section('hide_footer', 'true')
 
 @section('content')
-<x-publication.navigation :subItems="[
-        [
-            'label' => 'Browse',
-            'icon' => 'assets/images/icons/3dcube.svg',
-            'href' => route('publikasi'),
-            'active' => false,
-        ],
-        [
-            'label' => 'Categories',
-            'icon' => 'assets/images/icons/grid-dark.svg',
-            'href' => route('publikasi.categories'),
-            'active' => true,
-        ],
-        [
-            'label' => 'Trending',
-            'icon' => 'assets/images/icons/fire-dark.svg',
-            'href' => route('publikasi.trending'),
-            'active' => false,
-            'new' => true,
-        ],
-        [
-            'label' => 'My Library',
-            'icon' => 'assets/images/icons/book-dark.svg',
-            'href' => route('publikasi.library'),
-            'active' => false,
-            'badge' => auth()->check() ? 24 : 0,
-        ],
-    ]" :bottomItems="[
-        [
-            'label' => 'Browse',
-            'href' => route('publikasi'),
-            'active' => false,
-            'icon' => 'assets/images/icons/3dcube-white.svg',
-            'iconActive' => 'assets/images/icons/3dcube.svg',
-        ],
-        [
-            'label' => 'Categories',
-            'href' => route('publikasi.categories'),
-            'active' => true,
-            'icon' => 'assets/images/icons/grid-white.svg',
-            'iconActive' => 'assets/images/icons/grid-dark.svg',
-        ],
-        [
-            'label' => 'Trending',
-            'href' => route('publikasi.trending'),
-            'active' => false,
-            'icon' => 'assets/images/icons/fire-white.svg',
-            'iconActive' => 'assets/images/icons/fire-dark.svg',
-            'new' => true,
-        ],
-        [
-            'label' => 'Library',
-            'href' => route('publikasi.library'),
-            'active' => false,
-            'icon' => 'assets/images/icons/book-white.svg',
-            'iconActive' => 'assets/images/icons/book-dark.svg',
-            'badge' => auth()->check() ? 24 : 0,
-        ],
-    ]" />
+
+{{-- Sub Navigation - GUNAKAN CONFIG --}}
+<x-publication.navigation :subItems="config('publication.sub_navigation')"
+    :bottomItems="config('publication.bottom_navigation')" />
 
 <section class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px] mt-10 sm:mt-12">
 
@@ -81,7 +27,7 @@
     <div class="grid gap-4 mb-10 sm:grid-cols-2 lg:grid-cols-3">
 
         {{-- Category Card: Technology --}}
-        <a href="{{ route('publikasi.categories', ['category' => 'technology']) }}"
+        <a href="{{ route('publikasi.index', ['category' => 'technology']) }}"
             class="relative p-6 overflow-hidden transition-all duration-300 group bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl hover:shadow-2xl hover:-translate-y-1">
             <div class="relative z-10">
                 <div class="flex items-center justify-between mb-4">
@@ -109,7 +55,7 @@
         </a>
 
         {{-- Category Card: Science --}}
-        <a href="{{ route('publikasi.categories', ['category' => 'science']) }}"
+        <a href="{{ route('publikasi.index', ['category' => 'science']) }}"
             class="relative p-6 overflow-hidden transition-all duration-300 group bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl hover:shadow-2xl hover:-translate-y-1">
             <div class="relative z-10">
                 <div class="flex items-center justify-between mb-4">
@@ -137,7 +83,7 @@
         </a>
 
         {{-- Category Card: Health --}}
-        <a href="{{ route('publikasi.categories', ['category' => 'health']) }}"
+        <a href="{{ route('publikasi.index', ['category' => 'health']) }}"
             class="relative p-6 overflow-hidden transition-all duration-300 group bg-gradient-to-br from-red-500 to-red-600 rounded-2xl hover:shadow-2xl hover:-translate-y-1">
             <div class="relative z-10">
                 <div class="flex items-center justify-between mb-4">
@@ -165,7 +111,7 @@
         </a>
 
         {{-- Category Card: Education --}}
-        <a href="{{ route('publikasi.categories', ['category' => 'education']) }}"
+        <a href="{{ route('publikasi.index', ['category' => 'education']) }}"
             class="relative p-6 overflow-hidden transition-all duration-300 group bg-gradient-to-br from-green-500 to-green-600 rounded-2xl hover:shadow-2xl hover:-translate-y-1">
             <div class="relative z-10">
                 <div class="flex items-center justify-between mb-4">
@@ -193,7 +139,7 @@
         </a>
 
         {{-- Category Card: Engineering --}}
-        <a href="{{ route('publikasi.categories', ['category' => 'engineering']) }}"
+        <a href="{{ route('publikasi.index', ['category' => 'engineering']) }}"
             class="relative p-6 overflow-hidden transition-all duration-300 group bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl hover:shadow-2xl hover:-translate-y-1">
             <div class="relative z-10">
                 <div class="flex items-center justify-between mb-4">
@@ -221,7 +167,7 @@
         </a>
 
         {{-- Category Card: Business --}}
-        <a href="{{ route('publikasi.categories', ['category' => 'business']) }}"
+        <a href="{{ route('publikasi.index', ['category' => 'business']) }}"
             class="relative p-6 overflow-hidden transition-all duration-300 group bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl hover:shadow-2xl hover:-translate-y-1">
             <div class="relative z-10">
                 <div class="flex items-center justify-between mb-4">
@@ -249,7 +195,7 @@
         </a>
 
         {{-- Category Card: Social Sciences --}}
-        <a href="{{ route('publikasi.categories', ['category' => 'social']) }}"
+        <a href="{{ route('publikasi.index', ['category' => 'social']) }}"
             class="relative p-6 overflow-hidden transition-all duration-300 group bg-gradient-to-br from-pink-500 to-pink-600 rounded-2xl hover:shadow-2xl hover:-translate-y-1">
             <div class="relative z-10">
                 <div class="flex items-center justify-between mb-4">
@@ -277,7 +223,7 @@
         </a>
 
         {{-- Category Card: Arts & Humanities --}}
-        <a href="{{ route('publikasi.categories', ['category' => 'arts']) }}"
+        <a href="{{ route('publikasi.index', ['category' => 'arts']) }}"
             class="relative p-6 overflow-hidden transition-all duration-300 group bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-2xl hover:shadow-2xl hover:-translate-y-1">
             <div class="relative z-10">
                 <div class="flex items-center justify-between mb-4">
@@ -305,7 +251,7 @@
         </a>
 
         {{-- View All Categories --}}
-        <a href="{{ route('publikasi') }}"
+        <a href="{{ route('publikasi.index') }}"
             class="group relative overflow-hidden bg-white border-2 border-dashed border-[#EEF0F7] rounded-2xl p-6 hover:border-[#FF6B18] hover:shadow-lg transition-all duration-300 flex items-center justify-center">
             <div class="text-center">
                 <div
