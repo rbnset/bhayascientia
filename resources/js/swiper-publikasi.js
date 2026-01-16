@@ -19,83 +19,126 @@ export function initPublikasiSwiper() {
 
     try {
         const swiper = new Swiper('.upToDateSwiper', {
-            // Mobile: 1 card + sedikit peek
-            slidesPerView: 1.08,
+            slidesPerView: 1.12,
             spaceBetween: 16,
             slidesPerGroup: 1,
+            centeredSlides: false,
 
-            // Smooth scrolling
-            speed: 600,
-            grabCursor: true,
-            watchOverflow: true,
             watchSlidesProgress: true,
+            watchOverflow: true,
 
-            // Pagination
+            speed: 400,
+            grabCursor: true,
+
+            touchRatio: 1,
+            touchAngle: 45,
+            threshold: 5,
+            resistanceRatio: 0.85,
+
+            lazy: false,
+            preloadImages: true,
+
+            keyboard: {
+                enabled: true,
+                onlyInViewport: true,
+            },
+
+            mousewheel: {
+                forceToAxis: true,
+                sensitivity: 0.5,
+            },
+
             pagination: {
                 el: '.upToDateSwiper .swiper-pagination',
                 clickable: true,
                 dynamicBullets: true,
                 dynamicMainBullets: 3,
+                renderBullet: function (index, className) {
+                    return `<button class="${className}" aria-label="Pergi ke slide ${index + 1} dari ${slideCount}" type="button"></button>`;
+                },
             },
 
-            // Navigation
             navigation: {
                 nextEl: '.upToDateSwiper .swiper-button-next',
                 prevEl: '.upToDateSwiper .swiper-button-prev',
             },
 
-            // Breakpoints - ✅ EXACT slides tanpa peek di desktop
             breakpoints: {
-                // Mobile landscape (>= 480px)
                 480: {
-                    slidesPerView: 1.5,
-                    spaceBetween: 16
+                    slidesPerView: 1.3,
+                    spaceBetween: 16,
+                    slidesPerGroup: 1 // ✅ Geser 1 card
                 },
-                // Tablet (>= 640px)
                 640: {
-                    slidesPerView: 2,    // ✅ Exact 2 card
-                    spaceBetween: 20
+                    slidesPerView: 2.15,
+                    spaceBetween: 20,
+                    slidesPerGroup: 1 // ✅ Geser 1 card
                 },
-                // Tablet landscape (>= 768px)
                 768: {
-                    slidesPerView: 3,    // ✅ Exact 3 card
-                    spaceBetween: 20
+                    slidesPerView: 2.5,
+                    spaceBetween: 20,
+                    slidesPerGroup: 1 // ✅ Geser 1 card
                 },
-                // Desktop (>= 1024px)
                 1024: {
-                    slidesPerView: 3,    // ✅ Exact 3 card
+                    slidesPerView: 3,
                     spaceBetween: 24,
-                    slidesPerGroup: 3
+                    slidesPerGroup: 1 // ✅ PERBAIKAN: Geser 1 card, bukan 3
                 },
-                // Desktop large (>= 1280px)
                 1280: {
-                    slidesPerView: 4,    // ✅ Exact 4 card, NO PEEK!
+                    slidesPerView: 4,
                     spaceBetween: 24,
-                    slidesPerGroup: 4
+                    slidesPerGroup: 1, // ✅ PERBAIKAN: Geser per 1 card
+                    slidesOffsetBefore: 0,
+                    slidesOffsetAfter: 0,
+                    centeredSlides: false,
+                    watchOverflow: true,
+                    loop: false,
                 },
             },
 
-            // ✅ Prevent showing partial slides at the end
-            watchSlidesProgress: true,
 
-            // Accessibility
+
             a11y: {
                 enabled: true,
-                prevSlideMessage: 'Publikasi sebelumnya',
-                nextSlideMessage: 'Publikasi berikutnya',
-                paginationBulletMessage: 'Ke halaman {{index}}'
+                prevSlideMessage: 'Geser ke publikasi sebelumnya',
+                nextSlideMessage: 'Geser ke publikasi berikutnya',
+                firstSlideMessage: 'Ini adalah publikasi pertama',
+                lastSlideMessage: 'Ini adalah publikasi terakhir',
+                paginationBulletMessage: 'Pergi ke halaman {{index}}',
             },
 
-            // Callbacks
             on: {
                 init: function () {
-                    console.log('✅ Publikasi swiper initialized successfully');
-                    console.log(`Active breakpoint: ${this.currentBreakpoint}`);
-                    console.log(`Slides per view: ${this.params.slidesPerView}`);
+                    console.log('✅ Publikasi swiper initialized');
+
+                    this.el.setAttribute('role', 'region');
+                    this.el.setAttribute('aria-label', 'Carousel publikasi terbaru');
+
+                    const liveRegion = document.createElement('div');
+                    liveRegion.className = 'sr-only';
+                    liveRegion.setAttribute('aria-live', 'polite');
+                    liveRegion.setAttribute('aria-atomic', 'true');
+                    this.el.appendChild(liveRegion);
+
+                    console.log(`✅ Slides per view: ${this.params.slidesPerView}`);
+                    console.log(`✅ Total slides: ${this.slides.length}`);
                 },
+
                 slideChange: function () {
-                    console.log(`📄 Slide: ${this.activeIndex + 1}/${this.slides.length}`);
-                }
+                    const current = this.activeIndex + 1;
+                    const total = this.slides.length;
+                    console.log(`📄 Slide: ${current}/${total}`);
+
+                    const liveRegion = this.el.querySelector('.sr-only');
+                    if (liveRegion) {
+                        liveRegion.textContent = `Menampilkan publikasi ${current} dari ${total}`;
+                    }
+                },
+
+                resize: function () {
+                    console.log(`🔄 Swiper resized: ${window.innerWidth}px`);
+                    this.update(); // ✅ Recalculate pada resize
+                },
             }
         });
 

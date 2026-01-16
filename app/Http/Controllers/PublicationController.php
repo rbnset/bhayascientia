@@ -31,6 +31,7 @@ class PublicationController extends Controller
             $selectedType = $publicationTypes->first()->slug;
         }
 
+        // ✅ UBAH: take(10) menjadi take(6)
         $publications = Publication::with([
             'authors',
             'publicationType',
@@ -44,11 +45,10 @@ class PublicationController extends Controller
                     ->where('is_active', true);
             })
             ->orderBy('published_at', 'desc')
-            ->take(10)
+            ->take(6) // ✅ PERBAIKAN: Hanya ambil 6 publikasi terbaru
             ->get();
 
         $latestPublications = $publications->map(function ($pub) {
-            // ✅ Generate cover URL dengan validasi
             $coverUrl = $this->getCoverUrl($pub);
 
             // ✅ Debug logging (hanya di development)
@@ -134,7 +134,6 @@ class PublicationController extends Controller
      */
     private function getCoverUrl($publication)
     {
-        // Jika tidak ada cover path
         if (!$publication->cover_image_path) {
             return $this->getPlaceholderCover($publication);
         }
@@ -142,7 +141,7 @@ class PublicationController extends Controller
         // Clean path (remove 'public/' prefix jika ada)
         $cleanPath = $publication->cover_image_path;
         if (str_starts_with($cleanPath, 'public/')) {
-            $cleanPath = substr($cleanPath, 7); // Remove 'public/'
+            $cleanPath = substr($cleanPath, 7);
         }
 
         // Cek apakah file ada di storage
@@ -158,7 +157,6 @@ class PublicationController extends Controller
             'full_path' => storage_path('app/public/' . $cleanPath),
         ]);
 
-        // Return placeholder jika file tidak ada
         return $this->getPlaceholderCover($publication);
     }
 
@@ -210,7 +208,7 @@ class PublicationController extends Controller
     }
 
     /**
-     * ✅ Download publikasi (untuk nanti)
+     * ✅ Download publikasi
      */
     public function download($slug)
     {
@@ -225,7 +223,7 @@ class PublicationController extends Controller
             abort(404, 'File publikasi tidak ditemukan');
         }
 
-        // Log download (jika ada model DownloadLog)
+        // Log download
         try {
             \App\Models\DownloadLog::create([
                 'publication_id' => $publication->id,
@@ -234,7 +232,6 @@ class PublicationController extends Controller
                 'user_agent' => request()->userAgent(),
             ]);
         } catch (\Exception $e) {
-            // Silent fail jika model tidak ada
             Log::warning("Download log failed: " . $e->getMessage());
         }
 
