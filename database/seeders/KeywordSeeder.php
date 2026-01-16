@@ -47,6 +47,21 @@ class KeywordSeeder extends Seeder
             'Rock fragmentation',
             'Blasting optimization',
             'Scaled distance',
+
+            // Material ledakan
+            'TNT',
+            'C4',
+            'ANFO',
+            'Dynamite',
+            'Explosive composition',
+            'Detonation velocity',
+            'Detonation pressure',
+
+            // Safety & Risk
+            'Blast safety',
+            'Risk assessment',
+            'Safety distance',
+            'Protective structure',
         ];
 
         foreach ($keywords as $name) {
@@ -55,5 +70,7 @@ class KeywordSeeder extends Seeder
                 ['name' => $name]
             );
         }
+
+        $this->command->info('Berhasil membuat ' . count($keywords) . ' keywords.');
     }
 }

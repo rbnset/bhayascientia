@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Pivots\AuthorPublication;
 use App\Models\Pivots\PublicationKeyword;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -15,7 +16,15 @@ use Illuminate\Support\Facades\Storage;
 
 class Publication extends Model
 {
-    use SoftDeletes;
+    use SoftDeletes, HasFactory;
+
+    public const STATUS_DRAFT = 'draft';
+    public const STATUS_SUBMITTED = 'submitted';
+    public const STATUS_IN_REVIEW = 'in_review';
+    public const STATUS_REVISION_REQUIRED = 'revision_required';
+    public const STATUS_ACCEPTED = 'accepted';
+    public const STATUS_REJECTED = 'rejected';
+    public const STATUS_PUBLISHED = 'published';
 
     protected $fillable = [
         'publication_type_id',

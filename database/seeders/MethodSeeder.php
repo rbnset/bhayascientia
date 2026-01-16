@@ -10,39 +10,43 @@ class MethodSeeder extends Seeder
 {
     public function run(): void
     {
-        $names = [
-            // Payung besar
-            'Quantitative',
-            'Qualitative',
+        $methods = [
+            // Pendekatan Utama
+            'Kuantitatif',
+            'Kualitatif',
             'Mixed Methods',
+            'literatur-review',
+            'simulasi-komputasi',
 
-            // Kuantitatif (desain umum)
-            'Experimental',
-            'Quasi-Experimental',
-            'Survey',
-            'Correlational',
+            // Desain Kuantitatif
+            'Eksperimental',
+            'Quasi-Eksperimental',
+            'Survei',
+            'Korelasional',
             'Cross-Sectional',
             'Longitudinal',
 
-            // Kualitatif (desain umum)
-            'Case Study',
-            'Phenomenology',
-            'Ethnography',
+            // Desain Kualitatif
+            'Studi Kasus',
+            'Fenomenologi',
+            'Etnografi',
             'Grounded Theory',
             'Focus Group Discussion (FGD)',
             'In-depth Interview',
 
-            // Pendekatan lain yang sering dipakai
+            // Pendekatan Lainnya
             'Systematic Literature Review',
             'Meta-Analysis',
             'Action Research',
         ];
 
-        foreach ($names as $name) {
+        foreach ($methods as $name) {
             Method::updateOrCreate(
                 ['slug' => Str::slug($name)],
                 ['name' => $name]
             );
         }
+
+        $this->command->info('Berhasil membuat ' . count($methods) . ' metode penelitian.');
     }
 }

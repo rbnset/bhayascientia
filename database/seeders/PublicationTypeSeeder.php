@@ -11,24 +11,24 @@ class PublicationTypeSeeder extends Seeder
     {
         $types = [
             [
-                'slug' => 'book',
-                'name' => 'Book',
+                'slug' => 'buku',
+                'name' => 'Buku',
                 'description' => 'Karya berbentuk buku utuh (authorship sebuah buku)',
                 'requires_review' => false,
                 'is_active' => true,
             ],
             [
-                'slug' => 'journal-article',
-                'name' => 'Journal Article',
-                'description' => 'Artikel jurnal ilmiah',
+                'slug' => 'jurnal',
+                'name' => 'Jurnal',
+                'description' => 'Artikel jurnal ilmiah yang dipublikasikan dalam jurnal peer-reviewed',
                 'requires_review' => true,
                 'is_active' => true,
             ],
             [
-                'slug' => 'conference-paper',
-                'name' => 'Conference Paper',
-                'description' => 'Paper untuk konferensi',
-                'requires_review' => true,
+                'slug' => 'opini',
+                'name' => 'Opini',
+                'description' => 'Artikel opini berbasis fakta yang menyajikan pandangan ahli terhadap isu terkini',
+                'requires_review' => false,
                 'is_active' => true,
             ],
         ];
@@ -39,5 +39,7 @@ class PublicationTypeSeeder extends Seeder
                 $type
             );
         }
+
+        $this->command->info('Berhasil membuat ' . count($types) . ' tipe publikasi.');
     }
 }

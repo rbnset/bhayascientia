@@ -10,7 +10,7 @@ class CategorySeeder extends Seeder
 {
     public function run(): void
     {
-        $names = [
+        $categories = [
             // Forensik / Keamanan (crime-related)
             'Crime & Bombing Cases',
             'Terrorism & Security',
@@ -39,11 +39,13 @@ class CategorySeeder extends Seeder
             'Fireworks Misuse & Regulation',
         ];
 
-        foreach ($names as $name) {
+        foreach ($categories as $name) {
             Category::updateOrCreate(
                 ['slug' => Str::slug($name)],
                 ['name' => $name]
             );
         }
+
+        $this->command->info('Created ' . count($categories) . ' categories.');
     }
 }

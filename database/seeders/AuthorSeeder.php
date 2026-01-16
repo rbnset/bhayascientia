@@ -3,32 +3,37 @@
 namespace Database\Seeders;
 
 use App\Models\Author;
+use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class AuthorSeeder extends Seeder
 {
     public function run(): void
     {
-        Author::updateOrCreate(
-            ['email' => 'super_admin@admin.com'],
-            [
-                'user_id' => 1,
-                'name' => 'Super Admin',
-                'affiliation' => 'BHAYASCIENTIA',
-                'bio' => 'Experienced researcher with expertise in scientific publications and academic writing.',
-                'photo_path' => null, // Akan menggunakan default avatar
-            ]
-        );
+        // Buat authors dari existing users dengan role 'author'
+        $authorUsers = User::role('author')->get();
 
-        Author::updateOrCreate(
-            ['email' => 'dorman@gmail.com'],
-            [
-                'user_id' => 1,
-                'name' => 'Dorman',
-                'affiliation' => 'UPN',
-                'bio' => 'Academic researcher specializing in various fields of study.',
-                'photo_path' => null,
-            ]
-        );
+        foreach ($authorUsers as $user) {
+            Author::updateOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'affiliation' => $user->job_title ?? 'Independent Researcher',
+                    'bio' => "Bio for {$user->name}. Experienced researcher with expertise in various scientific fields.",
+                    'photo_path' => null,
+                ]
+            );
+        }
+
+        // Buat additional authors tanpa user account (external authors)
+        Author::factory()->count(20)->create();
+
+        // Buat beberapa authors dengan user account baru
+        Author::factory()
+            ->withUser()
+            ->count(10)
+            ->create();
     }
 }
