@@ -142,9 +142,9 @@
                         prevEl: '.swiper-button-prev',
                     },
                     breakpoints: {
-                        640: { slidesPerView: 2, spaceBetween: 20 },
-                        768: { slidesPerView: 3, spaceBetween: 24 },
-                        1024: { slidesPerView: 4, spaceBetween: 24 },
+                        640: { slidesPerView: 2, spaceBetween: 10 },
+                        768: { slidesPerView: 3, spaceBetween: 10 },
+                        1024: { slidesPerView: 4, spaceBetween: 10 },
                     },
                 });
                 console.log('✅ Swiper initialized with', slideCount, 'slides');
