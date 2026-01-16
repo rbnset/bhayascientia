@@ -1,34 +1,26 @@
+/* resources/css/app.css - SUDAH BENAR, TIDAK PERLU DIUBAH */
+
 @import "tailwindcss";
 
-/* Tailwind v4: tentukan sumber class */
 @source "../**/*.blade.php";
 @source "../**/*.{js,jsx,ts,tsx,vue}";
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 
-/* Import Base Styles */
 @import "./base/index.css";
-
-/* Import Components */
 @import "./components/index.css";
-
-/* Import Utilities */
 @import "./utilities/index.css";
-
-/* Import Animations */
 @import "./animations/index.css";
 
-/* Import Vendor Customizations */
+/* ✅ Import Swiper Custom */
 @import "./vendors/swiper-custom.css";
 @import "flickity/css/flickity.css";
 
-/* Theme Configuration */
 @theme {
     --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif,
         "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
         "Noto Color Emoji";
 
-    /* Custom Colors untuk BHAYASCIENTIA */
     --color-primary: #ff6b18;
     --color-primary-dark: #e64627;
     --color-primary-light: #ff8a3d;

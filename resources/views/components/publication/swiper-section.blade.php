@@ -1,3 +1,5 @@
+{{-- resources/views/components/publication/swiper-section.blade.php --}}
+
 @props([
 'title' => '',
 'badge' => '',
@@ -21,14 +23,14 @@
 
     {{-- Swiper Container --}}
     <div class="relative">
-        <div class="swiper {{ $swiperClass }} overflow-visible">
+        <div class="swiper {{ $swiperClass }} !overflow-hidden sm:!overflow-visible">
             <div class="swiper-wrapper">
                 {{ $slot }}
             </div>
 
-            <div class="swiper-pagination mt-6 sm:mt-8"></div>
-            <div class="swiper-button-prev" aria-label="Publikasi sebelumnya"></div>
-            <div class="swiper-button-next" aria-label="Publikasi berikutnya"></div>
+            <div class="swiper-pagination !relative mt-6 sm:mt-8"></div>
+            <div class="swiper-button-prev !hidden sm:!flex" aria-label="Publikasi sebelumnya"></div>
+            <div class="swiper-button-next !hidden sm:!flex" aria-label="Publikasi berikutnya"></div>
         </div>
     </div>
 </div>

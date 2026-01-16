@@ -1,3 +1,5 @@
+{{-- resources/views/components/publication/card.blade.php --}}
+
 @props([
 'title' => '',
 'cover' => '',
@@ -12,8 +14,9 @@
 
 <div class="swiper-slide h-auto">
     <a href="{{ $detailUrl }}"
-        class="publication-card-link group block h-full rounded-[22px] transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F4F6FB] px-2"
+        class="publication-card-link group block h-full rounded-[22px] transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F4F6FB]"
         aria-label="Baca publikasi: {{ Str::limit($title, 60) }}">
+
         <article
             class="publication-card-inner bg-white p-4 sm:p-5 gap-3 flex h-full flex-col rounded-[22px] ring-1 ring-[#EEF0F7] transition-all duration-300 group-hover:ring-[#FF6B18]/20 group-hover:shadow-lg group-hover:shadow-[#FF6B18]/5"
             itemscope itemtype="https://schema.org/ScholarlyArticle">
@@ -25,12 +28,12 @@
 
                     {{-- Cover Image --}}
                     @if($cover)
-                    <img src="{{ $cover }}" class="publication-cover-image" alt="Cover publikasi {{ $title }}"
-                        loading="lazy" itemprop="image"
-                        onerror="console.error('Image failed:', this.src); this.onerror=null; this.src='https://placehold.co/400x600/FF6B18/white?text={{ urlencode(Str::limit($title, 15, '')) }}';" />
+                    <img src="{{ $cover }}" class="publication-cover-image w-full h-full object-cover"
+                        alt="Cover publikasi {{ $title }}" loading="lazy" itemprop="image"
+                        onerror="this.onerror=null; this.src='https://placehold.co/400x600/FF6B18/white?text={{ urlencode(Str::limit($title, 15, '')) }}';" />
                     @else
-                    <div class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#FF6B18] to-[#FF8B3D] text-white p-6"
-                        style="z-index: 1;">
+                    <div
+                        class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#FF6B18] to-[#FF8B3D] text-white p-6">
                         <span class="text-center font-bold text-sm sm:text-base leading-tight">
                             {{ Str::limit($title, 50) }}
                         </span>
@@ -132,5 +135,4 @@
 
         </article>
     </a>
-
 </div>
