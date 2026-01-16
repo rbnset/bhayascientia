@@ -110,3 +110,5 @@ Route::prefix('publikasi')->name('publikasi.')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::view('/profile', 'pages.profile')->name('profile');
 });
+
+Route::get('/author/{id}', [PublicationController::class, 'showAuthor'])->name('author.show');

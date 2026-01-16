@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Publication;
 use App\Models\PublicationType;
+use App\Models\Author;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -20,7 +21,8 @@ class PublicationController extends Controller
             return view('pages.publication.index', [
                 'latestPublications' => [],
                 'publicationTypes' => $publicationTypes,
-                'selectedType' => null
+                'selectedType' => null,
+                'bestAuthors' => collect([])
             ]);
         }
 
@@ -31,7 +33,7 @@ class PublicationController extends Controller
             $selectedType = $publicationTypes->first()->slug;
         }
 
-        // ✅ UBAH: take(10) menjadi take(6)
+        // ✅ Get Latest Publications
         $publications = Publication::with([
             'authors',
             'publicationType',
@@ -45,13 +47,12 @@ class PublicationController extends Controller
                     ->where('is_active', true);
             })
             ->orderBy('published_at', 'desc')
-            ->take(6) // ✅ PERBAIKAN: Hanya ambil 6 publikasi terbaru
+            ->take(6)
             ->get();
 
         $latestPublications = $publications->map(function ($pub) {
             $coverUrl = $this->getCoverUrl($pub);
 
-            // ✅ Debug logging (hanya di development)
             if (config('app.debug')) {
                 Log::debug("Publication Cover Debug", [
                     'id' => $pub->id,
@@ -85,7 +86,38 @@ class PublicationController extends Controller
             ];
         })->toArray();
 
-        return view('pages.publication.index', compact('latestPublications', 'publicationTypes', 'selectedType'));
+        // ✅ Get Best Authors BERDASARKAN FILTER yang dipilih
+        $bestAuthors = Author::query()
+            ->withCount(['publications' => function ($query) use ($selectedType) {
+                $query->where('status', 'published')
+                    ->whereNotNull('published_at')
+                    ->where('published_at', '<=', now())
+                    ->whereHas('publicationType', function ($q) use ($selectedType) {
+                        $q->where('slug', $selectedType)
+                            ->where('is_active', true);
+                    });
+            }])
+            ->having('publications_count', '>', 0)
+            ->orderByDesc('publications_count')
+            ->limit(6) // ✅ UBAH: Maksimal 6 author
+            ->get()
+            ->map(function ($author) {
+                return [
+                    'name' => $author->name,
+                    'avatar' => $this->getAuthorPhoto($author),
+                    'publication_count' => $author->publications_count,
+                    'profile_url' => route('author.show', $author->id),
+                    'verified' => $author->user_id !== null,
+                    'specialty' => $author->affiliation ?? null,
+                ];
+            });
+
+        return view('pages.publication.index', compact(
+            'latestPublications',
+            'publicationTypes',
+            'selectedType',
+            'bestAuthors'
+        ));
     }
 
     public function show($slug)
@@ -107,7 +139,6 @@ class PublicationController extends Controller
             ->where('published_at', '<=', now())
             ->firstOrFail();
 
-        // Format data untuk view
         $data = [
             'publication' => $publication,
             'category' => $publication->categories->first()?->name ?? 'Umum',
@@ -129,27 +160,21 @@ class PublicationController extends Controller
         return view('pages.publication.show', $data);
     }
 
-    /**
-     * ✅ Helper: Generate cover URL dengan fallback
-     */
     private function getCoverUrl($publication)
     {
         if (!$publication->cover_image_path) {
             return $this->getPlaceholderCover($publication);
         }
 
-        // Clean path (remove 'public/' prefix jika ada)
         $cleanPath = $publication->cover_image_path;
         if (str_starts_with($cleanPath, 'public/')) {
             $cleanPath = substr($cleanPath, 7);
         }
 
-        // Cek apakah file ada di storage
         if (Storage::disk('public')->exists($cleanPath)) {
             return asset('storage/' . $cleanPath);
         }
 
-        // Log jika file tidak ditemukan
         Log::warning("Cover image not found", [
             'publication_id' => $publication->id,
             'cover_path' => $publication->cover_image_path,
@@ -160,9 +185,6 @@ class PublicationController extends Controller
         return $this->getPlaceholderCover($publication);
     }
 
-    /**
-     * ✅ Helper: Generate placeholder cover
-     */
     private function getPlaceholderCover($publication)
     {
         $category = $publication->categories->first()?->name ?? 'Publikasi';
@@ -171,33 +193,24 @@ class PublicationController extends Controller
         return 'https://placehold.co/400x600/FF6B18/white?text=' . urlencode($titleShort);
     }
 
-    /**
-     * ✅ Helper: Get author photo dengan fallback
-     */
     private function getAuthorPhoto($author)
     {
         if (!$author->photo_path) {
             return 'https://ui-avatars.com/api/?name=' . urlencode($author->name) . '&background=FF6B18&color=fff&size=128&bold=true&font-size=0.4';
         }
 
-        // Clean path
         $cleanPath = $author->photo_path;
         if (str_starts_with($cleanPath, 'public/')) {
             $cleanPath = substr($cleanPath, 7);
         }
 
-        // Cek file ada
         if (Storage::disk('public')->exists($cleanPath)) {
             return asset('storage/' . $cleanPath);
         }
 
-        // Fallback ke UI Avatars
         return 'https://ui-avatars.com/api/?name=' . urlencode($author->name) . '&background=FF6B18&color=fff&size=128&bold=true&font-size=0.4';
     }
 
-    /**
-     * ✅ Helper: Generate initials dari nama
-     */
     private function getInitials($name)
     {
         $words = explode(' ', $name);
@@ -207,23 +220,18 @@ class PublicationController extends Controller
         return strtoupper(substr($name, 0, 2));
     }
 
-    /**
-     * ✅ Download publikasi
-     */
     public function download($slug)
     {
         $publication = Publication::where('slug', $slug)
             ->where('status', 'published')
             ->firstOrFail();
 
-        // Get latest version file
         $latestVersion = $publication->versions()->latest()->first();
 
         if (!$latestVersion || !$latestVersion->file_path) {
             abort(404, 'File publikasi tidak ditemukan');
         }
 
-        // Log download
         try {
             \App\Models\DownloadLog::create([
                 'publication_id' => $publication->id,
@@ -235,7 +243,6 @@ class PublicationController extends Controller
             Log::warning("Download log failed: " . $e->getMessage());
         }
 
-        // Download file
         $filePath = $latestVersion->file_path;
         if (str_starts_with($filePath, 'public/')) {
             $filePath = substr($filePath, 7);
@@ -249,5 +256,17 @@ class PublicationController extends Controller
             $filePath,
             $publication->title . '.pdf'
         );
+    }
+
+    public function showAuthor($id)
+    {
+        $author = Author::with(['publications' => function ($query) {
+            $query->where('status', 'published')
+                ->whereNotNull('published_at')
+                ->where('published_at', '<=', now())
+                ->orderBy('published_at', 'desc');
+        }])->findOrFail($id);
+
+        return view('pages.author.show', compact('author'));
     }
 }

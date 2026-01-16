@@ -25,7 +25,6 @@
         swiperClass="upToDateSwiper">
 
         @forelse($latestPublications as $publication)
-        {{-- ✅ LANGSUNG panggil card TANPA wrapper div --}}
         <x-publication.card :title="$publication['title']" :cover="$publication['cover_url']"
             :category="$publication['category']" :date="$publication['formatted_date']" :status="$publication['status']"
             :authors="$publication['authors']" :totalAuthors="$publication['total_authors']"
@@ -49,6 +48,10 @@
     </x-publication.swiper-section>
 
 </section>
+
+{{-- ✅ Best Authors Section dengan filter --}}
+<x-publication.best-authors :authors="$bestAuthors" title="Penulis Terbaik<br/>dengan Kontribusi Terbanyak"
+    badge="PENULIS TERBAIK" :selectedType="$selectedType" />
 
 <x-filter-modal />
 
