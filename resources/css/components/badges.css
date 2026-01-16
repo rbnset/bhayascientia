@@ -1,0 +1,71 @@
+/* Badge Components */
+
+/* Badge Pulse Animation */
+.badge-pulse {
+    animation: pulse 2s var(--ease-in-out) infinite;
+}
+
+@keyframes pulse {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.8;
+    }
+}
+
+/* Badge Float Animation */
+.badge-float {
+    animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-4px);
+    }
+}
+
+/* Badge with Dot Indicator */
+.badge-dot {
+    position: relative;
+}
+
+.badge-dot::before {
+    content: "";
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 8px;
+    height: 8px;
+    background: var(--color-primary);
+    border: 2px solid white;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+/* Badge Variants */
+.badge-primary {
+    background: var(--color-card-bg);
+    color: var(--color-primary);
+    border: 1px solid rgba(255, 107, 24, 0.2);
+}
+
+.badge-success {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.badge-warning {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.badge-danger {
+    background: #fee2e2;
+    color: #991b1b;
+}

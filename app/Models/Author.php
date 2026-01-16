@@ -15,7 +15,49 @@ class Author extends Model
         'name',
         'email',
         'affiliation',
+        'bio',
+        'photo_path',
     ];
+
+    /**
+     * Accessor untuk mendapatkan URL foto author
+     */
+    public function getPhotoUrlAttribute(): string
+    {
+        if ($this->photo_path) {
+            return asset('storage/' . $this->photo_path);
+        }
+
+        return asset('assets/images/default-avatar.png');
+    }
+
+    /**
+     * Accessor untuk mendapatkan inisial nama (untuk fallback avatar)
+     */
+    public function getInitialsAttribute(): string
+    {
+        $words = explode(' ', $this->name);
+
+        if (count($words) >= 2) {
+            return strtoupper(substr($words[0], 0, 1) . substr($words[1], 0, 1));
+        }
+
+        return strtoupper(substr($this->name, 0, 2));
+    }
+
+    /**
+     * Accessor untuk bio pendek (150 karakter)
+     */
+    public function getShortBioAttribute(): ?string
+    {
+        if (!$this->bio) {
+            return null;
+        }
+
+        return strlen($this->bio) > 150
+            ? substr($this->bio, 0, 147) . '...'
+            : $this->bio;
+    }
 
     public function user(): BelongsTo
     {

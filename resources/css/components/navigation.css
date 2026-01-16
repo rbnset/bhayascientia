@@ -1,0 +1,55 @@
+/* Navigation Components */
+
+/* Navigation Hover Lift Effect */
+.nav-hover-lift {
+    transition: transform var(--transition-base) ease-out;
+}
+
+.nav-hover-lift:hover {
+    transform: translateY(-2px);
+}
+
+/* Mobile Bottom Navigation */
+.bottom-nav {
+    box-shadow: 0 -10px 40px 0 rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+/* Mobile Navigation Item Animation */
+.nav-mobile-item {
+    opacity: 0;
+    animation: slideInUp var(--transition-slow) ease-out forwards;
+}
+
+/* Navigation Link Active State */
+.nav-link-active {
+    position: relative;
+    color: var(--color-primary);
+}
+
+.nav-link-active::after {
+    content: "";
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--color-primary);
+    border-radius: 2px;
+}
+
+/* Sticky Navigation */
+.nav-sticky {
+    position: sticky;
+    top: 0;
+    z-index: var(--z-sticky);
+    transition: all var(--transition-slow) ease;
+}
+
+.nav-sticky.scrolled {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: var(--shadow-md);
+}

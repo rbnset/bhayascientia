@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('publication_type_id')
                 ->constrained()->restrictOnDelete();
             $table->string('title');
+            $table->string('slug')->unique();
             $table->text('abstract')->nullable();
             $table->string('cover_image_path')->nullable();
             $table->foreignId('category_id')->nullable()

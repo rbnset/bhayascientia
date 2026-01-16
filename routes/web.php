@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\PublicationController;
 use App\Http\Controllers\PublikasiController;
 use App\Models\PublicationVersion;
 use Illuminate\Support\Facades\Route;
@@ -88,12 +89,17 @@ Route::view('/kontak', 'pages.contact')->name('kontak');
 | Publikasi Routes
 |--------------------------------------------------------------------------
 */
+/*
+|--------------------------------------------------------------------------
+| Publikasi Routes
+|--------------------------------------------------------------------------
+*/
 Route::prefix('publikasi')->name('publikasi.')->group(function () {
-    Route::get('/', [PublikasiController::class, 'index'])->name('index');
-    Route::get('/categories', [PublikasiController::class, 'categories'])->name('categories');
-    Route::get('/trending', [PublikasiController::class, 'trending'])->name('trending');
-    Route::get('/library', [PublikasiController::class, 'library'])->name('library');
-    Route::get('/{id}', [PublikasiController::class, 'show'])->name('show');
+    Route::get('/', [PublicationController::class, 'index'])->name('index');
+    Route::get('/categories', [PublicationController::class, 'categories'])->name('categories');
+    Route::get('/trending', [PublicationController::class, 'trending'])->name('trending');
+    Route::get('/library', [PublicationController::class, 'library'])->name('library');
+    Route::get('/{slug}', [PublicationController::class, 'show'])->name('show');
 });
 
 /*

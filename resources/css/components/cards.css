@@ -1,0 +1,125 @@
+/* Publication Card - Perfect Orange Border */
+
+/* Ensure proper spacing for hover effect */
+.swiper-slide {
+    position: relative;
+    z-index: 1;
+}
+
+.swiper-slide:hover {
+    z-index: 10;
+}
+
+/* Card wrapper padding */
+.swiper-slide > div {
+    padding: 8px;
+}
+
+.publication-card-link {
+    position: relative;
+    display: block;
+    border-radius: 22px;
+}
+
+/* Card inner with perfect border on hover */
+.publication-card-inner {
+    position: relative;
+    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Perfect orange border using box-shadow */
+.publication-card-link:hover .publication-card-inner {
+    transform: translateY(-4px);
+    box-shadow: 0 0 0 2px #ff6b18, 0 20px 25px -5px rgba(255, 107, 24, 0.1),
+        0 10px 10px -5px rgba(255, 107, 24, 0.05);
+    --tw-ring-shadow: none;
+}
+
+/* ✅ FIX: Cover Image - Target by itemprop instead of class */
+.publication-card-inner img[itemprop="image"],
+.publication-card-inner .publication-cover-image {
+    display: block !important;
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    z-index: 1 !important;
+    transition: transform 500ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Cover zoom on hover */
+.publication-card-link:hover img[itemprop="image"],
+.publication-card-link:hover .publication-cover-image {
+    transform: scale(1.05) !important;
+}
+
+/* ✅ Ensure container allows positioning */
+.publication-card-inner .aspect-\[2\/3\] {
+    position: relative !important;
+    isolation: isolate !important;
+}
+
+/* ✅ Overlays don't block image */
+.publication-card-inner [aria-hidden="true"] {
+    pointer-events: none !important;
+    z-index: 2 !important;
+}
+
+/* ✅ Badge on top */
+.publication-card-inner [itemprop="articleSection"] {
+    z-index: 10 !important;
+}
+
+/* Author Avatars dengan proper z-index */
+.publication-card-inner .flex.-space-x-2 {
+    position: relative;
+    isolation: isolate;
+}
+
+.publication-card-inner .flex.-space-x-2 img {
+    position: relative;
+    display: block;
+    background: white;
+    border: 2px solid white;
+}
+
+.publication-card-inner .flex.-space-x-2 img:hover {
+    transform: translateY(-2px) scale(1.15);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15);
+    z-index: 100 !important;
+}
+
+/* CTA Animation */
+.publication-card-link:hover svg {
+    animation: arrowSlide 0.4s ease;
+}
+
+@keyframes arrowSlide {
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+    50% {
+        transform: translateX(4px);
+    }
+}
+
+/* Focus state */
+.publication-card-link:focus-visible {
+    outline: 3px solid #ff6b18;
+    outline-offset: 4px;
+}
+
+/* Mobile responsive */
+@media (max-width: 640px) {
+    .swiper-slide > div {
+        padding: 4px;
+    }
+
+    .publication-card-link:hover .publication-card-inner {
+        transform: translateY(-2px);
+    }
+}

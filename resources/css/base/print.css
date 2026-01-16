@@ -1,0 +1,33 @@
+/* Print Styles */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+
+    body {
+        background: white;
+        color: black;
+    }
+
+    a[href]::after {
+        content: " (" attr(href) ")";
+        font-size: 0.8em;
+        color: #666;
+    }
+
+    /* Hide navigation, footer, etc */
+    nav,
+    footer,
+    .btn,
+    button {
+        display: none !important;
+    }
+
+    /* Ensure content is readable */
+    .prose,
+    article {
+        max-width: 100%;
+        font-size: 12pt;
+        line-height: 1.5;
+    }
+}

@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 
 class Publication extends Model
 {
@@ -19,29 +21,34 @@ class Publication extends Model
         'publication_type_id',
         'method_id',
         'title',
+        'slug',
         'abstract',
         'status',
         'published_at',
         'cover_image_path',
-        // penting: kalau Anda memang punya kolom created_by, biasanya ini juga perlu fillable
-        // 'created_by',
     ];
 
     protected $casts = [
         'published_at' => 'datetime',
     ];
 
-    // =====================
-    // PUBLICATION TYPE
-    // =====================
+    // ✅ Appends accessor
+    protected $appends = ['cover_url', 'formatted_date', 'category_name'];
+
+    // ✅ Cache untuk menghindari multiple file exists check
+    protected $coverUrlCache = null;
+
+    /*
+    |--------------------------------------------------------------------------
+    | Relationships
+    |--------------------------------------------------------------------------
+    */
+
     public function publicationType(): BelongsTo
     {
         return $this->belongsTo(PublicationType::class);
     }
 
-    // =====================
-    // KEYWORDS (MANY TO MANY)
-    // =====================
     public function keywords(): BelongsToMany
     {
         return $this->belongsToMany(
@@ -50,13 +57,10 @@ class Publication extends Model
         )->using(PublicationKeyword::class);
     }
 
-    // =====================
-    // AUTHORS
-    // =====================
     public function authors(): BelongsToMany
     {
         return $this->belongsToMany(
-            \App\Models\Author::class,
+            Author::class,
             'author_publication',
             'publication_id',
             'author_id'
@@ -69,18 +73,15 @@ class Publication extends Model
 
     public function authorPublications(): HasMany
     {
-        return $this->hasMany(\App\Models\Pivots\AuthorPublication::class)
+        return $this->hasMany(AuthorPublication::class)
             ->orderBy('order');
     }
 
-    // =====================
-    // REVIEWS
-    // =====================
     public function reviews(): HasManyThrough
     {
         return $this->hasManyThrough(
-            \App\Models\Review::class,
-            \App\Models\PublicationVersion::class,
+            Review::class,
+            PublicationVersion::class,
             'publication_id',
             'publication_version_id',
             'id',
@@ -109,8 +110,223 @@ class Publication extends Model
         return $this->hasMany(DownloadLog::class);
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Query Scopes
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Scope query untuk publikasi yang sudah dipublish
+     */
     public function scopePublished($query)
     {
-        return $query->where('status', 'published');
+        return $query->where('status', 'published')
+            ->whereNotNull('published_at')
+            ->where('published_at', '<=', now());
+    }
+
+    /**
+     * Scope query untuk publikasi terbaru
+     */
+    public function scopeLatest($query)
+    {
+        return $query->orderBy('published_at', 'desc');
+    }
+
+    /**
+     * Scope query berdasarkan tipe publikasi
+     */
+    public function scopeOfType($query, $typeSlug)
+    {
+        return $query->whereHas('publicationType', function ($q) use ($typeSlug) {
+            $q->where('slug', $typeSlug);
+        });
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Accessors
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Accessor untuk mendapatkan kategori pertama
+     */
+    public function getCategoryNameAttribute()
+    {
+        // ✅ Gunakan relationLoaded untuk avoid N+1
+        if ($this->relationLoaded('categories')) {
+            return $this->categories->first()?->name ?? 'Umum';
+        }
+
+        return $this->categories()->first()?->name ?? 'Umum';
+    }
+
+    /**
+     * Accessor untuk format tanggal Indonesia
+     */
+    public function getFormattedDateAttribute()
+    {
+        if (!$this->published_at) {
+            return '-';
+        }
+
+        return $this->published_at->locale('id')->isoFormat('D MMMM YYYY');
+    }
+
+    /**
+     * ✅ Accessor untuk URL cover image (Optimized)
+     */
+    public function getCoverUrlAttribute()
+    {
+        // Return cached value jika ada
+        if ($this->coverUrlCache !== null) {
+            return $this->coverUrlCache;
+        }
+
+        // Jika tidak ada cover image path
+        if (!$this->cover_image_path) {
+            return $this->coverUrlCache = $this->generatePlaceholder();
+        }
+
+        // Clean path: remove 'public/' prefix jika ada
+        $cleanPath = $this->cover_image_path;
+        if (Str::startsWith($cleanPath, 'public/')) {
+            $cleanPath = Str::after($cleanPath, 'public/');
+        }
+
+        // Cek apakah file ada di storage/app/public
+        if (Storage::disk('public')->exists($cleanPath)) {
+            return $this->coverUrlCache = asset('storage/' . $cleanPath);
+        }
+
+        // Log warning jika file tidak ditemukan (hanya di development)
+        if (config('app.debug')) {
+            \Log::warning("Cover image not found for publication #{$this->id}", [
+                'title' => $this->title,
+                'cover_path' => $this->cover_image_path,
+                'clean_path' => $cleanPath,
+                'expected_location' => storage_path('app/public/' . $cleanPath),
+            ]);
+        }
+
+        // Return placeholder jika file tidak ada
+        return $this->coverUrlCache = $this->generatePlaceholder();
+    }
+
+    /**
+     * ✅ Generate placeholder cover URL
+     */
+    private function generatePlaceholder()
+    {
+        // Get category name (avoid N+1)
+        $categoryName = 'Publikasi';
+        if ($this->relationLoaded('categories') && $this->categories->isNotEmpty()) {
+            $categoryName = $this->categories->first()->name;
+        }
+
+        // Truncate title
+        $titleShort = Str::limit($this->title, 20, '');
+
+        return 'https://placehold.co/400x600/FF6B18/white?text=' . urlencode($titleShort);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Mutators
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * ✅ Set cover image path (normalize path)
+     */
+    public function setCoverImagePathAttribute($value)
+    {
+        // Remove 'public/' prefix jika ada saat save
+        if ($value && Str::startsWith($value, 'public/')) {
+            $value = Str::after($value, 'public/');
+        }
+
+        $this->attributes['cover_image_path'] = $value;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Boot
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Boot model events
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Auto-generate slug saat create
+        static::creating(function ($publication) {
+            if (empty($publication->slug)) {
+                $publication->slug = Str::slug($publication->title);
+            }
+        });
+
+        // Clear cover cache saat update
+        static::updating(function ($publication) {
+            $publication->coverUrlCache = null;
+        });
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Helper Methods
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * ✅ Check if publication has valid cover image
+     */
+    public function hasCover(): bool
+    {
+        if (!$this->cover_image_path) {
+            return false;
+        }
+
+        $cleanPath = Str::startsWith($this->cover_image_path, 'public/')
+            ? Str::after($this->cover_image_path, 'public/')
+            : $this->cover_image_path;
+
+        return Storage::disk('public')->exists($cleanPath);
+    }
+
+    /**
+     * ✅ Get file size in human readable format
+     */
+    public function getCoverFileSize(): ?string
+    {
+        if (!$this->hasCover()) {
+            return null;
+        }
+
+        $cleanPath = Str::startsWith($this->cover_image_path, 'public/')
+            ? Str::after($this->cover_image_path, 'public/')
+            : $this->cover_image_path;
+
+        $bytes = Storage::disk('public')->size($cleanPath);
+
+        return $this->formatBytes($bytes);
+    }
+
+    /**
+     * Format bytes ke KB/MB
+     */
+    private function formatBytes($bytes, $precision = 2)
+    {
+        $units = ['B', 'KB', 'MB', 'GB'];
+        $bytes = max($bytes, 0);
+        $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
+        $pow = min($pow, count($units) - 1);
+
+        return round($bytes / (1024 ** $pow), $precision) . ' ' . $units[$pow];
     }
 }
