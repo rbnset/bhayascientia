@@ -15,12 +15,13 @@
 /* Desktop: EXACT container untuk 4 slides visible */
 @media (min-width: 1280px) {
     .upToDateSwiper {
-        padding: 28px 0;
-        overflow: hidden !important; /* ✅ CRITICAL: hide overflow */
+        padding: 40px 0 48px 0; /* ✅ Extra space untuk translateY dan shadow */
+        overflow: hidden !important; /* ✅ CRITICAL: Hide horizontal overflow */
         max-width: 100%;
+        margin: 0 60px; /* ✅ Space untuk arrows */
     }
 
-    /* ✅ Container wrapper */
+    /* ✅ Container wrapper - hanya clip horizontal, biarkan vertical */
     .upToDateSwiper .swiper-wrapper {
         box-sizing: border-box;
     }
@@ -32,22 +33,33 @@
         box-sizing: border-box;
     }
 
-    /* ✅ Extra padding untuk shadow tidak terpotong */
+    /* ✅ Extra padding untuk shadow tidak terpotong HANYA TOP/BOTTOM */
     .upToDateSwiper .swiper-wrapper {
-        padding: 8px 4px 16px 4px !important;
+        padding: 16px 0 24px 0 !important; /* ✅ NO horizontal padding */
+        margin: 0 !important;
+    }
+
+    /* ✅ CRITICAL: Semua slides visible, tapi hanya active range */
+    .upToDateSwiper .swiper-slide {
+        opacity: 1 !important;
+        visibility: visible !important;
     }
 }
 
 @media (min-width: 1024px) and (max-width: 1279px) {
     .upToDateSwiper {
-        padding: 28px 66px;
-        overflow: visible !important;
+        padding: 40px 66px 48px 66px; /* ✅ Extra space */
+        overflow: hidden !important; /* ✅ Hide overflow */
     }
 
     /* ✅ 3 slides untuk medium desktop */
     .upToDateSwiper .swiper-slide {
         width: calc(33.333% - 16px) !important;
         flex-shrink: 0 !important;
+    }
+
+    .upToDateSwiper .swiper-wrapper {
+        padding: 16px 0 24px 0 !important;
     }
 }
 
@@ -57,7 +69,11 @@
         margin-left: -1rem;
         margin-right: -1rem;
         padding: 24px 1.5rem;
-        overflow: visible !important;
+        overflow: hidden !important; /* ✅ Changed to hidden */
+    }
+
+    .upToDateSwiper .swiper-wrapper {
+        padding: 8px 4px 16px 4px !important; /* ✅ Keep horizontal padding for mobile */
     }
 }
 
@@ -65,7 +81,11 @@
 @media (min-width: 640px) and (max-width: 1023px) {
     .upToDateSwiper {
         padding: 24px 1.5rem;
-        overflow: visible !important;
+        overflow: hidden !important; /* ✅ Changed to hidden */
+    }
+
+    .upToDateSwiper .swiper-wrapper {
+        padding: 8px 4px 16px 4px !important;
     }
 }
 
@@ -75,10 +95,7 @@
 
 .upToDateSwiper .swiper-wrapper {
     align-items: stretch !important;
-    padding-bottom: 16px; /* ✅ Untuk bottom shadow */
-    padding-top: 8px; /* ✅ Untuk top shadow/border */
-    padding-left: 4px; /* ✅ CRITICAL: untuk border kiri tidak terpotong */
-    padding-right: 4px; /* ✅ Untuk border kanan */
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .upToDateSwiper .swiper-slide {
@@ -91,6 +108,14 @@
     /* ✅ CRITICAL: Semua slides harus visible */
     opacity: 1 !important;
     visibility: visible !important;
+
+    /* ✅ Smooth transition untuk hover */
+    transition: transform 350ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+
+    /* ✅ Performance optimization */
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    transform: translate3d(0, 0, 0);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -115,8 +140,10 @@
 }
 
 .upToDateSwiper .publication-card-inner {
-    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+    transition: all 350ms cubic-bezier(0.4, 0, 0.2, 1) !important;
     position: relative;
+    will-change: box-shadow, transform;
+    border-radius: 22px;
 }
 
 .upToDateSwiper .publication-cover-image {
@@ -125,25 +152,32 @@
 }
 
 /* ========================================
-   HOVER & FOCUS EFFECTS - ✅ PERFECT FIX
+   HOVER & FOCUS EFFECTS - ✅ PERFECT SMOOTH FIX
    ======================================== */
 
 @media (min-width: 1024px) and (hover: hover) {
-    .upToDateSwiper {
-        padding-top: 32px !important; /* ✅ Extra space untuk translateY */
-        padding-bottom: 32px !important;
+    /* ✅ Hover pada slide dengan smooth transition */
+    .upToDateSwiper .swiper-slide {
+        transition: transform 350ms cubic-bezier(0.4, 0, 0.2, 1);
+        will-change: transform;
     }
 
     .upToDateSwiper .swiper-slide:hover {
-        transform: translateY(-12px);
+        transform: translateY(-12px); /* ✅ Smooth lift effect */
         z-index: 10;
     }
 
-    /* ✅ Shadow tidak terpotong */
+    /* ✅ Shadow smooth transition - border orange tetap terlihat penuh */
     .upToDateSwiper .swiper-slide:hover .publication-card-inner {
         box-shadow: 0 0 0 3px rgba(255, 107, 24, 0.4),
-            0 24px 48px rgba(255, 107, 24, 0.25),
+            /* ✅ Orange border */ 0 24px 48px rgba(255, 107, 24, 0.25),
             0 12px 20px rgba(0, 0, 0, 0.12) !important;
+        transition: box-shadow 350ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+
+    /* ✅ Image zoom effect */
+    .upToDateSwiper .swiper-slide:hover .publication-cover-image {
+        transform: scale(1.05);
     }
 }
 
@@ -155,11 +189,13 @@
 
     .upToDateSwiper .swiper-slide:hover {
         transform: translateY(-6px);
+        z-index: 10;
     }
 
     .upToDateSwiper .swiper-slide:hover .publication-card-inner {
         box-shadow: 0 0 0 2px rgba(255, 107, 24, 0.3),
             0 12px 24px rgba(255, 107, 24, 0.15) !important;
+        transition: box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1) !important;
     }
 }
 
@@ -169,6 +205,7 @@
         box-shadow: 0 0 0 2px rgba(255, 107, 24, 0.3),
             0 8px 16px rgba(255, 107, 24, 0.15) !important;
         transform: scale(0.98);
+        transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1) !important;
     }
 }
 
@@ -196,11 +233,12 @@
     background: white;
     border-radius: 50%;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-    transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
     opacity: 0;
     pointer-events: none;
     z-index: 20;
-    top: calc(50% - 20px); /* ✅ Adjust untuk extra padding */
+    top: 50%;
+    transform: translateY(-50%);
     margin-top: 0;
 }
 
@@ -209,6 +247,7 @@
     .upToDateSwiper:hover .swiper-button-next {
         opacity: 1;
         pointer-events: auto;
+        transition: opacity 300ms cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .swiper-button-prev:focus-visible,
@@ -225,12 +264,24 @@
     }
 }
 
-.swiper-button-prev {
-    left: 18px;
+@media (min-width: 1280px) {
+    .swiper-button-prev {
+        left: -60px; /* ✅ Outside container */
+    }
+
+    .swiper-button-next {
+        right: -60px; /* ✅ Outside container */
+    }
 }
 
-.swiper-button-next {
-    right: 18px;
+@media (min-width: 1024px) and (max-width: 1279px) {
+    .swiper-button-prev {
+        left: 18px;
+    }
+
+    .swiper-button-next {
+        right: 18px;
+    }
 }
 
 .swiper-button-next::after,
@@ -244,7 +295,7 @@
 .swiper-button-prev:hover {
     background: #ff6b18;
     box-shadow: 0 8px 24px rgba(255, 107, 24, 0.35);
-    transform: scale(1.08);
+    transform: translateY(-50%) scale(1.08);
 }
 
 .swiper-button-next:hover::after,
@@ -254,7 +305,7 @@
 
 .swiper-button-next:active,
 .swiper-button-prev:active {
-    transform: scale(0.96);
+    transform: translateY(-50%) scale(0.96);
 }
 
 .swiper-button-disabled {
@@ -264,7 +315,7 @@
 
 .swiper-button-disabled:hover {
     background: white !important;
-    transform: none !important;
+    transform: translateY(-50%) !important;
 }
 
 .swiper-button-next:focus-visible,
@@ -388,27 +439,6 @@
     }
 }
 
-@media (min-width: 1024px) and (max-width: 1279px) {
-    .upToDateSwiper {
-        padding: 28px 66px;
-    }
-}
-
-@media (min-width: 1280px) {
-    .swiper-button-prev {
-        left: -60px; /* ✅ Outside container */
-    }
-
-    .swiper-button-next {
-        right: -60px; /* ✅ Outside container */
-    }
-
-    /* ✅ Jika parent container ada padding, adjust */
-    .upToDateSwiper {
-        margin: 0 60px; /* ✅ Space untuk arrows */
-    }
-}
-
 /* ========================================
    ACCESSIBILITY
    ======================================== */
@@ -436,20 +466,6 @@
 .upToDateSwiper.swiper-initialized {
     opacity: 1;
     transition: opacity 400ms ease;
-}
-
-/* ========================================
-   PERFORMANCE
-   ======================================== */
-
-.upToDateSwiper .swiper-wrapper {
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.upToDateSwiper .swiper-slide {
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
-    transform: translate3d(0, 0, 0);
 }
 
 /* ========================================
