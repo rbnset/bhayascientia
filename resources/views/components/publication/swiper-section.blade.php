@@ -21,9 +21,9 @@
     </div>
 
     {{-- Swiper Container dengan overflow visible --}}
-    <div class="-mx-4 overflow-visible"> {{-- ✅ Ubah dari overflow-hidden --}}
-        <div class="upToDateClip overflow-visible"> {{-- ✅ Tambah overflow-visible --}}
-            <div class="swiper {{ $swiperClass }} px-4 w-full overflow-visible"> {{-- ✅ Tambah overflow-visible --}}
+    <div class="-mx-4 overflow-visible">
+        <div class="upToDateClip overflow-visible">
+            <div class="swiper {{ $swiperClass }} px-4 w-full overflow-visible">
                 <div class="swiper-wrapper">
                     {{ $slot }}
                 </div>

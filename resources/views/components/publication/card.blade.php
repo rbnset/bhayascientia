@@ -11,7 +11,7 @@
 ])
 
 <div class="swiper-slide h-auto">
-    <div class="p-2">
+    <div class="p-0.5">
         <a href="{{ $detailUrl }}"
             class="publication-card-link group block h-full rounded-[22px] transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F4F6FB]"
             aria-label="Baca publikasi: {{ Str::limit($title, 60) }}">
