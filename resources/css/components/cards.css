@@ -10,9 +10,9 @@
     z-index: 10;
 }
 
-/* Card wrapper padding */
+/* ✅ FIX: Remove extra padding from swiper-slide wrapper */
 .swiper-slide > div {
-    padding: 8px;
+    padding: 0;
 }
 
 .publication-card-link {
@@ -35,7 +35,7 @@
     --tw-ring-shadow: none;
 }
 
-/* ✅ FIX: Cover Image - Target by itemprop instead of class */
+/* Cover Image - Target by itemprop instead of class */
 .publication-card-inner img[itemprop="image"],
 .publication-card-inner .publication-cover-image {
     display: block !important;
@@ -56,19 +56,19 @@
     transform: scale(1.05) !important;
 }
 
-/* ✅ Ensure container allows positioning */
+/* Ensure container allows positioning */
 .publication-card-inner .aspect-\[2\/3\] {
     position: relative !important;
     isolation: isolate !important;
 }
 
-/* ✅ Overlays don't block image */
+/* Overlays don't block image */
 .publication-card-inner [aria-hidden="true"] {
     pointer-events: none !important;
     z-index: 2 !important;
 }
 
-/* ✅ Badge on top */
+/* Badge on top */
 .publication-card-inner [itemprop="articleSection"] {
     z-index: 10 !important;
 }
@@ -115,10 +115,6 @@
 
 /* Mobile responsive */
 @media (max-width: 640px) {
-    .swiper-slide > div {
-        padding: 4px;
-    }
-
     .publication-card-link:hover .publication-card-inner {
         transform: translateY(-2px);
     }

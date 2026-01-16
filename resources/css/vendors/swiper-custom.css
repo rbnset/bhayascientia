@@ -2,11 +2,19 @@
 
 .upToDateSwiper {
     overflow: visible !important;
-    padding: 12px 0;
+    padding: 12px 56px; /* Space for arrows on desktop */
+}
+
+@media (max-width: 1023px) {
+    .upToDateSwiper {
+        padding: 12px 0;
+        overflow: hidden !important;
+    }
 }
 
 .upToDateSwiper .swiper-wrapper {
     align-items: stretch !important;
+    padding-bottom: 2px; /* Prevent shadow clipping */
 }
 
 .upToDateSwiper .swiper-slide {
@@ -23,46 +31,121 @@
     overflow: visible !important;
 }
 
-/* Navigation buttons */
+/* ✅ Navigation Arrows - Enhanced UX */
 .swiper-button-next,
 .swiper-button-prev {
-    width: 44px;
-    height: 44px;
+    width: 48px;
+    height: 48px;
     background: white;
     border-radius: 50%;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    transition: all 200ms ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0;
+    pointer-events: none;
 }
 
-.swiper-button-next:hover,
-.swiper-button-prev:hover {
-    background: #ff6b18;
-    color: white;
-    transform: scale(1.1);
+/* Show arrows only on desktop when hovering swiper */
+@media (min-width: 1024px) {
+    .upToDateSwiper:hover .swiper-button-prev,
+    .upToDateSwiper:hover .swiper-button-next {
+        opacity: 1;
+        pointer-events: auto;
+    }
 }
 
+/* Always hide on mobile/tablet */
+@media (max-width: 1023px) {
+    .swiper-button-prev,
+    .swiper-button-next {
+        display: none !important;
+    }
+}
+
+/* Position adjustment */
+.swiper-button-prev {
+    left: 0;
+}
+
+.swiper-button-next {
+    right: 0;
+}
+
+/* Arrow icon styling */
 .swiper-button-next::after,
 .swiper-button-prev::after {
     font-size: 20px;
     font-weight: bold;
+    color: #111827;
 }
 
-/* Pagination */
+/* Hover state */
+.swiper-button-next:hover,
+.swiper-button-prev:hover {
+    background: #ff6b18;
+    box-shadow: 0 6px 20px rgba(255, 107, 24, 0.3);
+    transform: scale(1.1);
+}
+
+.swiper-button-next:hover::after,
+.swiper-button-prev:hover::after {
+    color: white;
+}
+
+/* Active state */
+.swiper-button-next:active,
+.swiper-button-prev:active {
+    transform: scale(0.95);
+}
+
+/* Disabled state */
+.swiper-button-disabled {
+    opacity: 0.3 !important;
+    cursor: not-allowed;
+    pointer-events: auto !important;
+}
+
+.swiper-button-disabled:hover {
+    background: white !important;
+    transform: none !important;
+}
+
+/* ✅ Pagination - Enhanced */
 .swiper-pagination {
     position: relative !important;
     margin-top: 24px;
+    bottom: 0 !important;
 }
 
 .swiper-pagination-bullet {
     width: 10px;
     height: 10px;
-    background: #eef0f7;
+    background: #d1d5db;
     opacity: 1;
-    transition: all 200ms ease;
+    transition: all 300ms ease;
+    margin: 0 4px !important;
 }
 
 .swiper-pagination-bullet-active {
     background: #ff6b18;
-    width: 24px;
+    width: 28px;
     border-radius: 5px;
+}
+
+.swiper-pagination-bullet:hover {
+    background: #ff6b18;
+    opacity: 0.7;
+    cursor: pointer;
+}
+
+/* Dynamic bullets */
+.swiper-pagination-bullets-dynamic {
+    overflow: visible;
+}
+
+.swiper-pagination-bullets-dynamic .swiper-pagination-bullet {
+    transform: scale(1);
+}
+
+.swiper-pagination-bullets-dynamic .swiper-pagination-bullet-active-main {
+    transform: scale(1);
 }

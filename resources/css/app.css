@@ -38,7 +38,3 @@
     --color-border: #eef0f7;
     --color-card-bg: #fff7f2;
 }
-
-/* Print & Accessibility */
-@import "./base/print.css";
-@import "./base/accessibility.css";
