@@ -5,14 +5,15 @@
 'authors' => [],
 'totalAuthors' => 0,
 'downloadCount' => 0,
+'viewsCount' => 0, // ✅ Tambahan
 'detailUrl' => '#'
 ])
 
 {{-- ✅ DEBUG: Uncomment untuk cek data --}}
-{{-- @dump($coverUrl, $authors) --}}
+{{-- @dump($coverUrl, $authors, $downloadCount, $viewsCount) --}}
 
 <a href="{{ $detailUrl }}"
-    class="group block rounded-[22px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+    class="group block rounded-[22px] focus:outline-none focus-visible:ring-2 focus-visual:ring-[#FF6B18] focus-visible:ring-offset-2 focus-visible:ring-offset-white"
     aria-label="Baca detail: {{ $title }}">
     <article
         class="flex items-center gap-4 rounded-[22px] border border-[#EEF0F7] bg-white p-3 transition duration-300 hover:-translate-y-[1px] hover:shadow-sm hover:ring-2 hover:ring-[#FF6B18] hover:ring-inset sm:p-[14px]">
@@ -47,13 +48,30 @@
                 </span>
             </h3>
 
-            {{-- Date & Download --}}
-            <div class="flex items-center gap-3 mt-2">
+            {{-- Date & Stats --}}
+            <div class="flex items-center gap-3 mt-2 flex-wrap">
                 <p class="text-[11px] leading-[16px] text-[#A3A6AE] sm:text-sm sm:leading-[21px]">
                     {{ $formattedDate }}
                 </p>
+
+                {{-- ✅ Views Count --}}
+                @if($viewsCount > 0)
+                <span class="inline-flex items-center gap-1 text-[10px] text-[#6B7280] sm:text-xs"
+                    title="{{ number_format($viewsCount) }} views">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    {{ number_format($viewsCount) }}
+                </span>
+                @endif
+
+                {{-- ✅ Download Count --}}
                 @if($downloadCount > 0)
-                <span class="inline-flex items-center gap-1 text-[10px] text-[#6B7280] sm:text-xs">
+                <span class="inline-flex items-center gap-1 text-[10px] text-[#6B7280] sm:text-xs"
+                    title="{{ number_format($downloadCount) }} downloads">
                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />

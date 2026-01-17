@@ -5,9 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Publication;
 use App\Models\PublicationType;
 use App\Models\Author;
+use App\Models\PublicationViewLog;
+use App\Models\DownloadLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Cache;
 
 class PublicationController extends Controller
 {
@@ -27,7 +30,7 @@ class PublicationController extends Controller
                 'bestAuthors' => collect([]),
                 'popularPublications' => collect([]),
                 'featuredPublication' => null,
-                'featuredTypeContent' => null, // ✅ Tambahan
+                'featuredTypeContent' => null,
             ]);
         }
 
@@ -47,11 +50,11 @@ class PublicationController extends Controller
             $featuredTypeContent = [
                 'title' => $currentType->content->title ?? $currentType->name,
                 'cover_url' => $this->getTypeContentCover($currentType->content),
-                'category' => $currentType->name, // Nama type sebagai category
+                'category' => $currentType->name,
                 'type' => $currentType->name,
                 'abstract' => $currentType->content->description,
-                'download_count' => 0, // Type content tidak ada download
-                'detail_url' => '#', // Atau route ke halaman detail type
+                'download_count' => 0,
+                'detail_url' => '#',
             ];
         }
 
@@ -156,7 +159,6 @@ class PublicationController extends Controller
             ->get();
 
         // ✅ Featured Publication (yang paling banyak diunduh)
-        // HANYA jika tidak ada featuredTypeContent
         $featuredPublication = null;
         if (!$featuredTypeContent && $popularPubs->first()) {
             $featuredPublication = [
@@ -173,7 +175,7 @@ class PublicationController extends Controller
         }
 
         // ✅ Popular Publications List (6 sisanya)
-        $skipCount = $featuredTypeContent ? 0 : 1; // Jika pakai type content, jangan skip
+        $skipCount = $featuredTypeContent ? 0 : 1;
         $popularPublications = $popularPubs->skip($skipCount)->take(6)->map(function ($pub) {
             return [
                 'id' => $pub->id,
@@ -183,6 +185,7 @@ class PublicationController extends Controller
                 'category' => $pub->category_name,
                 'formatted_date' => $pub->formatted_date,
                 'download_count' => $pub->download_logs_count,
+                'views_count' => $pub->views_count,
                 'detail_url' => route('publikasi.show', $pub->slug),
                 'authors' => $pub->authors->map(function ($author) {
                     return [
@@ -203,10 +206,13 @@ class PublicationController extends Controller
             'bestAuthors',
             'popularPublications',
             'featuredPublication',
-            'featuredTypeContent' // ✅ Tambahan
+            'featuredTypeContent'
         ));
     }
 
+    /**
+     * Show publication detail
+     */
     public function show($slug)
     {
         $publication = Publication::with([
@@ -218,13 +224,15 @@ class PublicationController extends Controller
                 $query->latest();
             },
             'method',
-            'downloadLogs'
         ])
             ->where('slug', $slug)
             ->where('status', 'published')
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now())
             ->firstOrFail();
+
+        // ✅ Log view (throttle untuk prevent spam)
+        $this->logPublicationView($publication);
 
         $data = [
             'publication' => $publication,
@@ -242,9 +250,86 @@ class PublicationController extends Controller
             'keywords' => $publication->keywords->pluck('name'),
             'formatted_date' => $publication->published_at->format('F j, Y'),
             'cover_url' => $this->getCoverUrl($publication),
+            'views_count' => $publication->views_count,
+            'downloads_count' => $publication->downloads_count,
         ];
 
         return view('pages.publication.show', $data);
+    }
+
+    /**
+     * ✅ Download publikasi (CONSOLIDATED - HANYA 1 METHOD)
+     */
+    public function download($slug)
+    {
+        $publication = Publication::where('slug', $slug)
+            ->where('status', 'published')
+            ->firstOrFail();
+
+        $latestVersion = $publication->versions()->latest()->first();
+
+        if (!$latestVersion || !$latestVersion->file_path) {
+            abort(404, 'File publikasi tidak ditemukan');
+        }
+
+        // ✅ Log download menggunakan helper method
+        try {
+            DownloadLog::logDownload($publication);
+            $publication->clearStatsCache();
+        } catch (\Exception $e) {
+            Log::warning("Download log failed: " . $e->getMessage());
+        }
+
+        $filePath = $this->cleanPath($latestVersion->file_path);
+
+        if (!Storage::disk('public')->exists($filePath)) {
+            abort(404, 'File tidak ditemukan di storage');
+        }
+
+        return Storage::disk('public')->download(
+            $filePath,
+            $publication->title . '.pdf'
+        );
+    }
+
+    /**
+     * ✅ Show author profile
+     */
+    public function showAuthor($id)
+    {
+        $author = Author::with([
+            'user',
+            'publications' => function ($query) {
+                $query->where('status', 'published')
+                    ->whereNotNull('published_at')
+                    ->where('published_at', '<=', now())
+                    ->orderBy('published_at', 'desc');
+            }
+        ])->findOrFail($id);
+
+        return view('pages.author.show', compact('author'));
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Private Helper Methods
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * ✅ Log publication view dengan throttling
+     */
+    private function logPublicationView(Publication $publication): void
+    {
+        $cacheKey = "publication_view_throttle.{$publication->id}." . request()->ip();
+
+        // Throttle: 1 view per IP per 5 menit
+        if (!Cache::has($cacheKey)) {
+            PublicationViewLog::logView($publication);
+            $publication->clearStatsCache();
+
+            Cache::put($cacheKey, true, now()->addMinutes(5));
+        }
     }
 
     /**
@@ -374,67 +459,9 @@ class PublicationController extends Controller
         $words = preg_split('/\s+/', $name);
 
         if (count($words) >= 2) {
-            // Ambil huruf pertama dari 2 kata pertama
             return strtoupper(substr($words[0], 0, 1) . substr($words[1], 0, 1));
         }
 
-        // Jika hanya 1 kata, ambil 2 huruf pertama
         return strtoupper(substr($name, 0, 2));
-    }
-
-    /**
-     * ✅ Download publikasi
-     */
-    public function download($slug)
-    {
-        $publication = Publication::where('slug', $slug)
-            ->where('status', 'published')
-            ->firstOrFail();
-
-        $latestVersion = $publication->versions()->latest()->first();
-
-        if (!$latestVersion || !$latestVersion->file_path) {
-            abort(404, 'File publikasi tidak ditemukan');
-        }
-
-        try {
-            \App\Models\DownloadLog::create([
-                'publication_id' => $publication->id,
-                'user_id' => auth()->id(),
-                'ip_address' => request()->ip(),
-                'user_agent' => request()->userAgent(),
-            ]);
-        } catch (\Exception $e) {
-            Log::warning("Download log failed: " . $e->getMessage());
-        }
-
-        $filePath = $this->cleanPath($latestVersion->file_path);
-
-        if (!Storage::disk('public')->exists($filePath)) {
-            abort(404, 'File tidak ditemukan di storage');
-        }
-
-        return Storage::disk('public')->download(
-            $filePath,
-            $publication->title . '.pdf'
-        );
-    }
-
-    /**
-     * ✅ Show author profile
-     */
-    public function showAuthor($id)
-    {
-        $author = Author::with([
-            'user',
-            'publications' => function ($query) {
-                $query->where('status', 'published')
-                    ->whereNotNull('published_at')
-                    ->where('published_at', '<=', now())
-                    ->orderBy('published_at', 'desc');
-            }
-        ])->findOrFail($id);
-
-        return view('pages.author.show', compact('author'));
     }
 }

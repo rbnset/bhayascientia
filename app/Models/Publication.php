@@ -42,7 +42,13 @@ class Publication extends Model
     ];
 
     // ✅ Appends accessor
-    protected $appends = ['cover_url', 'formatted_date', 'category_name'];
+    protected $appends = [
+        'cover_url',
+        'formatted_date',
+        'category_name',
+        'views_count',
+        'downloads_count',
+    ];
 
     // ✅ Cache untuk menghindari multiple file exists check
     protected $coverUrlCache = null;
@@ -337,5 +343,59 @@ class Publication extends Model
         $pow = min($pow, count($units) - 1);
 
         return round($bytes / (1024 ** $pow), $precision) . ' ' . $units[$pow];
+    }
+
+    /**
+     * Relasi ke view logs
+     */
+    public function viewLogs(): HasMany
+    {
+        return $this->hasMany(PublicationViewLog::class);
+    }
+
+    /**
+     * ✅ Accessor: Total views (with caching)
+     */
+    public function getViewsCountAttribute(): int
+    {
+        return \Cache::remember(
+            "publication.{$this->id}.views_count",
+            now()->addMinutes(5), // Cache 5 menit
+            fn() => $this->viewLogs()->count()
+        );
+    }
+
+    /**
+     * ✅ Accessor: Total downloads (with caching)
+     */
+    public function getDownloadsCountAttribute(): int
+    {
+        return \Cache::remember(
+            "publication.{$this->id}.downloads_count",
+            now()->addMinutes(5), // Cache 5 menit
+            fn() => $this->downloadLogs()->count()
+        );
+    }
+
+    /**
+     * ✅ Accessor: Unique visitors (based on IP)
+     */
+    public function getUniqueViewsCountAttribute(): int
+    {
+        return \Cache::remember(
+            "publication.{$this->id}.unique_views",
+            now()->addMinutes(10),
+            fn() => $this->viewLogs()->distinct('ip_address')->count('ip_address')
+        );
+    }
+
+    /**
+     * ✅ Clear cache saat ada view/download baru
+     */
+    public function clearStatsCache(): void
+    {
+        \Cache::forget("publication.{$this->id}.views_count");
+        \Cache::forget("publication.{$this->id}.downloads_count");
+        \Cache::forget("publication.{$this->id}.unique_views");
     }
 }
