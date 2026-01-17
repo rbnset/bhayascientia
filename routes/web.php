@@ -126,7 +126,7 @@ Route::prefix('publikasi')->name('publikasi.')->group(function () {
 
 Route::get('/author/{id}', [PublicationController::class, 'showAuthor'])->name('author.show');
 
-// ✅ TAMBAHKAN ROUTE INI (group dengan middleware web yang sudah ada)
+
 Route::post('/publikasi/{slug}/favorite', [PublicationController::class, 'toggleFavorite'])
     ->name('publikasi.favorite');
 
