@@ -314,29 +314,61 @@ class PublicationController extends Controller
     }
 
     /**
-     * ✅ Show trending publications
+     * ✅ Show trending publications dengan filter periode & type
      */
-    public function trending()
+    public function trending(Request $request)
     {
-        $trendingPublications = Publication::with([
+        // Get filter parameters
+        $period = $request->query('period', '7'); // 7 atau 30 hari
+        $typeSlug = $request->query('type', 'all'); // all atau slug publication type
+
+        // Validate period
+        if (!in_array($period, ['7', '30'])) {
+            $period = '7';
+        }
+
+        $daysAgo = (int) $period;
+
+        // Get all active publication types for filter tabs
+        $publicationTypes = PublicationType::where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'slug', 'name']);
+
+        // Base query
+        $query = Publication::with([
             'authors.user',
             'publicationType',
             'categories',
         ])
             ->withCount([
-                'viewLogs as recent_views' => function ($query) {
-                    $query->where('created_at', '>=', now()->subDays(30));
+                'viewLogs as recent_views' => function ($query) use ($daysAgo) {
+                    $query->where('created_at', '>=', now()->subDays($daysAgo));
                 },
-                'downloadLogs as recent_downloads' => function ($query) {
-                    $query->where('created_at', '>=', now()->subDays(30));
+                'downloadLogs as recent_downloads' => function ($query) use ($daysAgo) {
+                    $query->where('created_at', '>=', now()->subDays($daysAgo));
                 },
             ])
             ->where('status', 'published')
             ->whereNotNull('published_at')
-            ->where('published_at', '<=', now())
+            ->where('published_at', '<=', now());
+
+        // Filter by publication type if not 'all'
+        if ($typeSlug !== 'all') {
+            $query->whereHas('publicationType', function ($q) use ($typeSlug) {
+                $q->where('slug', $typeSlug)->where('is_active', true);
+            });
+        }
+
+        // Get trending publications
+        $trendingPublications = $query
             ->orderByRaw('(recent_views * 1) + (recent_downloads * 2) DESC')
-            ->take(20)
+            ->take(50) // Increase limit untuk lebih banyak hasil
             ->get()
+            ->filter(function ($pub) {
+                // Filter yang minimal ada aktivitas
+                return $pub->recent_views > 0 || $pub->recent_downloads > 0;
+            })
+            ->values()
             ->map(function ($pub) {
                 return [
                     'id' => $pub->id,
@@ -346,6 +378,7 @@ class PublicationController extends Controller
                     'category' => $pub->category_name,
                     'formatted_date' => $pub->formatted_date,
                     'type' => $pub->publicationType->name ?? 'Publikasi',
+                    'type_slug' => $pub->publicationType->slug ?? 'publikasi',
                     'detail_url' => route('publikasi.show', $pub->slug),
                     'trending_score' => $pub->recent_views + ($pub->recent_downloads * 2),
                     'recent_views' => $pub->recent_views,
@@ -362,8 +395,28 @@ class PublicationController extends Controller
                 ];
             });
 
-        return view('pages.publication.trending', compact('trendingPublications'));
+        // Get stats per type untuk summary
+        $typeStats = [];
+        foreach ($publicationTypes as $type) {
+            $count = $trendingPublications->where('type_slug', $type->slug)->count();
+            if ($count > 0) {
+                $typeStats[] = [
+                    'slug' => $type->slug,
+                    'name' => $type->name,
+                    'count' => $count,
+                ];
+            }
+        }
+
+        return view('pages.publication.trending', compact(
+            'trendingPublications',
+            'publicationTypes',
+            'period',
+            'typeSlug',
+            'typeStats'
+        ));
     }
+
 
 
     /**
