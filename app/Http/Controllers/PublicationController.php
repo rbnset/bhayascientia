@@ -211,7 +211,7 @@ class PublicationController extends Controller
     }
 
     /**
-     * Show publication detail
+     * ✅ Show publication detail - FIXED COVER IMAGE
      */
     public function show($slug)
     {
@@ -221,9 +221,8 @@ class PublicationController extends Controller
             'categories',
             'keywords',
             'versions' => function ($query) {
-                $query->latest();
+                $query->orderBy('version_number', 'desc');
             },
-            'method',
         ])
             ->where('slug', $slug)
             ->where('status', 'published')
@@ -231,34 +230,75 @@ class PublicationController extends Controller
             ->where('published_at', '<=', now())
             ->firstOrFail();
 
-        // ✅ Log view (throttle untuk prevent spam)
+        // ✅ Get latest version
+        $latestVersion = $publication->versions->first();
+        $fileSize = null;
+        $fileSizeFormatted = null;
+
+        // ✅ Get file size from storage
+        if ($latestVersion && $latestVersion->pdf_file_path) {
+            $filePath = $this->cleanPath($latestVersion->pdf_file_path);
+
+            if (Storage::disk('public')->exists($filePath)) {
+                $fileSizeBytes = Storage::disk('public')->size($filePath);
+                $fileSize = $fileSizeBytes;
+                $fileSizeFormatted = $this->formatFileSize($fileSizeBytes);
+            }
+        }
+
+        // ✅ Get download count
+        $downloadCount = $publication->downloadLogs()
+            ->where('publication_id', $publication->id)
+            ->count();
+
+        // ✅ Get view count
+        $viewsCount = $publication->viewLogs()
+            ->where('publication_id', $publication->id)
+            ->count();
+
+        // ✅ Log view (throttle per IP per 5 menit)
         $this->logPublicationView($publication);
 
-        $data = [
+        return view('pages.publication.show', [
             'publication' => $publication,
+            'formatted_date' => $publication->published_at->locale('id_ID')->isoFormat('D MMMM YYYY'),
             'category' => $publication->categories->first()?->name ?? 'Umum',
+            'keywords' => $publication->keywords->pluck('name')->toArray(),
+            'cover_url' => $this->getCoverUrl($publication), // ✅ FIX: Gunakan helper method
             'authors' => $publication->authors->map(function ($author) {
                 return [
                     'id' => $author->id,
                     'name' => $author->name,
-                    'affiliation' => $author->affiliation ?? 'N/A',
                     'initials' => $this->getInitials($author->name),
                     'photo' => $this->getAuthorPhoto($author),
-                    'is_corresponding' => $author->pivot->is_corresponding ?? false,
+                    'affiliation' => $author->affiliation ?? $author->user?->organization ?? '-',
+                    'is_corresponding' => $author->is_corresponding,
                 ];
             }),
-            'keywords' => $publication->keywords->pluck('name'),
-            'formatted_date' => $publication->published_at->format('F j, Y'),
-            'cover_url' => $this->getCoverUrl($publication),
-            'views_count' => $publication->views_count,
-            'downloads_count' => $publication->downloads_count,
-        ];
-
-        return view('pages.publication.show', $data);
+            'latestVersion' => $latestVersion,
+            'fileSize' => $fileSize,
+            'fileSizeFormatted' => $fileSizeFormatted,
+            'downloadCount' => $downloadCount,
+            'viewsCount' => $viewsCount,
+        ]);
     }
 
     /**
-     * ✅ Download publikasi (CONSOLIDATED - HANYA 1 METHOD)
+     * ✅ Format file size in human-readable format
+     */
+    private function formatFileSize($bytes)
+    {
+        if ($bytes == 0) return '0 B';
+
+        $k = 1024;
+        $sizes = ['B', 'KB', 'MB', 'GB'];
+        $i = floor(log($bytes, $k));
+
+        return round($bytes / pow($k, $i), 2) . ' ' . $sizes[$i];
+    }
+
+    /**
+     * ✅ Download publikasi - FIXED: Gunakan pdf_file_path
      */
     public function download($slug)
     {
@@ -266,13 +306,17 @@ class PublicationController extends Controller
             ->where('status', 'published')
             ->firstOrFail();
 
-        $latestVersion = $publication->versions()->latest()->first();
+        // ✅ Gunakan pdf_file_path (kolom sebenarnya di database)
+        $latestVersion = $publication->versions()
+            ->whereNotNull('pdf_file_path')
+            ->orderBy('version_number', 'desc')
+            ->first();
 
-        if (!$latestVersion || !$latestVersion->file_path) {
+        if (!$latestVersion || !$latestVersion->pdf_file_path) {
             abort(404, 'File publikasi tidak ditemukan');
         }
 
-        // ✅ Log download menggunakan helper method
+        // ✅ Log download
         try {
             DownloadLog::logDownload($publication);
             $publication->clearStatsCache();
@@ -280,16 +324,20 @@ class PublicationController extends Controller
             Log::warning("Download log failed: " . $e->getMessage());
         }
 
-        $filePath = $this->cleanPath($latestVersion->file_path);
+        $filePath = $this->cleanPath($latestVersion->pdf_file_path);
 
         if (!Storage::disk('public')->exists($filePath)) {
+            Log::error("File not found in storage", [
+                'publication_id' => $publication->id,
+                'file_path' => $latestVersion->pdf_file_path,
+                'clean_path' => $filePath,
+            ]);
             abort(404, 'File tidak ditemukan di storage');
         }
 
-        return Storage::disk('public')->download(
-            $filePath,
-            $publication->title . '.pdf'
-        );
+        $fileName = \Illuminate\Support\Str::slug($publication->title) . '.pdf';
+
+        return Storage::disk('public')->download($filePath, $fileName);
     }
 
     /**
@@ -308,6 +356,68 @@ class PublicationController extends Controller
         ])->findOrFail($id);
 
         return view('pages.author.show', compact('author'));
+    }
+
+    /**
+     * ✅ READ/VIEW publikasi PDF di browser (inline viewer)
+     */
+    public function read($slug)
+    {
+        $publication = Publication::with([
+            'authors.user',
+            'publicationType',
+            'categories',
+            'keywords',
+            'versions' => function ($query) {
+                $query->orderBy('version_number', 'desc');
+            },
+        ])
+            ->where('slug', $slug)
+            ->where('status', 'published')
+            ->whereNotNull('published_at')
+            ->where('published_at', '<=', now())
+            ->firstOrFail();
+
+        // ✅ Get latest version dengan file
+        $latestVersion = $publication->versions()
+            ->whereNotNull('pdf_file_path')
+            ->orderBy('version_number', 'desc')
+            ->first();
+
+        if (!$latestVersion || !$latestVersion->pdf_file_path) {
+            abort(404, 'File publikasi tidak ditemukan');
+        }
+
+        $filePath = $this->cleanPath($latestVersion->pdf_file_path);
+
+        if (!Storage::disk('public')->exists($filePath)) {
+            Log::error("File not found in storage", [
+                'publication_id' => $publication->id,
+                'file_path' => $latestVersion->pdf_file_path,
+                'clean_path' => $filePath,
+            ]);
+            abort(404, 'File tidak ditemukan di storage');
+        }
+
+        // ✅ Log view (throttle)
+        $this->logPublicationView($publication);
+
+        // ✅ Get PDF URL
+        $pdfUrl = asset('storage/' . $filePath);
+
+        return view('pages.publication.read', [
+            'publication' => $publication,
+            'pdfUrl' => $pdfUrl,
+            'category' => $publication->categories->first()?->name ?? 'Umum',
+            'authors' => $publication->authors->map(function ($author) {
+                return [
+                    'id' => $author->id,
+                    'name' => $author->name,
+                    'initials' => $this->getInitials($author->name),
+                    'photo' => $this->getAuthorPhoto($author),
+                ];
+            }),
+        ]);
     }
 
     /*

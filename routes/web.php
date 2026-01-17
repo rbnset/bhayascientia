@@ -100,7 +100,10 @@ Route::prefix('publikasi')->name('publikasi.')->group(function () {
     Route::get('/trending', [PublicationController::class, 'trending'])->name('trending');
     Route::get('/library', [PublicationController::class, 'library'])->name('library');
     Route::get('/{slug}', [PublicationController::class, 'show'])->name('show');
+    Route::get('/{slug}/download', [PublicationController::class, 'download'])->name('download');
+    Route::get('/{slug}/read', [PublicationController::class, 'read'])->name('read');
 });
+
 
 /*
 |--------------------------------------------------------------------------

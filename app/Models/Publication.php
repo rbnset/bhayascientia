@@ -125,6 +125,11 @@ class Publication extends Model
         return $this->hasMany(DownloadLog::class);
     }
 
+    public function viewLogs(): HasMany
+    {
+        return $this->hasMany(PublicationViewLog::class);
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Query Scopes
@@ -231,20 +236,39 @@ class Publication extends Model
     }
 
     /**
-     * ✅ Generate placeholder cover URL
+     * ✅ Accessor: Total views (with caching)
      */
-    private function generatePlaceholder()
+    public function getViewsCountAttribute(): int
     {
-        // Get category name (avoid N+1)
-        $categoryName = 'Publikasi';
-        if ($this->relationLoaded('categories') && $this->categories->isNotEmpty()) {
-            $categoryName = $this->categories->first()->name;
-        }
+        return \Cache::remember(
+            "publication.{$this->id}.views_count",
+            now()->addMinutes(5), // Cache 5 menit
+            fn() => $this->viewLogs()->count()
+        );
+    }
 
-        // Truncate title
-        $titleShort = Str::limit($this->title, 20, '');
+    /**
+     * ✅ Accessor: Total downloads (with caching)
+     */
+    public function getDownloadsCountAttribute(): int
+    {
+        return \Cache::remember(
+            "publication.{$this->id}.downloads_count",
+            now()->addMinutes(5), // Cache 5 menit
+            fn() => $this->downloadLogs()->count()
+        );
+    }
 
-        return 'https://placehold.co/400x600/FF6B18/white?text=' . urlencode($titleShort);
+    /**
+     * ✅ Accessor: Unique visitors (based on IP)
+     */
+    public function getUniqueViewsCountAttribute(): int
+    {
+        return \Cache::remember(
+            "publication.{$this->id}.unique_views",
+            now()->addMinutes(10),
+            fn() => $this->viewLogs()->distinct('ip_address')->count('ip_address')
+        );
     }
 
     /*
@@ -299,6 +323,23 @@ class Publication extends Model
     */
 
     /**
+     * ✅ Generate placeholder cover URL
+     */
+    private function generatePlaceholder()
+    {
+        // Get category name (avoid N+1)
+        $categoryName = 'Publikasi';
+        if ($this->relationLoaded('categories') && $this->categories->isNotEmpty()) {
+            $categoryName = $this->categories->first()->name;
+        }
+
+        // Truncate title
+        $titleShort = Str::limit($this->title, 20, '');
+
+        return 'https://placehold.co/400x600/FF6B18/white?text=' . urlencode($titleShort);
+    }
+
+    /**
      * ✅ Check if publication has valid cover image
      */
     public function hasCover(): bool
@@ -343,50 +384,6 @@ class Publication extends Model
         $pow = min($pow, count($units) - 1);
 
         return round($bytes / (1024 ** $pow), $precision) . ' ' . $units[$pow];
-    }
-
-    /**
-     * Relasi ke view logs
-     */
-    public function viewLogs(): HasMany
-    {
-        return $this->hasMany(PublicationViewLog::class);
-    }
-
-    /**
-     * ✅ Accessor: Total views (with caching)
-     */
-    public function getViewsCountAttribute(): int
-    {
-        return \Cache::remember(
-            "publication.{$this->id}.views_count",
-            now()->addMinutes(5), // Cache 5 menit
-            fn() => $this->viewLogs()->count()
-        );
-    }
-
-    /**
-     * ✅ Accessor: Total downloads (with caching)
-     */
-    public function getDownloadsCountAttribute(): int
-    {
-        return \Cache::remember(
-            "publication.{$this->id}.downloads_count",
-            now()->addMinutes(5), // Cache 5 menit
-            fn() => $this->downloadLogs()->count()
-        );
-    }
-
-    /**
-     * ✅ Accessor: Unique visitors (based on IP)
-     */
-    public function getUniqueViewsCountAttribute(): int
-    {
-        return \Cache::remember(
-            "publication.{$this->id}.unique_views",
-            now()->addMinutes(10),
-            fn() => $this->viewLogs()->distinct('ip_address')->count('ip_address')
-        );
     }
 
     /**
