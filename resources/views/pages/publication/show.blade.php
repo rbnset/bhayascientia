@@ -255,7 +255,7 @@
                     class="inline-flex items-center gap-2.5 px-4 py-2.5 bg-[#F8F9FC] rounded-xl hover:bg-[#FFF7F2] hover:shadow-md transition-all duration-300 cursor-pointer">
                     @if($author['photo'])
                     <img src="{{ $author['photo'] }}" alt="{{ $author['name'] }}"
-                        class="w-10 h-10 rounded-full object-cover ring-2 ring-white">
+                        class="object-cover w-10 h-10 rounded-full ring-2 ring-white">
                     @else
                     <div
                         class="w-10 h-10 bg-gradient-to-br from-[#FF6B18] to-[#E64627] rounded-full flex items-center justify-center text-white text-sm font-bold ring-2 ring-white">
@@ -382,12 +382,12 @@
             @if($cover_url)
             <div class="sticky-cover">
                 {{-- Cover Image with Enhanced Hover --}}
-                <div class="cover-image-wrapper mb-6">
-                    <img src="{{ $cover_url }}" alt="Cover {{ $publication->title }}" class="w-full object-cover">
+                <div class="mb-6 cover-image-wrapper">
+                    <img src="{{ $cover_url }}" alt="Cover {{ $publication->title }}" class="object-cover w-full">
 
                     {{-- Enhanced Overlay --}}
                     <div
-                        class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-500 rounded-xl flex items-end justify-center p-6">
+                        class="absolute inset-0 flex items-end justify-center p-6 transition-opacity duration-500 opacity-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent hover:opacity-100 rounded-xl">
                         <button onclick="viewCoverFullscreen()"
                             class="px-6 py-3 bg-white/95 backdrop-blur-sm text-[#1A1A1A] text-sm font-bold rounded-lg hover:bg-white transition-all duration-300 transform hover:scale-105 shadow-xl flex items-center gap-2">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -409,7 +409,7 @@
                     {{-- Button Baca Sekarang (Primary) --}}
                     <a href="{{ route('publikasi.read', $publication->slug) }}"
                         class="btn-ripple w-full px-5 py-3.5 bg-gradient-to-r from-[#FF6B18] to-[#E64627] text-white font-bold text-base rounded-xl hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 flex items-center justify-center gap-3 group">
-                        <svg class="w-5 h-5 group-hover:rotate-12 transition-transform duration-300" fill="none"
+                        <svg class="w-5 h-5 transition-transform duration-300 group-hover:rotate-12" fill="none"
                             stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
                                 d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -465,7 +465,7 @@
                             Published
                         </span>
                         @else
-                        <span class="px-3 py-1 bg-gray-100 text-xs font-bold text-gray-500 rounded-full">
+                        <span class="px-3 py-1 text-xs font-bold text-gray-500 bg-gray-100 rounded-full">
                             Unpublished
                         </span>
                         @endif
@@ -534,12 +534,12 @@
                     <div class="mt-3 pt-3 border-t border-[#EEF0F7]">
                         @if($hasFile)
                         <div class="flex items-center gap-2 px-3 py-2 bg-[#F0FDF4] rounded-lg border border-[#DCFCE7]">
-                            <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                            <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                             <span class="text-xs font-semibold text-green-700">File ready for download</span>
                         </div>
                         @else
                         <div class="flex items-center gap-2 px-3 py-2 bg-[#FEF2F2] rounded-lg border border-[#FECACA]">
-                            <div class="w-2 h-2 rounded-full bg-red-500"></div>
+                            <div class="w-2 h-2 bg-red-500 rounded-full"></div>
                             <span class="text-xs font-semibold text-red-700">File not uploaded yet</span>
                         </div>
                         @endif
@@ -556,50 +556,255 @@
 
 @push('scripts')
 <script>
-    function toggleFavorite() {
+    // ✅ CSRF Token setup
+const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+/**
+ * ✅ Toggle Favorite
+ */
+function toggleFavorite() {
     const button = event.currentTarget;
+    const svg = button.querySelector('svg');
+
+    // Prevent double click
+    if (button.disabled) return;
+    button.disabled = true;
+
     button.classList.add('animate-ping');
-    setTimeout(() => button.classList.remove('animate-ping'), 600);
-    console.log('Toggle favorite');
+
+    fetch('{{ route("publikasi.favorite", $publication->slug) }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': csrfToken,
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        button.classList.remove('animate-ping');
+        button.disabled = false;
+
+        if (!data.success) {
+            // Redirect to login if needed
+            if (data.redirect) {
+                window.location.href = data.redirect;
+                return;
+            }
+            showNotification(data.message || 'Terjadi kesalahan', 'error');
+            return;
+        }
+
+        // ✅ Update icon state
+        if (data.isFavorited) {
+            // Filled star (favorited)
+            svg.setAttribute('fill', 'currentColor');
+            svg.setAttribute('stroke', 'none');
+            svg.innerHTML = '<path fill="currentColor" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>';
+        } else {
+            // Outline star (not favorited)
+            svg.setAttribute('fill', 'none');
+            svg.setAttribute('stroke', 'currentColor');
+            svg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>';
+        }
+
+        showNotification(data.message, data.status === 'added' ? 'success' : 'info');
+    })
+    .catch(error => {
+        button.classList.remove('animate-ping');
+        button.disabled = false;
+        showNotification('Terjadi kesalahan jaringan', 'error');
+        console.error('Error:', error);
+    });
 }
 
+/**
+ * ✅ Save for Later
+ */
 function saveForLater() {
     const button = event.currentTarget;
+    const svg = button.querySelector('svg');
+
+    if (button.disabled) return;
+    button.disabled = true;
+
     button.classList.add('animate-ping');
-    setTimeout(() => button.classList.remove('animate-ping'), 600);
-    console.log('Save for later');
+
+    fetch('{{ route("publikasi.save", $publication->slug) }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': csrfToken,
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        button.classList.remove('animate-ping');
+        button.disabled = false;
+
+        if (!data.success) {
+            if (data.redirect) {
+                window.location.href = data.redirect;
+                return;
+            }
+            showNotification(data.message || 'Terjadi kesalahan', 'error');
+            return;
+        }
+
+        // ✅ Update icon state
+        if (data.isSaved) {
+            // Filled bookmark
+            svg.setAttribute('fill', 'currentColor');
+            svg.setAttribute('stroke', 'none');
+        } else {
+            // Outline bookmark
+            svg.setAttribute('fill', 'none');
+            svg.setAttribute('stroke', 'currentColor');
+        }
+
+        showNotification(data.message, data.status === 'added' ? 'success' : 'info');
+    })
+    .catch(error => {
+        button.classList.remove('animate-ping');
+        button.disabled = false;
+        showNotification('Terjadi kesalahan jaringan', 'error');
+        console.error('Error:', error);
+    });
 }
 
+/**
+ * ✅ Share Publication
+ */
 function sharePublication() {
     if (navigator.share) {
         navigator.share({
             title: '{{ $publication->title }}',
-            text: 'Check out this publication',
+            text: 'Lihat publikasi ilmiah ini di BHAYACIENTIA',
             url: window.location.href
-        }).catch(err => console.log('Error sharing:', err));
+        }).catch(err => {
+            if (err.name !== 'AbortError') {
+                console.log('Error sharing:', err)
+            }
+        });
     } else {
-        navigator.clipboard.writeText(window.location.href);
-
-        const notification = document.createElement('div');
-        notification.className = 'fixed bottom-4 right-4 bg-[#FF6B18] text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in';
-        notification.innerHTML = '<div class="flex items-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Link copied to clipboard!</span></div>';
-        document.body.appendChild(notification);
-
-        setTimeout(() => {
-            notification.remove();
-        }, 2000);
+        navigator.clipboard.writeText(window.location.href)
+            .then(() => {
+                showNotification('Link berhasil disalin ke clipboard!', 'success');
+            })
+            .catch(() => {
+                showNotification('Gagal menyalin link', 'error');
+            });
     }
 }
 
+/**
+ * ✅ Show All Authors Modal
+ */
 function showAllAuthors() {
-    console.log('Show all authors modal');
-    // TODO: Implement modal
+    // TODO: Implement modal untuk tampilkan semua authors
+    showNotification('Modal authors akan segera hadir!', 'info');
 }
 
+/**
+ * ✅ View Cover Fullscreen
+ */
 function viewCoverFullscreen() {
     const coverUrl = '{{ $cover_url }}';
-    window.open(coverUrl, '_blank');
+    window.open(coverUrl, '_blank', 'noopener,noreferrer');
 }
+
+/**
+ * ✅ Notification Helper
+ */
+function showNotification(message, type = 'success') {
+    const colors = {
+        success: 'bg-green-500',
+        info: 'bg-blue-500',
+        error: 'bg-red-500'
+    };
+
+    const icons = {
+        success: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>',
+        info: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>',
+        error: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>'
+    };
+
+    const notification = document.createElement('div');
+    notification.className = `fixed bottom-4 right-4 ${colors[type]} text-white px-6 py-3 rounded-lg shadow-lg z-50 transform transition-all duration-300 ease-out`;
+    notification.style.animation = 'slideInRight 0.3s ease-out';
+    notification.innerHTML = `
+        <div class="flex items-center gap-2">
+            <svg class="flex-shrink-0 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                ${icons[type]}
+            </svg>
+            <span class="font-medium">${message}</span>
+        </div>
+    `;
+
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+        notification.style.animation = 'slideOutRight 0.3s ease-in';
+        setTimeout(() => {
+            notification.remove();
+        }, 300);
+    }, 3000);
+}
+
+/**
+ * ✅ Set Initial Button States on Page Load
+ */
+document.addEventListener('DOMContentLoaded', function() {
+    @auth
+        // ✅ Set favorite button state
+        @if(auth()->user()->isFavorited($publication->id))
+            const favoriteBtn = document.querySelector('[onclick="toggleFavorite()"] svg');
+            if (favoriteBtn) {
+                favoriteBtn.setAttribute('fill', 'currentColor');
+                favoriteBtn.setAttribute('stroke', 'none');
+                favoriteBtn.innerHTML = '<path fill="currentColor" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>';
+            }
+        @endif
+
+        // ✅ Set saved button state
+        @if(auth()->user()->isSaved($publication->id))
+            const savedBtn = document.querySelector('[onclick="saveForLater()"] svg');
+            if (savedBtn) {
+                savedBtn.setAttribute('fill', 'currentColor');
+                savedBtn.setAttribute('stroke', 'none');
+            }
+        @endif
+    @endauth
+});
+
+// ✅ Add CSS Animation
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    @keyframes slideOutRight {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+    }
+`;
+document.head.appendChild(style);
 </script>
 @endpush
+
 @endsection

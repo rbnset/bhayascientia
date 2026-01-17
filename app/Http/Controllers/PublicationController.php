@@ -480,6 +480,67 @@ class PublicationController extends Controller
         return view('pages.publication.library', compact('publications', 'stats', 'activeTab'));
     }
 
+        /*
+    |--------------------------------------------------------------------------
+    | Library Action Methods
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * ✅ Toggle favorite publication
+     */
+    public function toggleFavorite($slug)
+    {
+        if (!auth()->check()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Silakan login terlebih dahulu',
+                'redirect' => route('login')
+            ], 401);
+        }
+
+        $publication = Publication::where('slug', $slug)
+            ->where('status', 'published')
+            ->firstOrFail();
+
+        $result = auth()->user()->toggleFavorite($publication->id);
+
+        return response()->json([
+            'success' => true,
+            'status' => $result['status'],
+            'message' => $result['message'],
+            'isFavorited' => $result['status'] === 'added'
+        ]);
+    }
+
+    /**
+     * ✅ Toggle saved publication
+     */
+    public function toggleSaved($slug)
+    {
+        if (!auth()->check()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Silakan login terlebih dahulu',
+                'redirect' => route('login')
+            ], 401);
+        }
+
+        $publication = Publication::where('slug', $slug)
+            ->where('status', 'published')
+            ->firstOrFail();
+
+        $result = auth()->user()->toggleSaved($publication->id);
+
+        return response()->json([
+            'success' => true,
+            'status' => $result['status'],
+            'message' => $result['message'],
+            'isSaved' => $result['status'] === 'added'
+        ]);
+    }
+
+
 
     /**
      * ✅ Download publikasi

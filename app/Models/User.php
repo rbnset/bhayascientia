@@ -73,4 +73,52 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         return $this->belongsToMany(Publication::class, 'user_saved_publications')
             ->withTimestamps();
     }
+
+    /**
+     * Toggle favorite publication
+     */
+    public function toggleFavorite($publicationId)
+    {
+        $exists = $this->favoritePublications()->where('publication_id', $publicationId)->exists();
+
+        if ($exists) {
+            $this->favoritePublications()->detach($publicationId);
+            return ['status' => 'removed', 'message' => 'Dihapus dari favorit'];
+        }
+
+        $this->favoritePublications()->attach($publicationId);
+        return ['status' => 'added', 'message' => 'Ditambahkan ke favorit'];
+    }
+
+    /**
+     * Toggle saved publication
+     */
+    public function toggleSaved($publicationId)
+    {
+        $exists = $this->savedPublications()->where('publication_id', $publicationId)->exists();
+
+        if ($exists) {
+            $this->savedPublications()->detach($publicationId);
+            return ['status' => 'removed', 'message' => 'Dihapus dari simpanan'];
+        }
+
+        $this->savedPublications()->attach($publicationId);
+        return ['status' => 'added', 'message' => 'Disimpan untuk nanti'];
+    }
+
+    /**
+     * Check if publication is favorited
+     */
+    public function isFavorited($publicationId)
+    {
+        return $this->favoritePublications()->where('publication_id', $publicationId)->exists();
+    }
+
+    /**
+     * Check if publication is saved
+     */
+    public function isSaved($publicationId)
+    {
+        return $this->savedPublications()->where('publication_id', $publicationId)->exists();
+    }
 }
