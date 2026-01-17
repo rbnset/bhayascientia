@@ -5,9 +5,9 @@ namespace App\Filament\Resources\Authors\Schemas;
 use Filament\Forms\Components\Hidden;
 use Filament\Schemas\Components\Section;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Placeholder;
-use Filament\Schemas\Schema;;
-
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\FileUpload;
+use Filament\Schemas\Schema;
 use Filament\Schemas\Components\View;
 
 class AuthorForm
@@ -60,6 +60,29 @@ class AuthorForm
                             ->maxLength(255)
                             ->live()
                             ->placeholder('Universitas / Organisasi'),
+
+                        Textarea::make('bio')
+                            ->label('Biografi')
+                            ->rows(4)
+                            ->maxLength(1000)
+                            ->live()
+                            ->placeholder('Tulis biografi singkat penulis...')
+                            ->helperText('Maksimal 1000 karakter'),
+
+                        FileUpload::make('photo_path')
+                            ->label('Foto Profil')
+                            ->image()
+                            ->disk('public')
+                            ->directory('authors/photos')
+                            ->imageEditor()
+                            ->imageEditorAspectRatios([
+                                '1:1',
+                            ])
+                            ->maxSize(2048)
+                            ->live()
+                            ->helperText('Format: JPG, PNG. Maksimal 2MB')
+                            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/jpg'])
+                            ->moveFiles(),
                     ])
                     ->columns([
                         'default' => 1,
