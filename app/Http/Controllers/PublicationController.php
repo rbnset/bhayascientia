@@ -365,15 +365,12 @@ class PublicationController extends Controller
         return view('pages.publication.trending', compact('trendingPublications'));
     }
 
+
     /**
-     * ✅ Show user's library with tabs (favorites, history, saved)
+     * ✅ Show user's library with LOGIN GATE (tidak redirect)
      */
     public function library(Request $request)
     {
-        if (!auth()->check()) {
-            return redirect()->route('publikasi.index')->with('error', 'Silakan login untuk melihat library Anda');
-        }
-
         $activeTab = $request->query('tab', 'favorites');
 
         // ✅ Validate tab
@@ -381,16 +378,29 @@ class PublicationController extends Controller
             $activeTab = 'favorites';
         }
 
+        // ✅ JIKA BELUM LOGIN: Show empty state dengan login prompt
+        if (!auth()->check()) {
+            return view('pages.publication.library', [
+                'publications' => collect([]),
+                'stats' => [
+                    'favorites' => 0,
+                    'history' => 0,
+                    'saved' => 0,
+                ],
+                'activeTab' => $activeTab,
+                'requiresLogin' => true, // ✅ Flag untuk show login gate
+            ]);
+        }
+
+        // ✅ JIKA SUDAH LOGIN: Show actual data
         $user = auth()->user();
 
-        // ✅ Get Stats for all tabs
         $stats = [
             'favorites' => $user->favoritePublications()->count(),
             'history' => $user->readPublications()->count(),
             'saved' => $user->savedPublications()->count(),
         ];
 
-        // ✅ Get publications based on active tab
         $publications = collect([]);
 
         switch ($activeTab) {
@@ -425,14 +435,12 @@ class PublicationController extends Controller
                 break;
         }
 
-        // ✅ Format publications data
         $publications = $publications->map(function ($pub) use ($activeTab) {
             $authorsText = $pub->authors->take(2)->pluck('name')->implode(', ');
             if ($pub->authors->count() > 2) {
                 $authorsText .= ' +' . ($pub->authors->count() - 2) . ' lainnya';
             }
 
-            // Tentukan action time berdasarkan tab
             $actionTime = '';
             switch ($activeTab) {
                 case 'favorites':
@@ -471,6 +479,7 @@ class PublicationController extends Controller
 
         return view('pages.publication.library', compact('publications', 'stats', 'activeTab'));
     }
+
 
     /**
      * ✅ Download publikasi
