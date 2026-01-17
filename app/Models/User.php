@@ -65,8 +65,10 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
     {
         return $this->belongsToMany(Publication::class, 'user_read_publications')
             ->withPivot('last_read_at')
-            ->withTimestamps();
+            ->withTimestamps()
+            ->using(UserReadPublication::class); // ✅ Gunakan custom pivot model
     }
+
 
     public function savedPublications()
     {

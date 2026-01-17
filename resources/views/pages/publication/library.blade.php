@@ -25,7 +25,7 @@
     {{-- ✅ LOGIN GATE - Show preview dengan beautiful empty state --}}
 
     {{-- Preview Stats Cards (Locked) --}}
-    <div class="grid gap-4 mb-8 sm:grid-cols-3 relative">
+    <div class="relative grid gap-4 mb-8 sm:grid-cols-3">
         {{-- Blur overlay --}}
         <div class="absolute inset-0 backdrop-blur-[2px] bg-white/60 z-10 rounded-2xl"></div>
 
@@ -94,7 +94,7 @@
         </p>
 
         {{-- Features Preview --}}
-        <div class="grid gap-4 sm:grid-cols-3 mb-8 max-w-3xl mx-auto text-left">
+        <div class="grid max-w-3xl gap-4 mx-auto mb-8 text-left sm:grid-cols-3">
             <div class="bg-white rounded-xl p-4 border border-[#EEF0F7]">
                 <div class="w-10 h-10 bg-[#FFF7F2] rounded-lg flex items-center justify-center mb-3">
                     <svg class="w-5 h-5 text-[#FF6B18]" fill="currentColor" viewBox="0 0 24 24">
@@ -130,7 +130,7 @@
         </div>
 
         {{-- CTA Buttons --}}
-        <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+        <div class="flex flex-col items-center justify-center gap-4 sm:flex-row">
             <a href="{{ route('login') }}"
                 class="px-8 py-4 bg-gradient-to-r from-[#FF6B18] to-[#E64627] text-white font-bold rounded-xl hover:shadow-[0_10px_30px_0_rgba(255,107,24,0.4)] transition-all duration-300 hover:-translate-y-1 inline-flex items-center gap-2">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -243,7 +243,7 @@
                 @forelse($publications as $publication)
                 <article
                     class="group flex gap-4 p-4 bg-[#F8F9FC] rounded-xl hover:bg-white hover:shadow-md transition-all duration-300">
-                    <a href="{{ $publication['detail_url'] }}" class="shrink-0 w-24 h-24 rounded-lg overflow-hidden">
+                    <a href="{{ $publication['detail_url'] }}" class="w-24 h-24 overflow-hidden rounded-lg shrink-0">
                         <img src="{{ $publication['cover_url'] }}" alt="{{ $publication['title'] }}"
                             class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105">
                     </a>
@@ -278,7 +278,7 @@
                     </div>
                 </article>
                 @empty
-                <div class="text-center py-12">
+                <div class="py-12 text-center">
                     <svg class="w-24 h-24 mx-auto mb-4 text-[#EEF0F7]" fill="none" stroke="currentColor"
                         viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -299,7 +299,7 @@
                 @forelse($publications as $publication)
                 <a href="{{ $publication['detail_url'] }}"
                     class="group flex items-center gap-4 p-3 rounded-xl hover:bg-[#F8F9FC] transition-colors">
-                    <div class="shrink-0 w-16 h-16 rounded-lg overflow-hidden">
+                    <div class="w-16 h-16 overflow-hidden rounded-lg shrink-0">
                         <img src="{{ $publication['cover_url'] }}" alt="{{ $publication['title'] }}"
                             class="object-cover w-full h-full">
                     </div>
@@ -321,7 +321,7 @@
                     </svg>
                 </a>
                 @empty
-                <div class="text-center py-12">
+                <div class="py-12 text-center">
                     <svg class="w-24 h-24 mx-auto mb-4 text-[#EEF0F7]" fill="none" stroke="currentColor"
                         viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -367,7 +367,7 @@
                     </div>
                 </article>
                 @empty
-                <div class="col-span-full text-center py-12">
+                <div class="py-12 text-center col-span-full">
                     <svg class="w-24 h-24 mx-auto mb-4 text-[#EEF0F7]" fill="none" stroke="currentColor"
                         viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -388,46 +388,197 @@
     @endif
 
 </section>
-
 @push('scripts')
 <script>
-    function removeFavorite(id) {
-    if (confirm('Hapus dari favorit?')) {
-        fetch(`/api/publications/${id}/unfavorite`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                window.location.reload();
-            }
-        })
-        .catch(error => console.error('Error:', error));
+    // ✅ CSRF Token Setup
+const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+/**
+ * ✅ Remove from Favorites
+ */
+function removeFavorite(publicationId) {
+    if (!confirm('Hapus publikasi ini dari favorit?')) return;
+
+    // ✅ Find slug from DOM
+    const button = event.currentTarget;
+    const article = button.closest('article');
+    const link = article.querySelector('a[href*="/publikasi/"]');
+
+    if (!link) {
+        showNotification('Tidak dapat menemukan publikasi', 'error');
+        return;
     }
+
+    const url = link.getAttribute('href');
+    const slug = url.split('/publikasi/')[1];
+
+    // Disable button
+    button.disabled = true;
+    button.style.opacity = '0.5';
+
+    fetch(`/publikasi/${slug}/favorite`, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': csrfToken,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(data.message, 'success');
+
+            // ✅ Animate removal
+            article.style.transition = 'all 0.3s ease';
+            article.style.transform = 'translateX(-100%)';
+            article.style.opacity = '0';
+
+            setTimeout(() => {
+                window.location.reload();
+            }, 300);
+        } else {
+            showNotification(data.message || 'Terjadi kesalahan', 'error');
+            button.disabled = false;
+            button.style.opacity = '1';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Terjadi kesalahan jaringan', 'error');
+        button.disabled = false;
+        button.style.opacity = '1';
+    });
 }
 
-function removeSaved(id) {
-    if (confirm('Hapus dari saved?')) {
-        fetch(`/api/publications/${id}/unsave`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                window.location.reload();
-            }
-        })
-        .catch(error => console.error('Error:', error));
+/**
+ * ✅ Remove from Saved
+ */
+function removeSaved(publicationId) {
+    if (!confirm('Hapus publikasi ini dari saved?')) return;
+
+    const button = event.currentTarget;
+    const article = button.closest('article');
+    const link = article.querySelector('a[href*="/publikasi/"]');
+
+    if (!link) {
+        showNotification('Tidak dapat menemukan publikasi', 'error');
+        return;
     }
+
+    const url = link.getAttribute('href');
+    const slug = url.split('/publikasi/')[1];
+
+    // Disable button
+    button.disabled = true;
+    button.style.opacity = '0.5';
+
+    fetch(`/publikasi/${slug}/save`, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': csrfToken,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(data.message, 'success');
+
+            // ✅ Animate removal
+            article.style.transition = 'all 0.3s ease';
+            article.style.transform = 'scale(0.8)';
+            article.style.opacity = '0';
+
+            setTimeout(() => {
+                window.location.reload();
+            }, 300);
+        } else {
+            showNotification(data.message || 'Terjadi kesalahan', 'error');
+            button.disabled = false;
+            button.style.opacity = '1';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Terjadi kesalahan jaringan', 'error');
+        button.disabled = false;
+        button.style.opacity = '1';
+    });
 }
+
+/**
+ * ✅ Notification Helper with Animation
+ */
+function showNotification(message, type = 'success') {
+    const colors = {
+        success: 'bg-green-500',
+        info: 'bg-blue-500',
+        error: 'bg-red-500'
+    };
+
+    const icons = {
+        success: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>`,
+        info: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>`,
+        error: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>`
+    };
+
+    const notification = document.createElement('div');
+    notification.className = `fixed bottom-4 right-4 ${colors[type]} text-white px-6 py-3 rounded-lg shadow-lg z-50 transform transition-all duration-300`;
+    notification.style.transform = 'translateX(400px)';
+    notification.innerHTML = `
+        <div class="flex items-center gap-3">
+            <svg class="flex-shrink-0 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                ${icons[type]}
+            </svg>
+            <span class="font-medium">${message}</span>
+        </div>
+    `;
+
+    document.body.appendChild(notification);
+
+    // ✅ Slide in animation
+    setTimeout(() => {
+        notification.style.transform = 'translateX(0)';
+    }, 10);
+
+    // ✅ Auto hide after 3 seconds
+    setTimeout(() => {
+        notification.style.transform = 'translateX(400px)';
+        setTimeout(() => {
+            notification.remove();
+        }, 300);
+    }, 3000);
+}
+
+/**
+ * ✅ Quick Stats Update (optional)
+ */
+function updateStats() {
+    // You can add real-time stats update here if needed
+    console.log('Stats updated');
+}
+
+// ✅ Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Library page loaded');
+
+    // Add smooth scroll behavior
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                target.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        });
+    });
+});
 </script>
 @endpush
+
 @endsection

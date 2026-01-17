@@ -441,16 +441,40 @@ class PublicationController extends Controller
                 $authorsText .= ' +' . ($pub->authors->count() - 2) . ' lainnya';
             }
 
+            // ✅ FIX: Handle different pivot columns per tab dengan safety check
             $actionTime = '';
             switch ($activeTab) {
                 case 'favorites':
-                    $actionTime = 'Ditambahkan ' . $pub->pivot->created_at->diffForHumans();
+                    if ($pub->pivot && $pub->pivot->created_at) {
+                        $createdAt = is_string($pub->pivot->created_at)
+                            ? \Carbon\Carbon::parse($pub->pivot->created_at)
+                            : $pub->pivot->created_at;
+                        $actionTime = 'Ditambahkan ' . $createdAt->diffForHumans();
+                    } else {
+                        $actionTime = 'Ditambahkan baru-baru ini';
+                    }
                     break;
+
                 case 'history':
-                    $actionTime = 'Dibaca ' . $pub->pivot->last_read_at->diffForHumans();
+                    if ($pub->pivot && $pub->pivot->last_read_at) {
+                        $lastReadAt = is_string($pub->pivot->last_read_at)
+                            ? \Carbon\Carbon::parse($pub->pivot->last_read_at)
+                            : $pub->pivot->last_read_at;
+                        $actionTime = 'Dibaca ' . $lastReadAt->diffForHumans();
+                    } else {
+                        $actionTime = 'Dibaca baru-baru ini';
+                    }
                     break;
+
                 case 'saved':
-                    $actionTime = 'Disimpan ' . $pub->pivot->created_at->diffForHumans();
+                    if ($pub->pivot && $pub->pivot->created_at) {
+                        $createdAt = is_string($pub->pivot->created_at)
+                            ? \Carbon\Carbon::parse($pub->pivot->created_at)
+                            : $pub->pivot->created_at;
+                        $actionTime = 'Disimpan ' . $createdAt->diffForHumans();
+                    } else {
+                        $actionTime = 'Disimpan baru-baru ini';
+                    }
                     break;
             }
 
@@ -479,6 +503,7 @@ class PublicationController extends Controller
 
         return view('pages.publication.library', compact('publications', 'stats', 'activeTab'));
     }
+
 
         /*
     |--------------------------------------------------------------------------
