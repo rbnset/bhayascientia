@@ -88,6 +88,18 @@ $ctaClasses = [
                     </div>
                 </nav>
 
+                {{-- ✅ ADD: Search Button (Only on Publikasi Pages) --}}
+                @if(request()->routeIs('publikasi.*'))
+                <button onclick="openPublicationSearch()"
+                    class="hidden xl:flex items-center justify-center w-12 h-12 bg-white rounded-full border-2 border-[#EEF0F7] hover:border-[#FF6B18] hover:bg-[#FFF7F2] transition-all duration-300 group shadow-sm hover:shadow-md">
+                    <svg class="w-5 h-5 text-[#737373] group-hover:text-[#FF6B18] group-hover:scale-110 transition-all"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </button>
+                @endif
+
                 {{-- Desktop CTA --}}
                 <a href="{{ route($ctaRoute) }}"
                     class="group text-sm font-bold text-white xl:flex hidden h-[48px] shrink-0 items-center justify-center rounded-full {{ $ctaClasses[$ctaVariant] }} transition-all duration-200 hover:-translate-y-[1px] hover:shadow-[0_10px_20px_0_#FF6B1880] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 focus-visible:ring-offset-white relative overflow-hidden {{ $ctaSubtext ? 'px-6 gap-2.5' : 'px-5 gap-2' }}">
@@ -119,6 +131,17 @@ $ctaClasses = [
                             d="M13 7l5 5m0 0l-5 5m5-5H6" />
                     </svg>
                 </a>
+
+                {{-- ✅ ADD: Mobile Search Button (Only on Publikasi Pages) --}}
+                @if(request()->routeIs('publikasi.*'))
+                <button onclick="openPublicationSearch()"
+                    class="xl:hidden flex items-center justify-center w-11 h-11 bg-white rounded-full border border-[#EEF0F7] hover:border-[#FF6B18] hover:bg-[#FFF7F2] transition-all duration-200 shadow-sm">
+                    <svg class="w-5 h-5 text-[#737373]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </button>
+                @endif
 
                 {{-- Mobile Hamburger --}}
                 <button id="hamburgerBtn" type="button"

@@ -116,6 +116,8 @@ Route::middleware('auth')->group(function () {
 */
 Route::prefix('publikasi')->name('publikasi.')->group(function () {
     Route::get('/', [PublicationController::class, 'index'])->name('index');
+
+    Route::get('/search', [PublicationController::class, 'search'])->name('search');
     Route::get('/categories', [PublicationController::class, 'categories'])->name('categories');
     Route::get('/trending', [PublicationController::class, 'trending'])->name('trending');
     Route::get('/library', [PublicationController::class, 'library'])->name('library');

@@ -7,20 +7,48 @@
 @section('custom_navbar')
 <x-navbar ctaLabel="Mulai Berlangganan" ctaRoute="publikasi.library" ctaIcon="sparkles" ctaSubtext="Gratis"
     ctaVariant="premium" />
+
+{{-- ✅ Search/Filter Modal Component --}}
+<x-publication-search-filter :selectedType="$selectedType" :categories="$categories" :years="$years"
+    :topKeywords="$topKeywords" :filterCategory="null" :filterYear="null" :filterKeyword="null"
+    :filterSort="$filterSort" :searchQuery="$searchQuery" />
 @endsection
 
 @section('content')
 
+{{-- Publication Navigation --}}
 <x-publication.navigation :items="config('publication.navigation')" />
 
-
+{{-- Hero Section --}}
 <x-hero.publication />
 
+{{-- Main Content Section --}}
 <section class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px] mt-10 sm:mt-12">
 
+    {{-- ✅ Quick Filter Bar (Type + Sort only) --}}
     <x-publication.filter-bar title="Pilih Jenis Publikasi" helper="Buku, Jurnal, atau Opini" :types="$publicationTypes"
-        :selectedType="$selectedType" />
+        :selectedType="$selectedType" :filterSort="$filterSort" :hasActiveFilters="false" />
 
+    {{-- ✅ Results Count & Quick Actions --}}
+    <div class="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-[#EEF0F7]">
+        <p class="text-sm text-[#737373]">
+            Menampilkan <span class="font-bold text-[#1A1A1A] text-base">{{ count($latestPublications) }}</span>
+            publikasi terbaru
+        </p>
+
+        {{-- Quick Action: Open Search --}}
+        <button onclick="openPublicationSearch()"
+            class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-[#FF6B18] hover:bg-[#FFF7F2] rounded-lg transition-all border border-[#FF6B18]/30 hover:border-[#FF6B18]">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <span class="hidden sm:inline">Cari & Filter</span>
+            <span class="sm:hidden">Cari</span>
+        </button>
+    </div>
+
+    {{-- ✅ Latest Publications Grid/Swiper --}}
     <x-publication.swiper-section title="Tulisan Terbaru <br />Untuk Diskursus yang Bertanggung Jawab" badge="TERKINI"
         swiperClass="upToDateSwiper">
 
@@ -31,16 +59,26 @@
             :detailUrl="$publication['detail_url']" />
         @empty
         <div class="swiper-slide">
-            <div class="bg-white p-8 rounded-[22px] ring-1 ring-[#EEF0F7] text-center">
-                <svg class="w-16 h-16 mx-auto text-[#A3A6AE] mb-4" fill="none" stroke="currentColor"
+            <div class="bg-white p-12 rounded-2xl border-2 border-dashed border-[#EEF0F7] text-center">
+                <svg class="w-20 h-20 mx-auto text-[#EEF0F7] mb-4" fill="none" stroke="currentColor"
                     viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                        d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <p class="text-[#A3A6AE] text-base font-medium">Belum ada publikasi tersedia</p>
-                <p class="text-[#A3A6AE] text-sm mt-2">
-                    Untuk kategori: <span class="font-bold text-[#FF6B18]">{{ ucfirst($selectedType) }}</span>
+                <p class="text-[#A3A6AE] text-lg font-bold mb-2">Belum Ada Publikasi</p>
+                <p class="text-[#737373] text-sm mb-6">
+                    Belum ada publikasi tersedia untuk kategori: <span class="font-bold text-[#FF6B18]">{{
+                        ucfirst($selectedType) }}</span>
                 </p>
+
+                <button onclick="openPublicationSearch()"
+                    class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#FF6B18] to-[#E64627] text-white font-bold rounded-xl hover:shadow-lg transition-all">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    Cari Publikasi Lain
+                </button>
             </div>
         </div>
         @endforelse
@@ -49,19 +87,13 @@
 
 </section>
 
-{{-- Best Authors Section --}}
+{{-- ✅ Best Authors Section --}}
 <x-publication.best-authors :authors="$bestAuthors" title="Penulis Terbaik<br/>dengan Kontribusi Terbanyak"
     badge="PENULIS TERBAIK" :selectedType="$selectedType" />
-
 
 {{-- ✅ Popular Publications Section --}}
 <x-publication.popular-section :featuredTypeContent="$featuredTypeContent ?? null"
     :featuredPublication="$featuredPublication ?? null" :publications="$popularPublications"
     :selectedType="$selectedType" :exploreAllUrl="route('publikasi.index', ['type' => $selectedType])" />
-
-
-<x-filter-modal />
-
-<br><br><br>
 
 @endsection
