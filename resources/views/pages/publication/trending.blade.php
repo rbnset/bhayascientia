@@ -249,15 +249,44 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <div class="text-sm text-[#737373]">
-                <p class="font-semibold text-[#1A1A1A] mb-1">Cara Perhitungan Trending Score</p>
-                <p><strong>Score = (Views × 1) + (Downloads × 2)</strong></p>
-                <p class="mt-1">Download memiliki bobot 2x lebih tinggi karena menunjukkan engagement yang lebih serius.
-                </p>
+            <div class="text-sm text-[#737373] leading-relaxed">
+                <p class="font-semibold text-[#1A1A1A] mb-2">📊 Cara Perhitungan Trending Score</p>
+
+                <div class="space-y-2">
+                    <p>
+                        <strong class="text-[#FF6B18]">Score = (Views × 1) + (Downloads × 2)</strong>
+                    </p>
+
+                    <p>
+                        Download memiliki bobot <strong>2x lebih tinggi</strong> karena menunjukkan engagement yang
+                        lebih serius dibanding hanya viewing.
+                    </p>
+
+                    <div class="mt-3 pt-3 border-t border-[#EEF0F7]">
+                        <p class="font-semibold text-[#1A1A1A] mb-1.5">🎯 Jika Score Sama</p>
+                        <p>Urutan ditentukan berdasarkan:</p>
+                        <ol class="list-decimal list-inside mt-1 space-y-0.5 ml-2">
+                            <li>Jumlah <strong>downloads</strong> tertinggi</li>
+                            <li>Jumlah <strong>views</strong> tertinggi</li>
+                            <li>Tanggal publikasi <strong>terbaru</strong></li>
+                        </ol>
+                    </div>
+
+                    <div class="mt-3 pt-3 border-t border-[#EEF0F7] text-xs">
+                        <p class="flex items-center gap-1.5">
+                            <svg class="w-4 h-4 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>Data diperbarui setiap kali ada aktivitas baru (view/download)</span>
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
     @endif
+
 </section>
 
 @endsection

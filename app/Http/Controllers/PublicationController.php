@@ -362,7 +362,10 @@ class PublicationController extends Controller
         // Get trending publications
         $trendingPublications = $query
             ->orderByRaw('(recent_views * 1) + (recent_downloads * 2) DESC')
-            ->take(50) // Increase limit untuk lebih banyak hasil
+            ->orderBy('recent_downloads', 'desc')  // ✅ Tiebreaker 1: Download lebih tinggi
+            ->orderBy('recent_views', 'desc')      // ✅ Tiebreaker 2: Views lebih tinggi
+            ->orderBy('published_at', 'desc')      // ✅ Tiebreaker 3: Yang terbaru
+            ->take(50)
             ->get()
             ->filter(function ($pub) {
                 // Filter yang minimal ada aktivitas
