@@ -39,9 +39,9 @@ return [
             'active' => ['publikasi.library'],
             'icon' => 'assets/images/icons/star-dark.svg',
             'iconWhite' => 'assets/images/icons/star-white.svg',
-            'badge' => fn() => auth()->check() ? auth()->user()->saved_publications_count : 0,
+            'badge' => fn() => auth()->check() ? auth()->user()->savedPublications()->count() : 0,
             'new' => false,
-            'auth' => true, // Hanya tampil jika login
+            'auth' => false, // Hanya tampil jika login
         ],
     ],
 

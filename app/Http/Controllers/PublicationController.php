@@ -264,7 +264,7 @@ class PublicationController extends Controller
             'formatted_date' => $publication->published_at->locale('id_ID')->isoFormat('D MMMM YYYY'),
             'category' => $publication->categories->first()?->name ?? 'Umum',
             'keywords' => $publication->keywords->pluck('name')->toArray(),
-            'cover_url' => $this->getCoverUrl($publication), // ✅ FIX: Gunakan helper method
+            'cover_url' => $this->getCoverUrl($publication),
             'authors' => $publication->authors->map(function ($author) {
                 return [
                     'id' => $author->id,
@@ -284,21 +284,196 @@ class PublicationController extends Controller
     }
 
     /**
-     * ✅ Format file size in human-readable format
+     * ✅ Show categories page
      */
-    private function formatFileSize($bytes)
+    public function categories()
     {
-        if ($bytes == 0) return '0 B';
+        $categories = \App\Models\Category::withCount([
+            'publications' => function ($query) {
+                $query->where('status', 'published')
+                    ->whereNotNull('published_at')
+                    ->where('published_at', '<=', now());
+            }
+        ])
+            ->having('publications_count', '>', 0)
+            ->orderByDesc('publications_count')
+            ->get()
+            ->map(function ($category) {
+                return [
+                    'id' => $category->id,
+                    'name' => $category->name,
+                    'slug' => $category->slug,
+                    'description' => $category->description,
+                    'publications_count' => $category->publications_count,
+                    'icon' => $category->icon ?? 'assets/images/icons/category-default.svg',
+                    'color' => $category->color ?? '#FF6B18',
+                ];
+            });
 
-        $k = 1024;
-        $sizes = ['B', 'KB', 'MB', 'GB'];
-        $i = floor(log($bytes, $k));
-
-        return round($bytes / pow($k, $i), 2) . ' ' . $sizes[$i];
+        return view('pages.publication.categories', compact('categories'));
     }
 
     /**
-     * ✅ Download publikasi - FIXED: Gunakan pdf_file_path
+     * ✅ Show trending publications
+     */
+    public function trending()
+    {
+        $trendingPublications = Publication::with([
+            'authors.user',
+            'publicationType',
+            'categories',
+        ])
+            ->withCount([
+                'viewLogs as recent_views' => function ($query) {
+                    $query->where('created_at', '>=', now()->subDays(30));
+                },
+                'downloadLogs as recent_downloads' => function ($query) {
+                    $query->where('created_at', '>=', now()->subDays(30));
+                },
+            ])
+            ->where('status', 'published')
+            ->whereNotNull('published_at')
+            ->where('published_at', '<=', now())
+            ->orderByRaw('(recent_views * 1) + (recent_downloads * 2) DESC')
+            ->take(20)
+            ->get()
+            ->map(function ($pub) {
+                return [
+                    'id' => $pub->id,
+                    'title' => $pub->title,
+                    'slug' => $pub->slug,
+                    'cover_url' => $this->getCoverUrl($pub),
+                    'category' => $pub->category_name,
+                    'formatted_date' => $pub->formatted_date,
+                    'type' => $pub->publicationType->name ?? 'Publikasi',
+                    'detail_url' => route('publikasi.show', $pub->slug),
+                    'trending_score' => $pub->recent_views + ($pub->recent_downloads * 2),
+                    'recent_views' => $pub->recent_views,
+                    'recent_downloads' => $pub->recent_downloads,
+                    'authors' => $pub->authors->map(function ($author) {
+                        return [
+                            'id' => $author->id,
+                            'name' => $author->name,
+                            'photo' => $this->getAuthorPhoto($author),
+                            'initials' => $this->getInitials($author->name),
+                        ];
+                    })->toArray(),
+                    'total_authors' => $pub->authors->count(),
+                ];
+            });
+
+        return view('pages.publication.trending', compact('trendingPublications'));
+    }
+
+    /**
+     * ✅ Show user's library with tabs (favorites, history, saved)
+     */
+    public function library(Request $request)
+    {
+        if (!auth()->check()) {
+            return redirect()->route('publikasi.index')->with('error', 'Silakan login untuk melihat library Anda');
+        }
+
+        $activeTab = $request->query('tab', 'favorites');
+
+        // ✅ Validate tab
+        if (!in_array($activeTab, ['favorites', 'history', 'saved'])) {
+            $activeTab = 'favorites';
+        }
+
+        $user = auth()->user();
+
+        // ✅ Get Stats for all tabs
+        $stats = [
+            'favorites' => $user->favoritePublications()->count(),
+            'history' => $user->readPublications()->count(),
+            'saved' => $user->savedPublications()->count(),
+        ];
+
+        // ✅ Get publications based on active tab
+        $publications = collect([]);
+
+        switch ($activeTab) {
+            case 'favorites':
+                $publications = $user->favoritePublications()
+                    ->with(['authors.user', 'publicationType', 'categories'])
+                    ->where('status', 'published')
+                    ->whereNotNull('published_at')
+                    ->where('published_at', '<=', now())
+                    ->orderBy('user_favorite_publications.created_at', 'desc')
+                    ->get();
+                break;
+
+            case 'history':
+                $publications = $user->readPublications()
+                    ->with(['authors.user', 'publicationType', 'categories'])
+                    ->where('status', 'published')
+                    ->whereNotNull('published_at')
+                    ->where('published_at', '<=', now())
+                    ->orderBy('user_read_publications.last_read_at', 'desc')
+                    ->get();
+                break;
+
+            case 'saved':
+                $publications = $user->savedPublications()
+                    ->with(['authors.user', 'publicationType', 'categories'])
+                    ->where('status', 'published')
+                    ->whereNotNull('published_at')
+                    ->where('published_at', '<=', now())
+                    ->orderBy('user_saved_publications.created_at', 'desc')
+                    ->get();
+                break;
+        }
+
+        // ✅ Format publications data
+        $publications = $publications->map(function ($pub) use ($activeTab) {
+            $authorsText = $pub->authors->take(2)->pluck('name')->implode(', ');
+            if ($pub->authors->count() > 2) {
+                $authorsText .= ' +' . ($pub->authors->count() - 2) . ' lainnya';
+            }
+
+            // Tentukan action time berdasarkan tab
+            $actionTime = '';
+            switch ($activeTab) {
+                case 'favorites':
+                    $actionTime = 'Ditambahkan ' . $pub->pivot->created_at->diffForHumans();
+                    break;
+                case 'history':
+                    $actionTime = 'Dibaca ' . $pub->pivot->last_read_at->diffForHumans();
+                    break;
+                case 'saved':
+                    $actionTime = 'Disimpan ' . $pub->pivot->created_at->diffForHumans();
+                    break;
+            }
+
+            return [
+                'id' => $pub->id,
+                'title' => $pub->title,
+                'slug' => $pub->slug,
+                'cover_url' => $this->getCoverUrl($pub),
+                'category' => $pub->category_name,
+                'formatted_date' => $pub->formatted_date,
+                'type' => $pub->publicationType->name ?? 'Publikasi',
+                'detail_url' => route('publikasi.show', $pub->slug),
+                'action_time' => $actionTime,
+                'authors_text' => $authorsText ?: 'Unknown',
+                'authors' => $pub->authors->map(function ($author) {
+                    return [
+                        'id' => $author->id,
+                        'name' => $author->name,
+                        'photo' => $this->getAuthorPhoto($author),
+                        'initials' => $this->getInitials($author->name),
+                    ];
+                })->toArray(),
+                'total_authors' => $pub->authors->count(),
+            ];
+        });
+
+        return view('pages.publication.library', compact('publications', 'stats', 'activeTab'));
+    }
+
+    /**
+     * ✅ Download publikasi
      */
     public function download($slug)
     {
@@ -306,7 +481,6 @@ class PublicationController extends Controller
             ->where('status', 'published')
             ->firstOrFail();
 
-        // ✅ Gunakan pdf_file_path (kolom sebenarnya di database)
         $latestVersion = $publication->versions()
             ->whereNotNull('pdf_file_path')
             ->orderBy('version_number', 'desc')
@@ -316,7 +490,6 @@ class PublicationController extends Controller
             abort(404, 'File publikasi tidak ditemukan');
         }
 
-        // ✅ Log download
         try {
             DownloadLog::logDownload($publication);
             $publication->clearStatsCache();
@@ -341,25 +514,7 @@ class PublicationController extends Controller
     }
 
     /**
-     * ✅ Show author profile
-     */
-    public function showAuthor($id)
-    {
-        $author = Author::with([
-            'user',
-            'publications' => function ($query) {
-                $query->where('status', 'published')
-                    ->whereNotNull('published_at')
-                    ->where('published_at', '<=', now())
-                    ->orderBy('published_at', 'desc');
-            }
-        ])->findOrFail($id);
-
-        return view('pages.author.show', compact('author'));
-    }
-
-    /**
-     * ✅ READ/VIEW publikasi PDF di browser (inline viewer)
+     * ✅ READ/VIEW publikasi PDF di browser
      */
     public function read($slug)
     {
@@ -378,7 +533,6 @@ class PublicationController extends Controller
             ->where('published_at', '<=', now())
             ->firstOrFail();
 
-        // ✅ Get latest version dengan file
         $latestVersion = $publication->versions()
             ->whereNotNull('pdf_file_path')
             ->orderBy('version_number', 'desc')
@@ -399,10 +553,15 @@ class PublicationController extends Controller
             abort(404, 'File tidak ditemukan di storage');
         }
 
-        // ✅ Log view (throttle)
         $this->logPublicationView($publication);
 
-        // ✅ Get PDF URL
+        // ✅ Log ke history jika user login
+        if (auth()->check()) {
+            auth()->user()->readPublications()->syncWithoutDetaching([
+                $publication->id => ['last_read_at' => now()]
+            ]);
+        }
+
         $pdfUrl = asset('storage/' . $filePath);
 
         return view('pages.publication.read', [
@@ -420,47 +579,59 @@ class PublicationController extends Controller
         ]);
     }
 
+    /**
+     * ✅ Show author profile
+     */
+    public function showAuthor($id)
+    {
+        $author = Author::with([
+            'user',
+            'publications' => function ($query) {
+                $query->where('status', 'published')
+                    ->whereNotNull('published_at')
+                    ->where('published_at', '<=', now())
+                    ->orderBy('published_at', 'desc');
+            }
+        ])->findOrFail($id);
+
+        return view('pages.author.show', compact('author'));
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Private Helper Methods
     |--------------------------------------------------------------------------
     */
 
-    /**
-     * ✅ Log publication view dengan throttling
-     */
+    private function formatFileSize($bytes)
+    {
+        if ($bytes == 0) return '0 B';
+        $k = 1024;
+        $sizes = ['B', 'KB', 'MB', 'GB'];
+        $i = floor(log($bytes, $k));
+        return round($bytes / pow($k, $i), 2) . ' ' . $sizes[$i];
+    }
+
     private function logPublicationView(Publication $publication): void
     {
         $cacheKey = "publication_view_throttle.{$publication->id}." . request()->ip();
 
-        // Throttle: 1 view per IP per 5 menit
         if (!Cache::has($cacheKey)) {
             PublicationViewLog::logView($publication);
             $publication->clearStatsCache();
-
             Cache::put($cacheKey, true, now()->addMinutes(5));
         }
     }
 
-    /**
-     * ✅ Helper: Clean storage path (remove 'public/' prefix)
-     */
     private function cleanPath($path)
     {
-        if (!$path) {
-            return null;
-        }
-
+        if (!$path) return null;
         if (str_starts_with($path, 'public/')) {
             return substr($path, 7);
         }
-
         return $path;
     }
 
-    /**
-     * ✅ Helper: Get cover URL dari PublicationTypeContent
-     */
     private function getTypeContentCover($content)
     {
         if (!$content || !$content->image_path) {
@@ -476,9 +647,6 @@ class PublicationController extends Controller
         return 'https://placehold.co/800x600/FF6B18/white?text=' . urlencode($content->title ?? 'Content');
     }
 
-    /**
-     * ✅ Helper: Generate cover URL dengan fallback
-     */
     private function getCoverUrl($publication)
     {
         if (!$publication->cover_image_path) {
@@ -497,17 +665,12 @@ class PublicationController extends Controller
                 'title' => $publication->title,
                 'cover_path' => $publication->cover_image_path,
                 'clean_path' => $cleanPath,
-                'storage_path' => storage_path('app/public/' . $cleanPath),
-                'file_exists' => file_exists(storage_path('app/public/' . $cleanPath)),
             ]);
         }
 
         return $this->getPlaceholderCover($publication);
     }
 
-    /**
-     * ✅ Helper: Generate placeholder cover
-     */
     private function getPlaceholderCover($publication)
     {
         $categoryName = 'Publikasi';
@@ -521,12 +684,8 @@ class PublicationController extends Controller
         return 'https://placehold.co/400x600/FF6B18/white?text=' . urlencode($titleShort);
     }
 
-    /**
-     * ✅ Helper: Get author photo dengan fallback ke UI Avatars dengan INISIAL
-     */
     private function getAuthorPhoto($author)
     {
-        // ✅ Prioritas 1: Cek photo_path dari Author model
         if ($author->photo_path) {
             $cleanPath = $this->cleanPath($author->photo_path);
 
@@ -535,7 +694,6 @@ class PublicationController extends Controller
             }
         }
 
-        // ✅ Prioritas 2: Cek profile_photo dari User (jika author punya user_id)
         if ($author->user_id && $author->relationLoaded('user') && $author->user) {
             if ($author->user->profile_photo) {
                 $cleanPath = $this->cleanPath($author->user->profile_photo);
@@ -546,7 +704,6 @@ class PublicationController extends Controller
             }
         }
 
-        // ✅ Prioritas 3: Fallback ke UI Avatars dengan INISIAL dari nama
         $initials = $this->getInitials($author->name);
 
         return 'https://ui-avatars.com/api/?' . http_build_query([
@@ -560,9 +717,6 @@ class PublicationController extends Controller
         ]);
     }
 
-    /**
-     * ✅ Helper: Generate initials dari nama (2 huruf pertama)
-     */
     private function getInitials($name)
     {
         $name = trim($name);

@@ -1,273 +1,63 @@
-{{-- resources/views/pages/publikasi/categories.blade.php --}}
 @extends('layouts.app')
 
 @section('title', 'Kategori Publikasi')
-@section('main_class', 'mt-0 pb-[120px] sm:pb-0')
-@section('hide_footer', 'true')
+@section('main_class', 'pb-16')
 
 @section('content')
 
-{{-- Sub Navigation - GUNAKAN CONFIG --}}
-<x-publication.navigation :subItems="config('publication.sub_navigation')"
-    :bottomItems="config('publication.bottom_navigation')" />
-
-<section class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px] mt-10 sm:mt-12">
-
-    {{-- Header --}}
-    <div class="mb-8">
-        <h1 class="text-2xl md:text-3xl font-bold text-[#1A1A1A] mb-2">
+{{-- Hero Section --}}
+<section class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px] mt-8">
+    <div class="text-center mb-8">
+        <h1 class="text-3xl md:text-4xl font-bold text-[#1A1A1A] mb-4">
             Jelajahi Berdasarkan Kategori
         </h1>
-        <p class="text-[#737373]">
+        <p class="text-[#737373] text-lg max-w-2xl mx-auto">
             Temukan publikasi ilmiah sesuai bidang minat Anda
         </p>
     </div>
 
+    {{-- Navigation --}}
+    <x-publication.navigation :items="config('publication.navigation')" />
+
     {{-- Categories Grid --}}
-    <div class="grid gap-4 mb-10 sm:grid-cols-2 lg:grid-cols-3">
-
-        {{-- Category Card: Technology --}}
-        <a href="{{ route('publikasi.index', ['category' => 'technology']) }}"
-            class="relative p-6 overflow-hidden transition-all duration-300 group bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl hover:shadow-2xl hover:-translate-y-1">
-            <div class="relative z-10">
-                <div class="flex items-center justify-between mb-4">
-                    <span class="text-5xl">💻</span>
-                    <span class="px-3 py-1 text-xs font-bold text-white rounded-full bg-white/20 backdrop-blur-sm">
-                        124 publikasi
-                    </span>
-                </div>
-                <h3 class="mb-2 text-xl font-bold text-white">Technology</h3>
-                <p class="mb-4 text-sm text-white/90">
-                    AI, Machine Learning, Software Engineering, dan teknologi terkini
-                </p>
-                <div class="flex items-center text-sm font-semibold text-white">
-                    Lihat publikasi
-                    <svg class="w-5 h-5 ml-2 transition-transform group-hover:translate-x-1" fill="none"
-                        stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                    </svg>
-                </div>
-            </div>
+    <div class="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        @forelse($categories as $category)
+        <a href="{{ route('publikasi.index', ['category' => $category['slug']]) }}"
+            class="group bg-white rounded-2xl border border-[#EEF0F7] p-6 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+            {{-- Icon --}}
             <div
-                class="absolute inset-0 transition-opacity duration-300 opacity-0 bg-gradient-to-t from-black/20 to-transparent group-hover:opacity-100">
+                class="w-16 h-16 rounded-xl bg-gradient-to-br from-[#FF6B18]/10 to-[#E64627]/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+                <img src="{{ asset($category['icon']) }}" alt="{{ $category['name'] }}" class="w-8 h-8">
+            </div>
+
+            {{-- Content --}}
+            <h3 class="text-xl font-bold text-[#1A1A1A] mb-2 group-hover:text-[#FF6B18] transition-colors">
+                {{ $category['name'] }}
+            </h3>
+
+            @if($category['description'])
+            <p class="text-sm text-[#737373] mb-4 line-clamp-2">
+                {{ $category['description'] }}
+            </p>
+            @endif
+
+            {{-- Stats --}}
+            <div class="flex items-center justify-between pt-4 border-t border-[#EEF0F7]">
+                <span class="text-sm font-semibold text-[#FF6B18]">
+                    {{ number_format($category['publications_count']) }} Publikasi
+                </span>
+                <svg class="w-5 h-5 text-[#737373] group-hover:text-[#FF6B18] group-hover:translate-x-1 transition-all"
+                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
             </div>
         </a>
-
-        {{-- Category Card: Science --}}
-        <a href="{{ route('publikasi.index', ['category' => 'science']) }}"
-            class="relative p-6 overflow-hidden transition-all duration-300 group bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl hover:shadow-2xl hover:-translate-y-1">
-            <div class="relative z-10">
-                <div class="flex items-center justify-between mb-4">
-                    <span class="text-5xl">🔬</span>
-                    <span class="px-3 py-1 text-xs font-bold text-white rounded-full bg-white/20 backdrop-blur-sm">
-                        98 publikasi
-                    </span>
-                </div>
-                <h3 class="mb-2 text-xl font-bold text-white">Science</h3>
-                <p class="mb-4 text-sm text-white/90">
-                    Fisika, Kimia, Biologi, dan penelitian sains fundamental
-                </p>
-                <div class="flex items-center text-sm font-semibold text-white">
-                    Lihat publikasi
-                    <svg class="w-5 h-5 ml-2 transition-transform group-hover:translate-x-1" fill="none"
-                        stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                    </svg>
-                </div>
-            </div>
-            <div
-                class="absolute inset-0 transition-opacity duration-300 opacity-0 bg-gradient-to-t from-black/20 to-transparent group-hover:opacity-100">
-            </div>
-        </a>
-
-        {{-- Category Card: Health --}}
-        <a href="{{ route('publikasi.index', ['category' => 'health']) }}"
-            class="relative p-6 overflow-hidden transition-all duration-300 group bg-gradient-to-br from-red-500 to-red-600 rounded-2xl hover:shadow-2xl hover:-translate-y-1">
-            <div class="relative z-10">
-                <div class="flex items-center justify-between mb-4">
-                    <span class="text-5xl">💊</span>
-                    <span class="px-3 py-1 text-xs font-bold text-white rounded-full bg-white/20 backdrop-blur-sm">
-                        87 publikasi
-                    </span>
-                </div>
-                <h3 class="mb-2 text-xl font-bold text-white">Health & Medicine</h3>
-                <p class="mb-4 text-sm text-white/90">
-                    Kesehatan, Kedokteran, Farmasi, dan penelitian medis
-                </p>
-                <div class="flex items-center text-sm font-semibold text-white">
-                    Lihat publikasi
-                    <svg class="w-5 h-5 ml-2 transition-transform group-hover:translate-x-1" fill="none"
-                        stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                    </svg>
-                </div>
-            </div>
-            <div
-                class="absolute inset-0 transition-opacity duration-300 opacity-0 bg-gradient-to-t from-black/20 to-transparent group-hover:opacity-100">
-            </div>
-        </a>
-
-        {{-- Category Card: Education --}}
-        <a href="{{ route('publikasi.index', ['category' => 'education']) }}"
-            class="relative p-6 overflow-hidden transition-all duration-300 group bg-gradient-to-br from-green-500 to-green-600 rounded-2xl hover:shadow-2xl hover:-translate-y-1">
-            <div class="relative z-10">
-                <div class="flex items-center justify-between mb-4">
-                    <span class="text-5xl">📚</span>
-                    <span class="px-3 py-1 text-xs font-bold text-white rounded-full bg-white/20 backdrop-blur-sm">
-                        76 publikasi
-                    </span>
-                </div>
-                <h3 class="mb-2 text-xl font-bold text-white">Education</h3>
-                <p class="mb-4 text-sm text-white/90">
-                    Pendidikan, Pembelajaran, Kurikulum, dan pedagogi
-                </p>
-                <div class="flex items-center text-sm font-semibold text-white">
-                    Lihat publikasi
-                    <svg class="w-5 h-5 ml-2 transition-transform group-hover:translate-x-1" fill="none"
-                        stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                    </svg>
-                </div>
-            </div>
-            <div
-                class="absolute inset-0 transition-opacity duration-300 opacity-0 bg-gradient-to-t from-black/20 to-transparent group-hover:opacity-100">
-            </div>
-        </a>
-
-        {{-- Category Card: Engineering --}}
-        <a href="{{ route('publikasi.index', ['category' => 'engineering']) }}"
-            class="relative p-6 overflow-hidden transition-all duration-300 group bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl hover:shadow-2xl hover:-translate-y-1">
-            <div class="relative z-10">
-                <div class="flex items-center justify-between mb-4">
-                    <span class="text-5xl">⚙️</span>
-                    <span class="px-3 py-1 text-xs font-bold text-white rounded-full bg-white/20 backdrop-blur-sm">
-                        65 publikasi
-                    </span>
-                </div>
-                <h3 class="mb-2 text-xl font-bold text-white">Engineering</h3>
-                <p class="mb-4 text-sm text-white/90">
-                    Teknik Sipil, Mesin, Elektro, dan teknologi rekayasa
-                </p>
-                <div class="flex items-center text-sm font-semibold text-white">
-                    Lihat publikasi
-                    <svg class="w-5 h-5 ml-2 transition-transform group-hover:translate-x-1" fill="none"
-                        stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                    </svg>
-                </div>
-            </div>
-            <div
-                class="absolute inset-0 transition-opacity duration-300 opacity-0 bg-gradient-to-t from-black/20 to-transparent group-hover:opacity-100">
-            </div>
-        </a>
-
-        {{-- Category Card: Business --}}
-        <a href="{{ route('publikasi.index', ['category' => 'business']) }}"
-            class="relative p-6 overflow-hidden transition-all duration-300 group bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl hover:shadow-2xl hover:-translate-y-1">
-            <div class="relative z-10">
-                <div class="flex items-center justify-between mb-4">
-                    <span class="text-5xl">💼</span>
-                    <span class="px-3 py-1 text-xs font-bold text-white rounded-full bg-white/20 backdrop-blur-sm">
-                        54 publikasi
-                    </span>
-                </div>
-                <h3 class="mb-2 text-xl font-bold text-white">Business</h3>
-                <p class="mb-4 text-sm text-white/90">
-                    Manajemen, Ekonomi, Kewirausahaan, dan bisnis
-                </p>
-                <div class="flex items-center text-sm font-semibold text-white">
-                    Lihat publikasi
-                    <svg class="w-5 h-5 ml-2 transition-transform group-hover:translate-x-1" fill="none"
-                        stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                    </svg>
-                </div>
-            </div>
-            <div
-                class="absolute inset-0 transition-opacity duration-300 opacity-0 bg-gradient-to-t from-black/20 to-transparent group-hover:opacity-100">
-            </div>
-        </a>
-
-        {{-- Category Card: Social Sciences --}}
-        <a href="{{ route('publikasi.index', ['category' => 'social']) }}"
-            class="relative p-6 overflow-hidden transition-all duration-300 group bg-gradient-to-br from-pink-500 to-pink-600 rounded-2xl hover:shadow-2xl hover:-translate-y-1">
-            <div class="relative z-10">
-                <div class="flex items-center justify-between mb-4">
-                    <span class="text-5xl">👥</span>
-                    <span class="px-3 py-1 text-xs font-bold text-white rounded-full bg-white/20 backdrop-blur-sm">
-                        43 publikasi
-                    </span>
-                </div>
-                <h3 class="mb-2 text-xl font-bold text-white">Social Sciences</h3>
-                <p class="mb-4 text-sm text-white/90">
-                    Sosiologi, Psikologi, Antropologi, dan ilmu sosial
-                </p>
-                <div class="flex items-center text-sm font-semibold text-white">
-                    Lihat publikasi
-                    <svg class="w-5 h-5 ml-2 transition-transform group-hover:translate-x-1" fill="none"
-                        stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                    </svg>
-                </div>
-            </div>
-            <div
-                class="absolute inset-0 transition-opacity duration-300 opacity-0 bg-gradient-to-t from-black/20 to-transparent group-hover:opacity-100">
-            </div>
-        </a>
-
-        {{-- Category Card: Arts & Humanities --}}
-        <a href="{{ route('publikasi.index', ['category' => 'arts']) }}"
-            class="relative p-6 overflow-hidden transition-all duration-300 group bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-2xl hover:shadow-2xl hover:-translate-y-1">
-            <div class="relative z-10">
-                <div class="flex items-center justify-between mb-4">
-                    <span class="text-5xl">🎨</span>
-                    <span class="px-3 py-1 text-xs font-bold text-white rounded-full bg-white/20 backdrop-blur-sm">
-                        32 publikasi
-                    </span>
-                </div>
-                <h3 class="mb-2 text-xl font-bold text-white">Arts & Humanities</h3>
-                <p class="mb-4 text-sm text-white/90">
-                    Seni, Sastra, Sejarah, Filsafat, dan budaya
-                </p>
-                <div class="flex items-center text-sm font-semibold text-white">
-                    Lihat publikasi
-                    <svg class="w-5 h-5 ml-2 transition-transform group-hover:translate-x-1" fill="none"
-                        stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                    </svg>
-                </div>
-            </div>
-            <div
-                class="absolute inset-0 transition-opacity duration-300 opacity-0 bg-gradient-to-t from-black/20 to-transparent group-hover:opacity-100">
-            </div>
-        </a>
-
-        {{-- View All Categories --}}
-        <a href="{{ route('publikasi.index') }}"
-            class="group relative overflow-hidden bg-white border-2 border-dashed border-[#EEF0F7] rounded-2xl p-6 hover:border-[#FF6B18] hover:shadow-lg transition-all duration-300 flex items-center justify-center">
-            <div class="text-center">
-                <div
-                    class="w-16 h-16 bg-[#F8F9FC] rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-[#FFF7F2] transition-colors">
-                    <svg class="w-8 h-8 text-[#737373] group-hover:text-[#FF6B18]" fill="none" stroke="currentColor"
-                        viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                    </svg>
-                </div>
-                <h3 class="text-lg font-bold text-[#1A1A1A] mb-1">Lihat Semua</h3>
-                <p class="text-sm text-[#737373]">579 total publikasi</p>
-            </div>
-        </a>
-
+        @empty
+        <div class="col-span-full text-center py-12">
+            <p class="text-[#737373] text-lg">Belum ada kategori tersedia</p>
+        </div>
+        @endforelse
     </div>
-
 </section>
+
 @endsection

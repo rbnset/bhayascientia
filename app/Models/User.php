@@ -49,4 +49,28 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
     {
         return true;
     }
+
+    public function getSavedPublicationsCountAttribute()
+    {
+        return $this->savedPublications()->count();
+    }
+
+    public function favoritePublications()
+    {
+        return $this->belongsToMany(Publication::class, 'user_favorite_publications')
+            ->withTimestamps();
+    }
+
+    public function readPublications()
+    {
+        return $this->belongsToMany(Publication::class, 'user_read_publications')
+            ->withPivot('last_read_at')
+            ->withTimestamps();
+    }
+
+    public function savedPublications()
+    {
+        return $this->belongsToMany(Publication::class, 'user_saved_publications')
+            ->withTimestamps();
+    }
 }
