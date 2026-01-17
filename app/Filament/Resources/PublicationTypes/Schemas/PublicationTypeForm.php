@@ -5,7 +5,10 @@ namespace App\Filament\Resources\PublicationTypes\Schemas;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\FileUpload;
 use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\Group;
+use Filament\Schemas\Components\Group as ComponentsGroup;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Str;
 
@@ -72,6 +75,51 @@ class PublicationTypeForm
                         'default' => 1,
                         'md' => 2,
                     ]),
+
+                // =========================
+                // PUBLICATION TYPE CONTENT (ONE-TO-ONE)
+                // =========================
+                Section::make('Content Information')
+                    ->description('Informasi konten untuk jenis publikasi ini')
+                    ->icon('heroicon-o-document-duplicate')
+                    ->collapsed(false)
+                    ->schema([
+                        ComponentsGroup::make()
+                            ->relationship('content')
+                            ->schema([
+                                TextInput::make('title')
+                                    ->label('Content Title')
+                                    ->placeholder('Contoh: Panduan Penulisan Jurnal')
+                                    ->maxLength(255)
+                                    ->helperText('Judul konten untuk jenis publikasi ini.')
+                                    ->columnSpanFull(),
+
+                                Textarea::make('description')
+                                    ->label('Content Description')
+                                    ->placeholder('Deskripsi lengkap tentang konten...')
+                                    ->rows(5)
+                                    ->helperText('Penjelasan detail tentang konten publikasi.')
+                                    ->columnSpanFull(),
+
+                                FileUpload::make('image_path')
+                                    ->label('Content Image')
+                                    ->image()
+                                    ->disk('public')
+                                    ->directory('publication-types/content-images')
+                                    ->imageEditor()
+                                    ->imageEditorAspectRatios([
+                                        '16:9',
+                                        '4:3',
+                                        '1:1',
+                                    ])
+                                    ->maxSize(3072)
+                                    ->helperText('Format: JPG, PNG. Maksimal 3MB. Rasio: 16:9, 4:3, atau 1:1')
+                                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/jpg'])
+                                    ->moveFiles()
+                                    ->columnSpanFull(),
+                            ])
+                    ])
+                    ->columns(1),
             ]);
     }
 }
