@@ -55,8 +55,10 @@
 
 
 {{-- ✅ Popular Publications Section --}}
-<x-publication.popular-section :featuredPublication="$featuredPublication" :publications="$popularPublications"
+<x-publication.popular-section :featuredTypeContent="$featuredTypeContent ?? null"
+    :featuredPublication="$featuredPublication ?? null" :publications="$popularPublications"
     :selectedType="$selectedType" :exploreAllUrl="route('publikasi.index', ['type' => $selectedType])" />
+
 
 <x-filter-modal />
 

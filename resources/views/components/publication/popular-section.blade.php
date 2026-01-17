@@ -1,5 +1,6 @@
 @props([
 'featuredPublication' => null,
+'featuredTypeContent' => null, // ✅ Tambahan prioritas tertinggi
 'publications' => [],
 'selectedType' => 'publikasi',
 'exploreAllUrl' => null
@@ -28,11 +29,18 @@
     </div>
 
     {{-- Content --}}
-    @if($featuredPublication || $publications->isNotEmpty())
+    @if($featuredTypeContent || $featuredPublication || $publications->isNotEmpty())
     <div class="flex flex-col gap-6 lg:flex-row lg:items-stretch lg:justify-between lg:gap-6">
 
-        {{-- Left: Featured --}}
-        @if($featuredPublication)
+        {{-- Left: Featured (Prioritas: TypeContent > Publication) --}}
+        @if($featuredTypeContent)
+        {{-- ✅ Prioritas 1: Featured dari PublicationTypeContent --}}
+        <x-publication.featured-card :title="$featuredTypeContent['title']"
+            :coverUrl="$featuredTypeContent['cover_url']" :category="$featuredTypeContent['category']"
+            :type="$featuredTypeContent['type']" :abstract="$featuredTypeContent['abstract'] ?? null"
+            :downloadCount="$featuredTypeContent['download_count']" :detailUrl="$featuredTypeContent['detail_url']" />
+        @elseif($featuredPublication)
+        {{-- ✅ Prioritas 2: Featured dari Publication paling populer --}}
         <x-publication.featured-card :title="$featuredPublication['title']"
             :coverUrl="$featuredPublication['cover_url']" :category="$featuredPublication['category']"
             :type="$featuredPublication['type']" :abstract="$featuredPublication['abstract'] ?? null"

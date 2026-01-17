@@ -13,7 +13,9 @@ class PublicationController extends Controller
 {
     public function index(Request $request)
     {
-        $publicationTypes = PublicationType::where('is_active', true)
+        // ✅ Load publication types WITH content (hasOne relationship)
+        $publicationTypes = PublicationType::with('content')
+            ->where('is_active', true)
             ->orderBy('name')
             ->get(['id', 'slug', 'name']);
 
@@ -25,6 +27,7 @@ class PublicationController extends Controller
                 'bestAuthors' => collect([]),
                 'popularPublications' => collect([]),
                 'featuredPublication' => null,
+                'featuredTypeContent' => null, // ✅ Tambahan
             ]);
         }
 
@@ -33,6 +36,23 @@ class PublicationController extends Controller
         $typeExists = $publicationTypes->contains('slug', $selectedType);
         if (!$typeExists) {
             $selectedType = $publicationTypes->first()->slug;
+        }
+
+        // ✅ Get current PublicationType object untuk ambil content
+        $currentType = $publicationTypes->firstWhere('slug', $selectedType);
+
+        // ✅ Format Featured Type Content dari PublicationTypeContent
+        $featuredTypeContent = null;
+        if ($currentType && $currentType->content) {
+            $featuredTypeContent = [
+                'title' => $currentType->content->title ?? $currentType->name,
+                'cover_url' => $this->getTypeContentCover($currentType->content),
+                'category' => $currentType->name, // Nama type sebagai category
+                'type' => $currentType->name,
+                'abstract' => $currentType->content->description,
+                'download_count' => 0, // Type content tidak ada download
+                'detail_url' => '#', // Atau route ke halaman detail type
+            ];
         }
 
         // ✅ Get Latest Publications
@@ -82,7 +102,7 @@ class PublicationController extends Controller
                         'id' => $author->id,
                         'name' => $author->name,
                         'photo' => $this->getAuthorPhoto($author),
-                        'initials' => $this->getInitials($author->name), // ✅ Tambahkan initials
+                        'initials' => $this->getInitials($author->name),
                     ];
                 })->toArray(),
                 'total_authors' => $pub->authors->count(),
@@ -109,7 +129,7 @@ class PublicationController extends Controller
                 return [
                     'name' => $author->name,
                     'avatar' => $this->getAuthorPhoto($author),
-                    'initials' => $this->getInitials($author->name), // ✅ Tambahkan initials
+                    'initials' => $this->getInitials($author->name),
                     'publication_count' => $author->publications_count,
                     'profile_url' => route('author.show', $author->id),
                     'verified' => $author->user_id !== null,
@@ -136,20 +156,25 @@ class PublicationController extends Controller
             ->get();
 
         // ✅ Featured Publication (yang paling banyak diunduh)
-        $featuredPublication = $popularPubs->first() ? [
-            'id' => $popularPubs->first()->id,
-            'title' => $popularPubs->first()->title,
-            'slug' => $popularPubs->first()->slug,
-            'cover_url' => $this->getCoverUrl($popularPubs->first()),
-            'category' => $popularPubs->first()->category_name,
-            'type' => $popularPubs->first()->publicationType->name ?? 'Publikasi',
-            'abstract' => \Illuminate\Support\Str::limit($popularPubs->first()->abstract, 120),
-            'download_count' => $popularPubs->first()->download_logs_count,
-            'detail_url' => route('publikasi.show', $popularPubs->first()->slug),
-        ] : null;
+        // HANYA jika tidak ada featuredTypeContent
+        $featuredPublication = null;
+        if (!$featuredTypeContent && $popularPubs->first()) {
+            $featuredPublication = [
+                'id' => $popularPubs->first()->id,
+                'title' => $popularPubs->first()->title,
+                'slug' => $popularPubs->first()->slug,
+                'cover_url' => $this->getCoverUrl($popularPubs->first()),
+                'category' => $popularPubs->first()->category_name,
+                'type' => $popularPubs->first()->publicationType->name ?? 'Publikasi',
+                'abstract' => \Illuminate\Support\Str::limit($popularPubs->first()->abstract, 120),
+                'download_count' => $popularPubs->first()->download_logs_count,
+                'detail_url' => route('publikasi.show', $popularPubs->first()->slug),
+            ];
+        }
 
         // ✅ Popular Publications List (6 sisanya)
-        $popularPublications = $popularPubs->skip(1)->take(6)->map(function ($pub) {
+        $skipCount = $featuredTypeContent ? 0 : 1; // Jika pakai type content, jangan skip
+        $popularPublications = $popularPubs->skip($skipCount)->take(6)->map(function ($pub) {
             return [
                 'id' => $pub->id,
                 'title' => $pub->title,
@@ -164,7 +189,7 @@ class PublicationController extends Controller
                         'id' => $author->id,
                         'name' => $author->name,
                         'photo' => $this->getAuthorPhoto($author),
-                        'initials' => $this->getInitials($author->name), // ✅ Tambahkan initials
+                        'initials' => $this->getInitials($author->name),
                     ];
                 })->toArray(),
                 'total_authors' => $pub->authors->count(),
@@ -177,7 +202,8 @@ class PublicationController extends Controller
             'selectedType',
             'bestAuthors',
             'popularPublications',
-            'featuredPublication'
+            'featuredPublication',
+            'featuredTypeContent' // ✅ Tambahan
         ));
     }
 
@@ -235,6 +261,24 @@ class PublicationController extends Controller
         }
 
         return $path;
+    }
+
+    /**
+     * ✅ Helper: Get cover URL dari PublicationTypeContent
+     */
+    private function getTypeContentCover($content)
+    {
+        if (!$content || !$content->image_path) {
+            return 'https://placehold.co/800x600/FF6B18/white?text=' . urlencode('Publication Type');
+        }
+
+        $cleanPath = $this->cleanPath($content->image_path);
+
+        if ($cleanPath && Storage::disk('public')->exists($cleanPath)) {
+            return asset('storage/' . $cleanPath);
+        }
+
+        return 'https://placehold.co/800x600/FF6B18/white?text=' . urlencode($content->title ?? 'Content');
     }
 
     /**
