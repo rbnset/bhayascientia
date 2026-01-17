@@ -11,8 +11,8 @@
 
 @section('content')
 
-<x-publication.navigation :subItems="config('publication.sub_navigation')"
-    :bottomItems="config('publication.bottom_navigation')" />
+<x-publication.navigation :items="config('publication.navigation')" />
+
 
 <x-hero.publication />
 

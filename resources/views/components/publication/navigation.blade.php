@@ -1,27 +1,35 @@
 {{-- resources/views/components/publication/navigation.blade.php --}}
 @props([
-'subItems' => [],
-'bottomItems' => [],
+'items' => [],
 'maxWidth' => 'max-w-[640px]',
 ])
 
-{{-- ===================== SUB MENU (tablet+ / >=640px) ===================== --}}
-<nav aria-label="Sub menu publikasi" class="hidden mt-4 sm:block sm:mt-5">
+@php
+// ✅ Filter menu berdasarkan auth requirement
+$filteredItems = collect($items)->filter(function ($item) {
+// Jika menu require auth, check user login
+if (isset($item['auth']) && $item['auth'] === true) {
+return auth()->check();
+}
+return true;
+})->values()->all();
+
+// ✅ Cek apakah ada menu yang aktif
+$hasActiveMenu = false;
+foreach ($filteredItems as $item) {
+$activeRoutes = isset($item['active']) ? (array) $item['active'] : [];
+if (request()->routeIs($activeRoutes)) {
+$hasActiveMenu = true;
+break;
+}
+}
+@endphp
+
+{{-- ===================== SUB MENU (Desktop - tablet+) ===================== --}}
+<nav aria-label="Sub menu publikasi" class="hidden sm:block mt-4 sm:mt-5">
     <div class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px]">
         <div class="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
-            @php
-            // Cek apakah ada menu yang aktif
-            $hasActiveMenu = false;
-            foreach ($subItems as $item) {
-            $activeRoutes = isset($item['active']) ? (array) $item['active'] : [];
-            if (request()->routeIs($activeRoutes)) {
-            $hasActiveMenu = true;
-            break;
-            }
-            }
-            @endphp
-
-            @foreach ($subItems as $index => $item)
+            @foreach ($filteredItems as $index => $item)
             @php
             // Handle active routes
             $activeRoutes = isset($item['active']) ? (array) $item['active'] : [];
@@ -46,6 +54,9 @@
             } catch (\Exception $e) {
             continue; // Skip item jika route tidak ada
             }
+
+            // Icon untuk desktop (selalu pakai 'icon' - dark version)
+            $iconSrc = $item['icon'];
             @endphp
 
             <a href="{{ $itemUrl }}" aria-current="{{ $isActive ? 'page' : 'false' }}"
@@ -53,11 +64,9 @@
                 , 'border-[#EEF0F7] hover:border-[#FF6B18] hover:ring-2 hover:ring-[#FF6B18]/20 hover:-translate-y-0.5'=>
                 !$isActive,
                 'border-[#FF6B18] ring-2 ring-[#FF6B18]/20 text-[#FF6B18] shadow-sm' => $isActive,
-                ])
-                >
+                ])>
                 <span class="flex w-5 h-5 transition-transform duration-200 shrink-0 group-hover:scale-110">
-                    <img src="{{ asset($item['icon']) }}" alt="" class="object-contain w-full h-full"
-                        aria-hidden="true">
+                    <img src="{{ asset($iconSrc) }}" alt="" class="object-contain w-full h-full" aria-hidden="true">
                 </span>
                 <span class="whitespace-nowrap">{{ $item['label'] }}</span>
 
@@ -82,31 +91,19 @@
     </div>
 </nav>
 
-{{-- ===================== BOTTOM NAV (mobile only / <640px)=====================--}} <nav
-    class="fixed left-0 right-0 z-40 px-4 bottom-5 sm:hidden" aria-label="Navigasi bawah">
+{{-- ===================== BOTTOM NAV (Mobile only) ===================== --}}
+<nav class="fixed left-0 right-0 z-40 px-4 bottom-5 sm:hidden" aria-label="Navigasi bawah">
     <div class="mx-auto w-full {{ $maxWidth }}">
         <div
             class="grid grid-flow-col auto-cols-auto items-center justify-between rounded-full bg-[#2A2A2A] p-2 px-4 shadow-[0_10px_40px_0_rgba(0,0,0,0.3)]">
-            @php
-            // Cek apakah ada menu yang aktif untuk bottom nav
-            $hasActiveBottomMenu = false;
-            foreach ($bottomItems as $item) {
-            $activeRoutes = isset($item['active']) ? (array) $item['active'] : [];
-            if (request()->routeIs($activeRoutes)) {
-            $hasActiveBottomMenu = true;
-            break;
-            }
-            }
-            @endphp
-
-            @foreach ($bottomItems as $index => $item)
+            @foreach ($filteredItems as $index => $item)
             @php
             // Handle active routes
             $activeRoutes = isset($item['active']) ? (array) $item['active'] : [];
             $isActive = request()->routeIs($activeRoutes);
 
             // DEFAULT: Jika tidak ada menu yang aktif, set Browse (index 0) sebagai default
-            if (!$hasActiveBottomMenu && $index === 0) {
+            if (!$hasActiveMenu && $index === 0) {
             $isActive = true;
             }
 
@@ -124,14 +121,20 @@
             } catch (\Exception $e) {
             continue; // Skip item jika route tidak ada
             }
+
+            // Icon untuk mobile
+            // Jika aktif: pakai 'icon' (dark)
+            // Jika tidak aktif: pakai 'iconWhite'
+            $iconSrc = $isActive
+            ? $item['icon']
+            : ($item['iconWhite'] ?? $item['icon']);
             @endphp
 
             @if ($isActive)
             {{-- Active Item - Expanded --}}
             <a href="{{ $itemUrl }}" class="flex items-center -mx-3 shrink-0" aria-current="page">
                 <div class="flex items-center gap-2.5 rounded-full bg-[#E64627] px-4 py-3 shadow-lg">
-                    <img src="{{ asset($item['iconActive'] ?? $item['icon']) }}" class="w-6 h-6" alt=""
-                        aria-hidden="true">
+                    <img src="{{ asset($iconSrc) }}" class="w-6 h-6" alt="" aria-hidden="true">
                     <span class="text-sm font-bold leading-none text-white">
                         {{ $item['label'] }}
                     </span>
@@ -142,7 +145,7 @@
             <a href="{{ $itemUrl }}"
                 class="relative flex items-center justify-center w-full p-2 mx-auto transition-all duration-200 rounded-full hover:bg-white/10 active:scale-95"
                 aria-current="false" aria-label="{{ $item['label'] }}">
-                <img src="{{ asset($item['icon']) }}" class="w-6 h-6" alt="{{ $item['label'] }}">
+                <img src="{{ asset($iconSrc) }}" class="w-6 h-6" alt="{{ $item['label'] }}">
 
                 {{-- Badge Display --}}
                 @if ($badgeValue > 0)
@@ -161,4 +164,4 @@
             @endforeach
         </div>
     </div>
-    </nav>
+</nav>

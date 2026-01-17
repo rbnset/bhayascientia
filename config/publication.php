@@ -2,68 +2,52 @@
 // config/publication.php
 
 return [
-    'sub_navigation' => [
+    /**
+     * ✅ UNIFIED NAVIGATION - Single source untuk desktop & mobile
+     */
+    'navigation' => [
         [
             'label' => 'Browse',
-            'icon' => 'assets/images/icons/3dcube.svg',
             'href' => 'publikasi.index',
-            'active' => ['publikasi.index', 'publikasi.show'], // Hapus 'publikasi'
+            'active' => ['publikasi.index', 'publikasi.show'],
+            'icon' => 'assets/images/icons/3dcube.svg',
+            'iconWhite' => 'assets/images/icons/3dcube-white.svg', // Untuk mobile inactive
+            'badge' => null,
+            'new' => false,
         ],
         [
             'label' => 'Categories',
-            'icon' => 'assets/images/icons/calendar-date-range-dark.svg',
             'href' => 'publikasi.categories',
             'active' => ['publikasi.categories'],
+            'icon' => 'assets/images/icons/calendar-date-range-dark.svg',
+            'iconWhite' => 'assets/images/icons/calendar-date-range-white.svg',
+            'badge' => null,
+            'new' => false,
         ],
         [
             'label' => 'Trending',
-            'icon' => 'assets/images/icons/user-dark.svg',
             'href' => 'publikasi.trending',
             'active' => ['publikasi.trending'],
+            'icon' => 'assets/images/icons/star-dark.svg',
+            'iconWhite' => 'assets/images/icons/star-white.svg',
+            'badge' => null,
             'new' => true,
         ],
         [
             'label' => 'My Library',
+            'href' => 'publikasi.library',
+            'active' => ['publikasi.library'],
             'icon' => 'assets/images/icons/star-dark.svg',
-            'href' => 'publikasi.library',
-            'active' => ['publikasi.library'],
-            'badge' => fn() => auth()->check() ? 24 : 0,
+            'iconWhite' => 'assets/images/icons/star-white.svg',
+            'badge' => fn() => auth()->check() ? auth()->user()->saved_publications_count : 0,
+            'new' => false,
+            'auth' => true, // Hanya tampil jika login
         ],
     ],
 
-    'bottom_navigation' => [
-        [
-            'label' => 'Browse',
-            'href' => 'publikasi.index',
-            'active' => ['publikasi.index', 'publikasi.show'], // Hapus 'publikasi'
-            'icon' => 'assets/images/icons/3dcube-white.svg',
-            'iconActive' => 'assets/images/icons/3dcube.svg',
-        ],
-        [
-            'label' => 'Categories',
-            'href' => 'publikasi.categories',
-            'active' => ['publikasi.categories'],
-            'icon' => 'assets/images/icons/grid-white.svg',
-            'iconActive' => 'assets/images/icons/grid-dark.svg',
-        ],
-        [
-            'label' => 'Trending',
-            'href' => 'publikasi.trending',
-            'active' => ['publikasi.trending'],
-            'icon' => 'assets/images/icons/fire-white.svg',
-            'iconActive' => 'assets/images/icons/fire-dark.svg',
-            'new' => true,
-        ],
-        [
-            'label' => 'Library',
-            'href' => 'publikasi.library',
-            'active' => ['publikasi.library'],
-            'icon' => 'assets/images/icons/book-white.svg',
-            'iconActive' => 'assets/images/icons/book-dark.svg',
-            'badge' => fn() => auth()->check() ? 24 : 0,
-        ],
-    ],
-
+    /**
+     * Publication Types (untuk filter)
+     */
     'publication_types' => [
         'all' => 'Semua',
         'book' => 'Buku',
