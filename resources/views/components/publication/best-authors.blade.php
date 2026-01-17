@@ -35,8 +35,9 @@
     <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 sm:gap-4 lg:gap-5">
         @foreach($authors as $author)
         <x-publication.author-card :name="$author['name']" :avatar="$author['avatar']"
-            :publicationCount="$author['publication_count']" :profileUrl="$author['profile_url']"
-            :verified="$author['verified'] ?? false" :specialty="$author['specialty'] ?? null" />
+            :initials="$author['initials'] ?? null" :publicationCount="$author['publication_count']"
+            :profileUrl="$author['profile_url']" :verified="$author['verified'] ?? false"
+            :specialty="$author['specialty'] ?? null" />
         @endforeach
     </div>
     @else

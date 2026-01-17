@@ -1,11 +1,22 @@
 @props([
 'name',
 'avatar',
+'initials' => null,
 'publicationCount',
 'profileUrl' => '#',
 'verified' => false,
 'specialty' => null
 ])
+
+@php
+// ✅ Generate initials jika tidak ada
+if (!$initials) {
+$words = explode(' ', $name);
+$initials = count($words) >= 2
+? strtoupper(substr($words[0], 0, 1) . substr($words[1], 0, 1))
+: strtoupper(substr($name, 0, 2));
+}
+@endphp
 
 <a href="{{ $profileUrl }}" class="block group" aria-label="Lihat profil {{ $name }}">
     <div
@@ -16,7 +27,7 @@
             <div
                 class="flex h-[70px] w-[70px] sm:h-[80px] sm:w-[80px] shrink-0 overflow-hidden rounded-full ring-2 ring-white shadow-md group-hover:ring-[#FF6B18] transition-all duration-300">
                 <img src="{{ $avatar }}" class="object-cover w-full h-full" alt="Avatar {{ $name }}" loading="lazy"
-                    onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode($name) }}&background=FF6B18&color=fff&size=128'" />
+                    onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ urlencode($initials) }}&background=FF6B18&color=fff&size=128&bold=true&font-size=0.5&length=2'" />
             </div>
 
             {{-- Verified badge --}}
@@ -48,7 +59,5 @@
                 <span class="font-bold text-[#1A1D29]">{{ $publicationCount }}</span> Publikasi
             </p>
         </div>
-
-        {{-- ✅ HAPUS: Garis bawah saat hover (tidak diperlukan lagi) --}}
     </div>
 </a>

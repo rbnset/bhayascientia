@@ -49,10 +49,41 @@
 
 </section>
 
-{{-- ✅ Best Authors Section dengan filter --}}
+{{-- Best Authors Section --}}
 <x-publication.best-authors :authors="$bestAuthors" title="Penulis Terbaik<br/>dengan Kontribusi Terbanyak"
     badge="PENULIS TERBAIK" :selectedType="$selectedType" />
+
+
+{{-- ✅ Popular Publications Section --}}
+<x-publication.popular-section :featuredPublication="$featuredPublication" :publications="$popularPublications"
+    :selectedType="$selectedType" :exploreAllUrl="route('publikasi.index', ['type' => $selectedType])" />
 
 <x-filter-modal />
 
 @endsection
+
+
+
+{{-- ✅ DEBUG: Tambahkan ini sementara di atas section popular --}}
+@if(config('app.debug'))
+<div class="bg-yellow-50 border-2 border-yellow-400 p-4 rounded-lg mx-auto max-w-[1130px] mb-4">
+    <h4 class="mb-2 font-bold">🔍 Debug Data Popular Publications:</h4>
+
+    <div class="text-xs">
+        <p><strong>Featured Publication:</strong></p>
+        <pre class="p-2 overflow-auto bg-white rounded">{{ json_encode($featuredPublication, JSON_PRETTY_PRINT) }}</pre>
+
+        <p class="mt-2"><strong>Popular Publications Count:</strong> {{ $popularPublications->count() }}</p>
+
+        @if($popularPublications->isNotEmpty())
+        <p class="mt-2"><strong>First Item Sample:</strong></p>
+        <pre
+            class="p-2 overflow-auto bg-white rounded">{{ json_encode($popularPublications->first(), JSON_PRETTY_PRINT) }}</pre>
+        @endif
+    </div>
+</div>
+@endif
+
+{{-- Popular Publications Section --}}
+<x-publication.popular-section :featuredPublication="$featuredPublication" :publications="$popularPublications"
+    :selectedType="$selectedType" :exploreAllUrl="route('publikasi.index', ['type' => $selectedType])" />

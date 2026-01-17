@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use App\Models\Pivots\AuthorPublication;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 
 class Author extends Model
 {
@@ -23,15 +24,36 @@ class Author extends Model
     ];
 
     /**
-     * Accessor untuk mendapatkan URL foto author
+     * ✅ Accessor untuk mendapatkan URL foto author (UPDATED)
      */
     public function getPhotoUrlAttribute(): string
     {
+        // Prioritas 1: photo_path dari author
         if ($this->photo_path) {
-            return asset('storage/' . $this->photo_path);
+            $cleanPath = $this->photo_path;
+            if (str_starts_with($cleanPath, 'public/')) {
+                $cleanPath = substr($cleanPath, 7);
+            }
+
+            if (Storage::disk('public')->exists($cleanPath)) {
+                return asset('storage/' . $cleanPath);
+            }
         }
 
-        return asset('assets/images/default-avatar.png');
+        // Prioritas 2: profile_photo dari user (jika ada relasi)
+        if ($this->user_id && $this->relationLoaded('user') && $this->user && $this->user->profile_photo) {
+            $cleanPath = $this->user->profile_photo;
+            if (str_starts_with($cleanPath, 'public/')) {
+                $cleanPath = substr($cleanPath, 7);
+            }
+
+            if (Storage::disk('public')->exists($cleanPath)) {
+                return asset('storage/' . $cleanPath);
+            }
+        }
+
+        // Prioritas 3: Fallback UI Avatars
+        return 'https://ui-avatars.com/api/?name=' . urlencode($this->name) . '&background=FF6B18&color=fff&size=128&bold=true&font-size=0.4';
     }
 
     /**
