@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\PublicationController;
 use App\Http\Controllers\PublikasiController;
+use App\Http\Controllers\AuthController;
 use App\Models\PublicationVersion;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
@@ -74,11 +75,16 @@ Route::get('/manuscripts/{version}/download', function (PublicationVersion $vers
 
 
 
+
+
+
+
 /*
 |--------------------------------------------------------------------------
 | Static Pages Routes
 |--------------------------------------------------------------------------
 */
+
 Route::view('/', 'pages.home')->name('home');
 Route::view('/event', 'pages.event')->name('event');
 Route::view('/tentang', 'pages.about')->name('tentang');
@@ -86,9 +92,23 @@ Route::view('/kontak', 'pages.contact')->name('kontak');
 
 /*
 |--------------------------------------------------------------------------
-| Publikasi Routes
+| Authentication Routes
 |--------------------------------------------------------------------------
 */
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
+    Route::post('/login', [AuthController::class, 'login'])->name('login.post');
+    Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('register');
+    Route::post('/register', [AuthController::class, 'register'])->name('register.post');
+});
+
+Route::middleware('auth')->group(function () {
+    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+    Route::get('/dashboard', function () {
+        return redirect()->route('publikasi.library');
+    })->name('dashboard');
+});
+
 /*
 |--------------------------------------------------------------------------
 | Publikasi Routes
@@ -102,16 +122,6 @@ Route::prefix('publikasi')->name('publikasi.')->group(function () {
     Route::get('/{slug}', [PublicationController::class, 'show'])->name('show');
     Route::get('/{slug}/download', [PublicationController::class, 'download'])->name('download');
     Route::get('/{slug}/read', [PublicationController::class, 'read'])->name('read');
-});
-
-
-/*
-|--------------------------------------------------------------------------
-| Profile Routes (untuk nanti)
-|--------------------------------------------------------------------------
-*/
-Route::middleware('auth')->group(function () {
-    Route::view('/profile', 'pages.profile')->name('profile');
 });
 
 Route::get('/author/{id}', [PublicationController::class, 'showAuthor'])->name('author.show');
