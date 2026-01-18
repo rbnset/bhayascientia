@@ -29,25 +29,6 @@
     <x-publication.filter-bar title="Pilih Jenis Publikasi" helper="Buku, Jurnal, atau Opini" :types="$publicationTypes"
         :selectedType="$selectedType" :filterSort="$filterSort" :hasActiveFilters="false" />
 
-    {{-- ✅ Results Count & Quick Actions --}}
-    <div class="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-[#EEF0F7]">
-        <p class="text-sm text-[#737373]">
-            Menampilkan <span class="font-bold text-[#1A1A1A] text-base">{{ count($latestPublications) }}</span>
-            publikasi terbaru
-        </p>
-
-        {{-- Quick Action: Open Search --}}
-        <button onclick="openPublicationSearch()"
-            class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-[#FF6B18] hover:bg-[#FFF7F2] rounded-lg transition-all border border-[#FF6B18]/30 hover:border-[#FF6B18]">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <span class="hidden sm:inline">Cari & Filter</span>
-            <span class="sm:hidden">Cari</span>
-        </button>
-    </div>
-
     {{-- ✅ Latest Publications Grid/Swiper --}}
     <x-publication.swiper-section title="Tulisan Terbaru <br />Untuk Diskursus yang Bertanggung Jawab" badge="TERKINI"
         swiperClass="upToDateSwiper">

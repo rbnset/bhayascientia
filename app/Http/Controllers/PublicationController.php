@@ -150,7 +150,7 @@ class PublicationController extends Controller
         }
 
         // ✅ Get Latest Publications
-        $publications = $publicationsQuery->take(12)->get();
+        $publications = $publicationsQuery->take(6)->get();
 
         $latestPublications = $publications->map(function ($pub) {
             return [
