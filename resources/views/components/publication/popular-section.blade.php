@@ -6,11 +6,11 @@
 'exploreAllUrl' => null
 ])
 
-<section id="publication-popular"
-    class="mx-auto mt-12 flex max-w-[1130px] flex-col gap-6 px-4 sm:mt-[70px] sm:px-6 lg:gap-[30px] lg:px-0"
+<section id="publication-popular" class="mx-auto mt-12 mb-8 max-w-[1130px] px-4 sm:mt-[70px] sm:px-6 lg:px-8"
     aria-labelledby="popular-heading">
+
     {{-- Header --}}
-    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div class="flex flex-col gap-3 mb-8 sm:mb-10 sm:flex-row sm:items-center sm:justify-between">
         <h2 id="popular-heading"
             class="font-bold text-[18px] leading-[26px] sm:text-[22px] sm:leading-[32px] lg:text-[26px] lg:leading-[39px]">
             {{ ucfirst($selectedType) }} Populer <br />
@@ -79,8 +79,8 @@
                         d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                 </svg>
             </div>
-            <h3 class="mb-2 font-bold text-[#1A1D29] text-lg sm:text-xl">Belum Ada Publikasi Populer</h3>
-            <p class="text-[#A3A6AE] text-sm sm:text-base">
+            <h3 class="mb-2 font-bold text-lg text-[#1A1D29] sm:text-xl">Belum Ada Publikasi Populer</h3>
+            <p class="text-sm text-[#A3A6AE] sm:text-base">
                 Belum ada publikasi populer untuk kategori
                 <span class="font-bold text-[#FF6B18]">{{ ucfirst($selectedType) }}</span>
             </p>
