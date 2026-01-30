@@ -12,11 +12,14 @@ class AuthorFactory extends Factory
 
     public function definition(): array
     {
+        // ✅ Set locale Indonesia untuk nama yang lebih realistis
+        $faker = \Faker\Factory::create('id_ID');
+
         return [
-            'user_id' => null, // Akan di-set manual atau null
-            'name' => $this->faker->name(),
-            'email' => $this->faker->unique()->safeEmail(),
-            'affiliation' => $this->faker->randomElement([
+            'user_id' => null,
+            'name' => $faker->name(),
+            'email' => fake()->unique()->safeEmail(),
+            'affiliation' => fake()->randomElement([
                 'Universitas Gadjah Mada',
                 'Institut Teknologi Bandung',
                 'Universitas Indonesia',
@@ -26,14 +29,11 @@ class AuthorFactory extends Factory
                 'Universitas Diponegoro',
                 'Institut Teknologi Sepuluh Nopember',
             ]),
-            'bio' => $this->faker->paragraph(3),
+            'bio' => fake()->paragraph(3),
             'photo_path' => null,
         ];
     }
 
-    /**
-     * Author yang terhubung dengan user
-     */
     public function withUser(): static
     {
         return $this->state(fn(array $attributes) => [
@@ -41,9 +41,6 @@ class AuthorFactory extends Factory
         ]);
     }
 
-    /**
-     * Author dengan bidang spesifik
-     */
     public function inField(string $field): static
     {
         $affiliations = [
@@ -53,7 +50,7 @@ class AuthorFactory extends Factory
         ];
 
         return $this->state(fn(array $attributes) => [
-            'affiliation' => $this->faker->randomElement($affiliations[$field] ?? $affiliations['biology']),
+            'affiliation' => fake()->randomElement($affiliations[$field] ?? $affiliations['biology']),
         ]);
     }
 }
