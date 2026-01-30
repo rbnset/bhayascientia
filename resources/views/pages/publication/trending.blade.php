@@ -49,6 +49,9 @@
 
 @section('content')
 
+{{-- Navigation --}}
+<x-publication.navigation :items="config('publication.navigation')" />
+
 {{-- Hero Section --}}
 <section class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px] mt-8">
     <div class="mb-8 text-center">
@@ -71,9 +74,6 @@
         </div>
         @endif
     </div>
-
-    {{-- Navigation --}}
-    <x-publication.navigation :items="config('publication.navigation')" />
 
     {{-- Filter Section --}}
     <div class="bg-white rounded-2xl border border-[#EEF0F7] p-6 mt-8 mb-6">
