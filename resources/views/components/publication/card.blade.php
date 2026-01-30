@@ -12,7 +12,7 @@
 'slug' => '',
 ])
 
-<div class="swiper-slide h-auto p-1">
+<div class="h-auto p-1 swiper-slide">
     <a href="{{ $detailUrl }}"
         class="publication-card-link group block h-full rounded-[22px] transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F4F6FB]"
         aria-label="Baca publikasi: {{ Str::limit($title, 60) }}">
@@ -28,13 +28,13 @@
 
                     {{-- Cover Image --}}
                     @if($cover)
-                    <img src="{{ $cover }}" class="publication-cover-image w-full h-full object-cover"
+                    <img src="{{ $cover }}" class="object-cover w-full h-full publication-cover-image"
                         alt="Cover publikasi {{ $title }}" loading="lazy" itemprop="image"
                         onerror="this.onerror=null; this.src='https://placehold.co/400x600/FF6B18/white?text={{ urlencode(Str::limit($title, 15, '')) }}';" />
                     @else
                     <div
                         class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#FF6B18] to-[#FF8B3D] text-white p-6">
-                        <span class="text-center font-bold text-sm sm:text-base leading-tight">
+                        <span class="text-sm font-bold leading-tight text-center sm:text-base">
                             {{ Str::limit($title, 50) }}
                         </span>
                     </div>
@@ -45,7 +45,7 @@
                         aria-hidden="true"></div>
 
                     {{-- Shine effect overlay --}}
-                    <div class="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/0 to-white/10 pointer-events-none"
+                    <div class="absolute inset-0 pointer-events-none bg-gradient-to-tr from-white/0 via-white/0 to-white/10"
                         aria-hidden="true"></div>
 
                     {{-- Category Badge --}}
@@ -58,13 +58,13 @@
             </div>
 
             {{-- CONTENT INFO SECTION --}}
-            <div class="gap-2 min-w-0 flex flex-1 flex-col">
+            <div class="flex flex-col flex-1 min-w-0 gap-2">
                 <h3 class="font-bold text-sm sm:text-base sm:leading-[24px] md:text-lg md:leading-[27px] leading-[20px] text-[#111827] transition-colors duration-200 group-hover:text-[#FF6B18]"
                     itemprop="headline">
                     <span class="line-clamp-3">{{ $title }}</span>
                 </h3>
 
-                <div class="flex items-center gap-2 flex-wrap">
+                <div class="flex flex-wrap items-center gap-2">
                     @if($date)
                     <time
                         class="text-[11px] leading-[16px] sm:text-sm sm:leading-[21px] text-[#A3A6AE] transition-colors duration-200 group-hover:text-[#6B7280]"
@@ -76,7 +76,7 @@
                     <span
                         class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] sm:text-xs font-bold ring-1 ring-emerald-200/50 transition-all duration-200 group-hover:ring-emerald-300"
                         role="status">
-                        <svg class="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <svg class="flex-shrink-0 w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd"
                                 d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
                                 clip-rule="evenodd" />
@@ -86,9 +86,9 @@
                 </div>
 
                 <div class="gap-3 mt-auto pt-3 flex items-center justify-between border-t border-[#EEF0F7]">
-                    <div class="min-w-0 flex-shrink">
+                    <div class="flex-shrink min-w-0">
                         @if(is_array($authors) && count($authors) > 0)
-                        <div class="-space-x-2 flex items-center">
+                        <div class="flex items-center -space-x-2">
                             @foreach(array_slice($authors, 0, 3) as $index => $author)
                             <img src="{{ $author['photo'] ?? 'https://ui-avatars.com/api/?name=' . urlencode($author['name'] ?? 'Unknown') . '&background=FF6B18&color=fff&size=128&bold=true' }}"
                                 class="h-8 w-8 rounded-full object-cover ring-2 ring-white transition-all duration-200 hover:scale-110 hover:z-20 hover:ring-[#FF6B18]"
@@ -123,11 +123,11 @@
                     <span
                         class="gap-1.5 sm:gap-2 inline-flex items-center text-[11px] sm:text-sm font-medium text-[#6B7280] transition-colors duration-200 group-hover:text-[#FF6B18] flex-shrink-0">
                         Baca detail
-                        <svg viewBox="0 0 20 20" fill="currentColor"
-                            class="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1">
-                            <path fill-rule="evenodd"
-                                d="M7.21 14.77a.75.75 0 0 1 .02-1.06L10.94 10 7.23 6.29a.75.75 0 1 1 1.06-1.06l4.24 4.24c.3.3.3.77 0 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0Z"
-                                clip-rule="evenodd" />
+                        <svg class="w-4 h-4 transition-transform duration-200 rotate-180 sm:h-5 sm:w-5 group-hover:translate-x-1"
+                            viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M11.3175 3.06L6.4275 7.95C5.85 8.5275 5.85 9.4725 6.4275 10.05L11.3175 14.94"
+                                stroke="currentColor" stroke-width="2" stroke-miterlimit="10" stroke-linecap="round"
+                                stroke-linejoin="round" />
                         </svg>
                     </span>
                 </div>
