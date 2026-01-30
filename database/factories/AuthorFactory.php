@@ -10,12 +10,20 @@ class AuthorFactory extends Factory
 {
     protected $model = Author::class;
 
+    /**
+     * ✅ Force initialize Faker instance
+     */
+    public function withFaker()
+    {
+        return \Faker\Factory::create($this->faker ? $this->faker->locale : 'en_US');
+    }
+
     public function definition(): array
     {
         return [
             'user_id' => null,
-            'name' => $this->faker->name, // ✅ Property (tanpa kurung)
-            'email' => $this->faker->unique()->safeEmail, // ✅ Property (tanpa kurung)
+            'name' => $this->faker->name,
+            'email' => $this->faker->unique()->safeEmail,
             'affiliation' => $this->faker->randomElement([
                 'Universitas Gadjah Mada',
                 'Institut Teknologi Bandung',
@@ -26,20 +34,16 @@ class AuthorFactory extends Factory
                 'Universitas Diponegoro',
                 'Institut Teknologi Sepuluh Nopember',
             ]),
-            'bio' => $this->faker->paragraph(3), // ✅ Method (pakai kurung)
+            'bio' => $this->faker->paragraph(3),
             'photo_path' => null,
         ];
     }
 
-    /**
-     * Author yang terhubung dengan user
-     */
     public function withUser(): static
     {
         return $this->state(function (array $attributes) {
             $user = User::factory()->create();
 
-            // ✅ Assign role 'author' jika ada spatie/laravel-permission
             if (method_exists($user, 'assignRole')) {
                 $user->assignRole('author');
             }
@@ -53,24 +57,12 @@ class AuthorFactory extends Factory
         });
     }
 
-    /**
-     * Author dengan bidang spesifik
-     */
     public function inField(string $field): static
     {
         $affiliations = [
-            'biology' => [
-                'Universitas Gadjah Mada - Fakultas Biologi',
-                'IPB University - Departemen Biologi',
-            ],
-            'physics' => [
-                'Institut Teknologi Bandung - Fisika',
-                'Universitas Indonesia - Departemen Fisika',
-            ],
-            'chemistry' => [
-                'Universitas Brawijaya - Kimia',
-                'ITS - Departemen Kimia',
-            ],
+            'biology' => ['Universitas Gadjah Mada - Fakultas Biologi', 'IPB University - Departemen Biologi'],
+            'physics' => ['Institut Teknologi Bandung - Fisika', 'Universitas Indonesia - Departemen Fisika'],
+            'chemistry' => ['Universitas Brawijaya - Kimia', 'ITS - Departemen Kimia'],
         ];
 
         return $this->state(fn(array $attributes) => [
