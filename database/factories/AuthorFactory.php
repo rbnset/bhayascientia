@@ -10,21 +10,16 @@ class AuthorFactory extends Factory
 {
     protected $model = Author::class;
 
-    /**
-     * ✅ Force initialize Faker instance
-     */
-    public function withFaker()
-    {
-        return \Faker\Factory::create($this->faker ? $this->faker->locale : 'en_US');
-    }
-
     public function definition(): array
     {
+        // ✅ Cara paling aman: manual initialize jika null
+        $faker = $this->faker ?? \Faker\Factory::create('en_US');
+
         return [
             'user_id' => null,
-            'name' => $this->faker->name,
-            'email' => $this->faker->unique()->safeEmail,
-            'affiliation' => $this->faker->randomElement([
+            'name' => $faker->name,
+            'email' => $faker->unique()->safeEmail,
+            'affiliation' => $faker->randomElement([
                 'Universitas Gadjah Mada',
                 'Institut Teknologi Bandung',
                 'Universitas Indonesia',
@@ -34,7 +29,7 @@ class AuthorFactory extends Factory
                 'Universitas Diponegoro',
                 'Institut Teknologi Sepuluh Nopember',
             ]),
-            'bio' => $this->faker->paragraph(3),
+            'bio' => $faker->paragraph(3),
             'photo_path' => null,
         ];
     }
@@ -59,6 +54,8 @@ class AuthorFactory extends Factory
 
     public function inField(string $field): static
     {
+        $faker = $this->faker ?? \Faker\Factory::create('en_US');
+
         $affiliations = [
             'biology' => ['Universitas Gadjah Mada - Fakultas Biologi', 'IPB University - Departemen Biologi'],
             'physics' => ['Institut Teknologi Bandung - Fisika', 'Universitas Indonesia - Departemen Fisika'],
@@ -66,7 +63,7 @@ class AuthorFactory extends Factory
         ];
 
         return $this->state(fn(array $attributes) => [
-            'affiliation' => $this->faker->randomElement($affiliations[$field] ?? $affiliations['biology']),
+            'affiliation' => $faker->randomElement($affiliations[$field] ?? $affiliations['biology']),
         ]);
     }
 }
