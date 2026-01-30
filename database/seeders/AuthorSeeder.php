@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use App\Models\Author;
 use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 
 class AuthorSeeder extends Seeder
 {
@@ -25,7 +24,7 @@ class AuthorSeeder extends Seeder
                         'email' => $user->email,
                         'affiliation' => $user->job_title ?? 'Independent Researcher',
                         'bio' => "Bio for {$user->name}. Experienced researcher with expertise in various scientific fields.",
-                        'photo_path' => $user->profile_photo ?? null, // ✅ Ambil dari user profile_photo
+                        'photo_path' => $user->profile_photo ?? null,
                     ]
                 );
             }
@@ -34,20 +33,58 @@ class AuthorSeeder extends Seeder
             $this->command->warn('⚠️  Tidak ada user dengan role "author" ditemukan.');
         }
 
-        // Buat additional authors tanpa user account (external authors)
+        // ✅ MANUAL CREATE tanpa factory (jika factory error)
         $this->command->info('🔄 Membuat 20 external authors...');
-        Author::factory()->count(20)->create();
+
+        $universities = [
+            'Universitas Gadjah Mada',
+            'Institut Teknologi Bandung',
+            'Universitas Indonesia',
+            'Institut Pertanian Bogor',
+            'Universitas Airlangga',
+            'Universitas Brawijaya',
+            'Universitas Diponegoro',
+            'Institut Teknologi Sepuluh Nopember',
+        ];
+
+        for ($i = 1; $i <= 20; $i++) {
+            Author::create([
+                'user_id' => null,
+                'name' => "External Author {$i}",
+                'email' => "external.author{$i}@example.com",
+                'affiliation' => $universities[array_rand($universities)],
+                'bio' => "Bio for External Author {$i}. Experienced researcher with expertise in various scientific fields.",
+                'photo_path' => null,
+            ]);
+        }
         $this->command->info('✅ Berhasil membuat 20 external authors.');
 
-        // Buat beberapa authors dengan user account baru
+        // ✅ MANUAL CREATE dengan user baru
         $this->command->info('🔄 Membuat 10 authors dengan user account baru...');
-        Author::factory()
-            ->withUser()
-            ->count(10)
-            ->create();
+
+        for ($i = 1; $i <= 10; $i++) {
+            $user = User::create([
+                'name' => "Author User {$i}",
+                'email' => "author.user{$i}@example.com",
+                'password' => bcrypt('password'),
+            ]);
+
+            if (method_exists($user, 'assignRole')) {
+                $user->assignRole('author');
+            }
+
+            Author::create([
+                'user_id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'affiliation' => $universities[array_rand($universities)],
+                'bio' => "Bio for {$user->name}. Experienced researcher with expertise in various scientific fields.",
+                'photo_path' => null,
+            ]);
+        }
         $this->command->info('✅ Berhasil membuat 10 authors dengan user account.');
 
-        // ✅ Tampilkan summary
+        // Tampilkan summary
         $totalAuthors = Author::count();
         $authorsWithUser = Author::whereNotNull('user_id')->count();
         $externalAuthors = Author::whereNull('user_id')->count();
