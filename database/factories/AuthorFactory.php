@@ -14,8 +14,8 @@ class AuthorFactory extends Factory
     {
         return [
             'user_id' => null,
-            'name' => $this->faker->name,
-            'email' => $this->faker->unique()->safeEmail,
+            'name' => $this->faker->name, // ✅ Property (tanpa kurung)
+            'email' => $this->faker->unique()->safeEmail, // ✅ Property (tanpa kurung)
             'affiliation' => $this->faker->randomElement([
                 'Universitas Gadjah Mada',
                 'Institut Teknologi Bandung',
@@ -26,8 +26,8 @@ class AuthorFactory extends Factory
                 'Universitas Diponegoro',
                 'Institut Teknologi Sepuluh Nopember',
             ]),
-            'bio' => $this->faker->paragraph(3),
-            'photo_path' => null, // ✅ Bisa di-set manual atau pakai seeder terpisah untuk upload foto
+            'bio' => $this->faker->paragraph(3), // ✅ Method (pakai kurung)
+            'photo_path' => null,
         ];
     }
 
@@ -39,16 +39,16 @@ class AuthorFactory extends Factory
         return $this->state(function (array $attributes) {
             $user = User::factory()->create();
 
-            // ✅ Assign role 'author' ke user yang dibuat
+            // ✅ Assign role 'author' jika ada spatie/laravel-permission
             if (method_exists($user, 'assignRole')) {
                 $user->assignRole('author');
             }
 
             return [
                 'user_id' => $user->id,
-                'name' => $user->name, // ✅ Pakai nama dari user
-                'email' => $user->email, // ✅ Pakai email dari user
-                'photo_path' => $user->profile_photo ?? null, // ✅ Ambil foto dari user
+                'name' => $user->name,
+                'email' => $user->email,
+                'photo_path' => $user->profile_photo ?? null,
             ];
         });
     }
@@ -62,17 +62,14 @@ class AuthorFactory extends Factory
             'biology' => [
                 'Universitas Gadjah Mada - Fakultas Biologi',
                 'IPB University - Departemen Biologi',
-                'Universitas Airlangga - Biologi',
             ],
             'physics' => [
                 'Institut Teknologi Bandung - Fisika',
                 'Universitas Indonesia - Departemen Fisika',
-                'ITS - Fisika',
             ],
             'chemistry' => [
                 'Universitas Brawijaya - Kimia',
                 'ITS - Departemen Kimia',
-                'ITB - Kimia',
             ],
         ];
 
