@@ -2,6 +2,13 @@
 
 @section('title', 'Trending Publikasi')
 @section('main_class', 'pb-16')
+@section('hide_footer', 'true') {{-- ✅ TAMBAHKAN: Hide footer untuk konsistensi --}}
+
+{{-- ✅ TAMBAHKAN: Custom Navbar dengan Avatar --}}
+@section('custom_navbar')
+<x-navbar ctaLabel="Browse Publikasi" ctaRoute="publikasi.index" ctaIcon="book" :showAvatarWhenAuth="true" {{-- Logo
+    hilang saat login, avatar muncul --}} :showCtaAlways="true" {{-- CTA hilang saat login --}} />
+@endsection
 
 @push('styles')
 <style>

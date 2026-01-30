@@ -14,11 +14,14 @@
     <link rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap">
 
+    {{-- ✅ TAMBAHKAN Alpine.js --}}
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
     @stack('styles')
 </head>
 
 <body class="m-0 bg-F8F9FC font-Poppins text-0B0B0B">
-    {{-- Navbar: Conditional rendering untuk custom navbar --}}
+    {{-- ✅ Navbar: Conditional rendering untuk custom navbar --}}
     @hasSection('custom_navbar')
     {{-- Jika page define custom navbar, render dari section --}}
     @yield('custom_navbar')

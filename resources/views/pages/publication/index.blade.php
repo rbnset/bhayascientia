@@ -5,8 +5,10 @@
 @section('hide_footer', 'true')
 
 @section('custom_navbar')
+{{-- ✅ Navbar dengan Avatar/Logo Logic --}}
 <x-navbar ctaLabel="Mulai Berlangganan" ctaRoute="publikasi.library" ctaIcon="sparkles" ctaSubtext="Gratis"
-    ctaVariant="premium" />
+    ctaVariant="premium" :showAvatarWhenAuth="true" {{-- Logo hilang saat login, muncul avatar --}}
+    :showCtaAlways="true" {{-- Tombol CTA tetap muncul --}} />
 
 {{-- ✅ Search/Filter Modal Component --}}
 <x-publication-search-filter :selectedType="$selectedType" :categories="$categories" :years="$years"
@@ -16,7 +18,7 @@
 
 @section('content')
 
-{{-- Publication Navigation --}}
+{{-- ✅ Publication Navigation (SUB MENU - tanpa logo) --}}
 <x-publication.navigation :items="config('publication.navigation')" />
 
 {{-- Hero Section --}}

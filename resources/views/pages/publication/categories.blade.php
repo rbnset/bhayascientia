@@ -1,33 +1,41 @@
 @extends('layouts.app')
 
 @section('title', 'Kategori Publikasi')
-@section('main_class', 'pb-16')
+@section('main_class', 'mt-0 pb-[120px] sm:pb-0') {{-- ✅ UBAH: Sesuaikan dengan halaman publikasi lain --}}
+@section('hide_footer', 'true') {{-- ✅ TAMBAHKAN: Hide footer untuk konsistensi --}}
+
+{{-- ✅ TAMBAHKAN: Custom Navbar dengan Avatar --}}
+@section('custom_navbar')
+<x-navbar ctaLabel="Browse Publikasi" ctaRoute="publikasi.index" ctaIcon="book" :showAvatarWhenAuth="true" {{-- Logo
+    hilang saat login, avatar muncul --}} :showCtaAlways="true" {{-- CTA hilang saat login --}} />
+@endsection
 
 @section('content')
 
+{{-- ✅ PINDAHKAN Navigation ke luar Hero Section --}}
+<x-publication.navigation :items="config('publication.navigation')" />
+
 {{-- Hero Section --}}
-<section class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px] mt-8">
-    <div class="text-center mb-8">
-        <h1 class="text-3xl md:text-4xl font-bold text-[#1A1A1A] mb-4">
+<section class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px] mt-8 sm:mt-10">
+    <div class="mb-8 text-center sm:mb-10">
+        <h1 class="text-3xl md:text-4xl lg:text-5xl font-bold text-[#1A1A1A] mb-4">
             Jelajahi Berdasarkan Kategori
         </h1>
-        <p class="text-[#737373] text-lg max-w-2xl mx-auto">
+        <p class="text-[#737373] text-base sm:text-lg max-w-2xl mx-auto">
             Temukan publikasi ilmiah sesuai bidang minat Anda
         </p>
     </div>
 
-    {{-- Navigation --}}
-    <x-publication.navigation :items="config('publication.navigation')" />
-
     {{-- Categories Grid --}}
-    <div class="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
         @forelse($categories as $category)
         <a href="{{ route('publikasi.index', ['category' => $category['slug']]) }}"
             class="group bg-white rounded-2xl border border-[#EEF0F7] p-6 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+
             {{-- Icon --}}
             <div
                 class="w-16 h-16 rounded-xl bg-gradient-to-br from-[#FF6B18]/10 to-[#E64627]/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-                <img src="{{ asset($category['icon']) }}" alt="{{ $category['name'] }}" class="w-8 h-8">
+                <img src="{{ asset($category['icon']) }}" alt="{{ $category['name'] }}" class="object-contain w-8 h-8">
             </div>
 
             {{-- Content --}}
@@ -53,8 +61,18 @@
             </div>
         </a>
         @empty
-        <div class="col-span-full text-center py-12">
-            <p class="text-[#737373] text-lg">Belum ada kategori tersedia</p>
+        <div class="py-12 text-center col-span-full">
+            <div class="bg-white p-12 rounded-2xl border-2 border-dashed border-[#EEF0F7]">
+                <svg class="w-20 h-20 mx-auto text-[#EEF0F7] mb-4" fill="none" stroke="currentColor"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p class="text-[#A3A6AE] text-lg font-bold mb-2">Belum Ada Kategori</p>
+                <p class="text-[#737373] text-sm">
+                    Kategori publikasi akan segera ditambahkan
+                </p>
+            </div>
         </div>
         @endforelse
     </div>

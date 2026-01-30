@@ -26,7 +26,7 @@ break;
 @endphp
 
 {{-- ===================== SUB MENU (Desktop - tablet+) ===================== --}}
-<nav aria-label="Sub menu publikasi" class="hidden sm:block mt-4 sm:mt-5">
+<nav aria-label="Sub menu publikasi" class="hidden mt-4 sm:block sm:mt-5">
     <div class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px]">
         <div class="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
             @foreach ($filteredItems as $index => $item)
