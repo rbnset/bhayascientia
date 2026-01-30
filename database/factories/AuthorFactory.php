@@ -12,12 +12,9 @@ class AuthorFactory extends Factory
 
     public function definition(): array
     {
-        // ✅ Set locale Indonesia untuk nama yang lebih realistis
-        $faker = \Faker\Factory::create('id_ID');
-
         return [
             'user_id' => null,
-            'name' => $faker->name(),
+            'name' => fake()->name(), // ✅ Langsung pakai fake()
             'email' => fake()->unique()->safeEmail(),
             'affiliation' => fake()->randomElement([
                 'Universitas Gadjah Mada',
@@ -44,7 +41,7 @@ class AuthorFactory extends Factory
     public function inField(string $field): static
     {
         $affiliations = [
-            'biology' => ['Universitas Gadjah Mada - Fakultas Biologi', 'IPB University - Departemen Biologi'],
+            'biology' => ['Universitas Gadjah Maga - Fakultas Biologi', 'IPB University - Departemen Biologi'],
             'physics' => ['Institut Teknologi Bandung - Fisika', 'Universitas Indonesia - Departemen Fisika'],
             'chemistry' => ['Universitas Brawijaya - Kimia', 'ITS - Departemen Kimia'],
         ];
