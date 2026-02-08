@@ -3,7 +3,7 @@
 'description' => 'Review gratis naskah jurnal, buku, dan opini. Hak cipta tetap milikmu - naskah hasil review tayang di
 platform kami.',
 'primaryLabel' => 'Mulai gratis',
-'primaryUrl' => '#',
+'primaryUrl' => 'http://bhayascientia.test/admin/register',
 
 // Demo video
 'secondaryLabel' => 'Lihat demo',
