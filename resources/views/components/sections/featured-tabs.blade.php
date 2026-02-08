@@ -17,7 +17,7 @@ kerja.',
 'Fokus ke isi, bukan beresin format.',
 'Siap submit tanpa bolak-balik file.',
 ],
-'image' => 'assets/images/thumbnails/image.png',
+'image' => 'assets/images/thumbnails/overview.png',
 'ctaText' => 'Mulai menulis',
 'ctaHref' => '#',
 ],
@@ -106,16 +106,16 @@ $uid = 'featuredTabs_' . substr(md5(json_encode($tabs)), 0, 8);
                         role="tablist" aria-label="Fitur unggulan">
                         @foreach ($tabs as $i => $tab)
                         <button type="button" class="tab-menu group sm:min-w-[220px] py-3 rounded-2xl flex min-w-[200px] cursor-pointer flex-col justify-between
-                       focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F8F9FC]
-                       active:scale-[0.99] transition-transform duration-200"
+                                       focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F8F9FC]
+                                       active:scale-[0.99] transition-transform duration-200"
                             aria-label="{{ $tab['step'] }}: {{ $tab['label'] }}"
                             aria-selected="{{ $i === 0 ? 'true' : 'false' }}" role="tab" id="{{ $uid }}_tab_{{ $i }}"
                             aria-controls="{{ $uid }}_panel" tabindex="{{ $i === 0 ? '0' : '-1' }}"
                             data-tab-index="{{ $i }}">
                             <div class="flex items-center gap-4">
                                 <div class="tab-icon-container h-11 w-11 sm:h-[50px] sm:w-[50px] flex shrink-0 items-center justify-center rounded-full
-                           {{ $i === 0 ? 'bg-[#FF6B18]' : 'bg-[#EEF0F7]' }}
-                           transition-colors group-hover:bg-[#FF6B18]">
+                                                {{ $i === 0 ? 'bg-[#FF6B18]' : 'bg-[#EEF0F7]' }}
+                                                transition-colors group-hover:bg-[#FF6B18]">
                                     <img src="{{ asset($tab['icon']) }}" class="w-6 h-6" alt="" aria-hidden="true" />
                                 </div>
 
@@ -145,9 +145,9 @@ $uid = 'featuredTabs_' . substr(md5(json_encode($tabs)), 0, 8);
             <div class="flex flex-col gap-6 tab-content lg:flex-row lg:items-center lg:gap-10" role="tabpanel"
                 id="{{ $uid }}_panel" aria-labelledby="{{ $uid }}_tab_0" tabindex="0">
                 <div
-                    class="tab-img lg:w-[450px] sm:h-[360px] lg:h-[470px] h-[240px] w-full shrink-0 overflow-hidden rounded-[26px] bg-[#F4F6FB] border border-[#EEF0F7]">
+                    class="tab-img lg:w-[450px] sm:h-[360px] lg:h-[470px] h-[240px] w-full shrink-0 overflow-hidden rounded-[26px] border border-[#EEF0F7]">
                     <img src="{{ $first ? asset($first['image']) : '' }}" alt="Ilustrasi fitur"
-                        class="object-cover w-full h-full" loading="lazy" />
+                        class="object-cover w-full h-full" />
                 </div>
 
                 <div class="flex flex-col gap-6">
@@ -177,8 +177,8 @@ $uid = 'featuredTabs_' . substr(md5(json_encode($tabs)), 0, 8);
                     </div>
 
                     <a href="{{ $first['ctaHref'] ?? '#' }}" class="tab-cta px-5 py-3 text-sm font-bold hover:text-white w-fit rounded-full border border-[#111827] transition-all duration-300
-                   hover:border-[#FF6B18] hover:bg-[#FF6B18] hover:ring-2 hover:ring-[#FF6B18]
-                   focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]">
+                               hover:border-[#FF6B18] hover:bg-[#FF6B18] hover:ring-2 hover:ring-[#FF6B18]
+                               focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]">
                         {{ $first['ctaText'] ?? 'Pelajari' }}
                     </a>
                 </div>
@@ -189,17 +189,17 @@ $uid = 'featuredTabs_' . substr(md5(json_encode($tabs)), 0, 8);
     {{-- data untuk JS --}}
     <script type="application/json" data-featured-tabs-data="{{ $uid }}">
         {!! json_encode([
-      'tabs' => array_map(function ($t) {
-        return [
-          'title' => $t['title'] ?? '',
-          'description' => $t['description'] ?? '',
-          'features' => $t['features'] ?? [],
-          'image' => asset($t['image'] ?? ''),
-          'ctaText' => $t['ctaText'] ?? 'Pelajari',
-          'ctaHref' => $t['ctaHref'] ?? '#',
-        ];
-      }, $tabs),
-      'checkIcon' => asset($checkIcon),
-    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}
+            'tabs' => array_map(function ($t) {
+                return [
+                    'title' => $t['title'] ?? '',
+                    'description' => $t['description'] ?? '',
+                    'features' => $t['features'] ?? [],
+                    'image' => asset($t['image'] ?? ''),
+                    'ctaText' => $t['ctaText'] ?? 'Pelajari',
+                    'ctaHref' => $t['ctaHref'] ?? '#',
+                ];
+            }, $tabs),
+            'checkIcon' => asset($checkIcon),
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}
     </script>
 </section>
