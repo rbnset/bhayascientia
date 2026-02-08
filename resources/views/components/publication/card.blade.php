@@ -1,5 +1,3 @@
-{{-- resources/views/components/publication/card.blade.php --}}
-
 @props([
 'title' => '',
 'cover' => '',
@@ -16,17 +14,13 @@
     <a href="{{ $detailUrl }}"
         class="publication-card-link group block h-full rounded-[22px] transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F4F6FB]"
         aria-label="Baca publikasi: {{ Str::limit($title, 60) }}">
-
         <article
             class="publication-card-inner bg-white p-4 sm:p-5 gap-3 flex h-full flex-col rounded-[22px] ring-1 ring-[#EEF0F7] transition-all duration-300 group-hover:ring-[#FF6B18]/20 group-hover:shadow-lg group-hover:shadow-[#FF6B18]/5"
             itemscope itemtype="https://schema.org/ScholarlyArticle">
-
-            {{-- COVER IMAGE SECTION --}}
+            {{-- COVER IMAGE --}}
             <div class="relative">
                 <div
                     class="relative aspect-[2/3] w-full overflow-hidden rounded-[20px] bg-[#F4F6FB] shadow-[0_18px_40px_-26px_rgba(0,0,0,0.65)] ring-1 ring-[#EEF0F7] transition-all duration-300 group-hover:shadow-[0_20px_45px_-28px_rgba(255,107,24,0.4)]">
-
-                    {{-- Cover Image --}}
                     @if($cover)
                     <img src="{{ $cover }}" class="object-cover w-full h-full publication-cover-image"
                         alt="Cover publikasi {{ $title }}" loading="lazy" itemprop="image"
@@ -40,11 +34,9 @@
                     </div>
                     @endif
 
-                    {{-- Shadow gradient overlay --}}
+                    {{-- Shadow & Shine overlays --}}
                     <div class="absolute inset-y-0 left-0 w-[10%] bg-gradient-to-r from-black/16 to-transparent pointer-events-none"
                         aria-hidden="true"></div>
-
-                    {{-- Shine effect overlay --}}
                     <div class="absolute inset-0 pointer-events-none bg-gradient-to-tr from-white/0 via-white/0 to-white/10"
                         aria-hidden="true"></div>
 
@@ -57,7 +49,7 @@
                 </div>
             </div>
 
-            {{-- CONTENT INFO SECTION --}}
+            {{-- CONTENT INFO --}}
             <div class="flex flex-col flex-1 min-w-0 gap-2">
                 <h3 class="font-bold text-sm sm:text-base sm:leading-[24px] md:text-lg md:leading-[27px] leading-[20px] text-[#111827] transition-colors duration-200 group-hover:text-[#FF6B18]"
                     itemprop="headline">
@@ -85,6 +77,7 @@
                     </span>
                 </div>
 
+                {{-- Authors & CTA --}}
                 <div class="gap-3 mt-auto pt-3 flex items-center justify-between border-t border-[#EEF0F7]">
                     <div class="flex-shrink min-w-0">
                         @if(is_array($authors) && count($authors) > 0)
@@ -132,7 +125,6 @@
                     </span>
                 </div>
             </div>
-
         </article>
     </a>
 </div>

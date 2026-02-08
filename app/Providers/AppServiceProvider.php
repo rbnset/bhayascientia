@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Facades\App;
+use App\Services\AuthorService;
+use App\Repositories\AuthorRepository;
+use App\Actions\Author\GetBestAuthorsAction;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -12,7 +14,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Register Author-related services sebagai singleton
+        $this->app->singleton(AuthorService::class);
+        $this->app->singleton(AuthorRepository::class);
+        $this->app->singleton(GetBestAuthorsAction::class);
     }
 
     /**
@@ -20,6 +25,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        App::setLocale('id');
+        //
     }
 }

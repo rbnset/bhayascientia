@@ -1,0 +1,49 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Author;
+use Illuminate\Support\Collection;
+
+class AuthorService
+{
+    /**
+     * Format author data untuk view card
+     */
+    public function formatAuthorForCard(Author $author): array
+    {
+        return [
+            'id' => $author->id,
+            'name' => $author->name,
+            'avatar' => $author->photo_url, // ✅ Pakai accessor
+            'initials' => $author->initials, // ✅ Pakai accessor
+            'publication_count' => $author->publications_count ?? 0,
+            'profile_url' => route('author.show', $author->id),
+            'verified' => $author->user_id !== null,
+            'specialty' => $author->affiliation ?? $author->short_bio ?? null,
+        ];
+    }
+
+    /**
+     * Format collection authors untuk view
+     */
+    public function formatAuthorsForCards(Collection $authors): Collection
+    {
+        return $authors->map(fn($author) => $this->formatAuthorForCard($author));
+    }
+
+    /**
+     * Format author untuk publication detail
+     */
+    public function formatAuthorForPublication(Author $author): array
+    {
+        return [
+            'id' => $author->id,
+            'name' => $author->name,
+            'initials' => $author->initials, // ✅ Pakai accessor
+            'photo' => $author->photo_url, // ✅ Pakai accessor
+            'affiliation' => $author->affiliation ?? $author->user?->organization ?? '-',
+            'is_corresponding' => $author->pivot->is_corresponding ?? false,
+        ];
+    }
+}

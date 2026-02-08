@@ -1,20 +1,22 @@
 @props([
-'name',
-'avatar',
-'initials' => null,
-'publicationCount',
+'author',
+'publicationCount' => null,
 'profileUrl' => '#',
 'verified' => false,
-'specialty' => null
 ])
 
 @php
-// ✅ Generate initials jika tidak ada
-if (!$initials) {
-$words = explode(' ', $name);
-$initials = count($words) >= 2
-? strtoupper(substr($words[0], 0, 1) . substr($words[1], 0, 1))
-: strtoupper(substr($name, 0, 2));
+$authorArray = is_array($author) ? $author : (array) $author;
+
+$name = $authorArray['name'] ?? 'Unknown';
+$avatar = $authorArray['photo_url'] ?? $authorArray['avatar'] ?? null;
+$initials = $authorArray['initials'] ?? 'UN';
+$specialty = $authorArray['affiliation'] ?? $authorArray['short_bio'] ?? $authorArray['specialty'] ?? null;
+$publicationCount = $publicationCount ?? ($authorArray['publications_count'] ?? 0);
+
+if (!$avatar) {
+$avatar = "https://ui-avatars.com/api/?name=" . urlencode($initials) .
+"&background=FF6B18&color=fff&size=128&bold=true&font-size=0.5&length=2";
 }
 @endphp
 
@@ -22,17 +24,15 @@ $initials = count($words) >= 2
     <div
         class="relative bg-white flex flex-col items-center rounded-[20px] ring-1 ring-[#EEF0F7] p-5 sm:p-6 transition-all duration-300 hover:ring-2 hover:ring-[#FF6B18] hover:shadow-[0_8px_30px_rgba(255,107,24,0.12)] hover:-translate-y-1">
 
-        {{-- Avatar dengan loading state --}}
+        {{-- Avatar dengan Background Image --}}
         <div class="relative mb-4">
-            <div
-                class="flex h-[70px] w-[70px] sm:h-[80px] sm:w-[80px] shrink-0 overflow-hidden rounded-full ring-2 ring-white shadow-md group-hover:ring-[#FF6B18] transition-all duration-300">
-                <img src="{{ $avatar }}" class="object-cover w-full h-full" alt="Avatar {{ $name }}" loading="lazy"
-                    onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ urlencode($initials) }}&background=FF6B18&color=fff&size=128&bold=true&font-size=0.5&length=2'" />
+            <div class="rounded-full ring-2 ring-white shadow-md group-hover:ring-[#FF6B18] transition-all duration-300"
+                style="width: 70px; height: 70px; background-image: url('{{ $avatar }}'); background-size: cover; background-position: center; background-repeat: no-repeat; background-color: #f3f4f6;">
             </div>
 
-            {{-- Verified badge --}}
+            {{-- Verified Badge --}}
             @if($verified)
-            <div class="absolute -bottom-1 -right-1 bg-[#FF6B18] rounded-full p-1.5 shadow-md ring-2 ring-white">
+            <div class="absolute -bottom-1 -right-1 bg-[#FF6B18] rounded-full p-1.5 shadow-md ring-2 ring-white z-10">
                 <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd"
                         d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
@@ -42,7 +42,7 @@ $initials = count($words) >= 2
             @endif
         </div>
 
-        {{-- Author info --}}
+        {{-- Author Info --}}
         <div class="flex flex-col w-full gap-1 text-center">
             <h3
                 class="font-semibold text-[15px] sm:text-base leading-tight text-[#1A1D29] line-clamp-1 group-hover:text-[#FF6B18] transition-colors duration-300">

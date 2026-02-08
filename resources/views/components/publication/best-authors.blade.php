@@ -1,5 +1,5 @@
 @props([
-'authors' => [],
+'authors' => collect(),
 'title' => 'Jelajahi Karya Masterpiece<br />dari Para Penulis Terbaik',
 'badge' => 'PENULIS TERBAIK',
 'selectedType' => null
@@ -21,7 +21,6 @@
             </h2>
         </div>
 
-        {{-- ✅ Info filter aktif --}}
         @if($selectedType)
         <p class="text-sm text-[#6B7280]">
             Menampilkan penulis terbaik untuk kategori:
@@ -33,11 +32,32 @@
     {{-- Authors Grid --}}
     @if($authors->isNotEmpty())
     <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 sm:gap-4 lg:gap-5">
-        @foreach($authors as $author)
-        <x-publication.author-card :name="$author['name']" :avatar="$author['avatar']"
-            :initials="$author['initials'] ?? null" :publicationCount="$author['publication_count']"
-            :profileUrl="$author['profile_url']" :verified="$author['verified'] ?? false"
-            :specialty="$author['specialty'] ?? null" />
+        @foreach($authors as $authorData)
+        @php
+        // Jika $authorData adalah array (dari Action), convert ke object
+        if (is_array($authorData)) {
+        // Buat mock object untuk compatibility
+        $authorObj = (object) [
+        'id' => $authorData['id'] ?? null,
+        'name' => $authorData['name'] ?? 'Unknown',
+        'photo_url' => $authorData['avatar'] ?? '',
+        'initials' => $authorData['initials'] ?? 'UN',
+        'affiliation' => $authorData['specialty'] ?? null,
+        'short_bio' => null,
+        'publications_count' => $authorData['publication_count'] ?? 0,
+        ];
+        $profileUrl = $authorData['profile_url'] ?? '#';
+        $verified = $authorData['verified'] ?? false;
+        } else {
+        // Jika sudah model Author
+        $authorObj = $authorData;
+        $profileUrl = route('author.show', $authorObj->id);
+        $verified = $authorObj->user_id !== null;
+        }
+        @endphp
+
+        {{-- ✅ GUNAKAN NAMESPACE publication. --}}
+        <x-publication.author-card :author="$authorObj" :profileUrl="$profileUrl" :verified="$verified" />
         @endforeach
     </div>
     @else
@@ -55,7 +75,7 @@
             <h3 class="font-bold text-lg sm:text-xl text-[#1A1D29] mb-2">Belum Ada Penulis</h3>
             <p class="text-sm sm:text-base text-[#A3A6AE]">
                 Belum ada penulis yang mempublikasikan
-                <span class="font-bold text-[#FF6B18]">{{ ucfirst($selectedType) }}</span>
+                <span class="font-bold text-[#FF6B18]">{{ ucfirst($selectedType ?? 'kategori ini') }}</span>
             </p>
         </div>
     </div>

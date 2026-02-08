@@ -72,13 +72,6 @@ Route::get('/manuscripts/{version}/download', function (PublicationVersion $vers
 
 
 
-
-
-
-
-
-
-
 /*
 |--------------------------------------------------------------------------
 | Static Pages Routes

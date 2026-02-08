@@ -24,44 +24,45 @@ class Author extends Model
     ];
 
     /**
-     * ✅ Accessor untuk mendapatkan URL foto author (UPDATED)
+     * ✅ Accessor untuk mendapatkan URL foto author
      */
     public function getPhotoUrlAttribute(): string
     {
-        // Prioritas 1: photo_path dari author
+        // 1. Cek photo_path dari author
         if ($this->photo_path) {
-            $cleanPath = $this->photo_path;
-            if (str_starts_with($cleanPath, 'public/')) {
-                $cleanPath = substr($cleanPath, 7);
-            }
+            $cleanPath = $this->cleanPath($this->photo_path);
 
-            if (Storage::disk('public')->exists($cleanPath)) {
+            if ($cleanPath && Storage::disk('public')->exists($cleanPath)) {
                 return asset('storage/' . $cleanPath);
             }
         }
 
-        // Prioritas 2: profile_photo dari user (jika ada relasi)
-        if ($this->user_id && $this->relationLoaded('user') && $this->user && $this->user->profile_photo) {
-            $cleanPath = $this->user->profile_photo;
-            if (str_starts_with($cleanPath, 'public/')) {
-                $cleanPath = substr($cleanPath, 7);
+        // 2. Cek profile_photo dari user (jika ada relasi)
+        if ($this->user_id && $this->user) {
+            if ($this->user->profile_photo) {
+                $cleanPath = $this->cleanPath($this->user->profile_photo);
+
+                if ($cleanPath && Storage::disk('public')->exists($cleanPath)) {
+                    return asset('storage/' . $cleanPath);
+                }
             }
 
-            if (Storage::disk('public')->exists($cleanPath)) {
-                return asset('storage/' . $cleanPath);
+            // 3. Cek avatar_url dari user (untuk OAuth/Socialite)
+            if ($this->user->avatar_url) {
+                return $this->user->avatar_url;
             }
         }
 
-        // Prioritas 3: Fallback UI Avatars
+        // 4. Fallback UI Avatars
         return 'https://ui-avatars.com/api/?name=' . urlencode($this->name) . '&background=FF6B18&color=fff&size=128&bold=true&font-size=0.4';
     }
 
     /**
-     * Accessor untuk mendapatkan inisial nama (untuk fallback avatar)
+     * ✅ Accessor untuk mendapatkan inisial nama
      */
     public function getInitialsAttribute(): string
     {
-        $words = explode(' ', $this->name);
+        $words = explode(' ', trim($this->name));
 
         if (count($words) >= 2) {
             return strtoupper(substr($words[0], 0, 1) . substr($words[1], 0, 1));
@@ -71,7 +72,7 @@ class Author extends Model
     }
 
     /**
-     * Accessor untuk bio pendek (150 karakter)
+     * ✅ Accessor untuk bio pendek (150 karakter)
      */
     public function getShortBioAttribute(): ?string
     {
@@ -84,6 +85,26 @@ class Author extends Model
             : $this->bio;
     }
 
+    /**
+     * ✅ Helper untuk clean path (hapus prefix 'public/')
+     */
+    private function cleanPath(?string $path): ?string
+    {
+        if (!$path) {
+            return null;
+        }
+
+        // Hapus prefix 'public/' jika ada
+        if (str_starts_with($path, 'public/')) {
+            return substr($path, 7);
+        }
+
+        return $path;
+    }
+
+    /**
+     * Relationships
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

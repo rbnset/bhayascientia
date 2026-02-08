@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Author\GetBestAuthorsAction;
 use App\Models\Publication;
 use App\Models\PublicationType;
 use App\Models\Author;
@@ -14,6 +15,10 @@ use Illuminate\Support\Facades\Cache;
 
 class PublicationController extends Controller
 {
+    public function __construct(
+        private GetBestAuthorsAction $getBestAuthorsAction
+    ) {}
+
     public function index(Request $request)
     {
         // ✅ Load publication types WITH content (hasOne relationship)
@@ -42,7 +47,7 @@ class PublicationController extends Controller
         // ✅ Simple parameters: type & sort only
         $selectedType = $request->query('type', $publicationTypes->first()->slug);
         $filterSort = $request->query('sort', 'latest');
-        $searchQuery = null; // Not used in index anymore
+        $searchQuery = null;
 
         $typeExists = $publicationTypes->contains('slug', $selectedType);
         if (!$typeExists) {
@@ -167,40 +172,16 @@ class PublicationController extends Controller
                     return [
                         'id' => $author->id,
                         'name' => $author->name,
-                        'photo' => $this->getAuthorPhoto($author),
-                        'initials' => $this->getInitials($author->name),
+                        'photo' => $author->photo_url, // ✅ Pakai accessor
+                        'initials' => $author->initials, // ✅ Pakai accessor
                     ];
                 })->toArray(),
                 'total_authors' => $pub->authors->count(),
             ];
         })->toArray();
 
-        // ✅ Get Best Authors
-        $bestAuthors = Author::query()
-            ->with('user')
-            ->withCount(['publications' => function ($query) use ($selectedType) {
-                $query->where('status', 'published')
-                    ->whereNotNull('published_at')
-                    ->where('published_at', '<=', now())
-                    ->whereHas('publicationType', function ($q) use ($selectedType) {
-                        $q->where('slug', $selectedType)->where('is_active', true);
-                    });
-            }])
-            ->having('publications_count', '>', 0)
-            ->orderByDesc('publications_count')
-            ->limit(6)
-            ->get()
-            ->map(function ($author) {
-                return [
-                    'name' => $author->name,
-                    'avatar' => $this->getAuthorPhoto($author),
-                    'initials' => $this->getInitials($author->name),
-                    'publication_count' => $author->publications_count,
-                    'profile_url' => route('author.show', $author->id),
-                    'verified' => $author->user_id !== null,
-                    'specialty' => $author->affiliation ?? null,
-                ];
-            });
+        // ✅ GET BEST AUTHORS (MENGGUNAKAN ACTION - SRP)
+        $bestAuthors = $this->getBestAuthorsAction->execute($selectedType, 12);
 
         // ✅ Get Popular Publications
         $popularPubs = Publication::with([
@@ -252,8 +233,8 @@ class PublicationController extends Controller
                     return [
                         'id' => $author->id,
                         'name' => $author->name,
-                        'photo' => $this->getAuthorPhoto($author),
-                        'initials' => $this->getInitials($author->name),
+                        'photo' => $author->photo_url, // ✅ Pakai accessor
+                        'initials' => $author->initials, // ✅ Pakai accessor
                     ];
                 })->toArray(),
                 'total_authors' => $pub->authors->count(),
@@ -268,7 +249,6 @@ class PublicationController extends Controller
             'popularPublications',
             'featuredPublication',
             'featuredTypeContent',
-            // ✅ Filter data for search modal
             'categories',
             'years',
             'topKeywords',
@@ -277,13 +257,11 @@ class PublicationController extends Controller
         ));
     }
 
-
     /**
      * ✅ Dedicated Search Results Page
      */
     public function search(Request $request)
     {
-        // Get all filter parameters
         $searchQuery = $request->query('search');
         $selectedType = $request->query('type', 'all');
         $filterCategory = $request->query('category');
@@ -291,12 +269,10 @@ class PublicationController extends Controller
         $filterKeyword = $request->query('keyword');
         $filterSort = $request->query('sort', 'latest');
 
-        // Get publication types for type switcher
         $publicationTypes = PublicationType::where('is_active', true)
             ->orderBy('name')
             ->get(['id', 'slug', 'name']);
 
-        // Get filter options
         $categories = \App\Models\Category::whereHas('publications', function ($query) {
             $query->where('status', 'published')
                 ->whereNotNull('published_at')
@@ -332,7 +308,6 @@ class PublicationController extends Controller
             ->limit(20)
             ->get();
 
-        // Build query
         $query = Publication::with([
             'authors.user',
             'publicationType',
@@ -343,14 +318,12 @@ class PublicationController extends Controller
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now());
 
-        // Apply publication type filter
         if ($selectedType !== 'all') {
             $query->whereHas('publicationType', function ($q) use ($selectedType) {
                 $q->where('slug', $selectedType)->where('is_active', true);
             });
         }
 
-        // Apply search query
         if ($searchQuery) {
             $query->where(function ($q) use ($searchQuery) {
                 $q->where('title', 'LIKE', "%{$searchQuery}%")
@@ -361,26 +334,22 @@ class PublicationController extends Controller
             });
         }
 
-        // Apply category filter
         if ($filterCategory) {
             $query->whereHas('categories', function ($q) use ($filterCategory) {
                 $q->where('slug', $filterCategory);
             });
         }
 
-        // Apply year filter
         if ($filterYear) {
             $query->whereYear('published_at', $filterYear);
         }
 
-        // Apply keyword filter
         if ($filterKeyword) {
             $query->whereHas('keywords', function ($q) use ($filterKeyword) {
                 $q->where('slug', $filterKeyword);
             });
         }
 
-        // Apply sorting
         switch ($filterSort) {
             case 'popular':
                 $query->withCount('downloadLogs')->orderByDesc('download_logs_count');
@@ -397,10 +366,8 @@ class PublicationController extends Controller
                 break;
         }
 
-        // Paginate results
         $publications = $query->paginate(18)->withQueryString();
 
-        // Format publications
         $searchResults = $publications->map(function ($pub) {
             return [
                 'id' => $pub->id,
@@ -417,8 +384,8 @@ class PublicationController extends Controller
                     return [
                         'id' => $author->id,
                         'name' => $author->name,
-                        'photo' => $this->getAuthorPhoto($author),
-                        'initials' => $this->getInitials($author->name),
+                        'photo' => $author->photo_url,
+                        'initials' => $author->initials,
                     ];
                 })->toArray(),
                 'total_authors' => $pub->authors->count(),
@@ -441,10 +408,8 @@ class PublicationController extends Controller
         ));
     }
 
-
-
     /**
-     * ✅ Show publication detail - FIXED COVER IMAGE
+     * ✅ Show publication detail
      */
     public function show($slug)
     {
@@ -463,12 +428,10 @@ class PublicationController extends Controller
             ->where('published_at', '<=', now())
             ->firstOrFail();
 
-        // ✅ Get latest version
         $latestVersion = $publication->versions->first();
         $fileSize = null;
         $fileSizeFormatted = null;
 
-        // ✅ Get file size from storage
         if ($latestVersion && $latestVersion->pdf_file_path) {
             $filePath = $this->cleanPath($latestVersion->pdf_file_path);
 
@@ -479,17 +442,14 @@ class PublicationController extends Controller
             }
         }
 
-        // ✅ Get download count
         $downloadCount = $publication->downloadLogs()
             ->where('publication_id', $publication->id)
             ->count();
 
-        // ✅ Get view count
         $viewsCount = $publication->viewLogs()
             ->where('publication_id', $publication->id)
             ->count();
 
-        // ✅ Log view (throttle per IP per 5 menit)
         $this->logPublicationView($publication);
 
         return view('pages.publication.show', [
@@ -502,10 +462,10 @@ class PublicationController extends Controller
                 return [
                     'id' => $author->id,
                     'name' => $author->name,
-                    'initials' => $this->getInitials($author->name),
-                    'photo' => $this->getAuthorPhoto($author),
+                    'initials' => $author->initials,
+                    'photo' => $author->photo_url,
                     'affiliation' => $author->affiliation ?? $author->user?->organization ?? '-',
-                    'is_corresponding' => $author->is_corresponding,
+                    'is_corresponding' => $author->pivot->is_corresponding ?? false,
                 ];
             }),
             'latestVersion' => $latestVersion,
@@ -547,27 +507,23 @@ class PublicationController extends Controller
     }
 
     /**
-     * ✅ Show trending publications dengan filter periode & type
+     * ✅ Show trending publications
      */
     public function trending(Request $request)
     {
-        // Get filter parameters
-        $period = $request->query('period', '7'); // 7 atau 30 hari
-        $typeSlug = $request->query('type', 'all'); // all atau slug publication type
+        $period = $request->query('period', '7');
+        $typeSlug = $request->query('type', 'all');
 
-        // Validate period
         if (!in_array($period, ['7', '30'])) {
             $period = '7';
         }
 
         $daysAgo = (int) $period;
 
-        // Get all active publication types for filter tabs
         $publicationTypes = PublicationType::where('is_active', true)
             ->orderBy('name')
             ->get(['id', 'slug', 'name']);
 
-        // Base query
         $query = Publication::with([
             'authors.user',
             'publicationType',
@@ -585,23 +541,20 @@ class PublicationController extends Controller
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now());
 
-        // Filter by publication type if not 'all'
         if ($typeSlug !== 'all') {
             $query->whereHas('publicationType', function ($q) use ($typeSlug) {
                 $q->where('slug', $typeSlug)->where('is_active', true);
             });
         }
 
-        // Get trending publications
         $trendingPublications = $query
             ->orderByRaw('(recent_views * 1) + (recent_downloads * 2) DESC')
-            ->orderBy('recent_downloads', 'desc')  // ✅ Tiebreaker 1: Download lebih tinggi
-            ->orderBy('recent_views', 'desc')      // ✅ Tiebreaker 2: Views lebih tinggi
-            ->orderBy('published_at', 'desc')      // ✅ Tiebreaker 3: Yang terbaru
+            ->orderBy('recent_downloads', 'desc')
+            ->orderBy('recent_views', 'desc')
+            ->orderBy('published_at', 'desc')
             ->take(50)
             ->get()
             ->filter(function ($pub) {
-                // Filter yang minimal ada aktivitas
                 return $pub->recent_views > 0 || $pub->recent_downloads > 0;
             })
             ->values()
@@ -623,15 +576,14 @@ class PublicationController extends Controller
                         return [
                             'id' => $author->id,
                             'name' => $author->name,
-                            'photo' => $this->getAuthorPhoto($author),
-                            'initials' => $this->getInitials($author->name),
+                            'photo' => $author->photo_url,
+                            'initials' => $author->initials,
                         ];
                     })->toArray(),
                     'total_authors' => $pub->authors->count(),
                 ];
             });
 
-        // Get stats per type untuk summary
         $typeStats = [];
         foreach ($publicationTypes as $type) {
             $count = $trendingPublications->where('type_slug', $type->slug)->count();
@@ -653,21 +605,17 @@ class PublicationController extends Controller
         ));
     }
 
-
-
     /**
-     * ✅ Show user's library with LOGIN GATE (tidak redirect)
+     * ✅ Show user's library
      */
     public function library(Request $request)
     {
         $activeTab = $request->query('tab', 'favorites');
 
-        // ✅ Validate tab
         if (!in_array($activeTab, ['favorites', 'history', 'saved'])) {
             $activeTab = 'favorites';
         }
 
-        // ✅ JIKA BELUM LOGIN: Show empty state dengan login prompt
         if (!auth()->check()) {
             return view('pages.publication.library', [
                 'publications' => collect([]),
@@ -677,11 +625,10 @@ class PublicationController extends Controller
                     'saved' => 0,
                 ],
                 'activeTab' => $activeTab,
-                'requiresLogin' => true, // ✅ Flag untuk show login gate
+                'requiresLogin' => true,
             ]);
         }
 
-        // ✅ JIKA SUDAH LOGIN: Show actual data
         $user = auth()->user();
 
         $stats = [
@@ -730,7 +677,6 @@ class PublicationController extends Controller
                 $authorsText .= ' +' . ($pub->authors->count() - 2) . ' lainnya';
             }
 
-            // ✅ FIX: Handle different pivot columns per tab dengan safety check
             $actionTime = '';
             switch ($activeTab) {
                 case 'favorites':
@@ -782,8 +728,8 @@ class PublicationController extends Controller
                     return [
                         'id' => $author->id,
                         'name' => $author->name,
-                        'photo' => $this->getAuthorPhoto($author),
-                        'initials' => $this->getInitials($author->name),
+                        'photo' => $author->photo_url,
+                        'initials' => $author->initials,
                     ];
                 })->toArray(),
                 'total_authors' => $pub->authors->count(),
@@ -792,13 +738,6 @@ class PublicationController extends Controller
 
         return view('pages.publication.library', compact('publications', 'stats', 'activeTab'));
     }
-
-
-        /*
-    |--------------------------------------------------------------------------
-    | Library Action Methods
-    |--------------------------------------------------------------------------
-    */
 
     /**
      * ✅ Toggle favorite publication
@@ -853,8 +792,6 @@ class PublicationController extends Controller
             'isSaved' => $result['status'] === 'added'
         ]);
     }
-
-
 
     /**
      * ✅ Download publikasi
@@ -939,7 +876,6 @@ class PublicationController extends Controller
 
         $this->logPublicationView($publication);
 
-        // ✅ Log ke history jika user login
         if (auth()->check()) {
             auth()->user()->readPublications()->syncWithoutDetaching([
                 $publication->id => ['last_read_at' => now()]
@@ -956,8 +892,8 @@ class PublicationController extends Controller
                 return [
                     'id' => $author->id,
                     'name' => $author->name,
-                    'initials' => $this->getInitials($author->name),
-                    'photo' => $this->getAuthorPhoto($author),
+                    'initials' => $author->initials,
+                    'photo' => $author->photo_url,
                 ];
             }),
         ]);
@@ -974,11 +910,31 @@ class PublicationController extends Controller
                 $query->where('status', 'published')
                     ->whereNotNull('published_at')
                     ->where('published_at', '<=', now())
+                    ->with(['publicationType', 'categories'])
                     ->orderBy('published_at', 'desc');
             }
         ])->findOrFail($id);
 
-        return view('pages.author.show', compact('author'));
+        $publicationsFormatted = $author->publications->map(function ($pub) {
+            return [
+                'id' => $pub->id,
+                'title' => $pub->title,
+                'slug' => $pub->slug,
+                'cover_url' => $this->getCoverUrl($pub),
+                'category' => $pub->category_name,
+                'formatted_date' => $pub->formatted_date,
+                'type' => $pub->publicationType->name ?? 'Publikasi',
+                'detail_url' => route('publikasi.show', $pub->slug),
+            ];
+        });
+
+        return view('pages.author.show', [
+            'author' => $author,
+            'photo_url' => $author->photo_url,
+            'initials' => $author->initials,
+            'publications' => $publicationsFormatted,
+            'publications_count' => $author->publications->count(),
+        ]);
     }
 
     /*
@@ -1066,50 +1022,5 @@ class PublicationController extends Controller
         $titleShort = \Illuminate\Support\Str::limit($publication->title, 25, '');
 
         return 'https://placehold.co/400x600/FF6B18/white?text=' . urlencode($titleShort);
-    }
-
-    private function getAuthorPhoto($author)
-    {
-        if ($author->photo_path) {
-            $cleanPath = $this->cleanPath($author->photo_path);
-
-            if ($cleanPath && Storage::disk('public')->exists($cleanPath)) {
-                return asset('storage/' . $cleanPath);
-            }
-        }
-
-        if ($author->user_id && $author->relationLoaded('user') && $author->user) {
-            if ($author->user->profile_photo) {
-                $cleanPath = $this->cleanPath($author->user->profile_photo);
-
-                if ($cleanPath && Storage::disk('public')->exists($cleanPath)) {
-                    return asset('storage/' . $cleanPath);
-                }
-            }
-        }
-
-        $initials = $this->getInitials($author->name);
-
-        return 'https://ui-avatars.com/api/?' . http_build_query([
-            'name' => $initials,
-            'background' => 'FF6B18',
-            'color' => 'ffffff',
-            'size' => '128',
-            'bold' => 'true',
-            'font-size' => '0.5',
-            'length' => '2'
-        ]);
-    }
-
-    private function getInitials($name)
-    {
-        $name = trim($name);
-        $words = preg_split('/\s+/', $name);
-
-        if (count($words) >= 2) {
-            return strtoupper(substr($words[0], 0, 1) . substr($words[1], 0, 1));
-        }
-
-        return strtoupper(substr($name, 0, 2));
     }
 }
