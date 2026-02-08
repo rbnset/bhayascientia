@@ -37,17 +37,22 @@ jurnal.',
             @foreach ($slides as $slide)
             <article
                 class="featured-news-card relative flex h-[420px] w-full overflow-hidden sm:h-[360px] md:h-[480px] lg:h-[550px]">
+                {{-- Gambar slide --}}
                 <img src="{{ asset($slide['image']) }}" class="absolute inset-0 object-cover w-full h-full"
-                    alt="{{ $slide['alt'] ?? 'thumbnail' }}" loading="lazy">
+                    alt="{{ $slide['alt'] ?? 'thumbnail' }}">
 
+                {{-- Overlay gradient --}}
                 <div
                     class="pointer-events-none absolute inset-0 z-10 bg-gradient-to-b from-[rgba(0,0,0,0)] to-[rgba(0,0,0,0.9)]">
                 </div>
 
-                <div class="relative z-20 flex items-end w-full h-full pb-6 md:pb-10">
+                {{-- Konten --}}
+                <div class="relative z-20 flex w-full h-full pb-6 items_end md:pb-10">
                     <div class="mx-auto flex w-full max-w-[1130px] items-end justify-between px-4 sm:px-6 lg:px-8">
                         <div class="flex max-w-[340px] flex-col gap-2 sm:max-w-[400px] sm:gap-[10px] md:max-w-[70%]">
-                            <p class="text-xs text-white sm:text-sm">{{ $badgeText }}</p>
+                            <p class="text-xs text-white sm:text-sm">
+                                {{ $badgeText }}
+                            </p>
 
                             <a href="{{ $slide['url'] ?? '#' }}" class="two-lines text-lg font-bold leading-[26px] text-white transition-all duration-300 hover:underline
                                            sm:text-2xl sm:leading-[32px]
@@ -56,10 +61,12 @@ jurnal.',
                                 {{ $slide['title'] }}
                             </a>
 
-                            <p class="text-xs text-white sm:text-sm">{{ $slide['excerpt'] }}</p>
+                            <p class="text-xs text-white sm:text-sm">
+                                {{ $slide['excerpt'] }}
+                            </p>
                         </div>
 
-                        {{-- biarkan kanan kosong, tombol dipindah ke overlay global --}}
+                        {{-- kanan dibiarkan kosong, tombol di overlay global --}}
                         <div class="hidden md:block"></div>
                     </div>
                 </div>
