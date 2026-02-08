@@ -81,9 +81,11 @@ $uid = 'comingSoon_' . substr(md5(json_encode($cards)), 0, 8);
                     <article
                         class="card snap-start group rounded-3xl sm:h-[475px] sm:w-[320px] lg:shrink relative h-[360px] w-[260px] shrink-0 overflow-clip transition-all duration-300 border border-transparent"
                         data-card="{{ $i + 1 }}" data-key="{{ $c['key'] ?? ($i + 1) }}" tabindex="0">
-                        <img src="{{ asset($c['image'] ?? '') }}" alt="" class="object-cover w-full h-full"
-                            loading="lazy" />
+                        {{-- Gambar kartu --}}
+                        <img src="{{ asset($c['image'] ?? '') }}" alt="{{ $c['title'] ?? '' }}"
+                            class="object-cover w-full h-full" />
 
+                        {{-- Overlay info --}}
                         <div
                             class="card-info left-6 right-6 bottom-6 gap-2 rounded-3xl bg-white p-6 ease-in-out absolute hidden items-center transition-all duration-300 border border-[#EEF0F7]">
                             <div class="gap-1 flex w-[260px] flex-col">
@@ -116,7 +118,9 @@ $uid = 'comingSoon_' . substr(md5(json_encode($cards)), 0, 8);
                     @endforeach
                 </div>
 
-                <p class="mt-2 text-xs lg:hidden text-[#6B7280]">Geser untuk melihat fitur lainnya.</p>
+                <p class="mt-2 text-xs lg:hidden text-[#6B7280]">
+                    Geser untuk melihat fitur lainnya.
+                </p>
             </div>
 
             {{-- Toast --}}
@@ -131,8 +135,8 @@ $uid = 'comingSoon_' . substr(md5(json_encode($cards)), 0, 8);
     {{-- Data untuk JS --}}
     <script type="application/json" data-coming-soon-data="{{ $uid }}">
         {!! json_encode([
-      'uid' => $uid,
-      'toastText' => $toastText,
-    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}
+            'uid' => $uid,
+            'toastText' => $toastText,
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}
     </script>
 </section>
