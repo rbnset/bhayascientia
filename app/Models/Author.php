@@ -9,6 +9,7 @@ use App\Models\Pivots\AuthorPublication;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class Author extends Model
 {
@@ -34,6 +35,15 @@ class Author extends Model
 
             if ($cleanPath && Storage::disk('public')->exists($cleanPath)) {
                 return asset('storage/' . $cleanPath);
+            } else {
+                // Log jika file tidak ditemukan (hanya di development)
+                if (config('app.debug')) {
+                    Log::debug("Author photo not found", [
+                        'author_id' => $this->id,
+                        'photo_path' => $this->photo_path,
+                        'clean_path' => $cleanPath,
+                    ]);
+                }
             }
         }
 
@@ -48,13 +58,14 @@ class Author extends Model
             }
 
             // 3. Cek avatar_url dari user (untuk OAuth/Socialite)
-            if ($this->user->avatar_url) {
+            if (!empty($this->user->avatar_url)) {
                 return $this->user->avatar_url;
             }
         }
 
         // 4. Fallback UI Avatars
-        return 'https://ui-avatars.com/api/?name=' . urlencode($this->name) . '&background=FF6B18&color=fff&size=128&bold=true&font-size=0.4';
+        return 'https://ui-avatars.com/api/?name=' . urlencode($this->name) .
+            '&background=FF6B18&color=fff&size=160&bold=true&font-size=0.4&length=2';
     }
 
     /**
@@ -77,7 +88,7 @@ class Author extends Model
     public function getShortBioAttribute(): ?string
     {
         if (!$this->bio) {
-            return null;
+            return $this->affiliation ?? null;
         }
 
         return strlen($this->bio) > 150
@@ -128,5 +139,25 @@ class Author extends Model
     public function authorPublications(): HasMany
     {
         return $this->hasMany(AuthorPublication::class, 'author_id');
+    }
+
+    /**
+     * ✅ Scope untuk author dengan publikasi
+     */
+    public function scopeHasPublications($query)
+    {
+        return $query->has('publications');
+    }
+
+    /**
+     * ✅ Scope untuk author dengan publikasi published
+     */
+    public function scopeHasPublishedPublications($query)
+    {
+        return $query->whereHas('publications', function ($q) {
+            $q->where('status', 'published')
+                ->whereNotNull('published_at')
+                ->where('published_at', '<=', now());
+        });
     }
 }

@@ -3,6 +3,7 @@
 use App\Http\Controllers\PublicationController;
 use App\Http\Controllers\PublikasiController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AuthorController;
 use App\Models\PublicationVersion;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
@@ -119,7 +120,7 @@ Route::prefix('publikasi')->name('publikasi.')->group(function () {
     Route::get('/{slug}/read', [PublicationController::class, 'read'])->name('read');
 });
 
-Route::get('/author/{id}', [PublicationController::class, 'showAuthor'])->name('author.show');
+Route::get('/author/{identifier}', [AuthorController::class, 'show'])->name('author.profile');
 
 
 Route::post('/publikasi/{slug}/favorite', [PublicationController::class, 'toggleFavorite'])

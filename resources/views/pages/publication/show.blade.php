@@ -339,38 +339,47 @@
             <p class="text-sm font-bold text-[#737373] uppercase tracking-wide mb-3">Authors</p>
             <div class="flex flex-wrap gap-3">
                 @foreach($authors->take(3) as $author)
-                <div
-                    class="inline-flex items-center gap-2.5 px-4 py-2.5 bg-[#F8F9FC] rounded-xl hover:bg-[#FFF7F2] hover:shadow-md transition-all duration-300 cursor-pointer">
+                {{-- ✅ FIXED: Make entire card clickable --}}
+                <a href="{{ route('author.profile', $author['profile_id']) }}"
+                    class="inline-flex items-center gap-2.5 px-4 py-2.5 bg-[#F8F9FC] rounded-xl hover:bg-[#FFF7F2] hover:shadow-md hover:scale-105 transition-all duration-300 cursor-pointer group">
+
+                    {{-- Author Avatar --}}
                     @if($author['photo'])
                     <img src="{{ $author['photo'] }}" alt="{{ $author['name'] }}"
-                        class="object-cover w-10 h-10 rounded-full ring-2 ring-white">
+                        class="w-10 h-10 rounded-full object-cover ring-2 ring-white group-hover:ring-[#FF6B18] transition-all">
                     @else
                     <div
-                        class="w-10 h-10 bg-gradient-to-br from-[#FF6B18] to-[#E64627] rounded-full flex items-center justify-center text-white text-sm font-bold ring-2 ring-white">
+                        class="w-10 h-10 bg-gradient-to-br from-[#FF6B18] to-[#E64627] rounded-full flex items-center justify-center text-white text-sm font-bold ring-2 ring-white group-hover:scale-110 transition-all">
                         {{ $author['initials'] }}
                     </div>
                     @endif
+
+                    {{-- Author Info --}}
                     <div class="text-left">
-                        <p class="text-sm font-bold text-[#1A1A1A]">
+                        <p class="text-sm font-bold text-[#1A1A1A] group-hover:text-[#FF6B18] transition-colors">
                             {{ $author['name'] }}
                             @if($author['is_corresponding'])
                             <span class="text-[#FF6B18]" title="Corresponding Author">*</span>
                             @endif
                         </p>
-                        <p class="text-xs text-[#737373]">{{ $author['affiliation'] }}</p>
+                        <p class="text-xs text-[#737373] line-clamp-1">{{ $author['affiliation'] }}</p>
                     </div>
-                </div>
+                </a>
                 @endforeach
 
                 @if($authors->count() > 3)
                 <button type="button" onclick="showAllAuthors()"
-                    class="inline-flex items-center gap-2 px-4 py-2.5 bg-[#F8F9FC] rounded-xl hover:bg-[#FFF7F2] hover:shadow-md transition-all duration-300">
+                    class="inline-flex items-center gap-2 px-4 py-2.5 bg-[#F8F9FC] rounded-xl hover:bg-[#FFF7F2] hover:shadow-md hover:scale-105 transition-all duration-300">
+                    <svg class="w-5 h-5 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
                     <span class="text-sm font-semibold text-[#737373]">+{{ $authors->count() - 3 }} more authors</span>
                 </button>
                 @endif
             </div>
         </div>
         @endif
+
 
         {{-- Meta Info --}}
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 pt-6 border-t border-[#EEF0F7]">
@@ -669,7 +678,8 @@
             <div class="modal-body">
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                     @foreach($authors as $index => $author)
-                    <div class="author-card-modal">
+                    {{-- ✅ FIXED: Make entire modal card clickable --}}
+                    <a href="{{ route('author.profile', $author['profile_id']) }}" class="block author-card-modal">
                         <div class="flex items-start gap-4">
                             {{-- Author Photo/Initial --}}
                             <div class="flex-shrink-0">
@@ -687,7 +697,8 @@
                             {{-- Author Info --}}
                             <div class="flex-1 min-w-0">
                                 <div class="flex items-start justify-between gap-2 mb-2">
-                                    <h4 class="text-base font-bold text-[#1A1A1A] leading-snug">
+                                    <h4
+                                        class="text-base font-bold text-[#1A1A1A] leading-snug hover:text-[#FF6B18] transition-colors">
                                         {{ $author['name'] }}
                                     </h4>
                                     @if($author['is_corresponding'])
@@ -711,13 +722,21 @@
                                     <span class="text-xs font-semibold text-[#737373]">
                                         Author #{{ $index + 1 }}
                                     </span>
+
+                                    {{-- View Profile Indicator --}}
+                                    <svg class="w-4 h-4 text-[#FF6B18] ml-auto" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 5l7 7-7 7" />
+                                    </svg>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </a>
                     @endforeach
                 </div>
             </div>
+
         </div>
     </div>
 </div>

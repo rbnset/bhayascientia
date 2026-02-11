@@ -452,22 +452,35 @@ class PublicationController extends Controller
 
         $this->logPublicationView($publication);
 
+        // ✅ Map authors dengan support User dan Author profile
+        $authors = $publication->authors->map(function ($author) {
+            $userData = $author->user;
+
+            return [
+                'id' => $author->id,
+                'user_id' => $author->user_id,
+                'name' => $author->name,
+                'initials' => $author->initials,
+                'photo' => $author->photo_url,
+                'photo_url' => $author->photo_url,
+                'affiliation' => $author->affiliation ?? ($userData ? ($userData->job_title ?? $userData->organization ?? '-') : '-'),
+                'bio' => $author->bio ?? ($userData ? $userData->bio : null),
+                'short_bio' => $author->short_bio,
+                'email' => $author->email,
+                'is_corresponding' => $author->pivot->is_corresponding ?? false,
+                // ✅ Add profile routing support
+                'profile_type' => $author->user_id ? 'user' : 'author',
+                'profile_id' => $author->user_id ?? $author->id,
+            ];
+        });
+
         return view('pages.publication.show', [
             'publication' => $publication,
             'formatted_date' => $publication->published_at->locale('id_ID')->isoFormat('D MMMM YYYY'),
             'category' => $publication->categories->first()?->name ?? 'Umum',
             'keywords' => $publication->keywords->pluck('name')->toArray(),
             'cover_url' => $this->getCoverUrl($publication),
-            'authors' => $publication->authors->take(6)->map(function ($author) {
-                return [
-                    'id' => $author->id,
-                    'name' => $author->name,
-                    'initials' => $author->initials,
-                    'photo' => $author->photo_url,
-                    'affiliation' => $author->affiliation ?? $author->user?->organization ?? '-',
-                    'is_corresponding' => $author->pivot->is_corresponding ?? false,
-                ];
-            }),
+            'authors' => $authors,
             'latestVersion' => $latestVersion,
             'fileSize' => $fileSize,
             'fileSizeFormatted' => $fileSizeFormatted,
@@ -899,43 +912,8 @@ class PublicationController extends Controller
         ]);
     }
 
-    /**
-     * ✅ Show author profile
-     */
-    public function showAuthor($id)
-    {
-        $author = Author::with([
-            'user',
-            'publications' => function ($query) {
-                $query->where('status', 'published')
-                    ->whereNotNull('published_at')
-                    ->where('published_at', '<=', now())
-                    ->with(['publicationType', 'categories'])
-                    ->orderBy('published_at', 'desc');
-            }
-        ])->findOrFail($id);
-
-        $publicationsFormatted = $author->publications->map(function ($pub) {
-            return [
-                'id' => $pub->id,
-                'title' => $pub->title,
-                'slug' => $pub->slug,
-                'cover_url' => $this->getCoverUrl($pub),
-                'category' => $pub->category_name,
-                'formatted_date' => $pub->formatted_date,
-                'type' => $pub->publicationType->name ?? 'Publikasi',
-                'detail_url' => route('publikasi.show', $pub->slug),
-            ];
-        });
-
-        return view('pages.author.show', [
-            'author' => $author,
-            'photo_url' => $author->photo_url,
-            'initials' => $author->initials,
-            'publications' => $publicationsFormatted,
-            'publications_count' => $author->publications->count(),
-        ]);
-    }
+    // ❌ METHOD INI DIHAPUS - Pindah ke AuthorController
+    // public function showAuthor($id) { ... }
 
     /*
     |--------------------------------------------------------------------------
