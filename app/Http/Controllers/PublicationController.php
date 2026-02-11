@@ -168,20 +168,20 @@ class PublicationController extends Controller
                 'status' => $pub->publicationType->requires_review ? 'Peer-reviewed' : 'Terverifikasi',
                 'type' => $pub->publicationType->name ?? 'Publikasi',
                 'detail_url' => route('publikasi.show', $pub->slug),
-                'authors' => $pub->authors->map(function ($author) {
+                'authors' => $pub->authors->take(6)->map(function ($author) {
                     return [
                         'id' => $author->id,
                         'name' => $author->name,
-                        'photo' => $author->photo_url, // ✅ Pakai accessor
-                        'initials' => $author->initials, // ✅ Pakai accessor
+                        'photo' => $author->photo_url,
+                        'initials' => $author->initials,
                     ];
                 })->toArray(),
                 'total_authors' => $pub->authors->count(),
             ];
         })->toArray();
 
-        // ✅ GET BEST AUTHORS (MENGGUNAKAN ACTION - SRP)
-        $bestAuthors = $this->getBestAuthorsAction->execute($selectedType, 12);
+        // ✅ GET BEST AUTHORS - LIMIT 6 (BUKAN 12)
+        $bestAuthors = $this->getBestAuthorsAction->execute($selectedType, 6);
 
         // ✅ Get Popular Publications
         $popularPubs = Publication::with([
@@ -229,12 +229,12 @@ class PublicationController extends Controller
                 'download_count' => $pub->download_logs_count,
                 'views_count' => $pub->views_count,
                 'detail_url' => route('publikasi.show', $pub->slug),
-                'authors' => $pub->authors->map(function ($author) {
+                'authors' => $pub->authors->take(6)->map(function ($author) {
                     return [
                         'id' => $author->id,
                         'name' => $author->name,
-                        'photo' => $author->photo_url, // ✅ Pakai accessor
-                        'initials' => $author->initials, // ✅ Pakai accessor
+                        'photo' => $author->photo_url,
+                        'initials' => $author->initials,
                     ];
                 })->toArray(),
                 'total_authors' => $pub->authors->count(),
@@ -380,7 +380,7 @@ class PublicationController extends Controller
                 'type' => $pub->publicationType->name ?? 'Publikasi',
                 'abstract' => \Illuminate\Support\Str::limit($pub->abstract, 150),
                 'detail_url' => route('publikasi.show', $pub->slug),
-                'authors' => $pub->authors->map(function ($author) {
+                'authors' => $pub->authors->take(6)->map(function ($author) {
                     return [
                         'id' => $author->id,
                         'name' => $author->name,
@@ -458,7 +458,7 @@ class PublicationController extends Controller
             'category' => $publication->categories->first()?->name ?? 'Umum',
             'keywords' => $publication->keywords->pluck('name')->toArray(),
             'cover_url' => $this->getCoverUrl($publication),
-            'authors' => $publication->authors->map(function ($author) {
+            'authors' => $publication->authors->take(6)->map(function ($author) {
                 return [
                     'id' => $author->id,
                     'name' => $author->name,
@@ -572,7 +572,7 @@ class PublicationController extends Controller
                     'trending_score' => $pub->recent_views + ($pub->recent_downloads * 2),
                     'recent_views' => $pub->recent_views,
                     'recent_downloads' => $pub->recent_downloads,
-                    'authors' => $pub->authors->map(function ($author) {
+                    'authors' => $pub->authors->take(6)->map(function ($author) {
                         return [
                             'id' => $author->id,
                             'name' => $author->name,
@@ -724,7 +724,7 @@ class PublicationController extends Controller
                 'detail_url' => route('publikasi.show', $pub->slug),
                 'action_time' => $actionTime,
                 'authors_text' => $authorsText ?: 'Unknown',
-                'authors' => $pub->authors->map(function ($author) {
+                'authors' => $pub->authors->take(6)->map(function ($author) {
                     return [
                         'id' => $author->id,
                         'name' => $author->name,
@@ -888,7 +888,7 @@ class PublicationController extends Controller
             'publication' => $publication,
             'pdfUrl' => $pdfUrl,
             'category' => $publication->categories->first()?->name ?? 'Umum',
-            'authors' => $publication->authors->map(function ($author) {
+            'authors' => $publication->authors->take(6)->map(function ($author) {
                 return [
                     'id' => $author->id,
                     'name' => $author->name,

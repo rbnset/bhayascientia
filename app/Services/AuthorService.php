@@ -15,8 +15,8 @@ class AuthorService
         return [
             'id' => $author->id,
             'name' => $author->name,
-            'avatar' => $author->photo_url, // ✅ Pakai accessor
-            'initials' => $author->initials, // ✅ Pakai accessor
+            'avatar' => $author->photo_url,
+            'initials' => $author->initials,
             'publication_count' => $author->publications_count ?? 0,
             'profile_url' => route('author.show', $author->id),
             'verified' => $author->user_id !== null,
@@ -25,11 +25,12 @@ class AuthorService
     }
 
     /**
-     * Format collection authors untuk view
+     * Format collection authors untuk view dengan limit maksimal
      */
-    public function formatAuthorsForCards(Collection $authors): Collection
+    public function formatAuthorsForCards(Collection $authors, int $limit = 6): Collection
     {
-        return $authors->map(fn($author) => $this->formatAuthorForCard($author));
+        return $authors->take($limit)
+            ->map(fn($author) => $this->formatAuthorForCard($author));
     }
 
     /**
@@ -40,10 +41,19 @@ class AuthorService
         return [
             'id' => $author->id,
             'name' => $author->name,
-            'initials' => $author->initials, // ✅ Pakai accessor
-            'photo' => $author->photo_url, // ✅ Pakai accessor
+            'initials' => $author->initials,
+            'photo' => $author->photo_url,
             'affiliation' => $author->affiliation ?? $author->user?->organization ?? '-',
             'is_corresponding' => $author->pivot->is_corresponding ?? false,
         ];
+    }
+
+    /**
+     * Format authors untuk publication dengan limit
+     */
+    public function formatAuthorsForPublication(Collection $authors, int $limit = 6): Collection
+    {
+        return $authors->take($limit)
+            ->map(fn($author) => $this->formatAuthorForPublication($author));
     }
 }

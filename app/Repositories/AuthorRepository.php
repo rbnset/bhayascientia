@@ -82,6 +82,11 @@ class AuthorRepository
             $query->has('publications');
         }
 
-        return $query->orderBy('name')->get();
+        // ✅ Apply limit (default 6)
+        $limit = $filters['limit'] ?? 6;
+
+        return $query->orderBy('name')
+            ->limit($limit)
+            ->get();
     }
 }
