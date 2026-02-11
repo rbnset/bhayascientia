@@ -4,6 +4,7 @@
 'badge' => 'Cara kerja',
 'title' => '3 langkah, naskah siap tayang.',
 'description' => 'Daftar, submit, revisi. Naskah diterima? kami publikasikan otomatis di BHAYACIENTIA.',
+{{-- Update bagian 'steps' di component --}}
 'steps' => [
 [
 'title' => 'Daftar akun',
@@ -34,8 +35,8 @@ Kamu akan mendapat feedback detail untuk perbaikan jika diperlukan.',
 'Track progress submission real-time',
 'Komunikasi langsung dengan reviewer'
 ],
-'cta' => 'Pelajari Proses Review',
-'cta_link' => '/submission-guidelines'
+'cta' => 'Pelajari Panduan Submit',
+'cta_link' => '/submission-guidelines' // ✅ Updated
 ],
 [
 'title' => 'Terbit otomatis',
@@ -51,7 +52,7 @@ diakses publik, dan diindeks di berbagai search engine untuk meningkatkan visibi
 'Share link profesional ke sosial media'
 ],
 'cta' => 'Lihat Contoh Publikasi',
-'cta_link' => '/publications'
+'cta_link' => '/publikasi' // ✅ Updated
 ],
 ],
 'arrowTop' => 'assets/images/icons/arrow-top.svg',

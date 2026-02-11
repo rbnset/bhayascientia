@@ -5,6 +5,7 @@ use App\Http\Controllers\PublikasiController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AuthorController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\SubmissionGuidelineController;
 use App\Http\Controllers\SubscriptionController;
 use App\Models\PublicationVersion;
 use Illuminate\Support\Facades\Route;
@@ -145,3 +146,6 @@ Route::middleware(['auth'])->group(function () {
     // ✅ AJAX endpoint untuk dynamic category filtering
     Route::post('/subscription/get-categories', [SubscriptionController::class, 'getCategories'])->name('subscription.getCategories');
 });
+
+Route::get('/submission-guidelines', [SubmissionGuidelineController::class, 'index'])
+    ->name('submission-guidelines');
