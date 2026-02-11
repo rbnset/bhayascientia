@@ -18,14 +18,16 @@
         </h2>
 
         @if($exploreAllUrl)
-        <a href="{{ $exploreAllUrl }}"
-            class="flex w-fit items-center gap-2 rounded-full border border-[#EEF0F7] bg-white px-4 py-2 font-semibold text-xs transition-all duration-300 hover:ring-2 hover:ring-[#FF6B18] sm:gap-[10px] sm:px-[18px] sm:py-[10px] sm:text-sm lg:p-[12px_22px] lg:text-base">
-            Jelajahi Semua
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        <a href="{{ $exploreAllUrl ?? route('publikasi.browse') }}"
+            class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#FF6B18] to-[#E64627] text-white font-bold rounded-xl hover:shadow-xl transition-all">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
             </svg>
+            Jelajahi Semua Publikasi
         </a>
         @endif
+
     </div>
 
     {{-- Content --}}
