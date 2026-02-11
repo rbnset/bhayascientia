@@ -1,13 +1,843 @@
 @extends('layouts.app')
 
-@section('title', 'About')
-@section('custom_navbar')
-<x-navbar ctaLabel="Browse Publikasi" ctaRoute="publikasi.index" ctaIcon="book" :showAvatarWhenAuth="false" {{-- Logo
-    hilang saat login, avatar muncul --}} :showCtaAlways="true" {{-- CTA hilang saat login --}} />
-@endsection
+@section('title', 'Tentang Kami - BHAYASCIENTIA')
+@section('main_class', 'pb-16')
+
+@push('styles')
+<style>
+    /* Stats Counter Animation */
+    @keyframes countUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .stat-card {
+        animation: countUp 0.6s ease-out forwards;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .stat-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 40px rgba(255, 107, 24, 0.15);
+    }
+
+    /* Timeline Line Animation */
+    .timeline-line {
+        position: relative;
+        background: linear-gradient(180deg, #FF6B18 0%, #E64627 100%);
+    }
+
+    .timeline-line::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 0%;
+        background: linear-gradient(180deg, #FFD4BA 0%, #FF6B18 100%);
+        animation: fillTimeline 2s ease-out forwards;
+    }
+
+    @keyframes fillTimeline {
+        to {
+            height: 100%;
+        }
+    }
+
+    /* Timeline Item */
+    .timeline-item {
+        opacity: 0;
+        transform: translateX(-30px);
+        animation: slideInLeft 0.6s ease-out forwards;
+    }
+
+    .timeline-item:nth-child(even) {
+        transform: translateX(30px);
+        animation: slideInRight 0.6s ease-out forwards;
+    }
+
+    @keyframes slideInLeft {
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    @keyframes slideInRight {
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    /* Team Card Hover */
+    .team-card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .team-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 40px rgba(255, 107, 24, 0.15);
+    }
+
+    .team-card:hover .team-image {
+        transform: scale(1.05);
+    }
+
+    .team-image {
+        transition: transform 0.3s ease;
+    }
+
+    /* Value Card */
+    .value-card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .value-card:hover {
+        transform: translateY(-4px);
+        border-color: #FF6B18;
+    }
+
+    .value-card:hover .value-icon {
+        transform: rotate(10deg) scale(1.1);
+    }
+
+    .value-icon {
+        transition: transform 0.3s ease;
+    }
+
+    /* Parallax Effect */
+    .parallax-bg {
+        background-attachment: fixed;
+        background-position: center;
+        background-repeat: no-repeat;
+        background-size: cover;
+    }
+
+    /* Gradient Text */
+    .gradient-text {
+        background: linear-gradient(135deg, #FF6B18 0%, #E64627 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    /* Floating Animation */
+    @keyframes float {
+
+        0%,
+        100% {
+            transform: translateY(0px);
+        }
+
+        50% {
+            transform: translateY(-20px);
+        }
+    }
+
+    .float-animation {
+        animation: float 3s ease-in-out infinite;
+    }
+</style>
+@endpush
 
 @section('content')
-<main class="mt-10 sm:mt-12">
 
-</main>
+{{-- Hero Section --}}
+<section
+    class="bg-gradient-to-br from-[#FF6B18] via-[#E64627] to-[#D63A25] relative overflow-hidden rounded-2xl sm:rounded-[28px]">
+    {{-- Background Pattern --}}
+    <div class="absolute inset-0 opacity-10">
+        <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <pattern id="about-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" stroke-width="1" />
+                </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#about-grid)" />
+        </svg>
+    </div>
+
+    {{-- Floating Elements --}}
+    <div class="absolute inset-0 overflow-hidden">
+        <div class="absolute w-20 h-20 rounded-full top-20 left-10 bg-white/10 blur-xl float-animation"></div>
+        <div class="absolute w-32 h-32 rounded-full bottom-20 right-10 bg-white/10 blur-xl float-animation"
+            style="animation-delay: 1s;"></div>
+    </div>
+
+    <div class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px] py-12 sm:py-16 md:py-20 lg:py-24 relative z-10">
+        {{-- Breadcrumb --}}
+        <nav class="flex items-center gap-2 mb-6 text-xs sm:text-sm text-white/80 sm:mb-8" aria-label="Breadcrumb">
+            <a href="{{ route('home') }}" class="transition-colors hover:text-white">Beranda</a>
+            <svg class="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+            <span class="font-bold text-white">Tentang Kami</span>
+        </nav>
+
+        {{-- Header Content --}}
+        <div class="max-w-4xl mx-auto text-center text-white">
+            <div
+                class="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 mb-4 sm:mb-6 text-[10px] sm:text-xs font-bold rounded-full bg-white/20 backdrop-blur-sm border border-white/30">
+                <svg class="w-3 h-3 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                    <path fill-rule="evenodd"
+                        d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"
+                        clip-rule="evenodd" />
+                </svg>
+                Sejak 2020
+            </div>
+
+            <h1 class="mb-4 text-3xl font-black leading-tight sm:text-4xl md:text-5xl lg:text-6xl sm:mb-6">
+                🚀 Tentang BHAYASCIENTIA
+            </h1>
+            <p class="text-base leading-relaxed sm:text-xl md:text-2xl text-white/90">
+                Platform publikasi ilmiah terpercaya yang menghubungkan peneliti, akademisi, dan masyarakat dengan
+                pengetahuan berkualitas
+            </p>
+        </div>
+    </div>
+</section>
+
+{{-- Stats Section --}}
+<section class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px] -mt-12 sm:-mt-16 relative z-20 mb-12 sm:mb-16">
+    <div class="grid grid-cols-2 gap-3 lg:grid-cols-4 sm:gap-4 md:gap-6">
+        {{-- Stat 1 --}}
+        <div class="stat-card bg-white rounded-xl sm:rounded-2xl border-2 border-[#EEF0F7] p-4 sm:p-6 text-center">
+            <div
+                class="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-[#FF6B18]/10 to-[#E64627]/10 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                <svg class="w-6 h-6 sm:w-8 sm:h-8 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+            </div>
+            <h3 class="text-2xl sm:text-3xl md:text-4xl font-black text-[#1A1A1A] mb-1 sm:mb-2 gradient-text">10,000+
+            </h3>
+            <p class="text-xs sm:text-sm text-[#737373] font-semibold">Publikasi Ilmiah</p>
+        </div>
+
+        {{-- Stat 2 --}}
+        <div class="stat-card bg-white rounded-xl sm:rounded-2xl border-2 border-[#EEF0F7] p-4 sm:p-6 text-center"
+            style="animation-delay: 0.1s;">
+            <div
+                class="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-[#FF6B18]/10 to-[#E64627]/10 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                <svg class="w-6 h-6 sm:w-8 sm:h-8 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+            </div>
+            <h3 class="text-2xl sm:text-3xl md:text-4xl font-black text-[#1A1A1A] mb-1 sm:mb-2 gradient-text">50,000+
+            </h3>
+            <p class="text-xs sm:text-sm text-[#737373] font-semibold">Pengguna Aktif</p>
+        </div>
+
+        {{-- Stat 3 --}}
+        <div class="stat-card bg-white rounded-xl sm:rounded-2xl border-2 border-[#EEF0F7] p-4 sm:p-6 text-center"
+            style="animation-delay: 0.2s;">
+            <div
+                class="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-[#FF6B18]/10 to-[#E64627]/10 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                <svg class="w-6 h-6 sm:w-8 sm:h-8 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+            </div>
+            <h3 class="text-2xl sm:text-3xl md:text-4xl font-black text-[#1A1A1A] mb-1 sm:mb-2 gradient-text">200+</h3>
+            <p class="text-xs sm:text-sm text-[#737373] font-semibold">Institusi Partner</p>
+        </div>
+
+        {{-- Stat 4 --}}
+        <div class="stat-card bg-white rounded-xl sm:rounded-2xl border-2 border-[#EEF0F7] p-4 sm:p-6 text-center"
+            style="animation-delay: 0.3s;">
+            <div
+                class="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-[#FF6B18]/10 to-[#E64627]/10 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                <svg class="w-6 h-6 sm:w-8 sm:h-8 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <h3 class="text-2xl sm:text-3xl md:text-4xl font-black text-[#1A1A1A] mb-1 sm:mb-2 gradient-text">25+</h3>
+            <p class="text-xs sm:text-sm text-[#737373] font-semibold">Negara</p>
+        </div>
+    </div>
+</section>
+
+{{-- About Content --}}
+<section class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px] mb-12 sm:mb-16">
+    <div class="grid items-center grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-12">
+        {{-- Left: Image --}}
+        <div class="order-2 lg:order-1">
+            <div class="relative overflow-hidden rounded-2xl">
+                <img src="https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=800&h=600&fit=crop"
+                    alt="BHAYASCIENTIA Team" class="w-full h-[300px] sm:h-[400px] lg:h-[500px] object-cover">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                <div class="absolute bottom-6 left-6 right-6">
+                    <p class="text-sm font-bold text-white sm:text-base">📚 Membangun Ekosistem Pengetahuan</p>
+                </div>
+            </div>
+        </div>
+
+        {{-- Right: Content --}}
+        <div class="order-1 lg:order-2">
+            <div
+                class="inline-flex items-center gap-2 px-4 py-2 mb-4 text-xs font-bold rounded-full bg-[#FFF7F2] text-[#FF6B18] border border-[#FFE2D2]">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                        clip-rule="evenodd" />
+                </svg>
+                Siapa Kami
+            </div>
+
+            <h2 class="text-2xl sm:text-3xl md:text-4xl font-black text-[#1A1A1A] mb-4 sm:mb-6">
+                Platform Publikasi Ilmiah Terdepan di Indonesia
+            </h2>
+
+            <div class="space-y-4 text-sm sm:text-base text-[#737373] leading-relaxed">
+                <p>
+                    <strong class="text-[#1A1A1A]">BHAYASCIENTIA</strong> adalah platform digital yang didedikasikan
+                    untuk mempermudah akses ke publikasi ilmiah berkualitas tinggi. Kami percaya bahwa pengetahuan
+                    adalah hak semua orang, dan teknologi adalah kunci untuk membukanya.
+                </p>
+
+                <p>
+                    Sejak didirikan pada tahun <strong class="text-[#1A1A1A]">2020</strong>, kami telah melayani lebih
+                    dari <strong class="text-[#1A1A1A]">50.000 pengguna aktif</strong> dari berbagai latar
+                    belakang—mulai dari mahasiswa, peneliti, dosen, hingga profesional yang haus akan pengetahuan.
+                </p>
+
+                <p>
+                    Dengan koleksi lebih dari <strong class="text-[#1A1A1A]">10.000 publikasi ilmiah</strong> yang
+                    ter-kurasi dengan baik, kami berkomitmen untuk terus berinovasi dan memperluas akses ke sumber
+                    pengetahuan berkualitas.
+                </p>
+            </div>
+
+            <div class="flex flex-col gap-3 mt-6 sm:flex-row sm:mt-8">
+                <a href="{{ route('publikasi.index') }}"
+                    class="group px-6 py-3 bg-gradient-to-r from-[#FF6B18] to-[#E64627] text-white text-sm font-bold rounded-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-2">
+                    <span>Jelajahi Publikasi</span>
+                    <svg class="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none"
+                        stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
+                </a>
+
+                <a href="{{ route('kontak') }}"
+                    class="px-6 py-3 border-2 border-[#EEF0F7] text-[#737373] text-sm font-bold rounded-xl hover:border-[#FF6B18] hover:text-[#FF6B18] hover:bg-[#FFF7F2] transition-all flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    <span>Hubungi Kami</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+{{-- Mission & Vision --}}
+<section class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px] mb-12 sm:mb-16">
+    <div class="mb-8 text-center sm:mb-12">
+        <h2 class="text-2xl sm:text-3xl md:text-4xl font-black text-[#1A1A1A] mb-3 sm:mb-4">🎯 Visi & Misi Kami</h2>
+        <p class="text-sm sm:text-base md:text-lg text-[#737373] max-w-2xl mx-auto">
+            Membangun masa depan yang lebih cerah melalui akses pengetahuan yang merata
+        </p>
+    </div>
+
+    <div class="grid grid-cols-1 gap-6 md:grid-cols-2 sm:gap-8">
+        {{-- Vision --}}
+        <div class="bg-gradient-to-br from-[#FFF7F2] to-[#FFE8DC] rounded-2xl border-2 border-[#FFE2D2] p-6 sm:p-8">
+            <div
+                class="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-[#FF6B18] to-[#E64627] rounded-2xl flex items-center justify-center mb-4 sm:mb-6">
+                <svg class="text-white w-7 h-7 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+            </div>
+            <h3 class="text-xl sm:text-2xl font-black text-[#1A1A1A] mb-3 sm:mb-4">Visi</h3>
+            <p class="text-sm sm:text-base text-[#737373] leading-relaxed">
+                Menjadi platform publikasi ilmiah terdepan di Asia Tenggara yang demokratis, mudah diakses, dan
+                terpercaya untuk mendukung kemajuan ilmu pengetahuan dan teknologi.
+            </p>
+        </div>
+
+        {{-- Mission --}}
+        <div class="bg-white rounded-2xl border-2 border-[#EEF0F7] p-6 sm:p-8">
+            <div
+                class="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-[#FF6B18] to-[#E64627] rounded-2xl flex items-center justify-center mb-4 sm:mb-6">
+                <svg class="text-white w-7 h-7 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                </svg>
+            </div>
+            <h3 class="text-xl sm:text-2xl font-black text-[#1A1A1A] mb-3 sm:mb-4">Misi</h3>
+            <ul class="space-y-2 text-sm sm:text-base text-[#737373]">
+                <li class="flex items-start gap-2">
+                    <svg class="w-5 h-5 text-[#FF6B18] flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    <span>Menyediakan akses gratis ke publikasi ilmiah berkualitas</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <svg class="w-5 h-5 text-[#FF6B18] flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    <span>Membangun ekosistem kolaborasi antar peneliti</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <svg class="w-5 h-5 text-[#FF6B18] flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    <span>Mendorong inovasi melalui berbagi pengetahuan</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+{{-- Values --}}
+<section class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px] mb-12 sm:mb-16">
+    <div class="mb-8 text-center sm:mb-12">
+        <h2 class="text-2xl sm:text-3xl md:text-4xl font-black text-[#1A1A1A] mb-3 sm:mb-4">💎 Nilai-Nilai Kami</h2>
+        <p class="text-sm sm:text-base md:text-lg text-[#737373] max-w-2xl mx-auto">
+            Prinsip yang menjadi fondasi setiap keputusan dan tindakan kami
+        </p>
+    </div>
+
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+        {{-- Value 1 --}}
+        <div class="value-card bg-white rounded-2xl border-2 border-[#EEF0F7] p-6 text-center">
+            <div
+                class="value-icon w-16 h-16 bg-gradient-to-br from-[#FF6B18]/10 to-[#E64627]/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+            </div>
+            <h3 class="text-lg font-black text-[#1A1A1A] mb-2">Integritas</h3>
+            <p class="text-sm text-[#737373]">Menjunjung tinggi kejujuran dan transparansi dalam setiap aspek</p>
+        </div>
+
+        {{-- Value 2 --}}
+        <div class="value-card bg-white rounded-2xl border-2 border-[#EEF0F7] p-6 text-center">
+            <div
+                class="value-icon w-16 h-16 bg-gradient-to-br from-[#FF6B18]/10 to-[#E64627]/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+            </div>
+            <h3 class="text-lg font-black text-[#1A1A1A] mb-2">Inovasi</h3>
+            <p class="text-sm text-[#737373]">Terus berinovasi untuk memberikan solusi terbaik</p>
+        </div>
+
+        {{-- Value 3 --}}
+        <div class="value-card bg-white rounded-2xl border-2 border-[#EEF0F7] p-6 text-center">
+            <div
+                class="value-icon w-16 h-16 bg-gradient-to-br from-[#FF6B18]/10 to-[#E64627]/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+            </div>
+            <h3 class="text-lg font-black text-[#1A1A1A] mb-2">Kolaborasi</h3>
+            <p class="text-sm text-[#737373]">Membangun sinergi dengan berbagai pihak</p>
+        </div>
+
+        {{-- Value 4 --}}
+        <div class="value-card bg-white rounded-2xl border-2 border-[#EEF0F7] p-6 text-center">
+            <div
+                class="value-icon w-16 h-16 bg-gradient-to-br from-[#FF6B18]/10 to-[#E64627]/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                </svg>
+            </div>
+            <h3 class="text-lg font-black text-[#1A1A1A] mb-2">Kualitas</h3>
+            <p class="text-sm text-[#737373]">Berkomitmen pada standar kualitas tertinggi</p>
+        </div>
+    </div>
+</section>
+
+{{-- Team Structure / Organizational Chart --}}
+<section class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px] mb-12 sm:mb-16">
+    <div class="mb-8 text-center sm:mb-12">
+        <h2 class="text-2xl sm:text-3xl md:text-4xl font-black text-[#1A1A1A] mb-3 sm:mb-4">👥 Struktur Organisasi</h2>
+        <p class="text-sm sm:text-base md:text-lg text-[#737373] max-w-2xl mx-auto">
+            Tim profesional yang berdedikasi untuk memberikan layanan terbaik
+        </p>
+    </div>
+
+    {{-- Leadership / Top Management --}}
+    <div class="mb-8 sm:mb-12">
+        <div class="flex justify-center">
+            <div
+                class="team-card bg-gradient-to-br from-[#FF6B18] to-[#E64627] rounded-2xl border-2 border-[#FF6B18] p-6 sm:p-8 text-center max-w-sm w-full shadow-xl">
+                <div class="relative inline-block mb-4">
+                    <div
+                        class="w-24 h-24 mx-auto overflow-hidden border-4 border-white shadow-lg sm:w-28 sm:h-28 rounded-2xl">
+                        <img src="https://ui-avatars.com/api/?name=Dr+Ahmad+Setiawan&size=200&background=fff&color=FF6B18&bold=true"
+                            alt="CEO" class="object-cover w-full h-full team-image">
+                    </div>
+                    <div
+                        class="absolute flex items-center justify-center w-10 h-10 bg-white shadow-lg -bottom-2 -right-2 rounded-xl">
+                        <svg class="w-6 h-6 text-[#FF6B18]" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd"
+                                d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"
+                                clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                </div>
+                <h3 class="mb-1 text-xl font-black text-white sm:text-2xl">Dr. Ahmad Setiawan</h3>
+                <p class="mb-2 text-sm font-semibold sm:text-base text-white/90">Chief Executive Officer</p>
+                <p class="mb-4 text-xs leading-relaxed sm:text-sm text-white/80">
+                    Memimpin visi strategis dan pertumbuhan platform
+                </p>
+                <div class="flex items-center justify-center gap-2">
+                    <a href="mailto:ahmad@bhayascientia.id"
+                        class="flex items-center justify-center transition-all rounded-lg w-9 h-9 bg-white/20 hover:bg-white/30">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                    </a>
+                    <a href="#"
+                        class="flex items-center justify-center transition-all rounded-lg w-9 h-9 bg-white/20 hover:bg-white/30">
+                        <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+                            <path
+                                d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        {{-- Connector Line --}}
+        <div class="flex justify-center my-4">
+            <div class="w-0.5 h-8 bg-gradient-to-b from-[#FF6B18] to-[#EEF0F7]"></div>
+        </div>
+    </div>
+
+    {{-- Management Team --}}
+    <div class="mb-8 sm:mb-12">
+        <div class="grid max-w-5xl grid-cols-1 gap-6 mx-auto sm:grid-cols-2 lg:grid-cols-3">
+            {{-- CTO --}}
+            <div class="team-card bg-white rounded-2xl border-2 border-[#EEF0F7] p-6 text-center">
+                <div class="relative inline-block mb-4">
+                    <div
+                        class="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-4 border-[#FFF7F2] mx-auto">
+                        <img src="https://ui-avatars.com/api/?name=Budi+Santoso&size=200&background=FFF7F2&color=FF6B18&bold=true"
+                            alt="CTO" class="object-cover w-full h-full team-image">
+                    </div>
+                    <div
+                        class="absolute -bottom-2 -right-2 w-8 h-8 bg-gradient-to-br from-[#FF6B18] to-[#E64627] rounded-lg flex items-center justify-center shadow-lg">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                        </svg>
+                    </div>
+                </div>
+                <h3 class="text-lg sm:text-xl font-black text-[#1A1A1A] mb-1">Budi Santoso, M.Kom</h3>
+                <p class="text-sm text-[#FF6B18] font-semibold mb-2">Chief Technology Officer</p>
+                <p class="text-xs sm:text-sm text-[#737373] leading-relaxed mb-4">
+                    Mengawasi pengembangan teknologi dan infrastruktur platform
+                </p>
+                <div class="flex items-center justify-center gap-2">
+                    <a href="mailto:budi@bhayascientia.id"
+                        class="w-8 h-8 bg-[#EEF0F7] hover:bg-[#FF6B18] hover:text-white rounded-lg flex items-center justify-center transition-all">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                    </a>
+                    <a href="#"
+                        class="w-8 h-8 bg-[#EEF0F7] hover:bg-[#FF6B18] hover:text-white rounded-lg flex items-center justify-center transition-all">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                            <path
+                                d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+                        </svg>
+                    </a>
+                </div>
+            </div>
+
+            {{-- COO --}}
+            <div class="team-card bg-white rounded-2xl border-2 border-[#EEF0F7] p-6 text-center">
+                <div class="relative inline-block mb-4">
+                    <div
+                        class="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-4 border-[#FFF7F2] mx-auto">
+                        <img src="https://ui-avatars.com/api/?name=Siti+Nurhaliza&size=200&background=FFF7F2&color=FF6B18&bold=true"
+                            alt="COO" class="object-cover w-full h-full team-image">
+                    </div>
+                    <div
+                        class="absolute -bottom-2 -right-2 w-8 h-8 bg-gradient-to-br from-[#FF6B18] to-[#E64627] rounded-lg flex items-center justify-center shadow-lg">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                        </svg>
+                    </div>
+                </div>
+                <h3 class="text-lg sm:text-xl font-black text-[#1A1A1A] mb-1">Siti Nurhaliza, S.E., M.M.</h3>
+                <p class="text-sm text-[#FF6B18] font-semibold mb-2">Chief Operating Officer</p>
+                <p class="text-xs sm:text-sm text-[#737373] leading-relaxed mb-4">
+                    Mengelola operasional harian dan efisiensi organisasi
+                </p>
+                <div class="flex items-center justify-center gap-2">
+                    <a href="mailto:siti@bhayascientia.id"
+                        class="w-8 h-8 bg-[#EEF0F7] hover:bg-[#FF6B18] hover:text-white rounded-lg flex items-center justify-center transition-all">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                    </a>
+                    <a href="#"
+                        class="w-8 h-8 bg-[#EEF0F7] hover:bg-[#FF6B18] hover:text-white rounded-lg flex items-center justify-center transition-all">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                            <path
+                                d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+                        </svg>
+                    </a>
+                </div>
+            </div>
+
+            {{-- CMO --}}
+            <div class="team-card bg-white rounded-2xl border-2 border-[#EEF0F7] p-6 text-center">
+                <div class="relative inline-block mb-4">
+                    <div
+                        class="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-4 border-[#FFF7F2] mx-auto">
+                        <img src="https://ui-avatars.com/api/?name=Andi+Wijaya&size=200&background=FFF7F2&color=FF6B18&bold=true"
+                            alt="CMO" class="object-cover w-full h-full team-image">
+                    </div>
+                    <div
+                        class="absolute -bottom-2 -right-2 w-8 h-8 bg-gradient-to-br from-[#FF6B18] to-[#E64627] rounded-lg flex items-center justify-center shadow-lg">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                        </svg>
+                    </div>
+                </div>
+                <h3 class="text-lg sm:text-xl font-black text-[#1A1A1A] mb-1">Andi Wijaya, S.Sos., M.M.</h3>
+                <p class="text-sm text-[#FF6B18] font-semibold mb-2">Chief Marketing Officer</p>
+                <p class="text-xs sm:text-sm text-[#737373] leading-relaxed mb-4">
+                    Memimpin strategi pemasaran dan komunikasi brand
+                </p>
+                <div class="flex items-center justify-center gap-2">
+                    <a href="mailto:andi@bhayascientia.id"
+                        class="w-8 h-8 bg-[#EEF0F7] hover:bg-[#FF6B18] hover:text-white rounded-lg flex items-center justify-center transition-all">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                    </a>
+                    <a href="#"
+                        class="w-8 h-8 bg-[#EEF0F7] hover:bg-[#FF6B18] hover:text-white rounded-lg flex items-center justify-center transition-all">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                            <path
+                                d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        {{-- Connector Line --}}
+        <div class="flex justify-center my-4">
+            <div class="w-0.5 h-8 bg-gradient-to-b from-[#EEF0F7] to-transparent"></div>
+        </div>
+    </div>
+
+    {{-- Department Teams --}}
+    <div>
+        <div class="mb-6 text-center sm:mb-8">
+            <h3 class="text-xl sm:text-2xl font-black text-[#1A1A1A] mb-2">Tim Departemen</h3>
+            <p class="text-sm text-[#737373]">Tim ahli di setiap bidang yang mendukung kesuksesan kami</p>
+        </div>
+
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+            {{-- Development Team --}}
+            <div class="team-card bg-white rounded-xl border-2 border-[#EEF0F7] p-5">
+                <div
+                    class="w-12 h-12 bg-gradient-to-br from-[#FF6B18]/10 to-[#E64627]/10 rounded-xl flex items-center justify-center mb-4">
+                    <svg class="w-6 h-6 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                    </svg>
+                </div>
+                <h4 class="text-base sm:text-lg font-black text-[#1A1A1A] mb-2">Tim Pengembangan</h4>
+                <p class="text-xs sm:text-sm text-[#737373] mb-3">Mengembangkan dan memelihara platform</p>
+                <div class="flex items-center gap-2 text-xs text-[#737373]">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path
+                            d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                    </svg>
+                    <span class="font-semibold">8 Anggota</span>
+                </div>
+            </div>
+
+            {{-- Content Team --}}
+            <div class="team-card bg-white rounded-xl border-2 border-[#EEF0F7] p-5">
+                <div
+                    class="w-12 h-12 bg-gradient-to-br from-[#FF6B18]/10 to-[#E64627]/10 rounded-xl flex items-center justify-center mb-4">
+                    <svg class="w-6 h-6 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                </div>
+                <h4 class="text-base sm:text-lg font-black text-[#1A1A1A] mb-2">Tim Konten</h4>
+                <p class="text-xs sm:text-sm text-[#737373] mb-3">Kurasi dan review publikasi ilmiah</p>
+                <div class="flex items-center gap-2 text-xs text-[#737373]">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path
+                            d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                    </svg>
+                    <span class="font-semibold">6 Anggota</span>
+                </div>
+            </div>
+
+            {{-- Marketing Team --}}
+            <div class="team-card bg-white rounded-xl border-2 border-[#EEF0F7] p-5">
+                <div
+                    class="w-12 h-12 bg-gradient-to-br from-[#FF6B18]/10 to-[#E64627]/10 rounded-xl flex items-center justify-center mb-4">
+                    <svg class="w-6 h-6 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                    </svg>
+                </div>
+                <h4 class="text-base sm:text-lg font-black text-[#1A1A1A] mb-2">Tim Pemasaran</h4>
+                <p class="text-xs sm:text-sm text-[#737373] mb-3">Strategi marketing dan outreach</p>
+                <div class="flex items-center gap-2 text-xs text-[#737373]">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path
+                            d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                    </svg>
+                    <span class="font-semibold">5 Anggota</span>
+                </div>
+            </div>
+
+            {{-- Support Team --}}
+            <div class="team-card bg-white rounded-xl border-2 border-[#EEF0F7] p-5">
+                <div
+                    class="w-12 h-12 bg-gradient-to-br from-[#FF6B18]/10 to-[#E64627]/10 rounded-xl flex items-center justify-center mb-4">
+                    <svg class="w-6 h-6 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                </div>
+                <h4 class="text-base sm:text-lg font-black text-[#1A1A1A] mb-2">Tim Dukungan</h4>
+                <p class="text-xs sm:text-sm text-[#737373] mb-3">Customer support dan bantuan teknis</p>
+                <div class="flex items-center gap-2 text-xs text-[#737373]">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path
+                            d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                    </svg>
+                    <span class="font-semibold">4 Anggota</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+{{-- CTA Section --}}
+<section class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px] mb-12 sm:mb-16">
+    <div
+        class="bg-gradient-to-br from-[#FF6B18] via-[#E64627] to-[#D63A25] rounded-2xl sm:rounded-[28px] p-8 sm:p-12 md:p-16 text-center relative overflow-hidden">
+        {{-- Background Pattern --}}
+        <div class="absolute inset-0 opacity-10">
+            <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <pattern id="cta-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                        <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" stroke-width="1" />
+                    </pattern>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#cta-grid)" />
+            </svg>
+        </div>
+
+        <div class="relative z-10">
+            <h2 class="mb-4 text-2xl font-black text-white sm:text-3xl md:text-4xl sm:mb-6">
+                🚀 Siap Bergabung dengan Kami?
+            </h2>
+            <p class="max-w-2xl mx-auto mb-6 text-base sm:text-lg md:text-xl text-white/90 sm:mb-8">
+                Mulai jelajahi ribuan publikasi ilmiah berkualitas dan bergabung dengan komunitas peneliti dari seluruh
+                Indonesia
+            </p>
+
+            <div class="flex flex-col justify-center gap-3 sm:flex-row sm:gap-4">
+                <a href="{{ route('register') }}"
+                    class="group px-8 py-4 bg-white text-[#FF6B18] text-sm font-bold rounded-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                    </svg>
+                    <span>Daftar Sekarang</span>
+                </a>
+
+                <a href="{{ route('publikasi.index') }}"
+                    class="flex items-center justify-center gap-2 px-8 py-4 text-sm font-bold text-white transition-all border-2 border-white bg-white/20 backdrop-blur-sm rounded-xl hover:bg-white/30">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <span>Jelajahi Publikasi</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
 @endsection
+
+@push('scripts')
+<script>
+    (function() {
+    // Smooth Scroll
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        });
+    });
+
+    // Animate on Scroll
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    }, observerOptions);
+
+    document.querySelectorAll('.stat-card, .value-card, .team-card').forEach(el => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(20px)';
+        el.style.transition = 'all 0.6s ease-out';
+        observer.observe(el);
+    });
+})();
+</script>
+@endpush
