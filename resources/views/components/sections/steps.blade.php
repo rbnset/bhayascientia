@@ -1,4 +1,4 @@
-{{-- resources/views/components/how-it-works.blade.php (WITH MODAL) --}}
+{{-- resources/views/components/how-it-works.blade.php (CLEAN VERSION) --}}
 
 @props([
 'badge' => 'Cara kerja',
@@ -75,32 +75,77 @@ diakses publik, dan diindeks di berbagai search engine untuk meningkatkan visibi
         </div>
 
         <div class="w-full mt-6">
+            {{-- ✨ MOBILE/TABLET: Flow Indicator (Above Cards) --}}
+            <div class="flex items-center justify-center gap-2 mb-6 lg:hidden">
+                @foreach ($steps as $index => $step)
+                {{-- Number Badge (Clickable) --}}
+                <button type="button" data-step-trigger="{{ $index }}"
+                    class="step-trigger flex flex-col items-center gap-1 group transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] rounded-lg p-2"
+                    aria-label="Langkah {{ $index + 1 }}: {{ $step['title'] }}">
+                    <div
+                        class="w-10 h-10 rounded-full bg-gradient-to-br from-[#FF6B18] to-[#E64627] flex items-center justify-center shadow-md group-hover:shadow-xl group-hover:scale-110 transition-all duration-300">
+                        <span class="text-base font-black text-white">{{ $index + 1 }}</span>
+                    </div>
+                    <span
+                        class="text-[10px] font-semibold text-[#6B7280] group-hover:text-[#FF6B18] transition-colors">Langkah</span>
+                </button>
+
+                {{-- Arrow (except last item) --}}
+                @if(!$loop->last)
+                <svg class="w-5 h-5 text-[#FFD4B8] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+                @endif
+                @endforeach
+            </div>
+
             {{-- Arrow Top (desktop only) --}}
             <div class="hidden lg:block">
                 <img src="{{ asset($arrowTop) }}" alt="" class="mb-3 ml-10 select-none" aria-hidden="true">
             </div>
 
-            {{-- Steps --}}
+            {{-- Steps Cards --}}
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 lg:gap-10">
                 @foreach ($steps as $index => $step)
                 <article
-                    class="group step-card rounded-2xl border border-[#EEF0F4] bg-white p-4 sm:p-5 transition-all duration-300 hover:border-[#FF6B18] hover:shadow-xl hover:-translate-y-1 cursor-pointer"
+                    class="group step-card rounded-2xl border border-[#EEF0F4] bg-white p-4 sm:p-5 transition-all duration-300 hover:border-[#FF6B18] hover:shadow-xl hover:-translate-y-1 cursor-pointer relative overflow-hidden"
                     data-step-item data-step-index="{{ $index }}" tabindex="0" role="button"
-                    aria-label="Lihat detail {{ $step['title'] }}">
+                    aria-label="Lihat detail langkah {{ $index + 1 }}: {{ $step['title'] }}">
 
-                    <div class="flex items-center gap-3">
+                    {{-- ✨ Number Badge (Top Right - Desktop/Tablet) --}}
+                    <div
+                        class="absolute flex items-center justify-center pointer-events-none -top-2 -right-2 w-14 h-14 sm:w-16 sm:h-16">
+                        <div class="relative">
+                            {{-- Background glow --}}
+                            <div
+                                class="absolute inset-0 bg-gradient-to-br from-[#FF6B18]/20 to-[#E64627]/20 rounded-full blur-lg group-hover:blur-xl transition-all duration-300">
+                            </div>
+
+                            {{-- Number circle --}}
+                            <div
+                                class="relative w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-[#FFECE1] to-[#FFE8DC] border-2 border-[#FF6B18]/30 group-hover:border-[#FF6B18] flex items-center justify-center transition-all duration-300 group-hover:scale-110">
+                                <span class="text-xl sm:text-2xl font-black text-[#FF6B18] leading-none">
+                                    {{ $index + 1 }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Content --}}
+                    <div class="flex items-center gap-3 mb-3">
                         <div
                             class="step-icon flex h-10 w-10 items-center justify-center rounded-full bg-[#FF6B18] transition-transform duration-300 group-hover:scale-110">
                             <img src="{{ asset($step['icon']) }}" alt="" class="w-5 h-5" aria-hidden="true">
                         </div>
 
                         <h3
-                            class="text-[18px] font-semibold leading-[26px] text-[#111827] group-hover:text-[#FF6B18] transition-colors">
+                            class="text-[18px] font-semibold leading-[26px] text-[#111827] group-hover:text-[#FF6B18] transition-colors flex-1 pr-10">
                             {{ $step['title'] }}
                         </h3>
                     </div>
 
-                    <p class="mt-3 max-w-[52ch] text-[14px] font-medium leading-6 text-[#6B7280] sm:text-[15px]">
+                    <p class="mt-3 text-[14px] font-medium leading-6 text-[#6B7280] sm:text-[15px]">
                         {{ $step['desc'] }}
                     </p>
 
@@ -108,7 +153,8 @@ diakses publik, dan diindeks di berbagai search engine untuk meningkatkan visibi
                     <div
                         class="mt-4 flex items-center gap-2 text-xs font-semibold text-[#FF6B18] opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                         <span>Lihat detail</span>
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" fill="none"
+                            stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                         </svg>
                     </div>
@@ -123,7 +169,7 @@ diakses publik, dan diindeks di berbagai search engine untuk meningkatkan visibi
         </div>
     </div>
 
-    {{-- ✨ MODAL POPUP --}}
+    {{-- MODAL POPUP --}}
     <div id="stepModal"
         class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-300"
         data-modal role="dialog" aria-modal="true" aria-labelledby="modalTitle">
@@ -141,12 +187,8 @@ diakses publik, dan diindeks di berbagai search engine untuk meningkatkan visibi
                         </div>
                         <span class="text-sm font-bold text-white/90">Langkah <span id="modalStepNumber"></span></span>
                     </div>
-                    <h3 id="modalTitle" class="text-2xl font-black text-white sm:text-3xl">
-                        <!-- Title dari JS -->
-                    </h3>
-                    <p id="modalSubtitle" class="mt-1 text-sm sm:text-base text-white/90">
-                        <!-- Subtitle dari JS -->
-                    </p>
+                    <h3 id="modalTitle" class="text-2xl font-black text-white sm:text-3xl"></h3>
+                    <p id="modalSubtitle" class="mt-1 text-sm sm:text-base text-white/90"></p>
                 </div>
 
                 <button type="button" data-close-modal
@@ -161,8 +203,6 @@ diakses publik, dan diindeks di berbagai search engine untuk meningkatkan visibi
 
             {{-- Modal Body --}}
             <div class="overflow-y-auto max-h-[calc(90vh-180px)] px-6 py-6 space-y-6">
-
-                {{-- Description --}}
                 <div>
                     <h4 class="text-sm font-bold text-[#111827] mb-2 flex items-center gap-2">
                         <svg class="w-5 h-5 text-[#FF6B18]" fill="currentColor" viewBox="0 0 20 20">
@@ -172,12 +212,9 @@ diakses publik, dan diindeks di berbagai search engine untuk meningkatkan visibi
                         </svg>
                         Detail Proses
                     </h4>
-                    <p id="modalDetails" class="text-sm sm:text-base text-[#6B7280] leading-relaxed">
-                        <!-- Details dari JS -->
-                    </p>
+                    <p id="modalDetails" class="text-sm sm:text-base text-[#6B7280] leading-relaxed"></p>
                 </div>
 
-                {{-- Benefits List --}}
                 <div>
                     <h4 class="text-sm font-bold text-[#111827] mb-3 flex items-center gap-2">
                         <svg class="w-5 h-5 text-[#FF6B18]" fill="currentColor" viewBox="0 0 20 20">
@@ -186,16 +223,12 @@ diakses publik, dan diindeks di berbagai search engine untuk meningkatkan visibi
                         </svg>
                         Keuntungan
                     </h4>
-                    <ul id="modalBenefits" class="space-y-2">
-                        <!-- Benefits dari JS -->
-                    </ul>
+                    <ul id="modalBenefits" class="space-y-2"></ul>
                 </div>
 
-                {{-- CTA Button --}}
                 <div class="pt-4">
                     <a id="modalCta" href="#"
                         class="block w-full text-center px-6 py-4 bg-gradient-to-r from-[#FF6B18] to-[#E64627] text-white text-sm sm:text-base font-bold rounded-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
-                        <!-- CTA text dari JS -->
                     </a>
                 </div>
             </div>
@@ -203,7 +236,7 @@ diakses publik, dan diindeks di berbagai search engine untuk meningkatkan visibi
     </div>
 </section>
 
-{{-- Enhanced JavaScript --}}
+{{-- JavaScript --}}
 @pushOnce('scripts')
 <script>
     (function() {
@@ -212,83 +245,80 @@ diakses publik, dan diindeks di berbagai search engine untuk meningkatkan visibi
     const section = document.querySelector('[data-steps-section]');
     if (!section) return;
 
-    // Data steps
     const stepsData = @json($steps);
-
-    // Elements
     const modal = section.querySelector('[data-modal]');
     const modalContent = modal?.querySelector('.modal-content');
     const closeModalBtn = modal?.querySelector('[data-close-modal]');
     const stepCards = section.querySelectorAll('[data-step-item]');
+    const stepTriggers = section.querySelectorAll('[data-step-trigger]'); // ✨ Top indicators
 
-    // ✅ Open Modal
+    // ✅ Function to open modal
+    function openModal(index) {
+        const step = stepsData[index];
+        if (!step || !modal) return;
+
+        modal.querySelector('#modalIcon').src = "{{ asset('') }}" + step.icon;
+        modal.querySelector('#modalStepNumber').textContent = index + 1;
+        modal.querySelector('#modalTitle').textContent = step.title || '';
+        modal.querySelector('#modalSubtitle').textContent = step.desc || '';
+        modal.querySelector('#modalDetails').textContent = step.details || '';
+
+        const benefitsList = modal.querySelector('#modalBenefits');
+        if (benefitsList && step.benefits) {
+            benefitsList.innerHTML = step.benefits.map(benefit => `
+                <li class="flex items-start gap-2">
+                    <svg class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                    <span class="text-sm text-[#6B7280]">${benefit}</span>
+                </li>
+            `).join('');
+        }
+
+        const ctaBtn = modal.querySelector('#modalCta');
+        if (ctaBtn) {
+            ctaBtn.textContent = step.cta || 'Selengkapnya';
+            ctaBtn.href = step.cta_link || '#';
+        }
+
+        modal.classList.remove('pointer-events-none', 'opacity-0');
+        modal.classList.add('pointer-events-auto', 'opacity-100');
+
+        setTimeout(() => {
+            if (modalContent) modalContent.style.transform = 'scale(1)';
+        }, 10);
+
+        document.body.style.overflow = 'hidden';
+    }
+
+    // ✅ Step Cards Click Handler
     stepCards.forEach(card => {
-        const openModal = () => {
+        const handleClick = () => {
             const index = parseInt(card.dataset.stepIndex);
-            const step = stepsData[index];
-            if (!step || !modal) return;
-
-            // Populate modal
-            modal.querySelector('#modalIcon').src = "{{ asset('') }}" + step.icon;
-            modal.querySelector('#modalStepNumber').textContent = index + 1;
-            modal.querySelector('#modalTitle').textContent = step.title || '';
-            modal.querySelector('#modalSubtitle').textContent = step.desc || '';
-            modal.querySelector('#modalDetails').textContent = step.details || '';
-
-            // Benefits list
-            const benefitsList = modal.querySelector('#modalBenefits');
-            if (benefitsList && step.benefits) {
-                benefitsList.innerHTML = step.benefits.map(benefit => `
-                    <li class="flex items-start gap-2">
-                        <svg class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                        </svg>
-                        <span class="text-sm text-[#6B7280]">${benefit}</span>
-                    </li>
-                `).join('');
-            }
-
-            // CTA
-            const ctaBtn = modal.querySelector('#modalCta');
-            if (ctaBtn) {
-                ctaBtn.textContent = step.cta || 'Selengkapnya';
-                ctaBtn.href = step.cta_link || '#';
-            }
-
-            // Show modal
-            modal.classList.remove('pointer-events-none', 'opacity-0');
-            modal.classList.add('pointer-events-auto', 'opacity-100');
-
-            setTimeout(() => {
-                if (modalContent) {
-                    modalContent.style.transform = 'scale(1)';
-                }
-            }, 10);
-
-            // Lock body scroll
-            document.body.style.overflow = 'hidden';
+            openModal(index);
         };
 
-        // Click handler
-        card.addEventListener('click', openModal);
-
-        // Keyboard handler
+        card.addEventListener('click', handleClick);
         card.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                openModal();
+                handleClick();
             }
+        });
+    });
+
+    // ✅ Top Indicators Click Handler (Mobile/Tablet)
+    stepTriggers.forEach(trigger => {
+        trigger.addEventListener('click', () => {
+            const index = parseInt(trigger.dataset.stepTrigger);
+            openModal(index);
         });
     });
 
     // ✅ Close Modal
     function closeModal() {
         if (!modal) return;
-
-        if (modalContent) {
-            modalContent.style.transform = 'scale(0.95)';
-        }
-
+        if (modalContent) modalContent.style.transform = 'scale(0.95)';
         setTimeout(() => {
             modal.classList.remove('pointer-events-auto', 'opacity-100');
             modal.classList.add('pointer-events-none', 'opacity-0');
@@ -296,32 +326,24 @@ diakses publik, dan diindeks di berbagai search engine untuk meningkatkan visibi
         }, 150);
     }
 
-    if (closeModalBtn) {
-        closeModalBtn.addEventListener('click', closeModal);
-    }
-
-    // Close on backdrop click
+    if (closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
     if (modal) {
         modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                closeModal();
-            }
+            if (e.target === modal) closeModal();
         });
     }
-
-    // Close on ESC key
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && modal && !modal.classList.contains('pointer-events-none')) {
             closeModal();
         }
     });
 
-    console.log('✅ How It Works with Modal initialized');
+    console.log('✅ How It Works (Clean Version) initialized');
 })();
 </script>
 @endPushOnce
 
-{{-- Modal Styles --}}
+{{-- Styles --}}
 @pushOnce('styles')
 <style>
     #stepModal.pointer-events-auto {
@@ -332,7 +354,6 @@ diakses publik, dan diindeks di berbagai search engine untuk meningkatkan visibi
         transform: scale(0.95);
     }
 
-    /* Hover effect untuk cards */
     .step-card {
         position: relative;
     }
@@ -352,7 +373,6 @@ diakses publik, dan diindeks di berbagai search engine untuk meningkatkan visibi
         opacity: 1;
     }
 
-    /* Focus visible */
     .step-card:focus-visible {
         outline: 3px solid #FF6B18;
         outline-offset: 2px;
