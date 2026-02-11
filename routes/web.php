@@ -4,6 +4,7 @@ use App\Http\Controllers\PublicationController;
 use App\Http\Controllers\PublikasiController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AuthorController;
+use App\Http\Controllers\ContactController;
 use App\Models\PublicationVersion;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
@@ -129,3 +130,6 @@ Route::post('/publikasi/{slug}/favorite', [PublicationController::class, 'toggle
 
 Route::post('/publikasi/{slug}/save', [PublicationController::class, 'toggleSaved'])
     ->name('publikasi.save');
+
+Route::get('/kontak', [ContactController::class, 'index'])->name('kontak');
+Route::post('/kontak', [ContactController::class, 'submit'])->name('kontak.submit');
