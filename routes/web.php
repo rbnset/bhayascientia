@@ -6,6 +6,12 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AuthorController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\LegalController;
+use App\Http\Controllers\Publication\PublicationBrowseController;
+use App\Http\Controllers\Publication\PublicationCategoriesController;
+use App\Http\Controllers\Publication\PublicationIndexController;
+use App\Http\Controllers\Publication\PublicationLibraryController;
+use App\Http\Controllers\Publication\PublicationSearchController;
+use App\Http\Controllers\Publication\PublicationTrendingController;
 use App\Http\Controllers\SubmissionGuidelineController;
 use App\Http\Controllers\SubscriptionController;
 use App\Models\PublicationVersion;
@@ -113,13 +119,13 @@ Route::middleware('auth')->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::prefix('publikasi')->name('publikasi.')->group(function () {
-    Route::get('/', [PublicationController::class, 'index'])->name('index');
+    Route::get('/', [PublicationIndexController::class, 'index'])->name('index');
 
-    Route::get('/jelajahi', [PublicationController::class, 'browse'])->name('browse');
-    Route::get('/search', [PublicationController::class, 'search'])->name('search');
-    Route::get('/categories', [PublicationController::class, 'categories'])->name('categories');
-    Route::get('/trending', [PublicationController::class, 'trending'])->name('trending');
-    Route::get('/library', [PublicationController::class, 'library'])->name('library');
+    Route::get('/jelajahi', [PublicationBrowseController::class, 'browse'])->name('browse');
+    Route::get('/search', [PublicationSearchController::class, 'search'])->name('search');
+    Route::get('/categories', [PublicationCategoriesController::class, 'categories'])->name('categories');
+    Route::get('/trending', [PublicationTrendingController::class, 'trending'])->name('trending');
+    Route::get('/library', [PublicationLibraryController::class, 'library'])->name('library');
     Route::get('/{slug}', [PublicationController::class, 'show'])->name('show');
     Route::get('/{slug}/download', [PublicationController::class, 'download'])->name('download');
     Route::get('/{slug}/read', [PublicationController::class, 'read'])->name('read');
