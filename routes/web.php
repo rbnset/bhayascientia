@@ -5,6 +5,7 @@ use App\Http\Controllers\PublikasiController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AuthorController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\LegalController;
 use App\Http\Controllers\SubmissionGuidelineController;
 use App\Http\Controllers\SubscriptionController;
 use App\Models\PublicationVersion;
@@ -149,3 +150,8 @@ Route::middleware(['auth'])->group(function () {
 
 Route::get('/submission-guidelines', [SubmissionGuidelineController::class, 'index'])
     ->name('submission-guidelines');
+
+Route::controller(LegalController::class)->group(function () {
+    Route::get('/privacy-policy', 'privacyPolicy')->name('privacy-policy');
+    Route::get('/terms-conditions', 'termsConditions')->name('terms-conditions');
+});
