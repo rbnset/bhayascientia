@@ -183,4 +183,9 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
     {
         return $this->savedPublications()->where('publication_id', $publicationId)->exists();
     }
+
+    public function subscription()
+    {
+        return $this->hasOne(Subscription::class);
+    }
 }

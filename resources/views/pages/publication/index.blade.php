@@ -6,7 +6,7 @@
 
 @section('custom_navbar')
 {{-- Navbar dengan Avatar/Logo Logic --}}
-<x-navbar ctaLabel="Mulai Berlangganan" ctaRoute="publikasi.library" ctaIcon="sparkles" ctaSubtext="Gratis"
+<x-navbar ctaLabel="Mulai Berlangganan" ctaRoute="subscription.index" ctaIcon="sparkles" ctaSubtext="Gratis"
     ctaVariant="premium" :showAvatarWhenAuth="true" :showCtaAlways="true" />
 
 {{-- Search/Filter Modal Component --}}

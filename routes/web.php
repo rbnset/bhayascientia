@@ -5,6 +5,7 @@ use App\Http\Controllers\PublikasiController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AuthorController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\SubscriptionController;
 use App\Models\PublicationVersion;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
@@ -133,3 +134,14 @@ Route::post('/publikasi/{slug}/save', [PublicationController::class, 'toggleSave
 
 Route::get('/kontak', [ContactController::class, 'index'])->name('kontak');
 Route::post('/kontak', [ContactController::class, 'submit'])->name('kontak.submit');
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/subscription', [SubscriptionController::class, 'index'])->name('subscription.index');
+    Route::post('/subscription', [SubscriptionController::class, 'store'])->name('subscription.store');
+    Route::put('/subscription', [SubscriptionController::class, 'update'])->name('subscription.update');
+    Route::delete('/subscription', [SubscriptionController::class, 'destroy'])->name('subscription.destroy');
+    Route::post('/subscription/reactivate', [SubscriptionController::class, 'reactivate'])->name('subscription.reactivate');
+
+    // ✅ AJAX endpoint untuk dynamic category filtering
+    Route::post('/subscription/get-categories', [SubscriptionController::class, 'getCategories'])->name('subscription.getCategories');
+});
