@@ -4,30 +4,31 @@
 [
 'image' => 'assets/images/thumbnails/lms.jpg',
 'title' => 'Tulis dengan data. Terbit dengan tanggung jawab.',
-'excerpt' => 'Dapatkan peninjauan editorial untuk struktur, argumentasi, dan etika akademik tanpa klaim peer-review
-jurnal.',
-'url' => '#',
-'alt' => 'thumbnail',
+'excerpt' => 'Platform publikasi akademik non-formal untuk penulis yang ingin naskahnya lebih rapi, risetnya lebih kuat,
+dan prosesnya lebih jelas—tanpa klaim peer-review jurnal.',
+'url' => '/submission-guidelines',
+'alt' => 'Publikasi akademik berbasis data',
 ],
 [
 'image' => 'assets/images/thumbnails/event.jpg',
-'title' => 'Tulis dengan data. Terbit dengan tanggung jawab.',
-'excerpt' => 'Dapatkan peninjauan editorial untuk struktur, argumentasi, dan etika akademik tanpa klaim peer-review
-jurnal.',
-'url' => '#',
-'alt' => 'thumbnail',
+'title' => 'Dari ide ke publikasi. Kami dampingi prosesnya.',
+'excerpt' => 'Dapatkan feedback editorial untuk struktur, argumentasi, dan sitasi. Publikasikan karya Anda dengan
+standar akademik yang terukur dan kredibel.',
+'url' => '/publikasi',
+'alt' => 'Proses editorial akademik',
 ],
 [
 'image' => 'assets/images/thumbnails/konsultasi.jpg',
-'title' => 'Tulis dengan data. Terbit dengan tanggung jawab.',
-'excerpt' => 'Dapatkan peninjauan editorial untuk struktur, argumentasi, dan etika akademik tanpa klaim peer-review
-jurnal.',
-'url' => '#',
-'alt' => 'thumbnail',
+'title' => 'Riset kuat. Tulisan jelas. Publikasi etis.',
+'excerpt' => 'Tidak sekadar opini. Tidak sekaku jurnal. BHAYASCIENTIA hadir sebagai jembatan antara pemikiran ilmiah dan
+aksesibilitas publik.',
+'url' => '/tentang',
+'alt' => 'Standar etika akademik',
 ],
 ],
 'arrowIcon' => 'assets/images/icons/arrow.svg',
 ])
+
 
 <section id="Featured" data-featured-carousel
     class="mt-2 relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen max-w-none">
