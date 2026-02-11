@@ -182,6 +182,94 @@
     .version-badge .animate-pulse {
         animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     }
+
+    /* ✅ Modal Styles */
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(4px);
+        z-index: 9998;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .modal-overlay.show {
+        opacity: 1;
+    }
+
+    .modal-container {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        opacity: 0;
+        transform: scale(0.95);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .modal-container.show {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    .modal-content {
+        background: white;
+        border-radius: 1.5rem;
+        max-width: 800px;
+        width: 100%;
+        max-height: 85vh;
+        overflow: hidden;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+
+    .modal-header {
+        padding: 1.5rem 2rem;
+        border-bottom: 2px solid #EEF0F7;
+        background: linear-gradient(135deg, #FAFBFC 0%, #FFFFFF 100%);
+    }
+
+    .modal-body {
+        padding: 2rem;
+        overflow-y: auto;
+        max-height: calc(85vh - 120px);
+    }
+
+    .modal-body::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .modal-body::-webkit-scrollbar-track {
+        background: #F8F9FC;
+        border-radius: 4px;
+    }
+
+    .modal-body::-webkit-scrollbar-thumb {
+        background: #FF6B18;
+        border-radius: 4px;
+    }
+
+    .modal-body::-webkit-scrollbar-thumb:hover {
+        background: #E64627;
+    }
+
+    /* Author Card in Modal */
+    .author-card-modal {
+        padding: 1.25rem;
+        background: linear-gradient(135deg, #FAFBFC 0%, #FFFFFF 100%);
+        border: 2px solid #EEF0F7;
+        border-radius: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .author-card-modal:hover {
+        border-color: #FF6B18;
+        box-shadow: 0 8px 16px rgba(255, 107, 24, 0.1);
+        transform: translateY(-2px);
+    }
 </style>
 @endpush
 
@@ -554,6 +642,86 @@
 
 </article>
 
+{{-- ✅ Authors Modal --}}
+<div id="authorsModal" class="modal-overlay" style="display: none;" onclick="closeAuthorsModal(event)">
+    <div class="modal-container">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            {{-- Modal Header --}}
+            <div class="modal-header">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-2xl font-bold text-[#1A1A1A] mb-1">All Authors</h3>
+                        <p class="text-sm text-[#737373]">{{ $authors->count() }} {{ $authors->count() > 1 ?
+                            'contributors' : 'contributor' }} to this publication</p>
+                    </div>
+                    <button onclick="closeAuthorsModal()"
+                        class="p-2 rounded-full hover:bg-[#FFF7F2] transition-colors duration-300 group">
+                        <svg class="w-6 h-6 text-[#737373] group-hover:text-[#FF6B18]" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            {{-- Modal Body --}}
+            <div class="modal-body">
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    @foreach($authors as $index => $author)
+                    <div class="author-card-modal">
+                        <div class="flex items-start gap-4">
+                            {{-- Author Photo/Initial --}}
+                            <div class="flex-shrink-0">
+                                @if($author['photo'])
+                                <img src="{{ $author['photo'] }}" alt="{{ $author['name'] }}"
+                                    class="object-cover w-16 h-16 rounded-full shadow-md ring-2 ring-white">
+                                @else
+                                <div
+                                    class="w-16 h-16 bg-gradient-to-br from-[#FF6B18] to-[#E64627] rounded-full flex items-center justify-center text-white text-lg font-bold ring-2 ring-white shadow-md">
+                                    {{ $author['initials'] }}
+                                </div>
+                                @endif
+                            </div>
+
+                            {{-- Author Info --}}
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-start justify-between gap-2 mb-2">
+                                    <h4 class="text-base font-bold text-[#1A1A1A] leading-snug">
+                                        {{ $author['name'] }}
+                                    </h4>
+                                    @if($author['is_corresponding'])
+                                    <span
+                                        class="px-2 py-0.5 bg-[#FFF7F2] text-xs font-bold text-[#FF6B18] rounded-full flex-shrink-0"
+                                        title="Corresponding Author">
+                                        CA
+                                    </span>
+                                    @endif
+                                </div>
+
+                                <p class="text-sm text-[#737373] mb-2">{{ $author['affiliation'] }}</p>
+
+                                {{-- Author Order --}}
+                                <div class="flex items-center gap-2 mt-3 pt-3 border-t border-[#EEF0F7]">
+                                    <svg class="w-4 h-4 text-[#FF6B18]" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                                    </svg>
+                                    <span class="text-xs font-semibold text-[#737373]">
+                                        Author #{{ $index + 1 }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 @push('scripts')
 <script>
     // ✅ CSRF Token setup
@@ -702,9 +870,52 @@ function sharePublication() {
  * ✅ Show All Authors Modal
  */
 function showAllAuthors() {
-    // TODO: Implement modal untuk tampilkan semua authors
-    showNotification('Modal authors akan segera hadir!', 'info');
+    const modal = document.getElementById('authorsModal');
+    const container = modal.querySelector('.modal-container');
+
+    // Show modal
+    modal.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+
+    // Trigger animation
+    requestAnimationFrame(() => {
+        modal.classList.add('show');
+        container.classList.add('show');
+    });
 }
+
+/**
+ * ✅ Close Authors Modal
+ */
+function closeAuthorsModal(event) {
+    // If event exists and it's not clicking the overlay, return
+    if (event && event.target !== event.currentTarget) {
+        return;
+    }
+
+    const modal = document.getElementById('authorsModal');
+    const container = modal.querySelector('.modal-container');
+
+    // Remove animation classes
+    modal.classList.remove('show');
+    container.classList.remove('show');
+
+    // Hide modal after animation
+    setTimeout(() => {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }, 300);
+}
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('authorsModal');
+        if (modal.style.display === 'block') {
+            closeAuthorsModal();
+        }
+    }
+});
 
 /**
  * ✅ View Cover Fullscreen
