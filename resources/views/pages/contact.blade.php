@@ -758,64 +758,6 @@
     </div>
 </section>
 
-{{-- FAQ Section --}}
-<section class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px] mb-12 sm:mb-16">
-    <div class="mb-8 text-center sm:mb-12">
-        <h2 class="text-2xl sm:text-3xl md:text-4xl font-black text-[#1A1A1A] mb-3 sm:mb-4">❓ Pertanyaan Umum</h2>
-        <p class="text-sm sm:text-base md:text-lg text-[#737373]">Mungkin jawaban yang Anda cari ada di sini</p>
-    </div>
-
-    <div class="max-w-3xl mx-auto space-y-3 sm:space-y-4">
-        <details
-            class="group bg-white rounded-xl sm:rounded-2xl border-2 border-[#EEF0F7] p-4 sm:p-6 hover:border-[#FF6B18] transition-all">
-            <summary
-                class="flex items-center justify-between cursor-pointer text-sm sm:text-base font-bold text-[#1A1A1A] list-none">
-                <span class="pr-4">Bagaimana cara mengakses publikasi?</span>
-                <svg class="flex-shrink-0 w-4 h-4 transition-transform sm:w-5 sm:h-5 group-open:rotate-180" fill="none"
-                    stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                </svg>
-            </summary>
-            <p class="mt-3 sm:mt-4 text-xs sm:text-sm text-[#737373] leading-relaxed">
-                Anda dapat mengakses ribuan publikasi ilmiah secara gratis melalui platform kami. Cukup browse katalog,
-                pilih publikasi yang Anda inginkan, dan download PDF-nya.
-            </p>
-        </details>
-
-        <details
-            class="group bg-white rounded-xl sm:rounded-2xl border-2 border-[#EEF0F7] p-4 sm:p-6 hover:border-[#FF6B18] transition-all">
-            <summary
-                class="flex items-center justify-between cursor-pointer text-sm sm:text-base font-bold text-[#1A1A1A] list-none">
-                <span class="pr-4">Apakah perlu mendaftar untuk download publikasi?</span>
-                <svg class="flex-shrink-0 w-4 h-4 transition-transform sm:w-5 sm:h-5 group-open:rotate-180" fill="none"
-                    stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                </svg>
-            </summary>
-            <p class="mt-3 sm:mt-4 text-xs sm:text-sm text-[#737373] leading-relaxed">
-                Ya, Anda perlu mendaftar akun gratis untuk dapat mengunduh publikasi. Pendaftaran mudah dan cepat, hanya
-                memerlukan email dan password.
-            </p>
-        </details>
-
-        <details
-            class="group bg-white rounded-xl sm:rounded-2xl border-2 border-[#EEF0F7] p-4 sm:p-6 hover:border-[#FF6B18] transition-all">
-            <summary
-                class="flex items-center justify-between cursor-pointer text-sm sm:text-base font-bold text-[#1A1A1A] list-none">
-                <span class="pr-4">Berapa lama waktu respons untuk pertanyaan?</span>
-                <svg class="flex-shrink-0 w-4 h-4 transition-transform sm:w-5 sm:h-5 group-open:rotate-180" fill="none"
-                    stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                </svg>
-            </summary>
-            <p class="mt-3 sm:mt-4 text-xs sm:text-sm text-[#737373] leading-relaxed">
-                Tim kami akan merespons pertanyaan Anda dalam waktu maksimal 1x24 jam pada hari kerja (Senin-Jumat,
-                09:00-17:00 WIB).
-            </p>
-        </details>
-    </div>
-</section>
-
 {{-- Google Maps Modal --}}
 <div id="mapModal" class="modal-overlay" onclick="closeMapModal()">
     <div class="modal-content" onclick="event.stopPropagation()">
