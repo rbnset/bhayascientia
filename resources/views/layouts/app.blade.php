@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="id">
+<html lang="id" class="scroll-smooth">
 
 <head>
     <meta charset="UTF-8">
@@ -14,36 +14,68 @@
     <link rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap">
 
-    {{-- ✅ TAMBAHKAN Alpine.js --}}
+    {{-- Alpine.js --}}
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    {{-- ✨ BASE STYLES untuk prevent horizontal scroll --}}
+    <style>
+        /* Prevent horizontal scroll */
+        html,
+        body {
+            max-width: 100vw;
+            overflow-x: hidden;
+        }
+
+        body {
+            position: relative;
+        }
+
+        /* Smooth scroll */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Fix untuk element yang keluar viewport */
+        * {
+            box-sizing: border-box;
+        }
+
+        /* Container default max width */
+        .container-safe {
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+    </style>
 
     @stack('styles')
 </head>
 
-<body class="m-0 bg-F8F9FC font-Poppins text-0B0B0B">
-    {{-- ✅ Navbar: Conditional rendering untuk custom navbar --}}
-    @hasSection('custom_navbar')
-    {{-- Jika page define custom navbar, render dari section --}}
-    @yield('custom_navbar')
-    @else
-    {{-- Default navbar untuk semua page lainnya --}}
-    <x-navbar />
-    @endif
+<body class="m-0 antialiased bg-F8F9FC font-Poppins text-0B0B0B">
+    {{-- Wrapper untuk prevent overflow --}}
+    <div class="flex flex-col min-h-screen overflow-x-hidden">
 
-    {{-- Main content --}}
-    <main class="@yield('main_class', 'mt-10 sm:mt-14')">
-        @yield('content')
-    </main>
+        {{-- Navbar --}}
+        @hasSection('custom_navbar')
+        @yield('custom_navbar')
+        @else
+        <x-navbar />
+        @endif
 
-    {{-- Footer: Hidden jika ada section 'hide_footer' --}}
-    @if (trim($__env->yieldContent('hide_footer')) !== 'true')
-    <x-layouts.footer />
-    @endif
+        {{-- Main content --}}
+        <main class="flex-1 @yield('main_class', 'mt-10 sm:mt-14') overflow-x-hidden">
+            @yield('content')
+        </main>
 
-    {{-- Bottom navigation stack (untuk mobile bottom nav di publikasi) --}}
+        {{-- Footer --}}
+        @if (trim($__env->yieldContent('hide_footer')) !== 'true')
+        <x-layouts.footer />
+        @endif
+    </div>
+
+    {{-- Bottom navigation stack --}}
     @stack('bottom_nav')
 
-    {{-- Additional scripts --}}
+    {{-- Scripts --}}
     @stack('scripts')
 </body>
 

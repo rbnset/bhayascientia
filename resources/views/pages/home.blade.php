@@ -3,12 +3,14 @@
 @section('title', 'Beranda')
 
 @section('custom_navbar')
-<x-navbar ctaLabel="Browse Publikasi" ctaRoute="publikasi.index" ctaIcon="book" :showAvatarWhenAuth="false" {{-- Logo
-    hilang saat login, avatar muncul --}} :showCtaAlways="true" {{-- CTA hilang saat login --}} />
+<x-navbar ctaLabel="Browse Publikasi" ctaRoute="publikasi.index" ctaIcon="book" :showAvatarWhenAuth="false"
+    :showCtaAlways="true" />
 @endsection
 
 @section('content')
-<main class="mt-10 sm:mt-12">
+{{-- ✨ Wrapper dengan overflow control --}}
+<div class="w-full overflow-x-hidden">
+
     <x-hero.home badge-icon="assets/images/icons/crown.svg" badge-text="Bantu Naskahmu Naik Kelas."
         youtube-id="rJQOQCe30EY" />
 
@@ -17,5 +19,6 @@
     <x-sections.testimoni />
     <x-sections.coming-soon />
     <x-sections.faq />
-</main>
+
+</div>
 @endsection
