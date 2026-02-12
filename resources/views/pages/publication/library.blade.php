@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('title', 'My Library')
-@section('main_class', 'mt-0 pb-20 sm:pb-16')
+@section('main_class', 'mt-0 pb-32 sm:pb-20') {{-- ✅ Extra padding untuk mobile nav --}}
 @section('hide_footer', 'true')
 
 {{-- Custom Navbar dengan Avatar --}}
@@ -19,11 +19,58 @@
 
     /* Card animations */
     .stat-card {
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* ✅ Active state untuk stat card */
+    .stat-card.active {
+        transform: scale(1.02);
+        box-shadow: 0 8px 24px rgba(255, 107, 24, 0.25);
+    }
+
+    /* ✅ Active indicator */
+    .stat-card.active::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #FF6B18, #E64627);
+        animation: slideIn 0.4s ease;
+    }
+
+    @keyframes slideIn {
+        from {
+            transform: translateX(-100%);
+        }
+
+        to {
+            transform: translateX(0);
+        }
+    }
+
+    /* ✅ Pulse animation untuk active card */
+    .stat-card.active {
+        animation: gentlePulse 2s ease-in-out infinite;
+    }
+
+    @keyframes gentlePulse {
+
+        0%,
+        100% {
+            box-shadow: 0 8px 24px rgba(255, 107, 24, 0.25);
+        }
+
+        50% {
+            box-shadow: 0 12px 32px rgba(255, 107, 24, 0.35);
+        }
     }
 
     @media (hover: hover) {
-        .stat-card:hover {
+        .stat-card:hover:not(.active) {
             transform: translateY(-4px);
         }
     }
@@ -51,6 +98,12 @@
             transform: scale(0.8);
             opacity: 0;
         }
+    }
+
+    /* ✅ Smooth scroll dengan offset untuk mobile nav */
+    html {
+        scroll-behavior: smooth;
+        scroll-padding-bottom: 100px;
     }
 </style>
 @endpush
@@ -219,11 +272,12 @@
     @else
     {{-- ✅ LOGGED IN - Actual Library Content --}}
 
-    {{-- Stats Cards (Mobile Optimized) --}}
+    {{-- ✅ Stats Cards dengan Active State --}}
     <div class="grid grid-cols-1 gap-3 mb-6 sm:gap-4 sm:mb-8 sm:grid-cols-3">
-        {{-- Favorites --}}
-        <div
-            class="stat-card bg-gradient-to-br from-[#FF6B18] to-[#E64627] rounded-xl sm:rounded-2xl p-5 sm:p-6 text-white hover:shadow-xl transition-shadow duration-300">
+
+        {{-- ✅ Favorites Card - Active if favorites tab --}}
+        <a href="{{ route('publikasi.library', ['tab' => 'favorites']) }}"
+            class="stat-card bg-gradient-to-br from-[#FF6B18] to-[#E64627] rounded-xl sm:rounded-2xl p-5 sm:p-6 text-white transition-all duration-300 {{ $activeTab === 'favorites' ? 'active ring-4 ring-[#FF6B18]/30' : 'hover:shadow-xl' }}">
             <div class="flex items-center justify-between mb-3 sm:mb-4">
                 <div
                     class="flex items-center justify-center w-10 h-10 rounded-full sm:w-12 sm:h-12 bg-white/20 backdrop-blur-sm">
@@ -234,43 +288,60 @@
                 </div>
                 <span class="text-2xl font-bold sm:text-3xl">{{ $stats['favorites'] }}</span>
             </div>
-            <h3 class="mb-1 text-base font-bold sm:text-lg">Favorites</h3>
+            <h3 class="flex items-center justify-between mb-1 text-base font-bold sm:text-lg">
+                Favorites
+                @if($activeTab === 'favorites')
+                <span class="text-xs bg-white/20 px-2 py-0.5 rounded-full">Active</span>
+                @endif
+            </h3>
             <p class="text-xs sm:text-sm text-white/80">Publikasi favorit Anda</p>
-        </div>
+        </a>
 
-        {{-- History --}}
-        <div
-            class="stat-card bg-white rounded-xl sm:rounded-2xl p-5 sm:p-6 border border-[#EEF0F7] hover:shadow-lg transition-shadow duration-300">
+        {{-- ✅ History Card - Active if history tab --}}
+        <a href="{{ route('publikasi.library', ['tab' => 'history']) }}"
+            class="stat-card bg-white rounded-xl sm:rounded-2xl p-5 sm:p-6 border border-[#EEF0F7] transition-all duration-300 {{ $activeTab === 'history' ? 'active ring-4 ring-[#FF6B18]/30 border-[#FF6B18]' : 'hover:shadow-lg' }}">
             <div class="flex items-center justify-between mb-3 sm:mb-4">
-                <div class="w-10 h-10 sm:w-12 sm:h-12 bg-[#F8F9FC] rounded-full flex items-center justify-center">
-                    <svg class="w-5 h-5 sm:w-6 sm:h-6 text-[#FF6B18]" fill="none" stroke="currentColor"
-                        viewBox="0 0 24 24">
+                <div
+                    class="w-10 h-10 sm:w-12 sm:h-12 {{ $activeTab === 'history' ? 'bg-gradient-to-br from-[#FF6B18] to-[#E64627]' : 'bg-[#F8F9FC]' }} rounded-full flex items-center justify-center transition-all duration-300">
+                    <svg class="w-5 h-5 sm:w-6 sm:h-6 {{ $activeTab === 'history' ? 'text-white' : 'text-[#FF6B18]' }}"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                 </div>
                 <span class="text-2xl sm:text-3xl font-bold text-[#1A1A1A]">{{ $stats['history'] }}</span>
             </div>
-            <h3 class="text-base sm:text-lg font-bold text-[#1A1A1A] mb-1">Reading History</h3>
+            <h3 class="text-base sm:text-lg font-bold text-[#1A1A1A] mb-1 flex items-center justify-between">
+                Reading History
+                @if($activeTab === 'history')
+                <span class="text-xs bg-[#FF6B18] text-white px-2 py-0.5 rounded-full">Active</span>
+                @endif
+            </h3>
             <p class="text-xs sm:text-sm text-[#737373]">Total publikasi dibaca</p>
-        </div>
+        </a>
 
-        {{-- Saved --}}
-        <div
-            class="stat-card bg-white rounded-xl sm:rounded-2xl p-5 sm:p-6 border border-[#EEF0F7] hover:shadow-lg transition-shadow duration-300">
+        {{-- ✅ Saved Card - Active if saved tab --}}
+        <a href="{{ route('publikasi.library', ['tab' => 'saved']) }}"
+            class="stat-card bg-white rounded-xl sm:rounded-2xl p-5 sm:p-6 border border-[#EEF0F7] transition-all duration-300 {{ $activeTab === 'saved' ? 'active ring-4 ring-[#FF6B18]/30 border-[#FF6B18]' : 'hover:shadow-lg' }}">
             <div class="flex items-center justify-between mb-3 sm:mb-4">
-                <div class="w-10 h-10 sm:w-12 sm:h-12 bg-[#F8F9FC] rounded-full flex items-center justify-center">
-                    <svg class="w-5 h-5 sm:w-6 sm:h-6 text-[#FF6B18]" fill="none" stroke="currentColor"
-                        viewBox="0 0 24 24">
+                <div
+                    class="w-10 h-10 sm:w-12 sm:h-12 {{ $activeTab === 'saved' ? 'bg-gradient-to-br from-[#FF6B18] to-[#E64627]' : 'bg-[#F8F9FC]' }} rounded-full flex items-center justify-center transition-all duration-300">
+                    <svg class="w-5 h-5 sm:w-6 sm:h-6 {{ $activeTab === 'saved' ? 'text-white' : 'text-[#FF6B18]' }}"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                     </svg>
                 </div>
                 <span class="text-2xl sm:text-3xl font-bold text-[#1A1A1A]">{{ $stats['saved'] }}</span>
             </div>
-            <h3 class="text-base sm:text-lg font-bold text-[#1A1A1A] mb-1">Saved</h3>
+            <h3 class="text-base sm:text-lg font-bold text-[#1A1A1A] mb-1 flex items-center justify-between">
+                Saved
+                @if($activeTab === 'saved')
+                <span class="text-xs bg-[#FF6B18] text-white px-2 py-0.5 rounded-full">Active</span>
+                @endif
+            </h3>
             <p class="text-xs sm:text-sm text-[#737373]">Disimpan untuk nanti</p>
-        </div>
+        </a>
     </div>
 
     {{-- Tabs Container (Mobile Optimized) --}}
@@ -599,7 +670,7 @@ function showNotification(message, type = 'success') {
 
 // ✅ Initialize
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Library page loaded');
+    console.log('Library page loaded with active tab highlight');
 });
 </script>
 @endpush
