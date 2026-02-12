@@ -1,5 +1,4 @@
 <?php
-// app/Http/Controllers/AuthController.php
 
 namespace App\Http\Controllers;
 
@@ -7,10 +6,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\Rules\Password;
 use App\Models\User;
-use Laravel\Socialite\Facades\Socialite;
-use Exception;
+use Exception; // ✅ TAMBAHKAN INI
+use Laravel\Socialite\Socialite;
 
 class AuthController extends Controller
 {
@@ -103,18 +101,16 @@ class AuthController extends Controller
                 ->withInput($request->only('name', 'email'));
         }
 
-        // Create user
         $user = User::create([
             'name' => trim($request->name),
             'email' => strtolower(trim($request->email)),
             'password' => Hash::make($request->password),
-            'provider' => 'manual', // ✅ TAMBAHKAN ini
+            'provider' => 'manual',
         ]);
 
-        // ✅ Assign role "Author" otomatis
         try {
             $user->assignRole('Author');
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'Author']);
             $user->assignRole('Author');
         }
@@ -132,7 +128,6 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         Auth::logout();
-
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
@@ -166,11 +161,9 @@ class AuthController extends Controller
         try {
             $googleUser = Socialite::driver('google')->user();
 
-            // Cek user berdasarkan google_id
             $user = User::where('google_id', $googleUser->id)->first();
 
             if ($user) {
-                // User sudah ada, login
                 Auth::login($user, true);
                 $request->session()->regenerate();
 
@@ -178,11 +171,9 @@ class AuthController extends Controller
                     ->with('success', 'Selamat datang kembali, ' . $user->name . '! 👋');
             }
 
-            // Cek apakah email sudah terdaftar (registrasi manual)
             $existingUser = User::where('email', $googleUser->email)->first();
 
             if ($existingUser) {
-                // Link Google account ke user existing
                 $existingUser->update([
                     'google_id' => $googleUser->id,
                     'avatar' => $googleUser->avatar,
@@ -196,21 +187,19 @@ class AuthController extends Controller
                     ->with('success', 'Akun Google berhasil ditautkan! Selamat datang, ' . $existingUser->name . '! 👋');
             }
 
-            // Buat user baru
             $newUser = User::create([
                 'name' => $googleUser->name,
                 'email' => $googleUser->email,
                 'google_id' => $googleUser->id,
                 'avatar' => $googleUser->avatar,
                 'provider' => 'google',
-                'email_verified_at' => now(), // Auto verify untuk social login
-                'password' => null, // Tidak perlu password untuk social login
+                'email_verified_at' => now(),
+                'password' => null,
             ]);
 
-            // ✅ Assign role "Author" otomatis
             try {
                 $newUser->assignRole('Author');
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'Author']);
                 $newUser->assignRole('Author');
             }
@@ -222,86 +211,85 @@ class AuthController extends Controller
                 ->with('success', 'Akun berhasil dibuat! Selamat datang, ' . $newUser->name . '! 🎉');
         } catch (Exception $e) {
             return redirect()->route('login')->withErrors([
-                'google' => 'Gagal login dengan Google. Silakan coba lagi. Error: ' . $e->getMessage()
+                'google' => 'Gagal login dengan Google: ' . $e->getMessage()
             ]);
         }
     }
 
-    // /**
-    //  * Redirect to Facebook OAuth
-    //  */
-    // public function redirectToFacebook()
-    // {
-    //     try {
-    //         return Socialite::driver('facebook')->redirect();
-    //     } catch (Exception $e) {
-    //         return redirect()->route('login')->withErrors([
-    //             'facebook' => 'Gagal menghubungkan ke Facebook. Silakan coba lagi.'
-    //         ]);
-    //     }
-    // // }
+    /**
+     * Redirect to Facebook OAuth
+     */
+    public function redirectToFacebook()
+    {
+        try {
+            return Socialite::driver('facebook')->redirect();
+        } catch (Exception $e) {
+            return redirect()->route('login')->withErrors([
+                'facebook' => 'Gagal menghubungkan ke Facebook. Silakan coba lagi.'
+            ]);
+        }
+    }
 
     /**
      * Handle Facebook OAuth Callback
      */
-    // public function handleFacebookCallback(Request $request)
-    // {
-    //     try {
-    //         $facebookUser = Socialite::driver('facebook')->user();
+    public function handleFacebookCallback(Request $request)
+    {
+        try {
+            $facebookUser = Socialite::driver('facebook')->user();
 
-    //         $user = User::where('facebook_id', $facebookUser->id)->first();
+            $user = User::where('facebook_id', $facebookUser->id)->first();
 
-    //         if ($user) {
-    //             Auth::login($user, true);
-    //             $request->session()->regenerate();
+            if ($user) {
+                Auth::login($user, true);
+                $request->session()->regenerate();
 
-    //             return redirect()->intended(route('publikasi.library'))
-    //                 ->with('success', 'Selamat datang kembali, ' . $user->name . '! 👋');
-    //         }
+                return redirect()->intended(route('publikasi.library'))
+                    ->with('success', 'Selamat datang kembali, ' . $user->name . '! 👋');
+            }
 
-    //         $existingUser = User::where('email', $facebookUser->email)->first();
+            $existingUser = User::where('email', $facebookUser->email)->first();
 
-    //         if ($existingUser) {
-    //             $existingUser->update([
-    //                 'facebook_id' => $facebookUser->id,
-    //                 'avatar' => $facebookUser->avatar,
-    //                 'provider' => 'facebook',
-    //             ]);
+            if ($existingUser) {
+                $existingUser->update([
+                    'facebook_id' => $facebookUser->id,
+                    'avatar' => $facebookUser->avatar,
+                    'provider' => 'facebook',
+                ]);
 
-    //             Auth::login($existingUser, true);
-    //             $request->session()->regenerate();
+                Auth::login($existingUser, true);
+                $request->session()->regenerate();
 
-    //             return redirect()->intended(route('publikasi.library'))
-    //                 ->with('success', 'Akun Facebook berhasil ditautkan! Selamat datang, ' . $existingUser->name . '! 👋');
-    //         }
+                return redirect()->intended(route('publikasi.library'))
+                    ->with('success', 'Akun Facebook berhasil ditautkan! Selamat datang, ' . $existingUser->name . '! 👋');
+            }
 
-    //         $newUser = User::create([
-    //             'name' => $facebookUser->name,
-    //             'email' => $facebookUser->email,
-    //             'facebook_id' => $facebookUser->id,
-    //             'avatar' => $facebookUser->avatar,
-    //             'provider' => 'facebook',
-    //             'email_verified_at' => now(),
-    //             'password' => null,
-    //         ]);
+            $newUser = User::create([
+                'name' => $facebookUser->name,
+                'email' => $facebookUser->email,
+                'facebook_id' => $facebookUser->id,
+                'avatar' => $facebookUser->avatar,
+                'provider' => 'facebook',
+                'email_verified_at' => now(),
+                'password' => null,
+            ]);
 
-    //         // ✅ Assign role "Author" otomatis
-    //         try {
-    //             $newUser->assignRole('Author');
-    //         } catch (\Exception $e) {
-    //             \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'Author']);
-    //             $newUser->assignRole('Author');
-    //         }
+            try {
+                $newUser->assignRole('Author');
+            } catch (Exception $e) {
+                \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'Author']);
+                $newUser->assignRole('Author');
+            }
 
-    //         Auth::login($newUser, true);
-    //         $request->session()->regenerate();
+            Auth::login($newUser, true);
+            $request->session()->regenerate();
 
-    //         return redirect()->intended(route('publikasi.library'))
-    //             ->with('success', 'Akun berhasil dibuat! Selamat datang, ' . $newUser->name . '! 🎉');
-    //     } catch (Exception $e) {
-    //         return redirect()->route('login')->withErrors([
-    //             'facebook' => 'Gagal login dengan Facebook. Silakan coba lagi. Error: ' . $e->getMessage()
-    //         ]);
-    //     }
-    // }
+            return redirect()->intended(route('publikasi.library'))
+                ->with('success', 'Akun berhasil dibuat! Selamat datang, ' . $newUser->name . '! 🎉');
+        } catch (Exception $e) {
+            return redirect()->route('login')->withErrors([
+                'facebook' => 'Gagal login dengan Facebook: ' . $e->getMessage()
+            ]);
+        }
+    }
 }
