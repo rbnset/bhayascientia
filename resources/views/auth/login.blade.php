@@ -3,145 +3,70 @@
 @section('title', 'Login')
 
 @section('custom_navbar')
-{{-- Custom navbar untuk auth pages --}}
-<div class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px]">
-    <header class="mt-6">
-        <div class="gap-4 flex items-center justify-between">
-            <!-- Logo -->
-            <div class="gap-4 flex shrink-0 items-center">
-                <a href="{{ route('home') }}" class="flex shrink-0 items-center">
-                    <img src="{{ asset('assets/images/logos/logo.svg') }}" alt="BHAYASCIENTIA" />
-                </a>
-            </div>
-
-            <!-- Right -->
-            <div class="gap-3 flex items-center">
-                <!-- Desktop Menu -->
-                <nav id="MenuBar" class="xl:flex hidden items-center" aria-label="Main menu">
-                    <div
-                        class="gap-1 bg-white p-1 inline-flex flex-wrap items-center rounded-full ring-1 ring-[#EEF0F7]">
-                        <a href="{{ route('home') }}"
-                            class="px-4 py-2 text-sm font-bold rounded-full transition-all duration-300 hover:bg-[#F4F6FB] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]">Beranda</a>
-                        <a href="{{ route('publikasi.index') }}"
-                            class="px-4 py-2 text-sm font-bold rounded-full transition-all duration-300 hover:bg-[#F4F6FB] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]">Publikasi</a>
-                        <a href="{{ route('event') }}"
-                            class="px-4 py-2 text-sm font-bold rounded-full transition-all duration-300 hover:bg-[#F4F6FB] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]">Event</a>
-                        <a href="{{ route('tentang') }}"
-                            class="px-4 py-2 text-sm font-bold rounded-full transition-all duration-300 hover:bg-[#F4F6FB] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]">Tentang</a>
-                        <a href="{{ route('kontak') }}"
-                            class="px-4 py-2 text-sm font-bold rounded-full transition-all duration-300 hover:bg-[#F4F6FB] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]">Kontak</a>
-                    </div>
-                </nav>
-
-                <!-- Desktop CTA -->
-                <a href="{{ route('register') }}"
-                    class="bg-white text-sm font-bold xl:flex hidden h-[44px] items-center justify-center rounded-full border border-[#EEF0F7] px-[18px] transition-all duration-300 hover:bg-[#F4F6FB] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]">
-                    Daftar
-                </a>
-
-                <!-- Mobile hamburger -->
-                <button id="hamburgerBtn"
-                    class="h-10 w-10 bg-white xl:hidden flex items-center justify-center rounded-full border border-[#EEF0F7]"
-                    aria-controls="mobileMenu" aria-expanded="false" aria-label="Toggle menu" type="button">
-                    <svg id="iconBurger" class="h-5 w-5 block" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="2">
-                        <path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16" />
-                    </svg>
-                    <svg id="iconClose" class="h-5 w-5 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="2">
-                        <path stroke-linecap="round" d="M6 6l12 12M18 6L6 18" />
-                    </svg>
-                </button>
-            </div>
-        </div>
-
-        <!-- MOBILE OVERLAY -->
-        <div id="mobileOverlay" class="inset-0 bg-black/25 xl:hidden fixed z-40 hidden backdrop-blur-[2px]"
-            aria-hidden="true"></div>
-
-        <!-- MOBILE PANEL -->
-        <div id="mobileMenu" class="mt-4 xl:hidden relative z-50 hidden">
-            <div class="space-y-4 rounded-2xl bg-white p-3 border border-[#EEF0F7]">
-                <div class="gap-2 grid grid-cols-1" aria-label="Main menu mobile">
-                    <a href="{{ route('home') }}"
-                        class="rounded-xl px-4 py-3 text-sm font-semibold border border-[#EEF0F7] transition-colors duration-300 hover:border-[#FF6B18]">Beranda</a>
-                    <a href="{{ route('publikasi.index') }}"
-                        class="rounded-xl px-4 py-3 text-sm font-semibold border border-[#EEF0F7] transition-colors duration-300 hover:border-[#FF6B18]">Publikasi</a>
-                    <a href="{{ route('event') }}"
-                        class="rounded-xl px-4 py-3 text-sm font-semibold border border-[#EEF0F7] transition-colors duration-300 hover:border-[#FF6B18]">Event</a>
-                    <a href="{{ route('tentang') }}"
-                        class="rounded-xl px-4 py-3 text-sm font-semibold border border-[#EEF0F7] transition-colors duration-300 hover:border-[#FF6B18]">Tentang</a>
-                    <a href="{{ route('kontak') }}"
-                        class="rounded-xl px-4 py-3 text-sm font-semibold border border-[#EEF0F7] transition-colors duration-300 hover:border-[#FF6B18]">Kontak</a>
-                    <a href="{{ route('register') }}"
-                        class="rounded-xl px-4 py-3 text-sm font-bold text-white bg-[#FF6B18] text-center transition-all duration-300 hover:shadow-[0_10px_20px_0_#FF6B1880]">Daftar</a>
-                </div>
-            </div>
-        </div>
-    </header>
-</div>
+<x-navbar ctaLabel="Daftar Sekarang" ctaRoute="register" ctaIcon="user-plus" :showAvatarWhenAuth="false"
+    :showCtaAlways="true" />
 @endsection
 
 @section('hide_footer', 'true')
 
 @section('content')
-<section class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px] pb-16 sm:pb-20">
-    <div class="gap-8 lg:grid-cols-2 grid items-center">
+<section class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px] py-8 sm:py-12 lg:py-16">
+    <div class="grid items-center gap-8 lg:gap-12 lg:grid-cols-2">
 
-        {{-- Left: Copy & Info --}}
-        <div class="lg:order-1 order-1">
-            <p class="px-4 py-2 text-xs font-bold inline-flex items-center rounded-full bg-[#FFECE1] text-[#FF6B18]">
-                Welcome back
-            </p>
+        {{-- Left: Hero Copy --}}
+        <div class="order-2 text-center lg:order-1 lg:text-left">
+            <span
+                class="inline-flex items-center rounded-full bg-[#FFECE1] px-4 py-2 text-xs sm:text-sm font-bold text-[#FF6B18]">
+                👋 Welcome back
+            </span>
 
-            <h1 class="mt-4 text-3xl font-bold sm:text-4xl sm:leading-[45px] leading-[40px] text-[#1A1A1A]">
-                Login untuk lanjut baca <br />
+            <h1
+                class="mt-4 text-2xl font-bold leading-tight text-[#1A1A1A] sm:text-3xl sm:leading-[40px] lg:text-4xl lg:leading-[50px]">
+                Login untuk lanjut baca <br class="hidden sm:inline" />
                 publikasi favoritmu
             </h1>
 
-            <p class="mt-3 max-w-xl text-sm sm:text-base sm:leading-[24px] leading-[21px] text-[#6B7280]">
+            <p
+                class="mt-3 max-w-xl mx-auto lg:mx-0 text-sm leading-relaxed text-[#6B7280] sm:text-base sm:leading-[24px]">
                 Masuk untuk akses fitur personal, simpan publikasi, dan kelola library yang sudah kamu miliki.
             </p>
 
-            <div class="mt-6 gap-3 flex flex-wrap items-center">
+            <div class="flex flex-wrap items-center justify-center gap-3 mt-6 lg:justify-start">
                 <a href="{{ route('home') }}"
-                    class="bg-white px-5 py-3 text-sm font-bold rounded-full border border-[#EEF0F7] transition-all duration-300 hover:bg-[#F4F6FB] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]">
-                    Kembali ke Home
+                    class="inline-flex items-center justify-center rounded-full border border-[#EEF0F7] bg-white px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition-all duration-300 hover:bg-[#F4F6FB] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]">
+                    🏠 Kembali ke Home
                 </a>
                 <a href="{{ route('register') }}"
-                    class="px-5 py-3 text-sm font-bold rounded-full text-[#FF6B18] transition-all duration-300 hover:bg-[#FFF7F2] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]">
-                    Belum punya akun? Daftar
+                    class="px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-bold rounded-full text-[#FF6B18] transition-all duration-300 hover:bg-[#FFF7F2] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]">
+                    Belum punya akun? <span class="underline">Daftar</span>
                 </a>
             </div>
         </div>
 
         {{-- Right: Login Card --}}
-        <div class="lg:order-2 order-2">
-            <div class="bg-white p-5 sm:p-6 rounded-[22px] ring-1 ring-[#EEF0F7] shadow-sm">
+        <div class="order-1 lg:order-2">
+            <div class="bg-white rounded-[22px] ring-1 ring-[#EEF0F7] shadow-sm p-5 sm:p-6 lg:p-8">
 
                 {{-- Card Header --}}
-                <div class="gap-4 flex items-start justify-between mb-5">
-                    <div class="min-w-0">
-                        <h2 class="text-xl font-bold sm:text-[22px] leading-[28px] text-[#111827]">
-                            Login
-                        </h2>
-                        <p class="mt-1 sm:text-sm sm:leading-[21px] text-[11px] leading-[16px] text-[#A3A6AE]">
+                <div class="flex items-start justify-between gap-4 mb-5">
+                    <div class="flex-1 min-w-0">
+                        <h2 class="text-xl font-bold text-[#111827] sm:text-2xl">Login</h2>
+                        <p class="mt-1 text-xs sm:text-sm text-[#A3A6AE]">
                             Gunakan email dan password yang terdaftar.
                         </p>
                     </div>
 
-                    <div class="sm:block hidden">
-                        <span class="px-4 py-2 text-xs font-bold inline-flex rounded-full bg-[#F4F6FB] text-[#111827]">
-                            🔒 Secure
-                        </span>
-                    </div>
+                    <span
+                        class="hidden sm:inline-flex items-center rounded-full bg-[#F4F6FB] px-4 py-2 text-xs font-bold text-[#111827]">
+                        🔒 Secure
+                    </span>
                 </div>
 
                 {{-- Error Alert --}}
                 @if ($errors->any())
-                <div class="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 animate-shake">
+                <div class="p-4 mb-5 border border-red-200 animate-shake rounded-xl bg-red-50">
                     <div class="flex items-start gap-3">
-                        <svg class="w-5 h-5 text-red-600 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <svg class="mt-0.5 h-5 w-5 shrink-0 text-red-600" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd"
                                 d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
                                 clip-rule="evenodd" />
@@ -157,7 +82,7 @@
 
                 {{-- Success Alert --}}
                 @if (session('success'))
-                <div class="mb-5 rounded-xl border border-green-200 bg-green-50 p-4">
+                <div class="p-4 mb-5 border border-green-200 rounded-xl bg-green-50">
                     <div class="flex items-center gap-3">
                         <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd"
@@ -169,43 +94,39 @@
                 </div>
                 @endif
 
-                {{-- Social Login Buttons (optional - implement later) --}}
-                <div class="gap-3 sm:grid-cols-2 grid grid-cols-1 mb-5">
+                {{-- Social Login --}}
+                <div class="grid grid-cols-1 gap-3 mb-5 sm:grid-cols-2">
                     <button type="button"
-                        class="gap-2 bg-white px-5 py-3 text-sm font-bold inline-flex items-center justify-center rounded-full border border-[#EEF0F7] transition-all duration-300 hover:bg-[#F4F6FB] hover:border-[#FF6B18]/30 hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]">
-                        <span class="h-5 w-5">
-                            <svg viewBox="0 0 48 48" class="h-5 w-5" aria-hidden="true">
-                                <path fill="#FFC107"
-                                    d="M43.611 20.083H42V20H24v8h11.303C33.656 32.91 29.236 36 24 36c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z" />
-                                <path fill="#FF3D00"
-                                    d="M6.306 14.691l6.571 4.819C14.655 16.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4c-7.682 0-14.354 4.337-17.694 10.691z" />
-                                <path fill="#4CAF50"
-                                    d="M24 44c5.166 0 9.86-1.977 13.409-5.197l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.214 0-9.62-3.06-11.283-7.438l-6.522 5.024C9.505 39.556 16.227 44 24 44z" />
-                                <path fill="#1976D2"
-                                    d="M43.611 20.083H42V20H24v8h11.303c-.792 2.238-2.231 4.166-4.094 5.565l.003-.002 6.19 5.238C36.97 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z" />
-                            </svg>
-                        </span>
-                        Google
+                        class="inline-flex items-center justify-center gap-2 rounded-full border border-[#EEF0F7] bg-white px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition-all duration-300 hover:border-[#FF6B18]/30 hover:bg-[#F4F6FB] hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]">
+                        <svg viewBox="0 0 48 48" class="w-5 h-5" aria-hidden="true">
+                            <path fill="#FFC107"
+                                d="M43.611 20.083H42V20H24v8h11.303C33.656 32.91 29.236 36 24 36c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z" />
+                            <path fill="#FF3D00"
+                                d="M6.306 14.691l6.571 4.819C14.655 16.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4c-7.682 0-14.354 4.337-17.694 10.691z" />
+                            <path fill="#4CAF50"
+                                d="M24 44c5.166 0 9.86-1.977 13.409-5.197l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.214 0-9.62-3.06-11.283-7.438l-6.522 5.024C9.505 39.556 16.227 44 24 44z" />
+                            <path fill="#1976D2"
+                                d="M43.611 20.083H42V20H24v8h11.303c-.792 2.238-2.231 4.166-4.094 5.565l.003-.002 6.19 5.238C36.97 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z" />
+                        </svg>
+                        <span class="hidden sm:inline">Google</span>
+                        <span class="sm:hidden">G</span>
                     </button>
 
                     <button type="button"
-                        class="gap-2 bg-white px-5 py-3 text-sm font-bold inline-flex items-center justify-center rounded-full border border-[#EEF0F7] transition-all duration-300 hover:bg-[#F4F6FB] hover:border-[#FF6B18]/30 hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]">
-                        <span class="h-5 w-5">
-                            <svg viewBox="0 0 24 24" class="h-5 w-5" aria-hidden="true">
-                                <path fill="currentColor"
-                                    d="M22 12.06c0-5.52-4.48-10-10-10S2 6.54 2 12.06c0 4.99 3.66 9.13 8.44 9.88v-6.99H7.9v-2.89h2.54V9.85c0-2.5 1.49-3.89 3.77-3.89 1.09 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56v1.87h2.78l-.44 2.89h-2.34v6.99C18.34 21.19 22 17.05 22 12.06z" />
-                            </svg>
-                        </span>
-                        Facebook
+                        class="inline-flex items-center justify-center gap-2 rounded-full border border-[#EEF0F7] bg-white px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition-all duration-300 hover:border-[#FF6B18]/30 hover:bg-[#F4F6FB] hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]">
+                        <svg viewBox="0 0 24 24" class="w-5 h-5" aria-hidden="true">
+                            <path fill="currentColor"
+                                d="M22 12.06c0-5.52-4.48-10-10-10S2 6.54 2 12.06c0 4.99 3.66 9.13 8.44 9.88v-6.99H7.9v-2.89h2.54V9.85c0-2.5 1.49-3.89 3.77-3.89 1.09 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56v1.87h2.78l-.44 2.89h-2.34v6.99C18.34 21.19 22 17.05 22 12.06z" />
+                        </svg>
+                        <span class="hidden sm:inline">Facebook</span>
+                        <span class="sm:hidden">FB</span>
                     </button>
                 </div>
 
                 {{-- Divider --}}
-                <div class="mb-5 gap-3 flex items-center">
+                <div class="flex items-center gap-3 mb-5">
                     <div class="h-px flex-1 bg-[#E8EBF4]"></div>
-                    <p class="font-bold tracking-wide text-xs text-[#A3A6AE]">
-                        OR
-                    </p>
+                    <p class="text-xs font-bold tracking-wide text-[#A3A6AE]">OR</p>
                     <div class="h-px flex-1 bg-[#E8EBF4]"></div>
                 </div>
 
@@ -213,69 +134,98 @@
                 <form action="{{ route('login.post') }}" method="POST" class="space-y-4">
                     @csrf
 
-                    {{-- Email --}}
+                    {{-- Email Input --}}
                     <div>
-                        <label for="email" class="block text-sm font-bold text-[#111827] mb-2">Email</label>
+                        <label for="email" class="mb-2 block text-sm font-bold text-[#111827]">
+                            Email <span class="text-red-500">*</span>
+                        </label>
+
+                        {{-- Input wrapper + icon kiri --}}
                         <div
-                            class="gap-3 bg-white flex items-center rounded-full border border-[#E8EBF4] p-[12px_16px] transition-all duration-300 focus-within:ring-2 focus-within:ring-[#FF6B18] @error('email') ring-2 ring-red-500 @enderror">
-                            <input id="email" name="email" type="email" autocomplete="email" value="{{ old('email') }}"
+                            class="flex items-center w-full rounded-full ring-1 ring-[#E8EBF4] px-[14px] gap-[10px] overflow-hidden bg-white transition-all duration-300 hover:ring-[#FF6B18]/60 focus-within:ring-2 focus-within:ring-[#FF6B18] @error('email') !ring-2 !ring-red-500 @enderror">
+
+                            {{-- Icon email (opsional) --}}
+                            <svg class="w-5 h-5 text-[#A3A6AE] shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
+                            </svg>
+
+                            <input type="email" id="email" name="email" autocomplete="email" value="{{ old('email') }}"
                                 required placeholder="nama@email.com"
-                                class="text-sm font-semibold placeholder:font-normal w-full appearance-none bg-transparent outline-none placeholder:text-[#A3A6AE]" />
+                                class="appearance-none focus:outline-none focus:ring-0 focus:border-transparent w-full py-[12px] border-none bg-white outline-none text-sm font-semibold placeholder:font-normal placeholder:text-[#A3A6AE] ">
                         </div>
+
                         @error('email')
                         <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
 
-                    {{-- Password --}}
+                    {{-- Password Input --}}
                     <div>
-                        <label for="password" class="block text-sm font-bold text-[#111827] mb-2">Password</label>
+                        <label for="password" class="mb-2 block text-sm font-bold text-[#111827]">
+                            Password <span class="text-red-500">*</span>
+                        </label>
+
+                        {{-- Input wrapper + icon kiri + button kanan --}}
                         <div
-                            class="gap-3 bg-white flex items-center rounded-full border border-[#E8EBF4] p-[12px_16px] transition-all duration-300 focus-within:ring-2 focus-within:ring-[#FF6B18] @error('password') ring-2 ring-red-500 @enderror">
-                            <input id="password" name="password" type="password" autocomplete="current-password"
+                            class="flex items-center w-full rounded-full ring-1 ring-[#E8EBF4] px-[14px] gap-[10px] overflow-hidden bg-white transition-all duration-300 hover:ring-[#FF6B18]/60 focus-within:ring-2 focus-within:ring-[#FF6B18] @error('password') !ring-2 !ring-red-500 @enderror">
+
+                            {{-- Icon lock --}}
+                            <svg class="w-5 h-5 text-[#A3A6AE] shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
+
+                            <input type="password" id="password" name="password" autocomplete="current-password"
                                 required minlength="6" placeholder="Minimal 6 karakter"
-                                class="text-sm font-semibold placeholder:font-normal w-full appearance-none bg-transparent outline-none placeholder:text-[#A3A6AE]" />
+                                class="appearance-none focus:outline-none focus:ring-0 focus:border-transparent border-white w-full py-[12px] border-none bg-white outline-none text-sm font-semibold placeholder:font-normal placeholder:text-[#A3A6AE]">
+
+                            {{-- Toggle button --}}
                             <button type="button" id="togglePassword"
-                                class="px-3 py-1 text-xs font-bold rounded-full text-[#6B7280] transition hover:bg-[#F4F6FB] hover:text-[#111827] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]"
+                                class="shrink-0 rounded-full px-3 py-1 text-xs font-bold text-[#6B7280] transition hover:bg-[#F4F6FB] hover:text-[#111827] focus:outline-none"
                                 aria-label="Toggle password visibility" aria-pressed="false">
                                 Show
                             </button>
                         </div>
+
                         @error('password')
                         <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
                         @enderror
 
                         {{-- Remember & Forgot --}}
-                        <div class="mt-3 gap-3 flex items-center justify-between">
+                        <div class="flex flex-wrap items-center justify-between gap-2 mt-3">
                             <label
-                                class="gap-2 text-sm font-semibold inline-flex items-center text-[#111827] cursor-pointer hover:text-[#FF6B18] transition-colors">
+                                class="inline-flex cursor-pointer items-center gap-2 text-xs sm:text-sm font-semibold text-[#111827] transition-colors hover:text-[#FF6B18]">
                                 <input id="remember" name="remember" type="checkbox" {{ old('remember') ? 'checked' : ''
                                     }}
-                                    class="h-4 w-4 rounded border-[#E8EBF4] text-[#FF6B18] focus:ring-[#FF6B18] cursor-pointer" />
+                                    class="h-4 w-4 cursor-pointer rounded border-[#E8EBF4] text-[#FF6B18] focus:ring-[#FF6B18]" />
                                 Remember me
                             </label>
 
-                            <a href="#"
-                                class="text-sm font-bold text-[#FF6B18] transition hover:text-[#d85712] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] rounded">
+                            <button type="button" id="openForgotPassword"
+                                class="rounded text-xs sm:text-sm font-bold text-[#FF6B18] transition hover:text-[#d85712] hover:underline focus:outline-none">
                                 Lupa password?
-                            </a>
+                            </button>
                         </div>
                     </div>
 
+
                     {{-- Submit Button --}}
                     <button type="submit"
-                        class="mt-2 px-5 py-3.5 text-sm font-bold text-white w-full inline-flex items-center justify-center rounded-full bg-gradient-to-r from-[#FF6B18] to-[#E64627] transition-all duration-300 hover:shadow-[0_10px_20px_0_#FF6B1880] hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 active:scale-95">
+                        class="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#FF6B18] to-[#E64627] px-5 py-3 sm:py-3.5 text-sm font-bold text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_20px_0_#FF6B1880] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 active:scale-95">
                         Login
                     </button>
 
                     {{-- Register Link --}}
-                    <p class="sm:text-sm sm:leading-[21px] text-center text-[11px] leading-[16px] text-[#A3A6AE]">
+                    <p class="text-center text-xs sm:text-sm text-[#A3A6AE]">
                         Belum punya akun?
                         <a href="{{ route('register') }}" class="font-bold text-[#FF6B18] hover:underline">Daftar</a>
                     </p>
 
                     {{-- Terms --}}
-                    <p class="sm:text-sm sm:leading-[21px] text-center text-[11px] leading-[16px] text-[#A3A6AE]">
+                    <p class="text-center text-xs text-[#A3A6AE]">
                         Dengan login, kamu setuju dengan
                         <button type="button" id="openTerms"
                             class="font-bold text-[#FF6B18] hover:underline focus:outline-none">Terms</button>
@@ -291,20 +241,49 @@
     </div>
 </section>
 
+{{-- Modal Forgot Password --}}
+<div id="forgotPasswordModal"
+    class="fixed inset-0 z-[70] hidden items-center justify-center bg-black/40 backdrop-blur-sm p-4" role="dialog"
+    aria-modal="true">
+    <div class="w-full max-w-md p-6 transition-all transform bg-white shadow-2xl rounded-3xl sm:p-8">
+        <div class="mb-6 text-center">
+            <div class="mx-auto w-16 h-16 bg-[#FFECE1] rounded-full flex items-center justify-center mb-4">
+                <svg class="w-8 h-8 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+            </div>
+            <h3 class="text-xl font-bold text-[#111827] mb-2">Lupa Password?</h3>
+            <p class="text-sm text-[#6B7280]">Fitur reset password sedang dalam pengembangan. Silakan hubungi admin.</p>
+        </div>
+
+        <div class="space-y-3">
+            <a href="{{ route('kontak') }}"
+                class="block w-full text-center rounded-full bg-gradient-to-r from-[#FF6B18] to-[#E64627] px-5 py-3 text-sm font-bold text-white transition-all hover:shadow-lg">
+                Hubungi Admin
+            </a>
+            <button type="button" id="closeForgotPassword"
+                class="block w-full text-center rounded-full border border-[#EEF0F7] px-5 py-3 text-sm font-bold text-[#6B7280] transition-all hover:bg-[#F4F6FB]">
+                Tutup
+            </button>
+        </div>
+    </div>
+</div>
+
 {{-- Legal Modal (Terms & Privacy) --}}
-<div id="legalOverlay" class="inset-0 bg-black/40 fixed z-[60] hidden backdrop-blur-sm transition-opacity duration-300"
+<div id="legalOverlay" class="fixed inset-0 z-[60] hidden bg-black/40 backdrop-blur-sm transition-opacity duration-300"
     aria-hidden="true"></div>
 
-<div id="legalModal" class="inset-0 p-4 fixed z-[70] hidden items-center justify-center overflow-y-auto" role="dialog"
+<div id="legalModal" class="fixed inset-0 z-[70] hidden items-center justify-center overflow-y-auto p-4" role="dialog"
     aria-modal="true" aria-labelledby="legalTitle">
     <div
-        class="bg-white w-full max-w-[720px] overflow-hidden rounded-3xl ring-1 ring-[#EEF0F7] shadow-2xl transform transition-all duration-300 my-8">
+        class="my-8 w-full max-w-[720px] transform overflow-hidden rounded-3xl bg-white ring-1 ring-[#EEF0F7] shadow-2xl transition-all duration-300">
 
-        {{-- Modal Header - Sticky --}}
-        <div class="sticky top-0 z-10 bg-white border-b border-[#EEF0F7]">
-            <div class="gap-4 p-5 sm:p-6 flex items-center justify-between">
-                <div class="min-w-0 flex-1">
-                    <h2 id="legalTitle" class="text-xl font-bold sm:text-2xl text-[#111827] flex items-center gap-2">
+        {{-- Modal Header --}}
+        <div class="sticky top-0 z-10 border-b border-[#EEF0F7] bg-white">
+            <div class="flex items-center justify-between gap-4 p-5 sm:p-6">
+                <div class="flex-1 min-w-0">
+                    <h2 id="legalTitle" class="flex items-center gap-2 text-xl font-bold text-[#111827] sm:text-2xl">
                         <span class="text-2xl">📋</span>
                         <span>Terms & Conditions</span>
                     </h2>
@@ -314,7 +293,7 @@
                 </div>
 
                 <button id="legalCloseBtn" type="button"
-                    class="h-10 w-10 bg-[#F4F6FB] inline-flex items-center justify-center rounded-full transition-all hover:bg-[#FF6B18] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]"
+                    class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#F4F6FB] transition-all hover:bg-[#FF6B18] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]"
                     aria-label="Tutup">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -324,25 +303,25 @@
             </div>
 
             {{-- Tabs --}}
-            <div class="px-5 sm:px-6 pb-4 flex gap-2">
+            <div class="flex gap-2 px-5 pb-4 sm:px-6">
                 <button id="tabTerms" type="button"
-                    class="px-5 py-2.5 text-sm font-bold rounded-full transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]"
+                    class="rounded-full px-5 py-2.5 text-sm font-bold transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]"
                     aria-selected="true">
                     📜 Terms
                 </button>
                 <button id="tabPrivacy" type="button"
-                    class="px-5 py-2.5 text-sm font-bold rounded-full transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]"
+                    class="rounded-full px-5 py-2.5 text-sm font-bold transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]"
                     aria-selected="false">
                     🔒 Privacy Policy
                 </button>
             </div>
         </div>
 
-        {{-- Modal Body - Scrollable --}}
-        <div class="px-5 sm:px-6 py-6 max-h-[60vh] overflow-y-auto">
+        {{-- Modal Body --}}
+        <div class="max-h-[60vh] overflow-y-auto px-5 py-6 sm:px-6">
 
             {{-- Terms Content --}}
-            <article id="contentTerms" class="prose prose-sm max-w-none">
+            <article id="contentTerms" class="prose-sm prose max-w-none">
                 <div class="bg-[#FFF7F2] rounded-2xl p-4 mb-6 border-l-4 border-[#FF6B18]">
                     <p class="text-sm leading-relaxed text-[#6B7280] m-0">
                         Dokumen ini menjelaskan syarat dan ketentuan penggunaan platform BHAYASCIENTIA untuk publikasi
@@ -449,7 +428,7 @@
             </article>
 
             {{-- Privacy Content --}}
-            <article id="contentPrivacy" class="prose prose-sm max-w-none hidden">
+            <article id="contentPrivacy" class="hidden prose-sm prose max-w-none">
                 <div class="bg-[#FFF7F2] rounded-2xl p-4 mb-6 border-l-4 border-[#FF6B18]">
                     <p class="text-sm leading-relaxed text-[#6B7280] m-0">
                         Kebijakan Privasi BHAYASCIENTIA menjelaskan bagaimana kami mengumpulkan, menggunakan, dan
@@ -561,10 +540,10 @@
 
         </div>
 
-        {{-- Modal Footer - Sticky --}}
-        <div class="sticky bottom-0 p-5 sm:p-6 border-t border-[#EEF0F7] bg-white">
+        {{-- Modal Footer --}}
+        <div class="sticky bottom-0 border-t border-[#EEF0F7] bg-white p-5 sm:p-6">
             <button id="legalOkBtn" type="button"
-                class="px-6 py-3.5 text-sm font-bold text-white w-full inline-flex items-center justify-center rounded-full bg-gradient-to-r from-[#FF6B18] to-[#E64627] transition-all duration-300 hover:shadow-[0_10px_20px_0_#FF6B1880] hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 active:scale-95">
+                class="inline-flex w-full items-center justify-center rounded-full bg-gradient-to-r from-[#FF6B18] to-[#E64627] px-6 py-3 sm:py-3.5 text-sm font-bold text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_20px_0_#FF6B1880] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 active:scale-95">
                 Saya mengerti
             </button>
         </div>
@@ -574,36 +553,6 @@
 
 @push('scripts')
 <script>
-    // Mobile menu
-    (function() {
-        const btn = document.getElementById("hamburgerBtn");
-        const panel = document.getElementById("mobileMenu");
-        const overlay = document.getElementById("mobileOverlay");
-        const iconBurger = document.getElementById("iconBurger");
-        const iconClose = document.getElementById("iconClose");
-
-        function setMobileOpen(open) {
-            panel?.classList.toggle("hidden", !open);
-            overlay?.classList.toggle("hidden", !open);
-            btn?.setAttribute("aria-expanded", String(open));
-            iconBurger?.classList.toggle("hidden", open);
-            iconClose?.classList.toggle("hidden", !open);
-            document.documentElement.classList.toggle("overflow-hidden", open);
-            document.body.classList.toggle("overflow-hidden", open);
-        }
-
-        btn?.addEventListener("click", () => {
-            const open = panel?.classList.contains("hidden");
-            setMobileOpen(!!open);
-        });
-
-        overlay?.addEventListener("click", () => setMobileOpen(false));
-
-        document.addEventListener("keydown", (e) => {
-            if (e.key === "Escape") setMobileOpen(false);
-        });
-    })();
-
     // Toggle password visibility
     (function() {
         const input = document.getElementById("password");
@@ -615,6 +564,33 @@
             input.type = isHidden ? "text" : "password";
             btn.textContent = isHidden ? "Hide" : "Show";
             btn.setAttribute("aria-pressed", String(isHidden));
+        });
+    })();
+
+    // Forgot Password Modal
+    (function() {
+        const openBtn = document.getElementById("openForgotPassword");
+        const closeBtn = document.getElementById("closeForgotPassword");
+        const modal = document.getElementById("forgotPasswordModal");
+
+        openBtn?.addEventListener("click", () => {
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+            document.body.classList.add("overflow-hidden");
+        });
+
+        closeBtn?.addEventListener("click", () => {
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+            document.body.classList.remove("overflow-hidden");
+        });
+
+        modal?.addEventListener("click", (e) => {
+            if (e.target === modal) {
+                modal.classList.add("hidden");
+                modal.classList.remove("flex");
+                document.body.classList.remove("overflow-hidden");
+            }
         });
     })();
 
@@ -645,20 +621,13 @@
                 overlay.classList.remove("hidden");
                 modal.classList.remove("hidden");
                 modal.classList.add("flex");
-                requestAnimationFrame(() => {
-                    overlay.classList.remove("opacity-0");
-                    modal.querySelector("div").classList.remove("scale-95", "opacity-0");
-                });
+                lockScroll(true);
             } else {
-                overlay.classList.add("opacity-0");
-                modal.querySelector("div").classList.add("scale-95", "opacity-0");
-                setTimeout(() => {
-                    overlay.classList.add("hidden");
-                    modal.classList.add("hidden");
-                    modal.classList.remove("flex");
-                }, 300);
+                overlay.classList.add("hidden");
+                modal.classList.add("hidden");
+                modal.classList.remove("flex");
+                lockScroll(false);
             }
-            lockScroll(open);
         }
 
         function setTab(which) {
@@ -670,56 +639,31 @@
             if (isTerms) {
                 tabTerms.className = "px-5 py-2.5 text-sm font-bold rounded-full transition-all duration-300 bg-[#FF6B18] text-white shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]";
                 tabPrivacy.className = "px-5 py-2.5 text-sm font-bold rounded-full transition-all duration-300 bg-[#F4F6FB] text-[#6B7280] hover:bg-[#FFECE1] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]";
+                contentTerms.classList.remove("hidden");
+                contentPrivacy.classList.add("hidden");
+                title.innerHTML = '<span class="text-2xl">📋</span> <span>Terms & Conditions</span>';
+                subtitle.textContent = "Syarat penggunaan layanan BHAYASCIENTIA.";
             } else {
                 tabTerms.className = "px-5 py-2.5 text-sm font-bold rounded-full transition-all duration-300 bg-[#F4F6FB] text-[#6B7280] hover:bg-[#FFECE1] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]";
                 tabPrivacy.className = "px-5 py-2.5 text-sm font-bold rounded-full transition-all duration-300 bg-[#FF6B18] text-white shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]";
+                contentTerms.classList.add("hidden");
+                contentPrivacy.classList.remove("hidden");
+                title.innerHTML = '<span class="text-2xl">🔒</span> <span>Privacy Policy</span>';
+                subtitle.textContent = "Kebijakan privasi BHAYASCIENTIA.";
             }
-
-            contentTerms.classList.toggle("hidden", !isTerms);
-            contentPrivacy.classList.toggle("hidden", isTerms);
-
-            if (isTerms) {
-                title.innerHTML = '<span class="text-2xl">📋</span><span>Terms & Conditions</span>';
-                subtitle.textContent = "Syarat penggunaan layanan BHAYASCIENTIA.";
-            } else {
-                title.innerHTML = '<span class="text-2xl">🔒</span><span>Privacy Policy</span>';
-                subtitle.textContent = "Kebijakan pengelolaan data pengguna.";
-            }
-
-            modal.querySelector(".overflow-y-auto").scrollTop = 0;
         }
 
-        openTerms.addEventListener("click", (e) => {
-            e.preventDefault();
-            setTab("terms");
-            setOpen(true);
-        });
-
-        openPrivacy.addEventListener("click", (e) => {
-            e.preventDefault();
-            setTab("privacy");
-            setOpen(true);
-        });
-
+        openTerms.addEventListener("click", () => { setOpen(true); setTab("terms"); });
+        openPrivacy.addEventListener("click", () => { setOpen(true); setTab("privacy"); });
+        closeBtn.addEventListener("click", () => setOpen(false));
+        okBtn.addEventListener("click", () => setOpen(false));
+        overlay.addEventListener("click", () => setOpen(false));
         tabTerms.addEventListener("click", () => setTab("terms"));
         tabPrivacy.addEventListener("click", () => setTab("privacy"));
 
-        function close() {
-            setOpen(false);
-        }
-        closeBtn.addEventListener("click", close);
-        okBtn.addEventListener("click", close);
-        overlay.addEventListener("click", close);
-
         document.addEventListener("keydown", (e) => {
-            if (e.key === "Escape" && !modal.classList.contains("hidden")) {
-                close();
-            }
+            if (e.key === "Escape") setOpen(false);
         });
-
-        overlay.classList.add("opacity-0");
-        modal.querySelector("div").classList.add("scale-95", "opacity-0");
-        setTab("terms");
     })();
 </script>
 
