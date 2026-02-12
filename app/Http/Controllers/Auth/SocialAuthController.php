@@ -60,8 +60,8 @@ class SocialAuthController extends Controller
                 'google_id' => $googleUser->id,
                 'avatar' => $googleUser->avatar,
                 'provider' => 'google',
-                'email_verified_at' => now(), // Auto verify email for social login
-                'password' => null, // No password for social login
+                'email_verified_at' => now(),
+                'password' => null,
             ]);
 
             Auth::login($newUser, true);
@@ -69,7 +69,7 @@ class SocialAuthController extends Controller
             return redirect()->intended(route('home'))->with('success', 'Akun berhasil dibuat dengan Google!');
         } catch (Exception $e) {
             return redirect()->route('login')->withErrors([
-                'google' => 'Gagal login dengan Google. Silakan coba lagi.'
+                'google' => 'Gagal login dengan Google. Silakan coba lagi. Error: ' . $e->getMessage()
             ]);
         }
     }
@@ -90,7 +90,6 @@ class SocialAuthController extends Controller
         try {
             $facebookUser = Socialite::driver('facebook')->user();
 
-            // Check if user exists by facebook_id
             $user = User::where('facebook_id', $facebookUser->id)->first();
 
             if ($user) {
@@ -98,7 +97,6 @@ class SocialAuthController extends Controller
                 return redirect()->intended(route('home'))->with('success', 'Berhasil login dengan Facebook!');
             }
 
-            // Check if email already exists
             $existingUser = User::where('email', $facebookUser->email)->first();
 
             if ($existingUser) {
@@ -112,7 +110,6 @@ class SocialAuthController extends Controller
                 return redirect()->intended(route('home'))->with('success', 'Akun Facebook berhasil ditautkan!');
             }
 
-            // Create new user
             $newUser = User::create([
                 'name' => $facebookUser->name,
                 'email' => $facebookUser->email,
@@ -128,7 +125,7 @@ class SocialAuthController extends Controller
             return redirect()->intended(route('home'))->with('success', 'Akun berhasil dibuat dengan Facebook!');
         } catch (Exception $e) {
             return redirect()->route('login')->withErrors([
-                'facebook' => 'Gagal login dengan Facebook. Silakan coba lagi.'
+                'facebook' => 'Gagal login dengan Facebook. Silakan coba lagi. Error: ' . $e->getMessage()
             ]);
         }
     }
