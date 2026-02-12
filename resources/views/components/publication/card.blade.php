@@ -3,7 +3,6 @@
 'cover' => '',
 'category' => 'Umum',
 'date' => '',
-'status' => 'Terverifikasi',
 'authors' => [],
 'totalAuthors' => 0,
 'detailUrl' => '#',
@@ -42,7 +41,7 @@
 
                     {{-- Category Badge --}}
                     <span
-                        class="absolute top-3 left-3 sm:top-4 sm:left-4 bg-white/95 backdrop-blur-sm px-3 py-1.5 sm:px-4 sm:py-2 font-bold text-[10px] leading-[14px] sm:text-xs sm:leading-[18px] rounded-full ring-1 ring-black/5 shadow-sm transition-all duration-200 group-hover:bg-[#FF6B18] group-hover:text-white"
+                        class="absolute top-3 right-3 left-3 sm:top-4 sm:right-4 sm:left-4 bg-white/95 backdrop-blur-sm px-3 py-1.5 font-bold text-[10px] leading-[14px] sm:text-xs sm:leading-[18px] rounded-full ring-1 ring-black/5 shadow-sm transition-all duration-200 group-hover:bg-[#FF6B18] group-hover:text-white text-left"
                         itemprop="articleSection">
                         {{ $category }}
                     </span>
@@ -56,26 +55,13 @@
                     <span class="line-clamp-3">{{ $title }}</span>
                 </h3>
 
-                <div class="flex flex-wrap items-center gap-2">
-                    @if($date)
-                    <time
-                        class="text-[11px] leading-[16px] sm:text-sm sm:leading-[21px] text-[#A3A6AE] transition-colors duration-200 group-hover:text-[#6B7280]"
-                        datetime="{{ $date }}" itemprop="datePublished">
-                        {{ $date }}
-                    </time>
-                    @endif
-
-                    <span
-                        class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] sm:text-xs font-bold ring-1 ring-emerald-200/50 transition-all duration-200 group-hover:ring-emerald-300"
-                        role="status">
-                        <svg class="flex-shrink-0 w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd"
-                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
-                                clip-rule="evenodd" />
-                        </svg>
-                        {{ $status }}
-                    </span>
-                </div>
+                @if($date)
+                <time
+                    class="text-[11px] leading-[16px] sm:text-sm sm:leading-[21px] text-[#A3A6AE] transition-colors duration-200 group-hover:text-[#6B7280]"
+                    datetime="{{ $date }}" itemprop="datePublished">
+                    {{ $date }}
+                </time>
+                @endif
 
                 {{-- Authors & CTA --}}
                 <div class="gap-3 mt-auto pt-3 flex items-center justify-between border-t border-[#EEF0F7]">
@@ -84,7 +70,7 @@
                         <div class="flex items-center -space-x-2">
                             @foreach(array_slice($authors, 0, 3) as $index => $author)
                             <img src="{{ $author['photo'] ?? 'https://ui-avatars.com/api/?name=' . urlencode($author['name'] ?? 'Unknown') . '&background=FF6B18&color=fff&size=128&bold=true' }}"
-                                class="h-8 w-8 rounded-full object-cover ring-2 ring-white transition-all duration-200 hover:scale-110 hover:z-20 hover:ring-[#FF6B18]"
+                                class="h-8 w-8 rounded-full object-cover ring-2 ring-white transition-all duration-200 hover:scale-110 hover:z-20 hover:ring-[#FF6B18] block"
                                 alt="Foto {{ $author['name'] ?? 'Penulis' }}"
                                 title="{{ $author['name'] ?? 'Penulis ' . ($index + 1) }}" loading="lazy"
                                 style="z-index: {{ 10 - $index }};"
