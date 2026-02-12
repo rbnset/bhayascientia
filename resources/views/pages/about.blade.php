@@ -206,10 +206,11 @@
     </div>
 </section>
 
-{{-- Stats Section --}}
+{{-- Stats Section (DINAMIS dari Database) --}}
 <section class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px] -mt-12 sm:-mt-16 relative z-20 mb-12 sm:mb-16">
     <div class="grid grid-cols-2 gap-3 lg:grid-cols-4 sm:gap-4 md:gap-6">
-        {{-- Stat 1 --}}
+
+        {{-- Stat 1: Publikasi Published --}}
         <div class="stat-card bg-white rounded-xl sm:rounded-2xl border-2 border-[#EEF0F7] p-4 sm:p-6 text-center">
             <div
                 class="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-[#FF6B18]/10 to-[#E64627]/10 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4">
@@ -218,14 +219,16 @@
                         d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
             </div>
-            <h3 class="text-2xl sm:text-3xl md:text-4xl font-black text-[#1A1A1A] mb-1 sm:mb-2 gradient-text">10,000+
+            <h3 class="text-2xl sm:text-3xl md:text-4xl font-black text-[#1A1A1A] mb-1 sm:mb-2 gradient-text"
+                data-count="{{ $stats['publications'] }}">
+                {{ number_format($stats['publications'], 0, ',', '.') }}+
             </h3>
             <p class="text-xs sm:text-sm text-[#737373] font-semibold">Publikasi Ilmiah</p>
         </div>
 
-        {{-- Stat 2 --}}
+        {{-- Stat 2: Users --}}
         <div class="stat-card bg-white rounded-xl sm:rounded-2xl border-2 border-[#EEF0F7] p-4 sm:p-6 text-center"
-            style="animation-delay: 0.1s;">
+            style="animation-delay: 0.1s">
             <div
                 class="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-[#FF6B18]/10 to-[#E64627]/10 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4">
                 <svg class="w-6 h-6 sm:w-8 sm:h-8 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -233,40 +236,50 @@
                         d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
             </div>
-            <h3 class="text-2xl sm:text-3xl md:text-4xl font-black text-[#1A1A1A] mb-1 sm:mb-2 gradient-text">50,000+
+            <h3 class="text-2xl sm:text-3xl md:text-4xl font-black text-[#1A1A1A] mb-1 sm:mb-2 gradient-text"
+                data-count="{{ $stats['users'] }}">
+                {{ number_format($stats['users'], 0, ',', '.') }}+
             </h3>
-            <p class="text-xs sm:text-sm text-[#737373] font-semibold">Pengguna Aktif</p>
+            <p class="text-xs sm:text-sm text-[#737373] font-semibold">Pengguna Terdaftar</p>
         </div>
 
-        {{-- Stat 3 --}}
+        {{-- Stat 3: Authors --}}
         <div class="stat-card bg-white rounded-xl sm:rounded-2xl border-2 border-[#EEF0F7] p-4 sm:p-6 text-center"
-            style="animation-delay: 0.2s;">
+            style="animation-delay: 0.2s">
             <div
                 class="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-[#FF6B18]/10 to-[#E64627]/10 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4">
                 <svg class="w-6 h-6 sm:w-8 sm:h-8 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                        d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                 </svg>
             </div>
-            <h3 class="text-2xl sm:text-3xl md:text-4xl font-black text-[#1A1A1A] mb-1 sm:mb-2 gradient-text">200+</h3>
-            <p class="text-xs sm:text-sm text-[#737373] font-semibold">Institusi Partner</p>
+            <h3 class="text-2xl sm:text-3xl md:text-4xl font-black text-[#1A1A1A] mb-1 sm:mb-2 gradient-text"
+                data-count="{{ $stats['authors'] }}">
+                {{ number_format($stats['authors'], 0, ',', '.') }}+
+            </h3>
+            <p class="text-xs sm:text-sm text-[#737373] font-semibold">Penulis Aktif</p>
         </div>
 
-        {{-- Stat 4 --}}
+        {{-- Stat 4: Categories --}}
         <div class="stat-card bg-white rounded-xl sm:rounded-2xl border-2 border-[#EEF0F7] p-4 sm:p-6 text-center"
-            style="animation-delay: 0.3s;">
+            style="animation-delay: 0.3s">
             <div
                 class="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-[#FF6B18]/10 to-[#E64627]/10 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4">
                 <svg class="w-6 h-6 sm:w-8 sm:h-8 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                 </svg>
             </div>
-            <h3 class="text-2xl sm:text-3xl md:text-4xl font-black text-[#1A1A1A] mb-1 sm:mb-2 gradient-text">25+</h3>
-            <p class="text-xs sm:text-sm text-[#737373] font-semibold">Negara</p>
+            <h3 class="text-2xl sm:text-3xl md:text-4xl font-black text-[#1A1A1A] mb-1 sm:mb-2 gradient-text"
+                data-count="{{ $stats['categories'] }}">
+                {{ number_format($stats['categories'], 0, ',', '.') }}+
+            </h3>
+            <p class="text-xs sm:text-sm text-[#737373] font-semibold">Kategori</p>
         </div>
+
     </div>
 </section>
+
 
 {{-- About Content --}}
 <section class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px] mb-12 sm:mb-16">

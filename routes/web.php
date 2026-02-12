@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AboutController;
 use App\Http\Controllers\PublicationController;
 use App\Http\Controllers\PublikasiController;
 use App\Http\Controllers\AuthController;
@@ -14,6 +15,7 @@ use App\Http\Controllers\Publication\PublicationSearchController;
 use App\Http\Controllers\Publication\PublicationTrendingController;
 use App\Http\Controllers\SubmissionGuidelineController;
 use App\Http\Controllers\SubscriptionController;
+use App\Http\Controllers\TentangController;
 use App\Models\PublicationVersion;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
@@ -161,3 +163,5 @@ Route::controller(LegalController::class)->group(function () {
     Route::get('/privacy-policy', 'privacyPolicy')->name('privacy-policy');
     Route::get('/terms-conditions', 'termsConditions')->name('terms-conditions');
 });
+
+Route::get('/tentang', [AboutController::class, 'index'])->name('tentang');
