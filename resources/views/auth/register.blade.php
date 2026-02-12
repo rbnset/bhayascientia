@@ -136,7 +136,7 @@
                                 d="M43.611 20.083H42V20H24v8h11.303c-.792 2.238-2.231 4.166-4.094 5.565l.003-.002 6.19 5.238C36.97 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z" />
                         </svg>
                         <span class="hidden sm:inline">Google</span>
-                        <span class="sm:hidden">G</span>
+                        <span class="sm:hidden">Google</span>
                     </a>
 
                     {{-- ✅ Facebook Register --}}
