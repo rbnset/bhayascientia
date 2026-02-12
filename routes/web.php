@@ -105,12 +105,20 @@ Route::view('/kontak', 'pages.contact')->name('kontak');
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->name('login.post');
+
     Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('register');
     Route::post('/register', [AuthController::class, 'register'])->name('register.post');
+
+    // ✅ Social Authentication Routes
+    Route::get('auth/google', [AuthController::class, 'redirectToGoogle'])->name('auth.google');
+    Route::get('auth/google/callback', [AuthController::class, 'handleGoogleCallback'])->name('auth.google.callback');
+
+    Route::get('auth/facebook', [AuthController::class, 'redirectToFacebook'])->name('auth.facebook');
+    Route::get('auth/facebook/callback', [AuthController::class, 'handleFacebookCallback'])->name('auth.facebook.callback');
 });
 
 Route::middleware('auth')->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+    Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
     Route::get('/dashboard', function () {
         return redirect()->route('publikasi.library');
     })->name('dashboard');
@@ -166,14 +174,3 @@ Route::controller(LegalController::class)->group(function () {
 });
 
 Route::get('/tentang', [AboutController::class, 'index'])->name('tentang');
-
-// Social Authentication Routes
-Route::prefix('auth')->group(function () {
-    // Google
-    Route::get('google', [SocialAuthController::class, 'redirectToGoogle'])->name('auth.google');
-    Route::get('google/callback', [SocialAuthController::class, 'handleGoogleCallback'])->name('auth.google.callback');
-
-    // Facebook
-    Route::get('facebook', [SocialAuthController::class, 'redirectToFacebook'])->name('auth.facebook');
-    Route::get('facebook/callback', [SocialAuthController::class, 'handleFacebookCallback'])->name('auth.facebook.callback');
-});
