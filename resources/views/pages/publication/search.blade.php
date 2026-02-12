@@ -4,14 +4,18 @@
 @section('main_class', 'pb-16')
 
 @section('custom_navbar')
-<x-navbar ctaLabel="Mulai Berlangganan" ctaRoute="publikasi.library" ctaIcon="sparkles" ctaSubtext="Gratis"
-    ctaVariant="premium" />
+
+<x-navbar ctaLabel="Browse Publikasi" ctaRoute="publikasi.index" ctaIcon="book" :showAvatarWhenAuth="false"
+    :showCtaAlways="true" />
+
 
 {{-- Search/Filter Modal --}}
 <x-publication-search-filter :selectedType="$selectedType" :categories="$categories" :years="$years"
     :topKeywords="$topKeywords" :filterCategory="$filterCategory" :filterYear="$filterYear"
     :filterKeyword="$filterKeyword" :filterSort="$filterSort" :searchQuery="$searchQuery" />
 @endsection
+
+
 
 @section('content')
 

@@ -196,6 +196,11 @@
 </style>
 @endpush
 
+@section('custom_navbar')
+<x-navbar ctaLabel="Browse Publikasi" ctaRoute="publikasi.index" ctaIcon="book" :showAvatarWhenAuth="false"
+    :showCtaAlways="true" />
+@endsection
+
 @section('content')
 
 {{-- Hero Section --}}
