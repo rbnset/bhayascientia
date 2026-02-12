@@ -25,6 +25,10 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         'username', // ✅ Add this if not exists
         'bio', // ✅ Add this if not exists
         'affiliation', // ✅ Add this if not exists
+        'google_id',
+        'facebook_id',
+        'avatar',
+        'provider',
     ];
 
     protected $hidden = [

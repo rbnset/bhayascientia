@@ -15,6 +15,7 @@
         "filament/filament": "^4.0",
         "jeffgreco13/filament-breezy": "^3.0",
         "laravel/framework": "^12.0",
+        "laravel/socialite": "^5.24",
         "laravel/tinker": "^2.10.1",
         "setasign/fpdf": "^1.8",
         "setasign/fpdi": "^2.6",

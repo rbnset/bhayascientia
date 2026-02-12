@@ -96,7 +96,8 @@
 
                 {{-- Social Login --}}
                 <div class="grid grid-cols-1 gap-3 mb-5 sm:grid-cols-2">
-                    <button type="button"
+                    {{-- Google Login --}}
+                    <a href="{{ route('auth.google') }}"
                         class="inline-flex items-center justify-center gap-2 rounded-full border border-[#EEF0F7] bg-white px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition-all duration-300 hover:border-[#FF6B18]/30 hover:bg-[#F4F6FB] hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]">
                         <svg viewBox="0 0 48 48" class="w-5 h-5" aria-hidden="true">
                             <path fill="#FFC107"
@@ -110,9 +111,10 @@
                         </svg>
                         <span class="hidden sm:inline">Google</span>
                         <span class="sm:hidden">G</span>
-                    </button>
+                    </a>
 
-                    <button type="button"
+                    {{-- Facebook Login --}}
+                    <a href="{{ route('auth.facebook') }}"
                         class="inline-flex items-center justify-center gap-2 rounded-full border border-[#EEF0F7] bg-white px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition-all duration-300 hover:border-[#FF6B18]/30 hover:bg-[#F4F6FB] hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]">
                         <svg viewBox="0 0 24 24" class="w-5 h-5" aria-hidden="true">
                             <path fill="currentColor"
@@ -120,8 +122,9 @@
                         </svg>
                         <span class="hidden sm:inline">Facebook</span>
                         <span class="sm:hidden">FB</span>
-                    </button>
+                    </a>
                 </div>
+
 
                 {{-- Divider --}}
                 <div class="flex items-center gap-3 mb-5">
