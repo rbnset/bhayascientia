@@ -19,16 +19,17 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         'name',
         'email',
         'password',
+        'email_verified_at', // ✅ TAMBAHKAN INI (untuk social login auto-verify)
         'profile_photo',
         'whatsapp_number',
         'job_title',
-        'username', // ✅ Add this if not exists
-        'bio', // ✅ Add this if not exists
-        'affiliation', // ✅ Add this if not exists
-        'google_id',
-        'facebook_id',
-        'avatar',
-        'provider',
+        'username',
+        'bio',
+        'affiliation',
+        'google_id',        // ✅ Sudah ada
+        'facebook_id',      // ✅ Sudah ada
+        'avatar',           // ✅ Sudah ada (untuk avatar dari Google/Facebook)
+        'provider',         // ✅ Sudah ada
     ];
 
     protected $hidden = [
@@ -44,9 +45,15 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         ];
     }
 
-    // ✅ Accessor untuk photo URL
+    // ✅ Accessor untuk photo URL (prioritaskan avatar dari social media)
     public function getPhotoUrlAttribute(): string
     {
+        // Prioritas 1: Avatar dari social login (Google/Facebook)
+        if ($this->avatar && filter_var($this->avatar, FILTER_VALIDATE_URL)) {
+            return $this->avatar;
+        }
+
+        // Prioritas 2: Profile photo yang diupload manual
         if ($this->profile_photo) {
             $cleanPath = str_starts_with($this->profile_photo, 'public/')
                 ? substr($this->profile_photo, 7)
@@ -57,6 +64,7 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
             }
         }
 
+        // Prioritas 3: Default UI Avatars
         return 'https://ui-avatars.com/api/?name=' . urlencode($this->name) .
             '&background=FF6B18&color=fff&size=128&bold=true&font-size=0.4';
     }
@@ -85,11 +93,32 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
             : $this->bio;
     }
 
+    // ✅ Filament avatar URL (prioritaskan avatar dari social media)
     public function getFilamentAvatarUrl(): ?string
     {
-        return filled($this->profile_photo)
-            ? Storage::disk('public')->url($this->profile_photo)
-            : null;
+        // Prioritas 1: Avatar dari social login
+        if ($this->avatar && filter_var($this->avatar, FILTER_VALIDATE_URL)) {
+            return $this->avatar;
+        }
+
+        // Prioritas 2: Profile photo upload
+        if (filled($this->profile_photo)) {
+            return Storage::disk('public')->url($this->profile_photo);
+        }
+
+        return null;
+    }
+
+    // ✅ Check if user is social login
+    public function isSocialLogin(): bool
+    {
+        return in_array($this->provider, ['google', 'facebook']);
+    }
+
+    // ✅ Check if user has password (manual registration)
+    public function hasPassword(): bool
+    {
+        return !is_null($this->password);
     }
 
     public function canAccessPanel(Panel $panel): bool
