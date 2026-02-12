@@ -3,9 +3,15 @@ export default {
         './resources/**/*.blade.php',
         './vendor/filament/**/*.blade.php',
         './vendor/diogogpinto/filament-auth-ui-enhancer/resources/**/*.blade.php',
+        "./resources/**/*.js",
+        "./resources/**/*.vue",
     ],
     theme: {
-        extend: {},
+        extend: {
+            screens: {
+                'xs': '370px',
+            },
+        },
     },
     plugins: [],
 }

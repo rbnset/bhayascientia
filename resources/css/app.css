@@ -17,9 +17,9 @@
 @import "flickity/css/flickity.css";
 
 @theme {
-    --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif,
-        "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
-        "Noto Color Emoji";
+    --font-sans:
+        "Poppins", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
+        "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 
     --color-primary: #ff6b18;
     --color-primary-dark: #e64627;
@@ -29,4 +29,35 @@
     --color-text-light: #737373;
     --color-border: #eef0f7;
     --color-card-bg: #fff7f2;
+}
+
+/* Custom breakpoint untuk layar sangat kecil */
+@media (max-width: 369px) {
+    .user-info-text-compact {
+        display: block;
+    }
+    .user-info-text-normal {
+        display: none;
+    }
+    .user-info-container {
+        max-width: 100px;
+    }
+}
+
+@media (min-width: 370px) {
+    .user-info-text-compact {
+        display: none;
+    }
+    .user-info-text-normal {
+        display: block;
+    }
+    .user-info-container {
+        max-width: 140px;
+    }
+}
+
+@media (min-width: 640px) {
+    .user-info-container {
+        max-width: 180px;
+    }
 }
