@@ -94,12 +94,12 @@
                 </div>
                 @endif
 
-                {{-- Social Login --}}
+                {{-- Social Login with Loading State --}}
                 <div class="grid grid-cols-1 gap-3 mb-5 sm:grid-cols-2">
                     {{-- Google Login --}}
-                    <a href="{{ route('auth.google') }}"
-                        class="inline-flex items-center justify-center gap-2 rounded-full border border-[#EEF0F7] bg-white px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition-all duration-300 hover:border-[#FF6B18]/30 hover:bg-[#F4F6FB] hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]">
-                        <svg viewBox="0 0 48 48" class="w-5 h-5" aria-hidden="true">
+                    <a href="{{ route('auth.google') }}" id="googleLoginBtn"
+                        class="inline-flex items-center justify-center gap-2 rounded-full border border-[#EEF0F7] bg-white px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition-all duration-300 hover:border-[#FF6B18]/30 hover:bg-[#F4F6FB] hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] disabled:opacity-50 disabled:cursor-not-allowed">
+                        <svg viewBox="0 0 48 48" class="w-5 h-5 google-icon" aria-hidden="true">
                             <path fill="#FFC107"
                                 d="M43.611 20.083H42V20H24v8h11.303C33.656 32.91 29.236 36 24 36c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z" />
                             <path fill="#FF3D00"
@@ -109,19 +109,32 @@
                             <path fill="#1976D2"
                                 d="M43.611 20.083H42V20H24v8h11.303c-.792 2.238-2.231 4.166-4.094 5.565l.003-.002 6.19 5.238C36.97 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z" />
                         </svg>
-                        <span class="hidden sm:inline">Google</span>
-                        <span class="sm:hidden">Google</span>
+                        <span class="google-text">Google</span>
+                        <svg class="hidden w-4 h-4 animate-spin google-spinner" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                            </circle>
+                            <path class="opacity-75" fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                            </path>
+                        </svg>
                     </a>
 
                     {{-- Facebook Login --}}
-                    <a href="{{ route('auth.facebook') }}"
-                        class="inline-flex items-center justify-center gap-2 rounded-full border border-[#EEF0F7] bg-white px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition-all duration-300 hover:border-[#FF6B18]/30 hover:bg-[#F4F6FB] hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]">
-                        <svg viewBox="0 0 24 24" class="w-5 h-5" aria-hidden="true">
+                    <a href="{{ route('auth.facebook') }}" id="facebookLoginBtn"
+                        class="inline-flex items-center justify-center gap-2 rounded-full border border-[#EEF0F7] bg-white px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition-all duration-300 hover:border-[#FF6B18]/30 hover:bg-[#F4F6FB] hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] disabled:opacity-50 disabled:cursor-not-allowed">
+                        <svg viewBox="0 0 24 24" class="w-5 h-5 text-[#1877F2] facebook-icon" aria-hidden="true">
                             <path fill="currentColor"
                                 d="M22 12.06c0-5.52-4.48-10-10-10S2 6.54 2 12.06c0 4.99 3.66 9.13 8.44 9.88v-6.99H7.9v-2.89h2.54V9.85c0-2.5 1.49-3.89 3.77-3.89 1.09 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56v1.87h2.78l-.44 2.89h-2.34v6.99C18.34 21.19 22 17.05 22 12.06z" />
                         </svg>
-                        <span class="hidden sm:inline">Facebook</span>
-                        <span class="sm:hidden">FB</span>
+                        <span class="hidden sm:inline facebook-text">Facebook</span>
+                        <span class="sm:hidden facebook-text">FB</span>
+                        <svg class="hidden w-4 h-4 animate-spin facebook-spinner" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                            </circle>
+                            <path class="opacity-75" fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                            </path>
+                        </svg>
                     </a>
                 </div>
 
@@ -553,10 +566,11 @@
     </div>
 </div>
 @endsection
-
 @push('scripts')
 <script>
-    // Toggle password visibility
+    // ========================================
+    // Toggle Password Visibility
+    // ========================================
     (function() {
         const input = document.getElementById("password");
         const btn = document.getElementById("togglePassword");
@@ -570,7 +584,9 @@
         });
     })();
 
+    // ========================================
     // Forgot Password Modal
+    // ========================================
     (function() {
         const openBtn = document.getElementById("openForgotPassword");
         const closeBtn = document.getElementById("closeForgotPassword");
@@ -597,7 +613,9 @@
         });
     })();
 
-    // Legal Modal with improved UX
+    // ========================================
+    // Legal Modal (Terms & Privacy)
+    // ========================================
     (function() {
         const openTerms = document.getElementById("openTerms");
         const openPrivacy = document.getElementById("openPrivacy");
@@ -668,6 +686,68 @@
             if (e.key === "Escape") setOpen(false);
         });
     })();
+
+    // ========================================
+    // Social Login Loading State
+    // ========================================
+    (function() {
+        const googleBtn = document.getElementById("googleLoginBtn");
+        const facebookBtn = document.getElementById("facebookLoginBtn");
+
+        function handleSocialClick(btn, iconSelector, textSelector, spinnerSelector) {
+            if (!btn) return;
+
+            btn.addEventListener("click", function(e) {
+                // Prevent double-click
+                if (btn.classList.contains('pointer-events-none')) {
+                    e.preventDefault();
+                    return;
+                }
+
+                const icon = btn.querySelector(iconSelector);
+                const text = btn.querySelector(textSelector);
+                const spinner = btn.querySelector(spinnerSelector);
+
+                // Show loading state
+                btn.classList.add('pointer-events-none', 'opacity-75');
+                if (icon) icon.classList.add('hidden');
+                if (text) text.textContent = 'Loading...';
+                if (spinner) spinner.classList.remove('hidden');
+            });
+        }
+
+        handleSocialClick(googleBtn, '.google-icon', '.google-text', '.google-spinner');
+        handleSocialClick(facebookBtn, '.facebook-icon', '.facebook-text', '.facebook-spinner');
+    })();
+
+    // ========================================
+    // Auto-dismiss Success Alerts
+    // ========================================
+    (function() {
+        const successAlert = document.querySelector('.bg-green-50');
+        if (successAlert) {
+            setTimeout(() => {
+                successAlert.style.transition = 'opacity 0.5s ease-out';
+                successAlert.style.opacity = '0';
+                setTimeout(() => successAlert.remove(), 500);
+            }, 5000); // 5 detik
+        }
+    })();
+
+    // ========================================
+    // Auto-shake Error Alerts
+    // ========================================
+    (function() {
+        const errorAlert = document.querySelector('.bg-red-50');
+        if (errorAlert && errorAlert.classList.contains('animate-shake')) {
+            // Auto-dismiss error setelah 8 detik
+            setTimeout(() => {
+                errorAlert.style.transition = 'opacity 0.5s ease-out';
+                errorAlert.style.opacity = '0';
+                setTimeout(() => errorAlert.remove(), 500);
+            }, 8000);
+        }
+    })();
 </script>
 
 <style>
@@ -696,6 +776,12 @@
 
     .animate-shake {
         animation: shake 0.5s ease-in-out;
+    }
+
+    /* Smooth transitions for alerts */
+    .bg-green-50,
+    .bg-red-50 {
+        transition: opacity 0.5s ease-out;
     }
 </style>
 @endpush

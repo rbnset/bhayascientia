@@ -6,9 +6,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 use App\Models\User;
-use Exception; // ✅ TAMBAHKAN INI
-use Laravel\Socialite\Socialite;
+use Exception;
+use Laravel\Socialite\Facades\Socialite; // ✅ PERBAIKI IMPORT
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
@@ -108,12 +110,7 @@ class AuthController extends Controller
             'provider' => 'manual',
         ]);
 
-        try {
-            $user->assignRole('Author');
-        } catch (Exception $e) {
-            \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'Author']);
-            $user->assignRole('Author');
-        }
+        $this->ensureAuthorRole($user);
 
         Auth::login($user);
         $request->session()->regenerate();
@@ -136,7 +133,7 @@ class AuthController extends Controller
     }
 
     // ========================================
-    // ✅ SOCIAL LOGIN METHODS
+    // ✅ GOOGLE OAUTH METHODS
     // ========================================
 
     /**
@@ -145,8 +142,12 @@ class AuthController extends Controller
     public function redirectToGoogle()
     {
         try {
-            return Socialite::driver('google')->redirect();
+            return Socialite::driver('google')
+                ->with(['prompt' => 'select_account']) // ✅ User bisa pilih akun
+                ->redirect();
         } catch (Exception $e) {
+            Log::error('Google OAuth Redirect Error: ' . $e->getMessage());
+
             return redirect()->route('login')->withErrors([
                 'google' => 'Gagal menghubungkan ke Google. Silakan coba lagi.'
             ]);
@@ -159,11 +160,24 @@ class AuthController extends Controller
     public function handleGoogleCallback(Request $request)
     {
         try {
-            $googleUser = Socialite::driver('google')->user();
+            // ✅ Gunakan stateless() untuk callback
+            $googleUser = Socialite::driver('google')->stateless()->user();
 
+            // ✅ Validasi data dari Google
+            if (!$googleUser || !$googleUser->email) {
+                return redirect()->route('login')->withErrors([
+                    'google' => 'Gagal mendapatkan data dari Google.'
+                ]);
+            }
+
+            // ✅ Cek user berdasarkan google_id
             $user = User::where('google_id', $googleUser->id)->first();
 
             if ($user) {
+                // User sudah ada dengan Google ID
+                $this->updateUserAvatar($user, $googleUser->avatar);
+                $this->ensureAuthorRole($user);
+
                 Auth::login($user, true);
                 $request->session()->regenerate();
 
@@ -171,22 +185,28 @@ class AuthController extends Controller
                     ->with('success', 'Selamat datang kembali, ' . $user->name . '! 👋');
             }
 
+            // ✅ Cek apakah email sudah terdaftar (link akun existing)
             $existingUser = User::where('email', $googleUser->email)->first();
 
             if ($existingUser) {
+                // Tautkan Google ID ke akun yang sudah ada
                 $existingUser->update([
                     'google_id' => $googleUser->id,
-                    'avatar' => $googleUser->avatar,
+                    'avatar' => $googleUser->avatar ?? $existingUser->avatar,
                     'provider' => 'google',
+                    'email_verified_at' => $existingUser->email_verified_at ?? now(),
                 ]);
+
+                $this->ensureAuthorRole($existingUser);
 
                 Auth::login($existingUser, true);
                 $request->session()->regenerate();
 
                 return redirect()->intended(route('publikasi.library'))
-                    ->with('success', 'Akun Google berhasil ditautkan! Selamat datang, ' . $existingUser->name . '! 👋');
+                    ->with('success', 'Akun Google berhasil ditautkan! 👋');
             }
 
+            // ✅ Buat user baru
             $newUser = User::create([
                 'name' => $googleUser->name,
                 'email' => $googleUser->email,
@@ -194,27 +214,31 @@ class AuthController extends Controller
                 'avatar' => $googleUser->avatar,
                 'provider' => 'google',
                 'email_verified_at' => now(),
-                'password' => null,
+                'password' => Hash::make(Str::random(32)), // ✅ Password random untuk keamanan
             ]);
 
-            try {
-                $newUser->assignRole('Author');
-            } catch (Exception $e) {
-                \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'Author']);
-                $newUser->assignRole('Author');
-            }
+            $this->ensureAuthorRole($newUser);
 
             Auth::login($newUser, true);
             $request->session()->regenerate();
 
             return redirect()->intended(route('publikasi.library'))
                 ->with('success', 'Akun berhasil dibuat! Selamat datang, ' . $newUser->name . '! 🎉');
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
+            // ✅ Tangkap semua error termasuk fatal error
+            Log::error('Google OAuth Callback Error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+
             return redirect()->route('login')->withErrors([
-                'google' => 'Gagal login dengan Google: ' . $e->getMessage()
+                'google' => 'Gagal login dengan Google. Silakan coba lagi.'
             ]);
         }
     }
+
+    // ========================================
+    // ✅ FACEBOOK OAUTH METHODS
+    // ========================================
 
     /**
      * Redirect to Facebook OAuth
@@ -222,8 +246,12 @@ class AuthController extends Controller
     public function redirectToFacebook()
     {
         try {
-            return Socialite::driver('facebook')->redirect();
+            return Socialite::driver('facebook')
+                ->with(['prompt' => 'select_account'])
+                ->redirect();
         } catch (Exception $e) {
+            Log::error('Facebook OAuth Redirect Error: ' . $e->getMessage());
+
             return redirect()->route('login')->withErrors([
                 'facebook' => 'Gagal menghubungkan ke Facebook. Silakan coba lagi.'
             ]);
@@ -236,11 +264,20 @@ class AuthController extends Controller
     public function handleFacebookCallback(Request $request)
     {
         try {
-            $facebookUser = Socialite::driver('facebook')->user();
+            $facebookUser = Socialite::driver('facebook')->stateless()->user();
+
+            if (!$facebookUser || !$facebookUser->email) {
+                return redirect()->route('login')->withErrors([
+                    'facebook' => 'Gagal mendapatkan data dari Facebook.'
+                ]);
+            }
 
             $user = User::where('facebook_id', $facebookUser->id)->first();
 
             if ($user) {
+                $this->updateUserAvatar($user, $facebookUser->avatar);
+                $this->ensureAuthorRole($user);
+
                 Auth::login($user, true);
                 $request->session()->regenerate();
 
@@ -253,15 +290,18 @@ class AuthController extends Controller
             if ($existingUser) {
                 $existingUser->update([
                     'facebook_id' => $facebookUser->id,
-                    'avatar' => $facebookUser->avatar,
+                    'avatar' => $facebookUser->avatar ?? $existingUser->avatar,
                     'provider' => 'facebook',
+                    'email_verified_at' => $existingUser->email_verified_at ?? now(),
                 ]);
+
+                $this->ensureAuthorRole($existingUser);
 
                 Auth::login($existingUser, true);
                 $request->session()->regenerate();
 
                 return redirect()->intended(route('publikasi.library'))
-                    ->with('success', 'Akun Facebook berhasil ditautkan! Selamat datang, ' . $existingUser->name . '! 👋');
+                    ->with('success', 'Akun Facebook berhasil ditautkan! 👋');
             }
 
             $newUser = User::create([
@@ -271,25 +311,62 @@ class AuthController extends Controller
                 'avatar' => $facebookUser->avatar,
                 'provider' => 'facebook',
                 'email_verified_at' => now(),
-                'password' => null,
+                'password' => Hash::make(Str::random(32)),
             ]);
 
-            try {
-                $newUser->assignRole('Author');
-            } catch (Exception $e) {
-                \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'Author']);
-                $newUser->assignRole('Author');
-            }
+            $this->ensureAuthorRole($newUser);
 
             Auth::login($newUser, true);
             $request->session()->regenerate();
 
             return redirect()->intended(route('publikasi.library'))
                 ->with('success', 'Akun berhasil dibuat! Selamat datang, ' . $newUser->name . '! 🎉');
-        } catch (Exception $e) {
-            return redirect()->route('login')->withErrors([
-                'facebook' => 'Gagal login dengan Facebook: ' . $e->getMessage()
+        } catch (\Throwable $e) {
+            Log::error('Facebook OAuth Callback Error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
             ]);
+
+            return redirect()->route('login')->withErrors([
+                'facebook' => 'Gagal login dengan Facebook. Silakan coba lagi.'
+            ]);
+        }
+    }
+
+    // ========================================
+    // ✅ HELPER METHODS
+    // ========================================
+
+    /**
+     * Pastikan user memiliki role Author
+     *
+     * @param User $user
+     * @return void
+     */
+    private function ensureAuthorRole(User $user)
+    {
+        try {
+            // Cek apakah user sudah punya role penting
+            if (!$user->hasAnyRole(['Author', 'Admin', 'Super Admin'])) {
+                $user->assignRole('Author');
+            }
+        } catch (Exception $e) {
+            // Buat role jika belum ada
+            \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'Author']);
+            $user->assignRole('Author');
+        }
+    }
+
+    /**
+     * Update avatar user jika kosong
+     *
+     * @param User $user
+     * @param string|null $avatar
+     * @return void
+     */
+    private function updateUserAvatar(User $user, ?string $avatar)
+    {
+        if (empty($user->avatar) && $avatar) {
+            $user->forceFill(['avatar' => $avatar])->save();
         }
     }
 }
