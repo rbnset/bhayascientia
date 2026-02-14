@@ -5,83 +5,219 @@ namespace App\Http\Controllers\Publication;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Traits\PublicationHelperTrait;
 use App\Models\Publication;
-use App\Models\DownloadLog;
+use App\Models\Author;
+use App\Models\PublicationType;
+use App\Models\Category;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Log;
 
-class PublicationCoreController extends Controller
+class PublicationBrowseController extends Controller
 {
     use PublicationHelperTrait;
 
-    public function show($slug)
+    public function index(Request $request)
     {
-        $publication = Publication::with([
-            'authors.user',
-            'publicationType',
+        $selectedType = $request->get('type', 'semua');
+        $searchQuery = $request->get('search', '');
+        $filterSort = $request->get('sort', 'latest');
+
+        // Get publication types
+        $publicationTypes = $this->getPublicationTypes();
+
+        // Get categories & years
+        $categories = Category::orderBy('name')->get();
+        $years = Publication::selectRaw('YEAR(published_at) as year')
+            ->whereNotNull('published_at')
+            ->where('status', 'published')
+            ->groupBy('year')
+            ->orderByDesc('year')
+            ->pluck('year');
+
+        // Latest Publications
+        $latestPublications = $this->getLatestPublications($selectedType);
+
+        // Best Authors
+        $bestAuthors = $this->getBestAuthors($selectedType);
+
+        // Popular Publications
+        $popularPublications = $this->getPopularPublications($selectedType);
+
+        // Featured Publication
+        $featuredPublication = $this->getFeaturedPublication($selectedType);
+
+        return view('publications.browse', compact(
+            'selectedType',
+            'searchQuery',
+            'filterSort',
+            'publicationTypes',
             'categories',
-            'keywords',
-            'versions' => fn($query) => $query->orderBy('version_number', 'desc')
-        ])
-        ->where('slug', $slug)
-        ->where('status', 'published')
-        ->whereNotNull('published_at')
-        ->where('published_at', '<=', now())
-        ->firstOrFail();
-
-        $latestVersion = $publication->versions->first();
-        $fileSize = null;
-        $fileSizeFormatted = null;
-
-        if ($latestVersion && $latestVersion->pdf_file_path) {
-            $filePath = $this->cleanPath($latestVersion->pdf_file_path);
-            if (Storage::disk('public')->exists($filePath)) {
-                $fileSizeBytes = Storage::disk('public')->size($filePath);
-                $fileSize = $fileSizeBytes;
-                $fileSizeFormatted = $this->formatFileSize($fileSizeBytes);
-            }
-        }
-
-        $downloadCount = $publication->downloadLogs()->where('publication_id', $publication->id)->count();
-        $viewsCount = $publication->viewLogs()->where('publication_id', $publication->id)->count();
-
-        $this->logPublicationView($publication);
-
-        // Map authors dengan support User dan Author profile
-        $authors = $publication->authors->map(function ($author) {
-            $userData = $author->user;
-            return [
-                'id' => $author->id,
-                'user_id' => $author->user_id,
-                'name' => $author->name,
-                'initials' => $author->initials,
-                'photo' => $author->photo_url,
-                'photo_url' => $author->photo_url,
-                'affiliation' => $author->affiliation ?? ($userData ? ($userData->job_title ?? $userData->organization ?? '-') : '-'),
-                'bio' => $author->bio ?? ($userData ? $userData->bio : null),
-                'short_bio' => $author->short_bio,
-                'email' => $author->email,
-                'is_corresponding' => $author->pivot->is_corresponding ?? false,
-                // Add profile routing support
-                'profile_type' => $author->user_id ? 'user' : 'author',
-                'profile_id' => $author->user_id ?? $author->id,
-            ];
-        });
-
-        return view('pages.publication.show', [
-            'publication' => $publication,
-            'formatted_date' => $publication->published_at?->locale('id_ID')->isoFormat('D MMMM YYYY'),
-            'category' => $publication->categories->first()?->name ?? 'Umum',
-            'keywords' => $publication->keywords->pluck('name')->toArray(),
-            'cover_url' => $this->getCoverUrl($publication),
-            'authors' => $authors,
-            'latest_version' => $latestVersion,
-            'file_size' => $fileSize,
-            'file_size_formatted' => $fileSizeFormatted,
-            'download_count' => $downloadCount,
-            'views_count' => $viewsCount,
-        ]);
+            'years',
+            'latestPublications',
+            'bestAuthors',
+            'popularPublications',
+            'featuredPublication'
+        ));
     }
 
-    public function download($slug
+    /**
+     * ✅ Get latest publications dengan mapping yang benar
+     */
+    private function getLatestPublications($type)
+    {
+        $query = Publication::with(['authors.user', 'categories'])
+            ->where('status', 'published')
+            ->whereNotNull('published_at')
+            ->where('published_at', '<=', now());
+
+        if ($type !== 'semua') {
+            $query->whereHas('publicationType', function ($q) use ($type) {
+                $q->where('slug', $type);
+            });
+        }
+
+        return $query->latest('published_at')
+            ->take(10)
+            ->get()
+            ->map(function ($publication) {
+                return [
+                    'title' => $publication->title,
+                    'cover_url' => $this->getCoverUrl($publication),
+                    'category' => $publication->categories->first()?->name ?? 'Umum',
+                    'formatted_date' => $publication->published_at?->locale('id_ID')->isoFormat('D MMMM YYYY'),
+                    'status' => $publication->status,
+                    'authors' => $publication->authors->map(function ($author) {
+                        return [
+                            'name' => $author->name,
+                            'photo' => $author->photo_url, // ✅ Gunakan accessor
+                        ];
+                    })->toArray(),
+                    'total_authors' => $publication->authors->count(),
+                    'detail_url' => route('publikasi.show', $publication->slug),
+                ];
+            });
+    }
+
+    /**
+     * ✅ Get best authors dengan mapping yang benar
+     */
+    private function getBestAuthors($type)
+    {
+        $query = Author::withCount(['publications' => function ($q) use ($type) {
+            $q->where('status', 'published')
+                ->whereNotNull('published_at')
+                ->where('published_at', '<=', now());
+
+            if ($type !== 'semua') {
+                $q->whereHas('publicationType', function ($query) use ($type) {
+                    $query->where('slug', $type);
+                });
+            }
+        }])
+            ->with('user')
+            ->having('publications_count', '>', 0)
+            ->orderByDesc('publications_count');
+
+        return $query->take(8)
+            ->get()
+            ->map(function ($author) {
+                return [
+                    'id' => $author->id,
+                    'name' => $author->name,
+                    'photo_url' => $author->photo_url, // ✅ Gunakan accessor
+                    'initials' => $author->initials,
+                    'affiliation' => $author->affiliation ?? ($author->user ? $author->user->job_title : '-'),
+                    'short_bio' => $author->short_bio,
+                    'publications_count' => $author->publications_count,
+                ];
+            });
+    }
+
+    /**
+     * ✅ Get popular publications
+     */
+    private function getPopularPublications($type)
+    {
+        $query = Publication::with(['authors.user', 'categories', 'downloadLogs'])
+            ->where('status', 'published')
+            ->whereNotNull('published_at')
+            ->where('published_at', '<=', now());
+
+        if ($type !== 'semua') {
+            $query->whereHas('publicationType', function ($q) use ($type) {
+                $q->where('slug', $type);
+            });
+        }
+
+        return $query->withCount('downloadLogs')
+            ->orderByDesc('download_logs_count')
+            ->take(6)
+            ->get()
+            ->map(function ($publication) {
+                return [
+                    'title' => $publication->title,
+                    'cover_url' => $this->getCoverUrl($publication),
+                    'category' => $publication->categories->first()?->name ?? 'Umum',
+                    'formatted_date' => $publication->published_at?->locale('id_ID')->isoFormat('D MMMM YYYY'),
+                    'authors' => $publication->authors->map(function ($author) {
+                        return [
+                            'name' => $author->name,
+                            'photo' => $author->photo_url, // ✅ Gunakan accessor
+                        ];
+                    })->toArray(),
+                    'total_authors' => $publication->authors->count(),
+                    'detail_url' => route('publikasi.show', $publication->slug),
+                    'download_count' => $publication->download_logs_count,
+                ];
+            });
+    }
+
+    /**
+     * ✅ Get featured publication
+     */
+    private function getFeaturedPublication($type)
+    {
+        $query = Publication::with(['authors.user', 'categories'])
+            ->where('status', 'published')
+            ->whereNotNull('published_at')
+            ->where('published_at', '<=', now())
+            ->where('is_featured', true); // Assuming you have this column
+
+        if ($type !== 'semua') {
+            $query->whereHas('publicationType', function ($q) use ($type) {
+                $q->where('slug', $type);
+            });
+        }
+
+        $publication = $query->first();
+
+        if (!$publication) {
+            return null;
+        }
+
+        return [
+            'title' => $publication->title,
+            'cover_url' => $this->getCoverUrl($publication),
+            'category' => $publication->categories->first()?->name ?? 'Umum',
+            'formatted_date' => $publication->published_at?->locale('id_ID')->isoFormat('D MMMM YYYY'),
+            'authors' => $publication->authors->map(function ($author) {
+                return [
+                    'name' => $author->name,
+                    'photo' => $author->photo_url, // ✅ Gunakan accessor
+                ];
+            })->toArray(),
+            'total_authors' => $publication->authors->count(),
+            'detail_url' => route('publikasi.show', $publication->slug),
+        ];
+    }
+
+    /**
+     * Get publication types with counts
+     */
+    private function getPublicationTypes()
+    {
+        return PublicationType::withCount(['publications' => function ($q) {
+            $q->where('status', 'published')
+                ->whereNotNull('published_at')
+                ->where('published_at', '<=', now());
+        }])->get();
+    }
+}
