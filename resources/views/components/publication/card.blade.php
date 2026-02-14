@@ -14,7 +14,7 @@
         class="publication-card-link group block h-full rounded-[22px] transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F4F6FB]"
         aria-label="Baca publikasi: {{ Str::limit($title, 60) }}">
         <article
-            class="publication-card-inner bg-white p-4 sm:p-5 gap-3 flex h-full flex-col rounded-[22px] ring-1 ring-[#EEF0F7] transition-all duration-300 group-hover:ring-[#FF6B18]/20 group-hover:shadow-lg group-hover:shadow-[#FF6B18]/5"
+            class="publication-card-inner bg-white p-4 mt-2 ml-1 mr-1 sm:p-5 gap-3 flex h-full flex-col rounded-[22px] ring-1 ring-[#EEF0F7] transition-all duration-300 group-hover:ring-[#FF6B18]/20 group-hover:shadow-lg group-hover:shadow-[#FF6B18]/5"
             itemscope itemtype="https://schema.org/ScholarlyArticle">
 
             {{-- COVER IMAGE --}}
