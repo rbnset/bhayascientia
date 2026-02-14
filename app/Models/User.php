@@ -19,17 +19,17 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         'name',
         'email',
         'password',
-        'email_verified_at', // ✅ TAMBAHKAN INI (untuk social login auto-verify)
-        'profile_photo',
+        'email_verified_at',
+        'profile_photo',    // ✅ Field utama untuk photo
         'whatsapp_number',
         'job_title',
         'username',
         'bio',
         'affiliation',
-        'google_id',        // ✅ Sudah ada
-        'facebook_id',      // ✅ Sudah ada
-        'avatar',           // ✅ Sudah ada (untuk avatar dari Google/Facebook)
-        'provider',         // ✅ Sudah ada
+        'google_id',
+        'facebook_id',
+        'avatar',           // ✅ Hanya untuk URL dari social login (Google/Facebook)
+        'provider',
     ];
 
     protected $hidden = [
@@ -45,15 +45,21 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         ];
     }
 
-    // ✅ Accessor untuk photo URL (prioritaskan avatar dari social media)
+    // ========================================
+    // ✅ ACCESSORS
+    // ========================================
+
+    /**
+     * ✅ PERBAIKAN: Accessor untuk photo URL dengan prioritas yang benar
+     */
     public function getPhotoUrlAttribute(): string
     {
-        // Prioritas 1: Avatar dari social login (Google/Facebook)
+        // Prioritas 1: Avatar dari social login (Google/Facebook) - ini URL langsung
         if ($this->avatar && filter_var($this->avatar, FILTER_VALIDATE_URL)) {
             return $this->avatar;
         }
 
-        // Prioritas 2: Profile photo yang diupload manual
+        // Prioritas 2: Profile photo yang diupload manual - ini path storage
         if ($this->profile_photo) {
             $cleanPath = str_starts_with($this->profile_photo, 'public/')
                 ? substr($this->profile_photo, 7)
@@ -69,7 +75,9 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
             '&background=FF6B18&color=fff&size=128&bold=true&font-size=0.4';
     }
 
-    // ✅ Accessor untuk initials
+    /**
+     * ✅ Accessor untuk initials
+     */
     public function getInitialsAttribute(): string
     {
         $words = explode(' ', trim($this->name));
@@ -81,7 +89,9 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         return strtoupper(substr($this->name, 0, 2));
     }
 
-    // ✅ Accessor untuk short bio
+    /**
+     * ✅ Accessor untuk short bio
+     */
     public function getShortBioAttribute(): ?string
     {
         if (!$this->bio) {
@@ -93,64 +103,113 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
             : $this->bio;
     }
 
-    // ✅ Filament avatar URL (prioritaskan avatar dari social media)
+    // ========================================
+    // ✅ FILAMENT METHODS
+    // ========================================
+
+    /**
+     * ✅ Filament avatar URL (prioritaskan avatar dari social media)
+     */
     public function getFilamentAvatarUrl(): ?string
     {
-        // Prioritas 1: Avatar dari social login
+        // Prioritas 1: Avatar dari social login (URL langsung)
         if ($this->avatar && filter_var($this->avatar, FILTER_VALIDATE_URL)) {
             return $this->avatar;
         }
 
-        // Prioritas 2: Profile photo upload
-        if (filled($this->profile_photo)) {
-            return Storage::disk('public')->url($this->profile_photo);
+        // Prioritas 2: Profile photo upload (path storage)
+        if ($this->profile_photo) {
+            $cleanPath = str_starts_with($this->profile_photo, 'public/')
+                ? substr($this->profile_photo, 7)
+                : $this->profile_photo;
+
+            if (Storage::disk('public')->exists($cleanPath)) {
+                return asset('storage/' . $cleanPath);
+            }
         }
 
         return null;
     }
 
-    // ✅ Check if user is social login
-    public function isSocialLogin(): bool
-    {
-        return in_array($this->provider, ['google', 'facebook']);
-    }
-
-    // ✅ Check if user has password (manual registration)
-    public function hasPassword(): bool
-    {
-        return !is_null($this->password);
-    }
-
+    /**
+     * ✅ Determine if user can access Filament panel
+     */
     public function canAccessPanel(Panel $panel): bool
     {
         return true;
     }
 
-    public function getSavedPublicationsCountAttribute()
+    // ========================================
+    // ✅ SOCIAL LOGIN HELPERS
+    // ========================================
+
+    /**
+     * Check if user logged in via social provider
+     */
+    public function isSocialLogin(): bool
     {
-        return $this->savedPublications()->count();
+        return in_array($this->provider, ['google', 'facebook']);
     }
 
-    // ✅ Relasi ke Author (jika user ini juga author)
+    /**
+     * Check if user has password (manual registration)
+     */
+    public function hasPassword(): bool
+    {
+        return !is_null($this->password) && !empty($this->password);
+    }
+
+    /**
+     * Check if email is verified
+     */
+    public function isEmailVerified(): bool
+    {
+        return !is_null($this->email_verified_at);
+    }
+
+    /**
+     * Get provider display name
+     */
+    public function getProviderNameAttribute(): string
+    {
+        return match ($this->provider) {
+            'google' => 'Google',
+            'facebook' => 'Facebook',
+            'manual' => 'Email',
+            default => 'Unknown'
+        };
+    }
+
+    // ========================================
+    // ✅ RELATIONSHIPS
+    // ========================================
+
+    /**
+     * Relasi ke Author profile
+     */
     public function authorProfile()
     {
         return $this->hasOne(Author::class);
     }
 
-    // ✅ Relasi publications through Author
+    /**
+     * Publications through Author
+     */
     public function publications()
     {
         return $this->hasManyThrough(
             Publication::class,
             Author::class,
-            'user_id', // Foreign key on authors table
-            'id', // Foreign key on publications table
-            'id', // Local key on users table
-            'id' // Local key on authors table
+            'user_id',
+            'id',
+            'id',
+            'id'
         )->distinct();
     }
 
-    // ✅ Relasi publications langsung (jika ada)
+    /**
+     * Direct publications relationship
+     */
     public function directPublications()
     {
         return $this->belongsToMany(Publication::class, 'author_publication', 'author_id', 'publication_id')
@@ -161,12 +220,18 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
             });
     }
 
+    /**
+     * Favorite publications
+     */
     public function favoritePublications()
     {
         return $this->belongsToMany(Publication::class, 'user_favorite_publications')
             ->withTimestamps();
     }
 
+    /**
+     * Read publications
+     */
     public function readPublications()
     {
         return $this->belongsToMany(Publication::class, 'user_read_publications')
@@ -175,12 +240,38 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
             ->using(UserReadPublication::class);
     }
 
+    /**
+     * Saved publications
+     */
     public function savedPublications()
     {
         return $this->belongsToMany(Publication::class, 'user_saved_publications')
             ->withTimestamps();
     }
 
+    /**
+     * Subscription relationship
+     */
+    public function subscription()
+    {
+        return $this->hasOne(Subscription::class);
+    }
+
+    // ========================================
+    // ✅ PUBLICATION INTERACTION METHODS
+    // ========================================
+
+    /**
+     * Get saved publications count
+     */
+    public function getSavedPublicationsCountAttribute()
+    {
+        return $this->savedPublications()->count();
+    }
+
+    /**
+     * Toggle favorite status
+     */
     public function toggleFavorite($publicationId)
     {
         $exists = $this->favoritePublications()->where('publication_id', $publicationId)->exists();
@@ -194,6 +285,9 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         return ['status' => 'added', 'message' => 'Ditambahkan ke favorit'];
     }
 
+    /**
+     * Toggle saved status
+     */
     public function toggleSaved($publicationId)
     {
         $exists = $this->savedPublications()->where('publication_id', $publicationId)->exists();
@@ -207,18 +301,19 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         return ['status' => 'added', 'message' => 'Disimpan untuk nanti'];
     }
 
+    /**
+     * Check if publication is favorited
+     */
     public function isFavorited($publicationId)
     {
         return $this->favoritePublications()->where('publication_id', $publicationId)->exists();
     }
 
+    /**
+     * Check if publication is saved
+     */
     public function isSaved($publicationId)
     {
         return $this->savedPublications()->where('publication_id', $publicationId)->exists();
-    }
-
-    public function subscription()
-    {
-        return $this->hasOne(Subscription::class);
     }
 }

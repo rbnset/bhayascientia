@@ -32,8 +32,10 @@
         :hasActiveFilters="false" />
 
     {{-- Latest Publications Grid/Swiper --}}
+    {{-- Latest Publications Grid/Swiper --}}
     <x-publication.swiper-section title="Tulisan Terbaru <br />Untuk Diskursus yang Bertanggung Jawab" badge="TERKINI"
         swiperClass="upToDateSwiper">
+
         @forelse($latestPublications as $publication)
         <x-publication.card :title="$publication['title']" :cover="$publication['cover_url']"
             :category="$publication['category']" :date="$publication['formatted_date']" :status="$publication['status']"
@@ -49,24 +51,13 @@
                 </svg>
                 <p class="text-[#A3A6AE] text-lg font-bold mb-2">Belum Ada Publikasi</p>
                 <p class="text-[#737373] text-sm mb-6">
-                    Belum ada publikasi tersedia
-                    @if($selectedType)
-                    untuk kategori: <span class="font-bold text-[#FF6B18]">{{ ucfirst($selectedType) }}</span>
-                    @endif
+                    Belum ada publikasi tersedia untuk kategori ini
                 </p>
-
-                <button onclick="openPublicationSearch()"
-                    class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#FF6B18] to-[#E64627] text-white font-bold rounded-xl hover:shadow-lg transition-all">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                    Cari Publikasi Lain
-                </button>
             </div>
         </div>
         @endforelse
     </x-publication.swiper-section>
+
 
 </section>
 

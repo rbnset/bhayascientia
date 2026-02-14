@@ -178,7 +178,7 @@ class PublicationController extends Controller
                     return [
                         'id' => $author->id,
                         'name' => $author->name,
-                        'photo' => $author->photo_url,
+                        'photo' => $author->photo_url, // ✅ Ini akan fallback ke User->photo_url
                         'initials' => $author->initials,
                     ];
                 })->toArray(),
@@ -239,7 +239,7 @@ class PublicationController extends Controller
                     return [
                         'id' => $author->id,
                         'name' => $author->name,
-                        'photo' => $author->photo_url,
+                        'photo' => $author->photo_url, // ✅ Ini akan fallback ke User->photo_url
                         'initials' => $author->initials,
                     ];
                 })->toArray(),

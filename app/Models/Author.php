@@ -9,7 +9,6 @@ use App\Models\Pivots\AuthorPublication;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Log;
 
 class Author extends Model
 {
@@ -29,41 +28,22 @@ class Author extends Model
      */
     public function getPhotoUrlAttribute(): string
     {
-        // 1. Cek photo_path dari author
+        // 1. Cek photo_path dari author table
         if ($this->photo_path) {
             $cleanPath = $this->cleanPath($this->photo_path);
 
             if ($cleanPath && Storage::disk('public')->exists($cleanPath)) {
                 return asset('storage/' . $cleanPath);
-            } else {
-                // Log jika file tidak ditemukan (hanya di development)
-                if (config('app.debug')) {
-                    Log::debug("Author photo not found", [
-                        'author_id' => $this->id,
-                        'photo_path' => $this->photo_path,
-                        'clean_path' => $cleanPath,
-                    ]);
-                }
             }
         }
 
-        // 2. Cek profile_photo dari user (jika ada relasi)
+        // 2. Cek user relation (fallback ke User model)
         if ($this->user_id && $this->user) {
-            if ($this->user->profile_photo) {
-                $cleanPath = $this->cleanPath($this->user->profile_photo);
-
-                if ($cleanPath && Storage::disk('public')->exists($cleanPath)) {
-                    return asset('storage/' . $cleanPath);
-                }
-            }
-
-            // 3. Cek avatar_url dari user (untuk OAuth/Socialite)
-            if (!empty($this->user->avatar_url)) {
-                return $this->user->avatar_url;
-            }
+            // Gunakan accessor photo_url dari User model
+            return $this->user->photo_url;
         }
 
-        // 4. Fallback UI Avatars
+        // 3. Fallback UI Avatars
         return 'https://ui-avatars.com/api/?name=' . urlencode($this->name) .
             '&background=FF6B18&color=fff&size=160&bold=true&font-size=0.4&length=2';
     }

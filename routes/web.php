@@ -1,10 +1,9 @@
 <?php
 
 use App\Http\Controllers\AboutController;
-use App\Http\Controllers\Auth\SocialAuthController;
+use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\PublicationController;
-use App\Http\Controllers\PublikasiController;
-use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AuthorController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\LegalController;
@@ -16,7 +15,6 @@ use App\Http\Controllers\Publication\PublicationSearchController;
 use App\Http\Controllers\Publication\PublicationTrendingController;
 use App\Http\Controllers\SubmissionGuidelineController;
 use App\Http\Controllers\SubscriptionController;
-use App\Http\Controllers\TentangController;
 use App\Models\PublicationVersion;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
@@ -97,33 +95,37 @@ Route::view('/event', 'pages.event')->name('event');
 Route::view('/tentang', 'pages.about')->name('tentang');
 Route::view('/kontak', 'pages.contact')->name('kontak');
 
-/*
-|--------------------------------------------------------------------------
-| Authentication Routes
-|--------------------------------------------------------------------------
-*/
+
+// ========================================
+// ✅ GUEST ROUTES (Belum Login)
+// ========================================
 Route::middleware('guest')->group(function () {
+    // Manual Login & Register
     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 
     Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('register');
     Route::post('/register', [AuthController::class, 'register'])->name('register.post');
 
-    // ✅ Social Authentication Routes
-    Route::get('auth/google', [AuthController::class, 'redirectToGoogle'])->name('auth.google');
-    Route::get('auth/google/callback', [AuthController::class, 'handleGoogleCallback'])->name('auth.google.callback');
+    // ✅ Google OAuth Routes
+    Route::get('auth/google', [GoogleAuthController::class, 'redirectToGoogle'])->name('auth.google');
+    Route::get('auth/google/callback', [GoogleAuthController::class, 'handleGoogleCallback'])->name('auth.google.callback');
 
-    Route::get('auth/facebook', [AuthController::class, 'redirectToFacebook'])->name('auth.facebook');
-    Route::get('auth/facebook/callback', [AuthController::class, 'handleFacebookCallback'])->name('auth.facebook.callback');
+    // ✅ Facebook OAuth Routes (jika Anda juga pakai Facebook)
+    Route::get('auth/facebook', [GoogleAuthController::class, 'redirectToFacebook'])->name('auth.facebook');
+    Route::get('auth/facebook/callback', [GoogleAuthController::class, 'handleFacebookCallback'])->name('auth.facebook.callback');
 });
 
+// ========================================
+// ✅ AUTHENTICATED ROUTES (Sudah Login)
+// ========================================
 Route::middleware('auth')->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
+    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
     Route::get('/dashboard', function () {
         return redirect()->route('publikasi.library');
     })->name('dashboard');
 });
-
 /*
 |--------------------------------------------------------------------------
 | Publikasi Routes
