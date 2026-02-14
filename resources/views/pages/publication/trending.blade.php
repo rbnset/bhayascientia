@@ -137,6 +137,26 @@
     {{-- Trending List (Mobile-Optimized) --}}
     <div class="space-y-3 sm:space-y-4">
         @forelse($trendingPublications as $index => $publication)
+        @php
+        // Generate initials for placeholder
+        $words = array_filter(explode(' ', $publication['title']));
+        $initials = '';
+        foreach (array_slice($words, 0, 2) as $word) {
+        $initials .= mb_strtoupper(mb_substr(trim($word), 0, 1));
+        }
+        if (empty($initials)) {
+        $initials = mb_strtoupper(mb_substr($publication['title'], 0, 2));
+        }
+
+        // Author display
+        $firstAuthor = count($publication['authors']) > 0 ? ($publication['authors'][0]['name'] ?? 'Unknown') :
+        'Anonymous';
+        $authorDisplay = $firstAuthor;
+        if ($publication['total_authors'] > 1) {
+        $authorDisplay .= ' et al.';
+        }
+        @endphp
+
         <a href="{{ $publication['detail_url'] }}"
             class="publication-card group flex gap-3 sm:gap-4 bg-white rounded-xl sm:rounded-2xl border border-[#EEF0F7] p-3 sm:p-4 md:p-5 hover:shadow-xl transition-all duration-300 relative overflow-hidden">
 
@@ -162,14 +182,41 @@
     @endif
     </div>
 
-    {{-- Cover (Mobile Optimized) --}}
-    <div class="relative z-10 flex-shrink-0">
-        <img src="{{ $publication['cover_url'] }}" alt="{{ $publication['title'] }}"
-            class="object-cover w-16 h-20 transition-shadow rounded-lg shadow-md sm:w-20 sm:h-28 md:w-24 md:h-32 group-hover:shadow-xl">
+    {{-- Cover with Placeholder (Mobile Optimized) --}}
+    <div
+        class="relative z-10 flex-shrink-0 w-16 h-20 sm:w-20 sm:h-28 md:w-24 md:h-32 overflow-hidden rounded-lg shadow-md group-hover:shadow-xl transition-shadow bg-[#F8F9FC]">
+        @if($publication['cover_url'])
+        <img src="{{ $publication['cover_url'] }}" alt="{{ $publication['title'] }}" class="object-cover w-full h-full"
+            onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
+
+        {{-- Fallback Placeholder --}}
+        <div class="absolute inset-0 hidden p-1">
+            @include('components.publication.placeholder-cover', [
+            'title' => $publication['title'],
+            'initials' => $initials,
+            'category' => $publication['category'] ?? 'Umum',
+            'publicationType' => $publication['type'] ?? 'Publikasi',
+            'authorDisplay' => $authorDisplay,
+            'slug' => 'trending-' . $index . '-' . ($publication['id'] ?? 'unknown'),
+            ])
+        </div>
+        @else
+        {{-- Placeholder (no cover) --}}
+        <div class="absolute inset-0 p-1">
+            @include('components.publication.placeholder-cover', [
+            'title' => $publication['title'],
+            'initials' => $initials,
+            'category' => $publication['category'] ?? 'Umum',
+            'publicationType' => $publication['type'] ?? 'Publikasi',
+            'authorDisplay' => $authorDisplay,
+            'slug' => 'trending-' . $index . '-' . ($publication['id'] ?? 'unknown'),
+            ])
+        </div>
+        @endif
 
         {{-- Type badge on cover --}}
         <div
-            class="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 px-1.5 py-0.5 sm:px-2 sm:py-1 bg-[#FF6B18] text-white text-[10px] sm:text-xs font-bold rounded shadow">
+            class="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 px-1.5 py-0.5 sm:px-2 sm:py-1 bg-[#FF6B18] text-white text-[10px] sm:text-xs font-bold rounded shadow z-10">
             {{ $publication['type'] }}
         </div>
     </div>
