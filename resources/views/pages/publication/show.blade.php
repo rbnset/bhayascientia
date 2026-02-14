@@ -476,15 +476,65 @@
 
         {{-- ✅ RIGHT COLUMN: Cover + Action Buttons --}}
         <aside id="publication-sidebar">
-            @if($cover_url)
+            @php
+            // Generate gradient & initials untuk placeholder
+            $typeGradients = [
+            'Buku' => ['from' => '10B981', 'to' => '059669'],
+            'Jurnal' => ['from' => 'FF6B18', 'to' => 'E64627'],
+            'Opini' => ['from' => '3B82F6', 'to' => '1D4ED8'],
+            'Artikel' => ['from' => 'F59E0B', 'to' => 'D97706'],
+            'Penelitian' => ['from' => '8B5CF6', 'to' => '6D28D9'],
+            'Skripsi' => ['from' => 'EC4899', 'to' => 'BE185D'],
+            'Tesis' => ['from' => '06B6D4', 'to' => '0891B2'],
+            'Disertasi' => ['from' => 'EF4444', 'to' => 'DC2626'],
+            'Makalah' => ['from' => '14B8A6', 'to' => '0F766E'],
+            'Laporan' => ['from' => 'A855F7', 'to' => '7C3AED'],
+            'default' => ['from' => 'A3A6AE', 'to' => '6B7280'],
+            ];
+
+            $gradient = $typeGradients[$publication_type ?? 'default'] ?? $typeGradients['default'];
+
+            // Generate initials from title
+            $words = array_filter(explode(' ', $publication->title));
+            $initials = '';
+            foreach (array_slice($words, 0, 2) as $word) {
+            $initials .= mb_strtoupper(mb_substr(trim($word), 0, 1));
+            }
+            if (empty($initials)) {
+            $initials = mb_strtoupper(mb_substr($publication->title, 0, 2));
+            }
+
+            // Format authors for placeholder
+            $firstAuthor = $authors->count() > 0 ? ($authors->first()['name'] ?? 'Unknown') : 'Anonymous';
+            $authorDisplay = $firstAuthor;
+            if ($authors->count() > 1) {
+            $authorDisplay .= ' et al.';
+            }
+            @endphp
+
             <div class="sticky-cover">
                 {{-- Cover Image with Enhanced Hover --}}
-                <div class="mb-6 cover-image-wrapper">
-                    <img src="{{ $cover_url }}" alt="Cover {{ $publication->title }}" class="object-cover w-full">
+                <div class="mb-6 cover-image-wrapper aspect-[2/3] relative overflow-hidden rounded-xl">
+                    @if($cover_url)
+                    {{-- Real Cover Image --}}
+                    <img src="{{ $cover_url }}" alt="Cover {{ $publication->title }}" class="object-cover w-full h-full"
+                        onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
 
-                    {{-- Enhanced Overlay --}}
+                    {{-- Fallback Placeholder (hidden by default) --}}
+                    <div class="absolute inset-0 hidden">
+                        @include('components.publication.placeholder-cover', [
+                        'title' => $publication->title,
+                        'initials' => $initials,
+                        'category' => $category,
+                        'publicationType' => $publication_type ?? 'Publikasi',
+                        'authorDisplay' => $authorDisplay,
+                        'slug' => $publication->slug,
+                        ])
+                    </div>
+
+                    {{-- Enhanced Overlay for Fullscreen --}}
                     <div
-                        class="absolute inset-0 flex items-end justify-center p-6 transition-opacity duration-500 opacity-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent hover:opacity-100 rounded-xl">
+                        class="absolute inset-0 z-20 flex items-end justify-center p-6 transition-opacity duration-500 opacity-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent hover:opacity-100 rounded-xl">
                         <button onclick="viewCoverFullscreen()"
                             class="px-6 py-3 bg-white/95 backdrop-blur-sm text-[#1A1A1A] text-sm font-bold rounded-lg hover:bg-white transition-all duration-300 transform hover:scale-105 shadow-xl flex items-center gap-2">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -494,6 +544,19 @@
                             View Full Size
                         </button>
                     </div>
+                    @else
+                    {{-- Placeholder Cover (always visible when no cover) --}}
+                    <div class="absolute inset-0">
+                        @include('components.publication.placeholder-cover', [
+                        'title' => $publication->title,
+                        'initials' => $initials,
+                        'category' => $category,
+                        'publicationType' => $publication_type ?? 'Publikasi',
+                        'authorDisplay' => $authorDisplay,
+                        'slug' => $publication->slug,
+                        ])
+                    </div>
+                    @endif
                 </div>
 
                 @php
@@ -644,8 +707,8 @@
                 </div>
                 @endif
             </div>
-            @endif
         </aside>
+
 
     </div>
 

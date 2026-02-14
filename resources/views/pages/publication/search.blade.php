@@ -4,18 +4,14 @@
 @section('main_class', 'pb-16')
 
 @section('custom_navbar')
-
 <x-navbar ctaLabel="Browse Publikasi" ctaRoute="publikasi.index" ctaIcon="book" :showAvatarWhenAuth="false"
     :showCtaAlways="true" />
-
 
 {{-- Search/Filter Modal --}}
 <x-publication-search-filter :selectedType="$selectedType" :categories="$categories" :years="$years"
     :topKeywords="$topKeywords" :filterCategory="$filterCategory" :filterYear="$filterYear"
     :filterKeyword="$filterKeyword" :filterSort="$filterSort" :searchQuery="$searchQuery" />
 @endsection
-
-
 
 @section('content')
 
@@ -231,13 +227,60 @@
     @if($searchResults->count() > 0)
     <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         @foreach($searchResults as $publication)
+        @php
+        // Generate initials for placeholder
+        $words = array_filter(explode(' ', $publication['title']));
+        $initials = '';
+        foreach (array_slice($words, 0, 2) as $word) {
+        $initials .= mb_strtoupper(mb_substr(trim($word), 0, 1));
+        }
+        if (empty($initials)) {
+        $initials = mb_strtoupper(mb_substr($publication['title'], 0, 2));
+        }
+
+        // Author display
+        $firstAuthor = count($publication['authors']) > 0 ? ($publication['authors'][0]['name'] ?? 'Unknown') :
+        'Anonymous';
+        $authorDisplay = $firstAuthor;
+        if ($publication['total_authors'] > 1) {
+        $authorDisplay .= ' et al.';
+        }
+        @endphp
+
         <a href="{{ $publication['detail_url'] }}"
             class="group bg-white rounded-2xl border-2 border-[#EEF0F7] hover:border-[#FF6B18] hover:shadow-xl transition-all duration-300 overflow-hidden">
 
             {{-- Cover Image --}}
-            <div class="aspect-[3/4] overflow-hidden bg-[#F8F9FC]">
+            <div class="aspect-[3/4] overflow-hidden bg-[#F8F9FC] relative">
+                @if($publication['cover_url'])
                 <img src="{{ $publication['cover_url'] }}" alt="{{ $publication['title'] }}"
-                    class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105">
+                    class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
+                    onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
+
+                {{-- Fallback Placeholder --}}
+                <div class="absolute inset-0 hidden p-4">
+                    @include('components.publication.placeholder-cover', [
+                    'title' => $publication['title'],
+                    'initials' => $initials,
+                    'category' => $publication['category'],
+                    'publicationType' => $publication['publication_type'] ?? 'Publikasi',
+                    'authorDisplay' => $authorDisplay,
+                    'slug' => $publication['slug'],
+                    ])
+                </div>
+                @else
+                {{-- Placeholder (no cover) --}}
+                <div class="absolute inset-0 p-4">
+                    @include('components.publication.placeholder-cover', [
+                    'title' => $publication['title'],
+                    'initials' => $initials,
+                    'category' => $publication['category'],
+                    'publicationType' => $publication['publication_type'] ?? 'Publikasi',
+                    'authorDisplay' => $authorDisplay,
+                    'slug' => $publication['slug'],
+                    ])
+                </div>
+                @endif
             </div>
 
             {{-- Content --}}

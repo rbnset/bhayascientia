@@ -176,3 +176,8 @@ Route::controller(LegalController::class)->group(function () {
 });
 
 Route::get('/tentang', [AboutController::class, 'index'])->name('tentang');
+
+
+Route::get('/test-card', function () {
+    return view('test-card');
+});

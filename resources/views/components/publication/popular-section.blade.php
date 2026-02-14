@@ -1,6 +1,6 @@
 @props([
 'featuredPublication' => null,
-'featuredTypeContent' => null, // ✅ Tambahan prioritas tertinggi
+'featuredTypeContent' => null,
 'publications' => [],
 'selectedType' => 'publikasi',
 'exploreAllUrl' => null
@@ -27,7 +27,6 @@
             Jelajahi Semua Publikasi
         </a>
         @endif
-
     </div>
 
     {{-- Content --}}
@@ -39,14 +38,18 @@
         {{-- ✅ Prioritas 1: Featured dari PublicationTypeContent --}}
         <x-publication.featured-card :title="$featuredTypeContent['title']"
             :coverUrl="$featuredTypeContent['cover_url']" :category="$featuredTypeContent['category']"
+            :publicationType="$featuredTypeContent['publication_type'] ?? $featuredTypeContent['type'] ?? 'Publikasi'"
             :type="$featuredTypeContent['type']" :abstract="$featuredTypeContent['abstract'] ?? null"
-            :downloadCount="$featuredTypeContent['download_count']" :detailUrl="$featuredTypeContent['detail_url']" />
+            :downloadCount="$featuredTypeContent['download_count'] ?? 0" :detailUrl="$featuredTypeContent['detail_url']"
+            :slug="$featuredTypeContent['slug'] ?? ''" />
         @elseif($featuredPublication)
         {{-- ✅ Prioritas 2: Featured dari Publication paling populer --}}
         <x-publication.featured-card :title="$featuredPublication['title']"
             :coverUrl="$featuredPublication['cover_url']" :category="$featuredPublication['category']"
+            :publicationType="$featuredPublication['publication_type'] ?? $featuredPublication['type'] ?? 'Publikasi'"
             :type="$featuredPublication['type']" :abstract="$featuredPublication['abstract'] ?? null"
-            :downloadCount="$featuredPublication['download_count']" :detailUrl="$featuredPublication['detail_url']" />
+            :downloadCount="$featuredPublication['download_count'] ?? 0" :detailUrl="$featuredPublication['detail_url']"
+            :slug="$featuredPublication['slug'] ?? ''" />
         @endif
 
         {{-- Right: List --}}
@@ -56,9 +59,10 @@
             <div class="flex flex-col w-full gap-4 lg:gap-5">
                 @foreach($publications as $pub)
                 <x-publication.popular-item :title="$pub['title']" :coverUrl="$pub['cover_url']"
-                    :formattedDate="$pub['formatted_date']" :authors="$pub['authors']"
-                    :totalAuthors="$pub['total_authors']" :downloadCount="$pub['download_count']"
-                    :detailUrl="$pub['detail_url']" />
+                    :category="$pub['category'] ?? 'Umum'" :publicationType="$pub['publication_type'] ?? 'Publikasi'"
+                    :formattedDate="$pub['formatted_date']" :authors="$pub['authors'] ?? []"
+                    :totalAuthors="$pub['total_authors'] ?? 0" :downloadCount="$pub['download_count'] ?? 0"
+                    :viewsCount="$pub['views_count'] ?? 0" :detailUrl="$pub['detail_url']" :slug="$pub['slug'] ?? ''" />
                 @endforeach
             </div>
 

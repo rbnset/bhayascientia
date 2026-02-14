@@ -6,28 +6,25 @@ use App\Actions\Author\GetBestAuthorsAction;
 use App\Http\Controllers\Traits\PublicationHelperTrait as TraitsPublicationHelperTrait;
 use App\Models\Publication;
 use App\Models\PublicationType;
-use App\Models\Author;
-use App\Models\Category;
-use App\Models\PublicationViewLog;
 use App\Models\DownloadLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Str;
 
 class PublicationController extends Controller
 {
-
     use TraitsPublicationHelperTrait;
 
     public function __construct(
         private GetBestAuthorsAction $getBestAuthorsAction
     ) {}
 
+    /**
+     * ✅ Display publication index/homepage
+     */
     public function index(Request $request)
     {
-        // ✅ Load publication types WITH content (hasOne relationship)
+        // Load publication types WITH content (hasOne relationship)
         $publicationTypes = PublicationType::with('content')
             ->where('is_active', true)
             ->orderBy('name')
@@ -50,7 +47,7 @@ class PublicationController extends Controller
             ]);
         }
 
-        // ✅ Simple parameters: type & sort only
+        // Simple parameters: type & sort only
         $selectedType = $request->query('type', $publicationTypes->first()->slug);
         $filterSort = $request->query('sort', 'latest');
         $searchQuery = null;
@@ -60,10 +57,10 @@ class PublicationController extends Controller
             $selectedType = $publicationTypes->first()->slug;
         }
 
-        // ✅ Get current PublicationType object untuk ambil content
+        // Get current PublicationType object untuk ambil content
         $currentType = $publicationTypes->firstWhere('slug', $selectedType);
 
-        // ✅ Format Featured Type Content dari PublicationTypeContent
+        // Format Featured Type Content dari PublicationTypeContent
         $featuredTypeContent = null;
         if ($currentType && $currentType->content) {
             $featuredTypeContent = [
@@ -71,13 +68,15 @@ class PublicationController extends Controller
                 'cover_url' => $this->getTypeContentCover($currentType->content),
                 'category' => $currentType->name,
                 'type' => $currentType->name,
+                'publication_type' => $currentType->name,
                 'abstract' => $currentType->content->description,
                 'download_count' => 0,
                 'detail_url' => '#',
+                'slug' => $currentType->slug, // ✅ TAMBAHAN untuk pattern ID
             ];
         }
 
-        // ✅ GET FILTER OPTIONS DATA (for search modal)
+        // GET FILTER OPTIONS DATA (for search modal)
         $categories = \App\Models\Category::whereHas('publications', function ($query) use ($selectedType) {
             $query->where('status', 'published')
                 ->whereNotNull('published_at')
@@ -130,7 +129,7 @@ class PublicationController extends Controller
             ->limit(20)
             ->get();
 
-        // ✅ SIMPLIFIED QUERY - Only type & sort filter
+        // SIMPLIFIED QUERY - Only type & sort filter
         $publicationsQuery = Publication::with([
             'authors.user',
             'publicationType',
@@ -143,7 +142,7 @@ class PublicationController extends Controller
                 $query->where('slug', $selectedType)->where('is_active', true);
             });
 
-        // ✅ Apply sorting only
+        // Apply sorting only
         switch ($filterSort) {
             case 'popular':
                 $publicationsQuery->withCount('downloadLogs')->orderByDesc('download_logs_count');
@@ -160,9 +159,10 @@ class PublicationController extends Controller
                 break;
         }
 
-        // ✅ Get Latest Publications
+        // Get Latest Publications
         $publications = $publicationsQuery->take(6)->get();
 
+        // Map Latest Publications dengan slug untuk pattern ID
         $latestPublications = $publications->map(function ($pub) {
             return [
                 'id' => $pub->id,
@@ -170,6 +170,7 @@ class PublicationController extends Controller
                 'slug' => $pub->slug,
                 'cover_url' => $this->getCoverUrl($pub),
                 'category' => $pub->category_name,
+                'publication_type' => $pub->publicationType->name ?? 'Publikasi',
                 'formatted_date' => $pub->formatted_date,
                 'status' => $pub->publicationType->requires_review ? 'Peer-reviewed' : 'Terverifikasi',
                 'type' => $pub->publicationType->name ?? 'Publikasi',
@@ -178,7 +179,7 @@ class PublicationController extends Controller
                     return [
                         'id' => $author->id,
                         'name' => $author->name,
-                        'photo' => $author->photo_url, // ✅ Ini akan fallback ke User->photo_url
+                        'photo' => $author->photo_url,
                         'initials' => $author->initials,
                     ];
                 })->toArray(),
@@ -186,10 +187,10 @@ class PublicationController extends Controller
             ];
         })->toArray();
 
-        // ✅ GET BEST AUTHORS - LIMIT 6 (BUKAN 12)
+        // GET BEST AUTHORS - LIMIT 6
         $bestAuthors = $this->getBestAuthorsAction->execute($selectedType, 6);
 
-        // ✅ Get Popular Publications
+        // Get Popular Publications
         $popularPubs = Publication::with([
             'authors.user',
             'publicationType',
@@ -206,7 +207,7 @@ class PublicationController extends Controller
             ->take(7)
             ->get();
 
-        // ✅ Featured Publication
+        // Featured Publication
         $featuredPublication = null;
         if (!$featuredTypeContent && $popularPubs->first()) {
             $featuredPublication = [
@@ -215,6 +216,7 @@ class PublicationController extends Controller
                 'slug' => $popularPubs->first()->slug,
                 'cover_url' => $this->getCoverUrl($popularPubs->first()),
                 'category' => $popularPubs->first()->category_name,
+                'publication_type' => $popularPubs->first()->publicationType->name ?? 'Publikasi',
                 'type' => $popularPubs->first()->publicationType->name ?? 'Publikasi',
                 'abstract' => \Illuminate\Support\Str::limit($popularPubs->first()->abstract, 120),
                 'download_count' => $popularPubs->first()->download_logs_count,
@@ -222,7 +224,7 @@ class PublicationController extends Controller
             ];
         }
 
-        // ✅ Popular Publications List
+        // Popular Publications List
         $skipCount = $featuredTypeContent ? 0 : 1;
         $popularPublications = $popularPubs->skip($skipCount)->take(6)->map(function ($pub) {
             return [
@@ -231,6 +233,7 @@ class PublicationController extends Controller
                 'slug' => $pub->slug,
                 'cover_url' => $this->getCoverUrl($pub),
                 'category' => $pub->category_name,
+                'publication_type' => $pub->publicationType->name ?? 'Publikasi',
                 'formatted_date' => $pub->formatted_date,
                 'download_count' => $pub->download_logs_count,
                 'views_count' => $pub->views_count,
@@ -239,7 +242,7 @@ class PublicationController extends Controller
                     return [
                         'id' => $author->id,
                         'name' => $author->name,
-                        'photo' => $author->photo_url, // ✅ Ini akan fallback ke User->photo_url
+                        'photo' => $author->photo_url,
                         'initials' => $author->initials,
                     ];
                 })->toArray(),
@@ -262,7 +265,6 @@ class PublicationController extends Controller
             'searchQuery'
         ));
     }
-
 
     /**
      * ✅ Show publication detail
@@ -308,7 +310,7 @@ class PublicationController extends Controller
 
         $this->logPublicationView($publication);
 
-        // ✅ Map authors dengan support User dan Author profile
+        // Map authors dengan support User dan Author profile
         $authors = $publication->authors->map(function ($author) {
             $userData = $author->user;
 
@@ -324,7 +326,6 @@ class PublicationController extends Controller
                 'short_bio' => $author->short_bio,
                 'email' => $author->email,
                 'is_corresponding' => $author->pivot->is_corresponding ?? false,
-                // ✅ Add profile routing support
                 'profile_type' => $author->user_id ? 'user' : 'author',
                 'profile_id' => $author->user_id ?? $author->id,
             ];
@@ -334,6 +335,7 @@ class PublicationController extends Controller
             'publication' => $publication,
             'formatted_date' => $publication->published_at->locale('id_ID')->isoFormat('D MMMM YYYY'),
             'category' => $publication->categories->first()?->name ?? 'Umum',
+            'publication_type' => $publication->publicationType->name ?? 'Publikasi',
             'keywords' => $publication->keywords->pluck('name')->toArray(),
             'cover_url' => $this->getCoverUrl($publication),
             'authors' => $authors,
@@ -494,6 +496,7 @@ class PublicationController extends Controller
             'publication' => $publication,
             'pdfUrl' => $pdfUrl,
             'category' => $publication->categories->first()?->name ?? 'Umum',
+            'publication_type' => $publication->publicationType->name ?? 'Publikasi',
             'authors' => $publication->authors->take(6)->map(function ($author) {
                 return [
                     'id' => $author->id,

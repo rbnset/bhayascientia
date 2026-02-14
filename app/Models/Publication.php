@@ -196,7 +196,7 @@ class Publication extends Model
     }
 
     /**
-     * ✅ Accessor untuk URL cover image (Optimized)
+     * ✅ Accessor untuk URL cover image - Return NULL untuk support custom placeholder
      */
     public function getCoverUrlAttribute()
     {
@@ -205,9 +205,9 @@ class Publication extends Model
             return $this->coverUrlCache;
         }
 
-        // Jika tidak ada cover image path
+        // ✅ Jika tidak ada cover image path, return NULL
         if (!$this->cover_image_path) {
-            return $this->coverUrlCache = $this->generatePlaceholder();
+            return $this->coverUrlCache = null;
         }
 
         // Clean path: remove 'public/' prefix jika ada
@@ -231,8 +231,16 @@ class Publication extends Model
             ]);
         }
 
-        // Return placeholder jika file tidak ada
-        return $this->coverUrlCache = $this->generatePlaceholder();
+        // ✅ Return NULL jika file tidak ada (custom placeholder akan handle di blade)
+        return $this->coverUrlCache = null;
+    }
+
+    /**
+     * ✅ Get cover URL dengan fallback placehold.co (untuk backward compatibility)
+     */
+    public function getCoverUrlWithFallback()
+    {
+        return $this->cover_url ?? $this->generatePlaceholder();
     }
 
     /**
@@ -323,7 +331,7 @@ class Publication extends Model
     */
 
     /**
-     * ✅ Generate placeholder cover URL
+     * ✅ Generate placeholder cover URL (untuk backward compatibility)
      */
     private function generatePlaceholder()
     {

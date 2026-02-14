@@ -32,15 +32,15 @@
         :hasActiveFilters="false" />
 
     {{-- Latest Publications Grid/Swiper --}}
-    {{-- Latest Publications Grid/Swiper --}}
     <x-publication.swiper-section title="Tulisan Terbaru <br />Untuk Diskursus yang Bertanggung Jawab" badge="TERKINI"
         swiperClass="upToDateSwiper">
 
         @forelse($latestPublications as $publication)
-        <x-publication.card :title="$publication['title']" :cover="$publication['cover_url']"
-            :category="$publication['category']" :date="$publication['formatted_date']" :status="$publication['status']"
-            :authors="$publication['authors']" :totalAuthors="$publication['total_authors']"
-            :detailUrl="$publication['detail_url']" />
+        <x-publication.card :title="$publication['title']" :cover="$publication['cover_url'] ?? ''"
+            :category="$publication['category']" :publicationType="$publication['publication_type'] ?? 'Publikasi'"
+            :date="$publication['formatted_date']" :authors="$publication['authors']"
+            :totalAuthors="$publication['total_authors']" :detailUrl="$publication['detail_url']"
+            :slug="$publication['slug']" />
         @empty
         <div class="swiper-slide">
             <div class="bg-white p-12 rounded-2xl border-2 border-dashed border-[#EEF0F7] text-center">
@@ -57,7 +57,6 @@
         </div>
         @endforelse
     </x-publication.swiper-section>
-
 
 </section>
 

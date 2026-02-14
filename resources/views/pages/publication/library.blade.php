@@ -461,11 +461,54 @@
                 @forelse($publications as $publication)
                 <article
                     class="group flex gap-3 sm:gap-4 p-3 sm:p-4 bg-[#F8F9FC] rounded-xl hover:bg-white hover:shadow-md transition-all duration-300">
+                    @php
+                    // Generate initials for placeholder
+                    $words = array_filter(explode(' ', $publication['title']));
+                    $initials = '';
+                    foreach (array_slice($words, 0, 2) as $word) {
+                    $initials .= mb_strtoupper(mb_substr(trim($word), 0, 1));
+                    }
+                    if (empty($initials)) {
+                    $initials = mb_strtoupper(mb_substr($publication['title'], 0, 2));
+                    }
+
+                    // Author display
+                    $authorDisplay = $publication['authors_text'] ?? 'Anonymous';
+                    @endphp
+
                     <a href="{{ $publication['detail_url'] }}"
-                        class="w-16 h-20 overflow-hidden rounded-lg sm:w-20 sm:h-24 md:w-24 md:h-28 shrink-0">
+                        class="w-16 h-20 overflow-hidden rounded-lg sm:w-20 sm:h-24 md:w-24 md:h-28 shrink-0 relative bg-[#F8F9FC]">
+                        @if($publication['cover_url'])
                         <img src="{{ $publication['cover_url'] }}" alt="{{ $publication['title'] }}"
-                            class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105">
+                            class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
+                            onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
+
+                        {{-- Fallback Placeholder --}}
+                        <div class="absolute inset-0 hidden p-1">
+                            @include('components.publication.placeholder-cover', [
+                            'title' => $publication['title'],
+                            'initials' => $initials,
+                            'category' => $publication['category'] ?? 'Umum',
+                            'publicationType' => $publication['type'] ?? 'Publikasi',
+                            'authorDisplay' => $authorDisplay,
+                            'slug' => 'lib-fav-' . $publication['id'],
+                            ])
+                        </div>
+                        @else
+                        {{-- Placeholder (no cover) --}}
+                        <div class="absolute inset-0 p-1">
+                            @include('components.publication.placeholder-cover', [
+                            'title' => $publication['title'],
+                            'initials' => $initials,
+                            'category' => $publication['category'] ?? 'Umum',
+                            'publicationType' => $publication['type'] ?? 'Publikasi',
+                            'authorDisplay' => $authorDisplay,
+                            'slug' => 'lib-fav-' . $publication['id'],
+                            ])
+                        </div>
+                        @endif
                     </a>
+
 
                     <div class="flex-1 min-w-0">
                         <div class="flex items-start justify-between gap-2 sm:gap-4 mb-1.5 sm:mb-2">
@@ -534,10 +577,49 @@
                 @forelse($publications as $publication)
                 <a href="{{ $publication['detail_url'] }}"
                     class="group flex items-center gap-3 sm:gap-4 p-3 rounded-xl hover:bg-[#F8F9FC] transition-colors">
-                    <div class="w-12 h-16 overflow-hidden rounded-lg sm:w-14 sm:h-18 md:w-16 md:h-20 shrink-0">
+                    @php
+                    $words = array_filter(explode(' ', $publication['title']));
+                    $initials = '';
+                    foreach (array_slice($words, 0, 2) as $word) {
+                    $initials .= mb_strtoupper(mb_substr(trim($word), 0, 1));
+                    }
+                    if (empty($initials)) {
+                    $initials = mb_strtoupper(mb_substr($publication['title'], 0, 2));
+                    }
+                    $authorDisplay = $publication['authors_text'] ?? 'Anonymous';
+                    @endphp
+
+                    <div
+                        class="w-12 h-16 overflow-hidden rounded-lg sm:w-14 sm:h-18 md:w-16 md:h-20 shrink-0 relative bg-[#F8F9FC]">
+                        @if($publication['cover_url'])
                         <img src="{{ $publication['cover_url'] }}" alt="{{ $publication['title'] }}"
-                            class="object-cover w-full h-full">
+                            class="object-cover w-full h-full"
+                            onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
+
+                        <div class="absolute inset-0 hidden p-0.5">
+                            @include('components.publication.placeholder-cover', [
+                            'title' => $publication['title'],
+                            'initials' => $initials,
+                            'category' => $publication['category'] ?? 'Umum',
+                            'publicationType' => $publication['type'] ?? 'Publikasi',
+                            'authorDisplay' => $authorDisplay,
+                            'slug' => 'lib-hist-' . $publication['id'],
+                            ])
+                        </div>
+                        @else
+                        <div class="absolute inset-0 p-0.5">
+                            @include('components.publication.placeholder-cover', [
+                            'title' => $publication['title'],
+                            'initials' => $initials,
+                            'category' => $publication['category'] ?? 'Umum',
+                            'publicationType' => $publication['type'] ?? 'Publikasi',
+                            'authorDisplay' => $authorDisplay,
+                            'slug' => 'lib-hist-' . $publication['id'],
+                            ])
+                        </div>
+                        @endif
                     </div>
+
 
                     <div class="flex-1 min-w-0">
                         <h4
@@ -587,12 +669,51 @@
                 @forelse($publications as $publication)
                 <article
                     class="group bg-white border border-[#EEF0F7] rounded-xl overflow-hidden hover:shadow-lg hover:border-[#FF6B18]/20 transition-all duration-300">
+                    @php
+                    $words = array_filter(explode(' ', $publication['title']));
+                    $initials = '';
+                    foreach (array_slice($words, 0, 2) as $word) {
+                    $initials .= mb_strtoupper(mb_substr(trim($word), 0, 1));
+                    }
+                    if (empty($initials)) {
+                    $initials = mb_strtoupper(mb_substr($publication['title'], 0, 2));
+                    }
+                    $authorDisplay = $publication['authors_text'] ?? 'Anonymous';
+                    @endphp
+
                     <a href="{{ $publication['detail_url'] }}">
-                        <div class="aspect-[3/4] overflow-hidden relative">
+                        <div class="aspect-[3/4] overflow-hidden relative bg-[#F8F9FC]">
+                            @if($publication['cover_url'])
                             <img src="{{ $publication['cover_url'] }}" alt="{{ $publication['title'] }}"
-                                class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105">
+                                class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
+                                onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
+
+                            <div class="absolute inset-0 hidden p-2">
+                                @include('components.publication.placeholder-cover', [
+                                'title' => $publication['title'],
+                                'initials' => $initials,
+                                'category' => $publication['category'] ?? 'Umum',
+                                'publicationType' => $publication['type'] ?? 'Publikasi',
+                                'authorDisplay' => $authorDisplay,
+                                'slug' => 'lib-saved-' . $publication['id'],
+                                ])
+                            </div>
+                            @else
+                            <div class="absolute inset-0 p-2">
+                                @include('components.publication.placeholder-cover', [
+                                'title' => $publication['title'],
+                                'initials' => $initials,
+                                'category' => $publication['category'] ?? 'Umum',
+                                'publicationType' => $publication['type'] ?? 'Publikasi',
+                                'authorDisplay' => $authorDisplay,
+                                'slug' => 'lib-saved-' . $publication['id'],
+                                ])
+                            </div>
+                            @endif
+
+                            {{-- Type Badge (overlay on top) --}}
                             <div
-                                class="absolute top-2 left-2 px-2 py-1 bg-[#FF6B18] text-white text-[10px] sm:text-xs font-bold rounded shadow">
+                                class="absolute top-2 left-2 px-2 py-1 bg-[#FF6B18] text-white text-[10px] sm:text-xs font-bold rounded shadow z-10">
                                 {{ $publication['type'] }}
                             </div>
                         </div>

@@ -2,12 +2,36 @@
 'title' => '',
 'cover' => '',
 'category' => 'Umum',
+'publicationType' => 'Publikasi',
 'date' => '',
 'authors' => [],
 'totalAuthors' => 0,
 'detailUrl' => '#',
 'slug' => '',
 ])
+
+@php
+// Generate initial dari title (2 huruf pertama dari 2 kata pertama)
+$words = array_filter(explode(' ', $title));
+$initials = '';
+foreach (array_slice($words, 0, 2) as $word) {
+$initials .= mb_strtoupper(mb_substr(trim($word), 0, 1));
+}
+// Fallback jika initials kosong
+if (empty($initials)) {
+$initials = mb_strtoupper(mb_substr($title, 0, 2));
+}
+
+// Format authors untuk placeholder (max 2)
+$firstAuthor = count($authors) > 0 ? ($authors[0]['name'] ?? 'Unknown') : 'Anonymous';
+$authorDisplay = $firstAuthor;
+if ($totalAuthors > 1) {
+$authorDisplay .= ' et al.';
+}
+
+// Generate unique ID untuk pattern SVG
+$uniqueId = $slug ?: 'card-' . uniqid();
+@endphp
 
 <div class="h-auto swiper-slide" style="overflow: visible !important;">
     <a href="{{ $detailUrl }}"
@@ -21,39 +45,52 @@
             <div class="relative">
                 <div
                     class="relative aspect-[2/3] w-full overflow-hidden rounded-[20px] bg-[#F4F6FB] shadow-[0_18px_40px_-26px_rgba(0,0,0,0.65)] ring-1 ring-[#EEF0F7] transition-all duration-300 group-hover:shadow-[0_20px_45px_-28px_rgba(255,107,24,0.4)]">
-                    @if($cover)
-                    <img src="{{ $cover }}" class="object-cover w-full h-full publication-cover-image"
-                        alt="Cover publikasi {{ $title }}" loading="lazy" itemprop="image"
-                        onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';" />
 
-                    {{-- Fallback gradient --}}
-                    <div
-                        class="absolute inset-0 items-center justify-center hidden p-6 text-white bg-gradient-to-br from-[#FF6B18] to-[#FF8B3D]">
-                        <span class="text-sm font-bold leading-tight text-center sm:text-base">
-                            {{ Str::limit($title, 50) }}
-                        </span>
+                    @if($cover)
+                    {{-- Real Cover Image --}}
+                    <img src="{{ $cover }}" class="object-cover w-full h-full cover-image publication-cover-image"
+                        alt="Cover publikasi {{ $title }}" loading="lazy" itemprop="image"
+                        onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';" />
+
+                    {{-- ✅ Fallback Placeholder (hidden by default) --}}
+                    <div class="absolute inset-0 hidden">
+                        @include('components.publication.placeholder-cover', [
+                        'title' => $title,
+                        'initials' => $initials,
+                        'category' => $category,
+                        'publicationType' => $publicationType,
+                        'authorDisplay' => $authorDisplay,
+                        'slug' => $uniqueId,
+                        ])
                     </div>
                     @else
-                    <div
-                        class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#FF6B18] to-[#FF8B3D] text-white p-6">
-                        <span class="text-sm font-bold leading-tight text-center sm:text-base">
-                            {{ Str::limit($title, 50) }}
-                        </span>
+                    {{-- ✅ Placeholder Cover (always visible when no cover) --}}
+                    <div class="absolute inset-0">
+                        @include('components.publication.placeholder-cover', [
+                        'title' => $title,
+                        'initials' => $initials,
+                        'category' => $category,
+                        'publicationType' => $publicationType,
+                        'authorDisplay' => $authorDisplay,
+                        'slug' => $uniqueId,
+                        ])
                     </div>
                     @endif
 
-                    {{-- Shadow & Shine overlays --}}
-                    <div class="absolute inset-y-0 left-0 w-[10%] bg-gradient-to-r from-black/16 to-transparent pointer-events-none"
+                    {{-- Shadow & Shine overlays (always on top) --}}
+                    <div class="absolute inset-y-0 left-0 w-[10%] bg-gradient-to-r from-black/16 to-transparent pointer-events-none z-10"
                         aria-hidden="true"></div>
-                    <div class="absolute inset-0 pointer-events-none bg-gradient-to-tr from-white/0 via-white/0 to-white/10"
+                    <div class="absolute inset-0 z-10 pointer-events-none bg-gradient-to-tr from-white/0 via-white/0 to-white/10"
                         aria-hidden="true"></div>
 
-                    {{-- Category Badge --}}
+                    {{-- Category Badge (hanya untuk real cover) --}}
+                    @if($cover)
                     <span
-                        class="absolute top-3 right-3 left-3 sm:top-4 sm:right-4 sm:left-4 bg-white/95 backdrop-blur-sm px-3 py-1.5 font-bold text-[10px] leading-[14px] sm:text-xs sm:leading-[18px] rounded-full ring-1 ring-black/5 shadow-sm transition-all duration-200 group-hover:bg-[#FF6B18] group-hover:text-white text-left"
+                        class="absolute top-3 right-3 left-3 sm:top-4 sm:right-4 sm:left-4 bg-white/95 backdrop-blur-sm px-3 py-1.5 font-bold text-[10px] leading-[14px] sm:text-xs sm:leading-[18px] rounded-full ring-1 ring-black/5 shadow-sm transition-all duration-200 group-hover:bg-[#FF6B18] group-hover:text-white text-left z-20"
                         itemprop="articleSection">
                         {{ $category }}
                     </span>
+                    @endif
                 </div>
             </div>
 
@@ -86,15 +123,16 @@
                                 <img src="{{ $author['photo'] ?? 'https://ui-avatars.com/api/?name=' . urlencode($author['name'] ?? 'Unknown') . '&background=FF6B18&color=fff&size=128&bold=true&font-size=0.4&length=2' }}"
                                     class="author-photo block h-8 w-8 rounded-full object-cover ring-2 ring-white transition-all duration-200 hover:scale-110 hover:ring-[#FF6B18]"
                                     alt="Foto {{ $author['name'] ?? 'Penulis' }}"
-                                    title="{{ $author['name'] ?? 'Penulis ' . ($index + 1) }}"
-                                    onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ urlencode($author['name'] ?? 'Unknown') }}&background=FF6B18&color=fff&size=128&bold=true&font-size=0.4&length=2';" />
+                                    title="{{ $author['name'] ?? 'Penulis ' . ($index + 1) }}" loading="lazy"
+                                    onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ urlencode($author['name'] ?? 'UN') }}&background=FF6B18&color=fff&size=128&bold=true&font-size=0.4&length=2';" />
                             </div>
                             @endforeach
 
                             @if($totalAuthors > 3)
                             <div class="relative inline-block" style="z-index: 5;">
                                 <span
-                                    class="flex items-center justify-center h-8 w-8 font-bold ring-2 ring-white rounded-full bg-[#FF6B18] text-white text-[11px] transition-all duration-200 hover:scale-110">
+                                    class="flex items-center justify-center h-8 w-8 font-bold ring-2 ring-white rounded-full bg-[#FF6B18] text-white text-[11px] transition-all duration-200 hover:scale-110"
+                                    title="+{{ $totalAuthors - 3 }} penulis lainnya">
                                     +{{ $totalAuthors - 3 }}
                                 </span>
                             </div>
@@ -131,9 +169,7 @@
     </a>
 </div>
 
-{{-- ✅ Component-specific styles --}}
 <style>
-    /* Force avatar visibility */
     .author-photo {
         display: block !important;
         opacity: 1 !important;
@@ -148,8 +184,11 @@
         overflow: visible !important;
     }
 
-    /* Ensure proper stacking */
     .author-avatar-wrapper:hover {
         z-index: 999 !important;
+    }
+
+    .cover-image {
+        transition: opacity 0.3s ease-in-out;
     }
 </style>

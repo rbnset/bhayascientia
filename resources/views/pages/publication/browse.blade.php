@@ -328,17 +328,64 @@
             <div id="publicationsContainer"
                 class="grid grid-cols-1 gap-6 publications-grid md:grid-cols-2 lg:grid-cols-3">
                 @foreach($formattedPublications as $publication)
+                @php
+                // Generate initials for placeholder
+                $words = array_filter(explode(' ', $publication['title']));
+                $initials = '';
+                foreach (array_slice($words, 0, 2) as $word) {
+                $initials .= mb_strtoupper(mb_substr(trim($word), 0, 1));
+                }
+                if (empty($initials)) {
+                $initials = mb_strtoupper(mb_substr($publication['title'], 0, 2));
+                }
+
+                // Author display
+                $firstAuthor = count($publication['authors']) > 0 ? ($publication['authors'][0]['name'] ?? 'Unknown') :
+                'Anonymous';
+                $authorDisplay = $firstAuthor;
+                if ($publication['total_authors'] > 1) {
+                $authorDisplay .= ' et al.';
+                }
+                @endphp
+
                 <a href="{{ $publication['detail_url'] }}"
                     class="publication-card group bg-white rounded-2xl border-2 border-[#EEF0F7] hover:border-[#FF6B18] hover:shadow-xl transition-all duration-300 overflow-hidden">
 
                     {{-- Cover Image --}}
                     <div class="aspect-[3/4] overflow-hidden bg-[#F8F9FC] relative">
+                        @if($publication['cover_url'])
                         <img src="{{ $publication['cover_url'] }}" alt="{{ $publication['title'] }}"
-                            class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110">
+                            class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110"
+                            onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
+
+                        {{-- Fallback Placeholder --}}
+                        <div class="absolute inset-0 hidden p-4">
+                            @include('components.publication.placeholder-cover', [
+                            'title' => $publication['title'],
+                            'initials' => $initials,
+                            'category' => $publication['category'],
+                            'publicationType' => $publication['publication_type'] ?? 'Publikasi',
+                            'authorDisplay' => $authorDisplay,
+                            'slug' => $publication['slug'],
+                            ])
+                        </div>
+                        @else
+                        {{-- Placeholder (no cover) --}}
+                        <div class="absolute inset-0 p-4">
+                            @include('components.publication.placeholder-cover', [
+                            'title' => $publication['title'],
+                            'initials' => $initials,
+                            'category' => $publication['category'],
+                            'publicationType' => $publication['publication_type'] ?? 'Publikasi',
+                            'authorDisplay' => $authorDisplay,
+                            'slug' => $publication['slug'],
+                            ])
+                        </div>
+                        @endif
 
                         {{-- Stats Overlay --}}
                         <div
-                            class="absolute bottom-0 left-0 right-0 p-4 transition-opacity duration-300 opacity-0 bg-gradient-to-t from-black/70 to-transparent group-hover:opacity-100">
+                            class="absolute bottom-0 left-0 right-0 z-20 p-4 transition-opacity duration-300 opacity-0 bg-gradient-to-t from-black/70 to-transparent group-hover:opacity-100">
                             <div class="flex items-center gap-4 text-sm text-white">
                                 <span class="flex items-center gap-1">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
