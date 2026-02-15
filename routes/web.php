@@ -7,6 +7,7 @@ use App\Http\Controllers\PublicationController;
 use App\Http\Controllers\AuthorController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\LegalController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Publication\PublicationBrowseController;
 use App\Http\Controllers\Publication\PublicationCategoriesController;
 use App\Http\Controllers\Publication\PublicationIndexController;
@@ -157,14 +158,20 @@ Route::get('/kontak', [ContactController::class, 'index'])->name('kontak');
 Route::post('/kontak', [ContactController::class, 'submit'])->name('kontak.submit');
 
 Route::middleware(['auth'])->group(function () {
+    // Subscription routes
     Route::get('/subscription', [SubscriptionController::class, 'index'])->name('subscription.index');
     Route::post('/subscription', [SubscriptionController::class, 'store'])->name('subscription.store');
     Route::put('/subscription', [SubscriptionController::class, 'update'])->name('subscription.update');
     Route::delete('/subscription', [SubscriptionController::class, 'destroy'])->name('subscription.destroy');
     Route::post('/subscription/reactivate', [SubscriptionController::class, 'reactivate'])->name('subscription.reactivate');
-
-    // ✅ AJAX endpoint untuk dynamic category filtering
     Route::post('/subscription/get-categories', [SubscriptionController::class, 'getCategories'])->name('subscription.getCategories');
+
+    // Profile routes
+    Route::get('/profil-saya', [ProfileController::class, 'index'])->name('profil.saya');
+    Route::post('/profil-saya/update', [ProfileController::class, 'update'])->name('profil.update');
+    Route::post('/profil-saya/update-photo', [ProfileController::class, 'updatePhoto'])->name('profil.updatePhoto');
+    Route::delete('/profil-saya/delete-photo', [ProfileController::class, 'deletePhoto'])->name('profil.deletePhoto');
+    Route::post('/profil-saya/update-password', [ProfileController::class, 'updatePassword'])->name('profil.updatePassword');
 });
 
 Route::get('/submission-guidelines', [SubmissionGuidelineController::class, 'index'])
