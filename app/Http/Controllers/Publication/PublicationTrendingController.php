@@ -55,14 +55,63 @@ class PublicationTrendingController extends Controller
             ->filter(fn($pub) => $pub->recent_views > 0 || $pub->recent_downloads > 0)
             ->values()
             ->map(function ($pub) {
+                // ✅ Get publication type with fallback
+                $pubType = 'Publikasi';
+                if ($pub->publicationType) {
+                    $pubType = $pub->publicationType->name;
+                }
+
+                // ✅ Get cover URL using trait method (returns NULL if no cover)
+                $coverUrl = $this->getCoverUrl($pub);
+
+                // ✅ Generate initials for placeholder
+                $words = array_filter(explode(' ', $pub->title));
+                $initials = '';
+                foreach (array_slice($words, 0, 2) as $word) {
+                    $initials .= mb_strtoupper(mb_substr(trim($word), 0, 1));
+                }
+                if (empty($initials)) {
+                    $initials = mb_strtoupper(mb_substr($pub->title, 0, 2));
+                }
+
+                // ✅ Get first author
+                $firstAuthor = 'Anonymous';
+                if ($pub->authors->isNotEmpty()) {
+                    $firstAuthor = $pub->authors->first()->name ?? 'Unknown';
+                }
+
+                // ✅ Generate placeholder URL
+                $placeholderUrl = route('placeholder.cover', [
+                    'initials' => $initials,
+                    'type' => $pubType,
+                    'title' => $pub->title,
+                    'category' => $pub->category_name,
+                    'author' => $firstAuthor,
+                    'v' => time(),
+                ]);
+
+                // ✅ DEBUG LOG
+                if (config('app.debug')) {
+                    \Log::info('Trending Publication Cover Debug', [
+                        'id' => $pub->id,
+                        'title' => \Illuminate\Support\Str::limit($pub->title, 50),
+                        'cover_url' => $coverUrl,
+                        'placeholder_url' => $placeholderUrl,
+                        'is_null' => is_null($coverUrl),
+                    ]);
+                }
+
                 return [
                     'id' => $pub->id,
                     'title' => $pub->title,
                     'slug' => $pub->slug,
-                    'cover_url' => $this->getCoverUrl($pub),
+                    'cover_url' => $coverUrl, // NULL jika tidak ada cover
+                    'placeholder_url' => $placeholderUrl, // ✅ ADDED: URL placeholder
+                    'initials' => $initials, // ✅ ADDED: Untuk fallback di blade
                     'category' => $pub->category_name,
                     'formatted_date' => $pub->formatted_date,
-                    'type' => $pub->publicationType->name ?? 'Publikasi',
+                    'publication_type' => $pubType,
+                    'type' => $pubType,
                     'type_slug' => $pub->publicationType->slug ?? 'publikasi',
                     'detail_url' => route('publikasi.show', $pub->slug),
                     'trending_score' => $pub->recent_views + $pub->recent_downloads * 2,

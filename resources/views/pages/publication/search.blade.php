@@ -3,6 +3,42 @@
 @section('title', 'Hasil Pencarian Publikasi' . ($searchQuery ? ' - ' . $searchQuery : ''))
 @section('main_class', 'pb-16')
 
+@push('styles')
+<style>
+    /* ✅ Search Result Card Cover Styles - FIXED */
+    .search-result-card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .search-result-card:hover {
+        transform: translateY(-4px);
+    }
+
+    .search-result-cover {
+        position: relative;
+        aspect-ratio: 3/4;
+        overflow: hidden;
+        background-color: #F8F9FC;
+        display: block;
+        /* ✅ ADDED */
+    }
+
+    .search-result-cover img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+        transition: transform 0.3s ease;
+        display: block;
+        /* ✅ ADDED */
+    }
+
+    .search-result-card:hover .search-result-cover img {
+        transform: scale(1.05);
+    }
+</style>
+@endpush
+
 @section('custom_navbar')
 <x-navbar ctaLabel="Browse Publikasi" ctaRoute="publikasi.index" ctaIcon="book" :showAvatarWhenAuth="false"
     :showCtaAlways="true" />
@@ -228,7 +264,7 @@
     <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         @foreach($searchResults as $publication)
         @php
-        // Generate initials for placeholder
+        // Generate initials
         $words = array_filter(explode(' ', $publication['title']));
         $initials = '';
         foreach (array_slice($words, 0, 2) as $word) {
@@ -238,56 +274,46 @@
         $initials = mb_strtoupper(mb_substr($publication['title'], 0, 2));
         }
 
-        // Author display
-        $firstAuthor = count($publication['authors']) > 0 ? ($publication['authors'][0]['name'] ?? 'Unknown') :
-        'Anonymous';
-        $authorDisplay = $firstAuthor;
-        if ($publication['total_authors'] > 1) {
-        $authorDisplay .= ' et al.';
+        // Get first author
+        $firstAuthor = 'Anonymous';
+        if (isset($publication['authors']) && count($publication['authors']) > 0) {
+        $firstAuthor = $publication['authors'][0]['name'] ?? 'Unknown';
         }
+
+        // ✅ Generate placeholder URL
+        $placeholderParams = http_build_query([
+        'initials' => $initials,
+        'type' => $publication['publication_type'] ?? 'Publikasi',
+        'title' => $publication['title'],
+        'category' => $publication['category'] ?? 'Umum',
+        'author' => $firstAuthor,
+        'v' => time(),
+        ]);
+
+        $placeholderUrl = route('placeholder.cover') . '?' . $placeholderParams;
+
+        // Fallback eksternal
+        $fallbackUrl = 'https://placehold.co/600x900/6B7280/white?text=' . urlencode($initials);
+
+        // ✅ Use cover or placeholder
+        $finalCoverUrl = $publication['cover_url'] ?? $placeholderUrl;
         @endphp
 
         <a href="{{ $publication['detail_url'] }}"
-            class="group bg-white rounded-2xl border-2 border-[#EEF0F7] hover:border-[#FF6B18] hover:shadow-xl transition-all duration-300 overflow-hidden">
+            class="search-result-card group bg-white rounded-2xl border-2 border-[#EEF0F7] hover:border-[#FF6B18] hover:shadow-xl transition-all duration-300 overflow-hidden">
 
-            {{-- Cover Image --}}
-            <div class="aspect-[3/4] overflow-hidden bg-[#F8F9FC] relative">
-                @if($publication['cover_url'])
-                <img src="{{ $publication['cover_url'] }}" alt="{{ $publication['title'] }}"
-                    class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
-                    onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
-
-                {{-- Fallback Placeholder --}}
-                <div class="absolute inset-0 hidden p-4">
-                    @include('components.publication.placeholder-cover', [
-                    'title' => $publication['title'],
-                    'initials' => $initials,
-                    'category' => $publication['category'],
-                    'publicationType' => $publication['publication_type'] ?? 'Publikasi',
-                    'authorDisplay' => $authorDisplay,
-                    'slug' => $publication['slug'],
-                    ])
-                </div>
-                @else
-                {{-- Placeholder (no cover) --}}
-                <div class="absolute inset-0 p-4">
-                    @include('components.publication.placeholder-cover', [
-                    'title' => $publication['title'],
-                    'initials' => $initials,
-                    'category' => $publication['category'],
-                    'publicationType' => $publication['publication_type'] ?? 'Publikasi',
-                    'authorDisplay' => $authorDisplay,
-                    'slug' => $publication['slug'],
-                    ])
-                </div>
-                @endif
+            {{-- ✅ Cover Image WITH INLINE STYLES --}}
+            <div class="search-result-cover" style="display: block; background-color: #F8F9FC;">
+                <img src="{{ $finalCoverUrl }}" alt="Cover {{ $publication['title'] }}" loading="lazy" decoding="async"
+                    style="width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; opacity: 1 !important; visibility: visible !important;"
+                    onerror="if(!this.dataset.errored){this.dataset.errored='1';this.src='{{ $fallbackUrl }}';}">
             </div>
 
             {{-- Content --}}
             <div class="p-5">
                 <div class="flex items-center gap-2 mb-3">
                     <span class="px-3 py-1 bg-[#FFF7F2] text-[#FF6B18] text-xs font-bold rounded-full">
-                        {{ $publication['category'] }}
+                        {{ $publication['category'] ?? 'Umum' }}
                     </span>
                     <span class="text-xs text-[#737373]">{{ $publication['formatted_date'] }}</span>
                 </div>
@@ -298,20 +324,19 @@
                 </h3>
 
                 <p class="text-sm text-[#737373] mb-4 line-clamp-2">
-                    {{ $publication['abstract'] }}
+                    {{ $publication['abstract'] ?? 'Tidak ada abstrak' }}
                 </p>
 
                 <div class="flex items-center gap-2">
-                    @foreach($publication['authors'] as $author)
-                    @if($loop->index < 2) <img src="{{ $author['photo'] }}" alt="{{ $author['name'] }}"
+                    @foreach(array_slice($publication['authors'], 0, 2) as $author)
+                    <img src="{{ $author['photo'] }}" alt="{{ $author['name'] }}"
                         class="w-8 h-8 rounded-full border-2 border-white {{ $loop->index > 0 ? '-ml-3' : '' }}">
-                        @endif
-                        @endforeach
-                        @if($publication['total_authors'] > 2)
-                        <span class="text-xs font-semibold text-[#737373] ml-1">
-                            +{{ $publication['total_authors'] - 2 }} lainnya
-                        </span>
-                        @endif
+                    @endforeach
+                    @if($publication['total_authors'] > 2)
+                    <span class="text-xs font-semibold text-[#737373] ml-1">
+                        +{{ $publication['total_authors'] - 2 }} lainnya
+                    </span>
+                    @endif
                 </div>
             </div>
         </a>

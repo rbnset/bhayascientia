@@ -30,6 +30,7 @@ class PublicationLibraryController extends Controller
         if (!Auth::check()) {
             return view('pages.publication.library', [
                 'publications' => collect(),
+                'formattedPublications' => collect(), // ✅ ADDED
                 'stats' => ['favorites' => 0, 'history' => 0, 'saved' => 0],
                 'activeTab' => $activeTab,
                 'requiresLogin' => true,
@@ -63,8 +64,8 @@ class PublicationLibraryController extends Controller
         switch ($activeTab) {
             case 'favorites':
                 $query = $user->favoritePublications()
-                    ->with(['authors.user', 'publicationType', 'categories'])
-                    ->whereHas('publicationType', fn($q) => $q->where('is_active', true)) // ✅ Only active types
+                    ->with(['authors.user', 'publicationType', 'categories', 'downloadLogs', 'viewLogs']) // ✅ Added logs
+                    ->whereHas('publicationType', fn($q) => $q->where('is_active', true))
                     ->where('status', 'published')
                     ->whereNotNull('published_at')
                     ->where('published_at', '<=', now());
@@ -90,8 +91,8 @@ class PublicationLibraryController extends Controller
 
             case 'history':
                 $query = $user->readPublications()
-                    ->with(['authors.user', 'publicationType', 'categories'])
-                    ->whereHas('publicationType', fn($q) => $q->where('is_active', true)) // ✅ Only active types
+                    ->with(['authors.user', 'publicationType', 'categories', 'downloadLogs', 'viewLogs']) // ✅ Added logs
+                    ->whereHas('publicationType', fn($q) => $q->where('is_active', true))
                     ->where('status', 'published')
                     ->whereNotNull('published_at')
                     ->where('published_at', '<=', now());
@@ -117,8 +118,8 @@ class PublicationLibraryController extends Controller
 
             case 'saved':
                 $query = $user->savedPublications()
-                    ->with(['authors.user', 'publicationType', 'categories'])
-                    ->whereHas('publicationType', fn($q) => $q->where('is_active', true)) // ✅ Only active types
+                    ->with(['authors.user', 'publicationType', 'categories', 'downloadLogs', 'viewLogs']) // ✅ Added logs
+                    ->whereHas('publicationType', fn($q) => $q->where('is_active', true))
                     ->where('status', 'published')
                     ->whereNotNull('published_at')
                     ->where('published_at', '<=', now());
@@ -144,14 +145,25 @@ class PublicationLibraryController extends Controller
         }
 
         // ✅ Map publications (filter out any with inactive types as extra safety)
-        $publications = $publications->filter(function ($pub) {
+        $formattedPublications = $publications->filter(function ($pub) {
             return $pub->publicationType && $pub->publicationType->is_active;
         })->map(function ($pub) use ($activeTab) {
+            // ✅ Get publication type with fallback
+            $pubType = 'Publikasi';
+            if ($pub->publicationType) {
+                $pubType = $pub->publicationType->name;
+            }
+
+            // ✅ Get cover URL using trait method
+            $coverUrl = $this->getCoverUrl($pub);
+
+            // Authors text
             $authorsText = $pub->authors->take(2)->pluck('name')->implode(', ');
             if ($pub->authors->count() > 2) {
                 $authorsText .= ' +' . ($pub->authors->count() - 2) . ' lainnya';
             }
 
+            // Action time based on tab
             $actionTime = match ($activeTab) {
                 'favorites' => $pub->pivot?->created_at
                     ? (is_string($pub->pivot->created_at)
@@ -174,15 +186,22 @@ class PublicationLibraryController extends Controller
                 default => 'Unknown'
             };
 
+            // ✅ Get category
+            $category = $pub->categories->first();
+
             return [
                 'id' => $pub->id,
                 'title' => $pub->title,
                 'slug' => $pub->slug,
-                'cover_url' => $this->getCoverUrl($pub),
-                'category' => $pub->category_name,
+                'abstract' => $pub->abstract ? \Illuminate\Support\Str::limit($pub->abstract, 150) : null, // ✅ ADDED
+                'cover_url' => $coverUrl, // Bisa null
+                'category' => $category ? $category->name : 'Uncategorized',
+                'category_slug' => $category ? $category->slug : null, // ✅ ADDED
                 'formatted_date' => $pub->formatted_date,
-                'type' => $pub->publicationType->name ?? 'Publikasi',
+                'publication_type' => $pubType, // ✅ ADDED: Correct key
+                'type' => $pubType, // Backward compatibility
                 'type_id' => $pub->publication_type_id,
+                'type_slug' => $pub->publicationType->slug ?? 'publikasi', // ✅ ADDED
                 'type_active' => $pub->publicationType->is_active ?? false,
                 'detail_url' => route('publikasi.show', $pub->slug),
                 'action_time' => $actionTime,
@@ -190,20 +209,25 @@ class PublicationLibraryController extends Controller
                 'authors' => $pub->authors->take(6)->map(fn($author) => [
                     'id' => $author->id,
                     'name' => $author->name,
-                    'photo' => $author->photo_url,
+                    'photo' => $author->photo_url, // ✅ Use accessor
                     'initials' => $author->initials,
                 ])->toArray(),
                 'total_authors' => $pub->authors->count(),
+                'views_count' => $pub->viewLogs->count(), // ✅ ADDED
+                'download_count' => $pub->downloadLogs->count(), // ✅ ADDED
             ];
         });
 
-        return view('pages.publication.library', compact(
-            'publications',
-            'stats',
-            'activeTab',
-            'publicationTypes',
-            'search',
-            'typeFilter'
-        ));
+        return view('pages.publication.library', [
+            'publications' => $publications, // ✅ Original collection (jika diperlukan)
+            'formattedPublications' => $formattedPublications, // ✅ Formatted data
+            'stats' => $stats,
+            'activeTab' => $activeTab,
+            'publicationTypes' => $publicationTypes,
+            'search' => $search,
+            'typeFilter' => $typeFilter,
+            'requiresLogin' => false, // ✅ ADDED
+            'user' => $user, // ✅ ADDED
+        ]);
     }
 }

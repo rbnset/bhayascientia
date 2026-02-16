@@ -7,6 +7,8 @@ use App\Http\Controllers\PublicationController;
 use App\Http\Controllers\AuthorController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\LegalController;
+use App\Http\Controllers\PlaceholderCoverController;
+use App\Http\Controllers\PlaceholderImageController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Publication\PublicationBrowseController;
 use App\Http\Controllers\Publication\PublicationCategoriesController;
@@ -188,3 +190,9 @@ Route::get('/tentang', [AboutController::class, 'index'])->name('tentang');
 Route::get('/test-card', function () {
     return view('test-card');
 });
+
+Route::get('/placeholder-image', [PlaceholderImageController::class, 'generate'])
+    ->name('placeholder.image');
+
+Route::get('/placeholder-cover', [PlaceholderCoverController::class, 'generate'])
+    ->name('placeholder.cover');

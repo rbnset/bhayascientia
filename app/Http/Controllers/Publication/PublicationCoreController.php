@@ -63,7 +63,7 @@ class PublicationBrowseController extends Controller
      */
     private function getLatestPublications($type)
     {
-        $query = Publication::with(['authors.user', 'categories'])
+        $query = Publication::with(['authors.user', 'categories', 'publicationType']) // ✅ Eager load publicationType
             ->where('status', 'published')
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now());
@@ -78,16 +78,25 @@ class PublicationBrowseController extends Controller
             ->take(10)
             ->get()
             ->map(function ($publication) {
+                // ✅ Get publication type
+                $pubType = 'Publikasi';
+                if ($publication->publicationType) {
+                    $pubType = $publication->publicationType->name;
+                }
+
                 return [
                     'title' => $publication->title,
+                    'slug' => $publication->slug,
                     'cover_url' => $this->getCoverUrl($publication),
                     'category' => $publication->categories->first()?->name ?? 'Umum',
+                    'publication_type' => $pubType, // ✅ ADDED
                     'formatted_date' => $publication->published_at?->locale('id_ID')->isoFormat('D MMMM YYYY'),
                     'status' => $publication->status,
                     'authors' => $publication->authors->map(function ($author) {
                         return [
                             'name' => $author->name,
-                            'photo' => $author->photo_url, // ✅ Gunakan accessor
+                            'photo' => $author->photo_url,
+                            'initials' => $author->initials,
                         ];
                     })->toArray(),
                     'total_authors' => $publication->authors->count(),
@@ -122,7 +131,7 @@ class PublicationBrowseController extends Controller
                 return [
                     'id' => $author->id,
                     'name' => $author->name,
-                    'photo_url' => $author->photo_url, // ✅ Gunakan accessor
+                    'photo_url' => $author->photo_url,
                     'initials' => $author->initials,
                     'affiliation' => $author->affiliation ?? ($author->user ? $author->user->job_title : '-'),
                     'short_bio' => $author->short_bio,
@@ -136,7 +145,7 @@ class PublicationBrowseController extends Controller
      */
     private function getPopularPublications($type)
     {
-        $query = Publication::with(['authors.user', 'categories', 'downloadLogs'])
+        $query = Publication::with(['authors.user', 'categories', 'downloadLogs', 'publicationType']) // ✅ Eager load publicationType
             ->where('status', 'published')
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now());
@@ -152,20 +161,30 @@ class PublicationBrowseController extends Controller
             ->take(6)
             ->get()
             ->map(function ($publication) {
+                // ✅ Get publication type
+                $pubType = 'Publikasi';
+                if ($publication->publicationType) {
+                    $pubType = $publication->publicationType->name;
+                }
+
                 return [
                     'title' => $publication->title,
+                    'slug' => $publication->slug,
                     'cover_url' => $this->getCoverUrl($publication),
                     'category' => $publication->categories->first()?->name ?? 'Umum',
+                    'publication_type' => $pubType, // ✅ ADDED
                     'formatted_date' => $publication->published_at?->locale('id_ID')->isoFormat('D MMMM YYYY'),
                     'authors' => $publication->authors->map(function ($author) {
                         return [
                             'name' => $author->name,
-                            'photo' => $author->photo_url, // ✅ Gunakan accessor
+                            'photo' => $author->photo_url,
+                            'initials' => $author->initials,
                         ];
                     })->toArray(),
                     'total_authors' => $publication->authors->count(),
                     'detail_url' => route('publikasi.show', $publication->slug),
                     'download_count' => $publication->download_logs_count,
+                    'views_count' => $publication->views_count ?? 0, // ✅ ADDED
                 ];
             });
     }
@@ -175,7 +194,7 @@ class PublicationBrowseController extends Controller
      */
     private function getFeaturedPublication($type)
     {
-        $query = Publication::with(['authors.user', 'categories'])
+        $query = Publication::with(['authors.user', 'categories', 'publicationType']) // ✅ Eager load publicationType
             ->where('status', 'published')
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now())
@@ -193,19 +212,31 @@ class PublicationBrowseController extends Controller
             return null;
         }
 
+        // ✅ Get publication type
+        $pubType = 'Publikasi';
+        if ($publication->publicationType) {
+            $pubType = $publication->publicationType->name;
+        }
+
         return [
             'title' => $publication->title,
+            'slug' => $publication->slug,
             'cover_url' => $this->getCoverUrl($publication),
             'category' => $publication->categories->first()?->name ?? 'Umum',
+            'publication_type' => $pubType, // ✅ ADDED
+            'type' => $pubType, // ✅ Backward compatibility
+            'abstract' => \Illuminate\Support\Str::limit($publication->abstract, 120), // ✅ ADDED
             'formatted_date' => $publication->published_at?->locale('id_ID')->isoFormat('D MMMM YYYY'),
             'authors' => $publication->authors->map(function ($author) {
                 return [
                     'name' => $author->name,
-                    'photo' => $author->photo_url, // ✅ Gunakan accessor
+                    'photo' => $author->photo_url,
+                    'initials' => $author->initials,
                 ];
             })->toArray(),
             'total_authors' => $publication->authors->count(),
             'detail_url' => route('publikasi.show', $publication->slug),
+            'download_count' => $publication->download_logs_count ?? 0, // ✅ ADDED
         ];
     }
 
@@ -218,6 +249,9 @@ class PublicationBrowseController extends Controller
             $q->where('status', 'published')
                 ->whereNotNull('published_at')
                 ->where('published_at', '<=', now());
-        }])->get();
+        }])
+            ->where('is_active', true) // ✅ ADDED: Only active types
+            ->orderBy('name')
+            ->get();
     }
 }

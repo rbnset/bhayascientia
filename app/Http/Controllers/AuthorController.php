@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Traits\PublicationHelperTrait; // ✅ Import trait
 use App\Models\Author;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -11,6 +12,8 @@ use Illuminate\Support\Str;
 
 class AuthorController extends Controller
 {
+    use PublicationHelperTrait; // ✅ Use trait untuk getCoverUrl() dan helper methods
+
     /**
      * Display the author's profile with their publications
      * Support both Author model and User model
@@ -63,6 +66,7 @@ class AuthorController extends Controller
                     'affiliation' => $affiliation,
                     'photoUrl' => $photoUrl,
                     'publications' => collect()->paginate(9),
+                    'formattedPublications' => collect(), // ✅ ADDED
                     'totalPublications' => 0,
                     'totalViews' => 0,
                     'totalDownloads' => 0,
@@ -80,18 +84,55 @@ class AuthorController extends Controller
             $publicationsQuery = $author->publications();
         }
 
-        // ✅ Get publications with pagination (9 per page) dan mapping data seperti browse
+        // ✅ Get publications with pagination (9 per page)
         $publications = $publicationsQuery
-            ->with(['publicationType', 'categories', 'authors.user', 'versions'])
+            ->with(['publicationType', 'categories', 'authors.user', 'downloadLogs', 'viewLogs']) // ✅ Added logs
             ->where('status', 'published')
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now())
             ->orderBy('published_at', 'desc')
             ->paginate(9)
-            ->through(function ($publication) {
-                // ✅ Map data untuk setiap publikasi (sama seperti browse controller)
-                return $this->mapPublicationData($publication);
-            });
+            ->withQueryString(); // ✅ Preserve query string
+
+        // ✅ Format publications untuk view (gunakan getCollection()->transform untuk preserve pagination)
+        $formattedPublications = $publications->getCollection()->transform(function ($publication) {
+            $category = $publication->categories->first();
+
+            // ✅ Get publication type with fallback
+            $pubType = 'Publikasi';
+            if ($publication->publicationType) {
+                $pubType = $publication->publicationType->name;
+            }
+
+            // ✅ Get cover URL using trait method
+            $coverUrl = $this->getCoverUrl($publication);
+
+            return [
+                'id' => $publication->id,
+                'title' => $publication->title,
+                'slug' => $publication->slug,
+                'abstract' => $publication->abstract ? Str::limit($publication->abstract, 150) : 'No abstract available',
+                'cover_url' => $coverUrl, // Bisa null
+                'category' => $category ? $category->name : 'Uncategorized',
+                'category_slug' => $category ? $category->slug : null,
+                'publication_type' => $pubType, // ✅ ADDED: Correct key
+                'type' => $pubType, // ✅ Backward compatibility
+                'type_slug' => $publication->publicationType->slug ?? 'publikasi',
+                'formatted_date' => $publication->published_at?->locale('id_ID')->isoFormat('D MMM Y'),
+                'year' => $publication->published_at?->year,
+                'detail_url' => route('publikasi.show', $publication->slug),
+                'authors' => $publication->authors->map(function ($author) {
+                    return [
+                        'name' => $author->name,
+                        'photo' => $author->photo_url, // ✅ Use accessor
+                        'initials' => $author->initials, // ✅ ADDED
+                    ];
+                })->toArray(),
+                'total_authors' => $publication->authors->count(),
+                'views_count' => $publication->viewLogs->count(),
+                'download_count' => $publication->downloadLogs->count(),
+            ];
+        });
 
         // ✅ Get publication IDs for stats
         $publicationIds = $author->publications()
@@ -140,7 +181,17 @@ class AuthorController extends Controller
                         ->where('published_at', '<=', now());
                 }])
                 ->limit(6)
-                ->get();
+                ->get()
+                ->map(function ($coAuthor) {
+                    return [
+                        'id' => $coAuthor->id,
+                        'name' => $coAuthor->name,
+                        'photo_url' => $coAuthor->photo_url,
+                        'initials' => $coAuthor->initials,
+                        'publications_count' => $coAuthor->publications_count,
+                        'profile_url' => route('author.profile', $coAuthor->id),
+                    ];
+                });
         }
 
         return view('author.profile', [
@@ -151,71 +202,13 @@ class AuthorController extends Controller
             'bio' => $bio,
             'affiliation' => $affiliation,
             'photoUrl' => $photoUrl,
-            'publications' => $publications,
+            'publications' => $publications, // ✅ Paginator object
+            'formattedPublications' => $formattedPublications, // ✅ Formatted data
             'totalPublications' => $totalPublications,
             'totalViews' => $totalViews,
             'totalDownloads' => $totalDownloads,
             'coAuthors' => $coAuthors,
             'isUserProfile' => $isUserProfile,
         ]);
-    }
-
-    /**
-     * ✅ Helper: Map publication data (sama seperti browse controller)
-     */
-    private function mapPublicationData($publication)
-    {
-        // Get cover URL
-        $coverUrl = $this->getCoverUrl($publication);
-
-        // Map authors data
-        $authorsData = $publication->authors->map(function ($author) {
-            return [
-                'name' => $author->name,
-                'photo' => $author->photo_url, // Gunakan accessor dari model
-            ];
-        })->toArray();
-
-        // Tambahkan properties ke object publication
-        $publication->cover_url = $coverUrl;
-        $publication->authors_data = $authorsData;
-
-        return $publication;
-    }
-
-    /**
-     * ✅ Helper: Get cover URL
-     */
-    private function getCoverUrl($publication)
-    {
-        $latestVersion = $publication->versions->first();
-
-        if (!$latestVersion || !$latestVersion->cover_image_path) {
-            return null;
-        }
-
-        $cleanPath = $this->cleanPath($latestVersion->cover_image_path);
-
-        if (Storage::disk('public')->exists($cleanPath)) {
-            return asset('storage/' . $cleanPath);
-        }
-
-        return null;
-    }
-
-    /**
-     * ✅ Helper: Clean path (hapus prefix 'public/')
-     */
-    private function cleanPath(?string $path): ?string
-    {
-        if (!$path) {
-            return null;
-        }
-
-        if (str_starts_with($path, 'public/')) {
-            return substr($path, 7);
-        }
-
-        return $path;
     }
 }

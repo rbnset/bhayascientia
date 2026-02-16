@@ -98,7 +98,6 @@
         scroll-padding-bottom: 100px;
     }
 
-    /* ✅ Filter dropdown animation */
     .filter-dropdown {
         max-height: 0;
         overflow: hidden;
@@ -107,6 +106,24 @@
 
     .filter-dropdown.active {
         max-height: 400px;
+    }
+
+    /* ✅ Cover Image Styles - FIXED */
+    .library-cover {
+        position: relative;
+        overflow: hidden;
+        background-color: #F8F9FC;
+        display: block;
+        /* ✅ ADDED */
+    }
+
+    .library-cover img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+        display: block;
+        /* ✅ ADDED */
     }
 </style>
 @endpush
@@ -245,7 +262,6 @@
                 </svg>
                 Login Sekarang
             </a>
-
             <a href="{{ route('register') }}"
                 class="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-white border-2 border-[#FF6B18] text-[#FF6B18] text-sm sm:text-base font-bold rounded-xl hover:bg-[#FFF7F2] transition-all duration-300 inline-flex items-center justify-center gap-2">
                 <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -362,7 +378,7 @@
                 </a>
             </div>
 
-            {{-- ✅ Search & Filter Bar --}}
+            {{-- Search & Filter Bar --}}
             <div class="p-4 pb-0 space-y-3 sm:p-6">
                 <form action="{{ route('publikasi.library') }}" method="GET" id="filterForm">
                     <input type="hidden" name="tab" value="{{ $activeTab }}">
@@ -389,7 +405,7 @@
                         </button>
                     </div>
 
-                    {{-- ✅ Type Filter Dropdown --}}
+                    {{-- Type Filter Dropdown --}}
                     <div id="filterDropdown" class="filter-dropdown {{ $typeFilter ? 'active' : '' }}">
                         <div class="pt-3">
                             <label class="block text-xs sm:text-sm font-semibold text-[#737373] mb-2">
@@ -409,8 +425,7 @@
                                     <input type="radio" name="type" value="{{ $type->id }}" {{ $typeFilter==$type->id ?
                                     'checked' : '' }}
                                     onchange="document.getElementById('filterForm').submit()"
-                                    class="w-4 h-4 text-[#FF6B18] focus:ring-[#FF6B18]"
-                                    >
+                                    class="w-4 h-4 text-[#FF6B18] focus:ring-[#FF6B18]">
                                     <span class="text-xs sm:text-sm font-semibold text-[#1A1A1A] truncate">{{
                                         $type->name }}</span>
                                 </label>
@@ -419,7 +434,7 @@
                         </div>
                     </div>
 
-                    {{-- ✅ Active Filters Display --}}
+                    {{-- Active Filters Display --}}
                     @if($search || $typeFilter)
                     <div class="flex flex-wrap items-center gap-2 pt-3">
                         <span class="text-xs sm:text-sm text-[#737373] font-semibold">Filter aktif:</span>
@@ -458,57 +473,53 @@
             @if($activeTab === 'favorites')
             {{-- FAVORITES TAB --}}
             <div class="grid grid-cols-1 gap-3 sm:gap-4">
-                @forelse($publications as $publication)
+                @forelse($formattedPublications as $publication)
+                @php
+                // Generate initials
+                $words = array_filter(explode(' ', $publication['title']));
+                $initials = '';
+                foreach (array_slice($words, 0, 2) as $word) {
+                $initials .= mb_strtoupper(mb_substr(trim($word), 0, 1));
+                }
+                if (empty($initials)) {
+                $initials = mb_strtoupper(mb_substr($publication['title'], 0, 2));
+                }
+
+                // Get first author
+                $firstAuthor = 'Anonymous';
+                if (isset($publication['authors']) && count($publication['authors']) > 0) {
+                $firstAuthor = $publication['authors'][0]['name'] ?? 'Unknown';
+                }
+
+                // ✅ Generate placeholder URL
+                $placeholderParams = http_build_query([
+                'initials' => $initials,
+                'type' => $publication['publication_type'] ?? 'Publikasi',
+                'title' => $publication['title'],
+                'category' => $publication['category'] ?? 'Umum',
+                'author' => $firstAuthor,
+                'v' => time(),
+                ]);
+
+                $placeholderUrl = route('placeholder.cover') . '?' . $placeholderParams;
+
+                // Fallback eksternal
+                $fallbackUrl = 'https://placehold.co/600x900/6B7280/white?text=' . urlencode($initials);
+
+                // Use cover or placeholder
+                $finalCoverUrl = $publication['cover_url'] ?? $placeholderUrl;
+                @endphp
+
                 <article
                     class="group flex gap-3 sm:gap-4 p-3 sm:p-4 bg-[#F8F9FC] rounded-xl hover:bg-white hover:shadow-md transition-all duration-300">
-                    @php
-                    // Generate initials for placeholder
-                    $words = array_filter(explode(' ', $publication['title']));
-                    $initials = '';
-                    foreach (array_slice($words, 0, 2) as $word) {
-                    $initials .= mb_strtoupper(mb_substr(trim($word), 0, 1));
-                    }
-                    if (empty($initials)) {
-                    $initials = mb_strtoupper(mb_substr($publication['title'], 0, 2));
-                    }
-
-                    // Author display
-                    $authorDisplay = $publication['authors_text'] ?? 'Anonymous';
-                    @endphp
-
                     <a href="{{ $publication['detail_url'] }}"
-                        class="w-16 h-20 overflow-hidden rounded-lg sm:w-20 sm:h-24 md:w-24 md:h-28 shrink-0 relative bg-[#F8F9FC]">
-                        @if($publication['cover_url'])
-                        <img src="{{ $publication['cover_url'] }}" alt="{{ $publication['title'] }}"
-                            class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
-                            onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
-
-                        {{-- Fallback Placeholder --}}
-                        <div class="absolute inset-0 hidden p-1">
-                            @include('components.publication.placeholder-cover', [
-                            'title' => $publication['title'],
-                            'initials' => $initials,
-                            'category' => $publication['category'] ?? 'Umum',
-                            'publicationType' => $publication['type'] ?? 'Publikasi',
-                            'authorDisplay' => $authorDisplay,
-                            'slug' => 'lib-fav-' . $publication['id'],
-                            ])
-                        </div>
-                        @else
-                        {{-- Placeholder (no cover) --}}
-                        <div class="absolute inset-0 p-1">
-                            @include('components.publication.placeholder-cover', [
-                            'title' => $publication['title'],
-                            'initials' => $initials,
-                            'category' => $publication['category'] ?? 'Umum',
-                            'publicationType' => $publication['type'] ?? 'Publikasi',
-                            'authorDisplay' => $authorDisplay,
-                            'slug' => 'lib-fav-' . $publication['id'],
-                            ])
-                        </div>
-                        @endif
+                        class="library-cover w-16 h-20 sm:w-20 sm:h-24 md:w-24 md:h-28 shrink-0 rounded-lg"
+                        style="display: block; background-color: #F8F9FC;">
+                        <img src="{{ $finalCoverUrl }}" alt="Cover {{ $publication['title'] }}" loading="lazy"
+                            decoding="async" class="transition-transform duration-300 group-hover:scale-105"
+                            style="width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; opacity: 1 !important; visibility: visible !important;"
+                            onerror="if(!this.dataset.errored){this.dataset.errored='1';this.src='{{ $fallbackUrl }}';}">
                     </a>
-
 
                     <div class="flex-1 min-w-0">
                         <div class="flex items-start justify-between gap-2 sm:gap-4 mb-1.5 sm:mb-2">
@@ -529,15 +540,15 @@
                         </div>
 
                         <p class="text-xs sm:text-sm text-[#737373] mb-1.5 sm:mb-2 line-clamp-1">
-                            {{ $publication['authors_text'] }}
+                            {{ $publication['authors_text'] ?? 'Tanpa penulis' }}
                         </p>
 
                         <div class="flex items-center gap-2 text-[10px] sm:text-xs text-[#737373]">
                             <span class="px-2 py-0.5 bg-[#FFF7F2] text-[#FF6B18] rounded font-semibold">{{
-                                $publication['type'] }}</span>
-                            <span class="truncate">{{ $publication['category'] }}</span>
+                                $publication['type'] ?? 'Publikasi' }}</span>
+                            <span class="truncate">{{ $publication['category'] ?? 'Umum' }}</span>
                             <span class="hidden xs:inline">•</span>
-                            <span class="hidden xs:inline">{{ $publication['action_time'] }}</span>
+                            <span class="hidden xs:inline">{{ $publication['action_time'] ?? '-' }}</span>
                         </div>
                     </div>
                 </article>
@@ -574,52 +585,44 @@
             @elseif($activeTab === 'history')
             {{-- HISTORY TAB --}}
             <div class="space-y-2 sm:space-y-3">
-                @forelse($publications as $publication)
+                @forelse($formattedPublications as $publication)
+                @php
+                $words = array_filter(explode(' ', $publication['title']));
+                $initials = '';
+                foreach (array_slice($words, 0, 2) as $word) {
+                $initials .= mb_strtoupper(mb_substr(trim($word), 0, 1));
+                }
+                if (empty($initials)) {
+                $initials = mb_strtoupper(mb_substr($publication['title'], 0, 2));
+                }
+
+                $firstAuthor = 'Anonymous';
+                if (isset($publication['authors']) && count($publication['authors']) > 0) {
+                $firstAuthor = $publication['authors'][0]['name'] ?? 'Unknown';
+                }
+
+                $placeholderParams = http_build_query([
+                'initials' => $initials,
+                'type' => $publication['publication_type'] ?? 'Publikasi',
+                'title' => $publication['title'],
+                'category' => $publication['category'] ?? 'Umum',
+                'author' => $firstAuthor,
+                'v' => time(),
+                ]);
+
+                $placeholderUrl = route('placeholder.cover') . '?' . $placeholderParams;
+                $fallbackUrl = 'https://placehold.co/600x900/6B7280/white?text=' . urlencode($initials);
+                $finalCoverUrl = $publication['cover_url'] ?? $placeholderUrl;
+                @endphp
+
                 <a href="{{ $publication['detail_url'] }}"
                     class="group flex items-center gap-3 sm:gap-4 p-3 rounded-xl hover:bg-[#F8F9FC] transition-colors">
-                    @php
-                    $words = array_filter(explode(' ', $publication['title']));
-                    $initials = '';
-                    foreach (array_slice($words, 0, 2) as $word) {
-                    $initials .= mb_strtoupper(mb_substr(trim($word), 0, 1));
-                    }
-                    if (empty($initials)) {
-                    $initials = mb_strtoupper(mb_substr($publication['title'], 0, 2));
-                    }
-                    $authorDisplay = $publication['authors_text'] ?? 'Anonymous';
-                    @endphp
-
-                    <div
-                        class="w-12 h-16 overflow-hidden rounded-lg sm:w-14 sm:h-18 md:w-16 md:h-20 shrink-0 relative bg-[#F8F9FC]">
-                        @if($publication['cover_url'])
-                        <img src="{{ $publication['cover_url'] }}" alt="{{ $publication['title'] }}"
-                            class="object-cover w-full h-full"
-                            onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
-
-                        <div class="absolute inset-0 hidden p-0.5">
-                            @include('components.publication.placeholder-cover', [
-                            'title' => $publication['title'],
-                            'initials' => $initials,
-                            'category' => $publication['category'] ?? 'Umum',
-                            'publicationType' => $publication['type'] ?? 'Publikasi',
-                            'authorDisplay' => $authorDisplay,
-                            'slug' => 'lib-hist-' . $publication['id'],
-                            ])
-                        </div>
-                        @else
-                        <div class="absolute inset-0 p-0.5">
-                            @include('components.publication.placeholder-cover', [
-                            'title' => $publication['title'],
-                            'initials' => $initials,
-                            'category' => $publication['category'] ?? 'Umum',
-                            'publicationType' => $publication['type'] ?? 'Publikasi',
-                            'authorDisplay' => $authorDisplay,
-                            'slug' => 'lib-hist-' . $publication['id'],
-                            ])
-                        </div>
-                        @endif
+                    <div class="library-cover w-12 h-16 sm:w-14 sm:h-18 md:w-16 md:h-20 shrink-0 rounded-lg"
+                        style="display: block; background-color: #F8F9FC;">
+                        <img src="{{ $finalCoverUrl }}" alt="Cover {{ $publication['title'] }}" loading="lazy"
+                            style="width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; opacity: 1 !important; visibility: visible !important;"
+                            onerror="if(!this.dataset.errored){this.dataset.errored='1';this.src='{{ $fallbackUrl }}';}">
                     </div>
-
 
                     <div class="flex-1 min-w-0">
                         <h4
@@ -629,10 +632,11 @@
                         <p class="text-[10px] sm:text-xs text-[#737373] mb-0.5 sm:mb-1 line-clamp-1">
                             <span
                                 class="px-1.5 py-0.5 bg-[#FFF7F2] text-[#FF6B18] rounded text-[9px] sm:text-[10px] font-semibold mr-1">{{
-                                $publication['type'] }}</span>
-                            {{ $publication['category'] }} • {{ $publication['authors_text'] }}
+                                $publication['type'] ?? 'Publikasi' }}</span>
+                            {{ $publication['category'] ?? 'Umum' }} • {{ $publication['authors_text'] ?? 'Tanpa
+                            penulis' }}
                         </p>
-                        <p class="text-[10px] sm:text-xs text-[#737373]">{{ $publication['action_time'] }}</p>
+                        <p class="text-[10px] sm:text-xs text-[#737373]">{{ $publication['action_time'] ?? '-' }}</p>
                     </div>
 
                     <svg class="w-4 h-4 sm:w-5 sm:h-5 text-[#737373] group-hover:text-[#FF6B18] transition-colors shrink-0"
@@ -666,55 +670,49 @@
             @else
             {{-- SAVED TAB --}}
             <div class="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
-                @forelse($publications as $publication)
+                @forelse($formattedPublications as $publication)
+                @php
+                $words = array_filter(explode(' ', $publication['title']));
+                $initials = '';
+                foreach (array_slice($words, 0, 2) as $word) {
+                $initials .= mb_strtoupper(mb_substr(trim($word), 0, 1));
+                }
+                if (empty($initials)) {
+                $initials = mb_strtoupper(mb_substr($publication['title'], 0, 2));
+                }
+
+                $firstAuthor = 'Anonymous';
+                if (isset($publication['authors']) && count($publication['authors']) > 0) {
+                $firstAuthor = $publication['authors'][0]['name'] ?? 'Unknown';
+                }
+
+                $placeholderParams = http_build_query([
+                'initials' => $initials,
+                'type' => $publication['publication_type'] ?? 'Publikasi',
+                'title' => $publication['title'],
+                'category' => $publication['category'] ?? 'Umum',
+                'author' => $firstAuthor,
+                'v' => time(),
+                ]);
+
+                $placeholderUrl = route('placeholder.cover') . '?' . $placeholderParams;
+                $fallbackUrl = 'https://placehold.co/600x900/6B7280/white?text=' . urlencode($initials);
+                $finalCoverUrl = $publication['cover_url'] ?? $placeholderUrl;
+                @endphp
+
                 <article
                     class="group bg-white border border-[#EEF0F7] rounded-xl overflow-hidden hover:shadow-lg hover:border-[#FF6B18]/20 transition-all duration-300">
-                    @php
-                    $words = array_filter(explode(' ', $publication['title']));
-                    $initials = '';
-                    foreach (array_slice($words, 0, 2) as $word) {
-                    $initials .= mb_strtoupper(mb_substr(trim($word), 0, 1));
-                    }
-                    if (empty($initials)) {
-                    $initials = mb_strtoupper(mb_substr($publication['title'], 0, 2));
-                    }
-                    $authorDisplay = $publication['authors_text'] ?? 'Anonymous';
-                    @endphp
-
                     <a href="{{ $publication['detail_url'] }}">
-                        <div class="aspect-[3/4] overflow-hidden relative bg-[#F8F9FC]">
-                            @if($publication['cover_url'])
-                            <img src="{{ $publication['cover_url'] }}" alt="{{ $publication['title'] }}"
-                                class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
-                                onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
-
-                            <div class="absolute inset-0 hidden p-2">
-                                @include('components.publication.placeholder-cover', [
-                                'title' => $publication['title'],
-                                'initials' => $initials,
-                                'category' => $publication['category'] ?? 'Umum',
-                                'publicationType' => $publication['type'] ?? 'Publikasi',
-                                'authorDisplay' => $authorDisplay,
-                                'slug' => 'lib-saved-' . $publication['id'],
-                                ])
-                            </div>
-                            @else
-                            <div class="absolute inset-0 p-2">
-                                @include('components.publication.placeholder-cover', [
-                                'title' => $publication['title'],
-                                'initials' => $initials,
-                                'category' => $publication['category'] ?? 'Umum',
-                                'publicationType' => $publication['type'] ?? 'Publikasi',
-                                'authorDisplay' => $authorDisplay,
-                                'slug' => 'lib-saved-' . $publication['id'],
-                                ])
-                            </div>
-                            @endif
+                        <div class="library-cover aspect-[3/4]" style="display: block; background-color: #F8F9FC;">
+                            <img src="{{ $finalCoverUrl }}" alt="Cover {{ $publication['title'] }}" loading="lazy"
+                                class="transition-transform duration-300 group-hover:scale-105"
+                                style="width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; opacity: 1 !important; visibility: visible !important;"
+                                onerror="if(!this.dataset.errored){this.dataset.errored='1';this.src='{{ $fallbackUrl }}';}">
 
                             {{-- Type Badge (overlay on top) --}}
                             <div
                                 class="absolute top-2 left-2 px-2 py-1 bg-[#FF6B18] text-white text-[10px] sm:text-xs font-bold rounded shadow z-10">
-                                {{ $publication['type'] }}
+                                {{ $publication['type'] ?? 'Publikasi' }}
                             </div>
                         </div>
                     </a>
@@ -728,11 +726,11 @@
                         </a>
 
                         <p class="text-[10px] sm:text-xs md:text-sm text-[#737373] mb-2 sm:mb-3 line-clamp-1">
-                            {{ $publication['authors_text'] }}
+                            {{ $publication['authors_text'] ?? 'Tanpa penulis' }}
                         </p>
 
                         <div class="flex items-center justify-between text-[10px] sm:text-xs text-[#737373]">
-                            <span class="truncate">{{ $publication['action_time'] }}</span>
+                            <span class="truncate">{{ $publication['action_time'] ?? '-' }}</span>
                             <button type="button" onclick="removeSaved({{ $publication['id'] }})"
                                 class="text-[#FF6B18] hover:underline font-semibold flex-shrink-0 ml-2">
                                 Hapus
@@ -784,7 +782,7 @@
 <script>
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
-// ✅ Toggle Filter Dropdown
+// Toggle Filter Dropdown
 function toggleFilter() {
     const dropdown = document.getElementById('filterDropdown');
     dropdown.classList.toggle('active');

@@ -31,16 +31,94 @@
         :types="$publicationTypes ?? []" :selectedType="$selectedType" :filterSort="$filterSort"
         :hasActiveFilters="false" />
 
+    {{-- DEBUG: Lihat data yang diterima --}}
+    @php
+    // Uncomment untuk debug lengkap
+    // dd($latestPublications);
+
+    // Log untuk debugging
+    if (!empty($latestPublications)) {
+    \Log::info('Latest Publications in Blade', [
+    'count' => count($latestPublications),
+    'first_item_keys' => array_keys($latestPublications[0] ?? []),
+    'first_item' => $latestPublications[0] ?? null,
+    ]);
+    }
+    @endphp
+
     {{-- Latest Publications Grid/Swiper --}}
     <x-publication.swiper-section title="Tulisan Terbaru <br />Untuk Diskursus yang Bertanggung Jawab" badge="TERKINI"
         swiperClass="upToDateSwiper">
 
-        @forelse($latestPublications as $publication)
-        <x-publication.card :title="$publication['title']" :cover="$publication['cover_url'] ?? ''"
-            :category="$publication['category']" :publicationType="$publication['publication_type'] ?? 'Publikasi'"
-            :date="$publication['formatted_date']" :authors="$publication['authors']"
-            :totalAuthors="$publication['total_authors']" :detailUrl="$publication['detail_url']"
-            :slug="$publication['slug']" />
+        @forelse($latestPublications as $index => $publication)
+        @php
+        // ✅ Validasi data publication
+        if (!is_array($publication)) {
+        \Log::error('Publication is not an array', ['index' => $index, 'data' => $publication]);
+        continue;
+        }
+
+        // Generate initials
+        $words = array_filter(explode(' ', $publication['title'] ?? ''));
+        $initials = '';
+        foreach (array_slice($words, 0, 2) as $word) {
+        $initials .= mb_strtoupper(mb_substr(trim($word), 0, 1));
+        }
+        if (empty($initials)) {
+        $initials = mb_strtoupper(mb_substr($publication['title'] ?? 'UN', 0, 2));
+        }
+
+        // Format author display
+        $firstAuthor = $publication['first_author_name'] ??
+        (isset($publication['authors']) && count($publication['authors']) > 0
+        ? ($publication['authors'][0]['name'] ?? 'Unknown')
+        : 'Anonymous');
+
+        // ✅ Get publication type dengan fallback bertingkat
+        $publicationType = $publication['publication_type'] ??
+        $publication['type'] ??
+        'Publikasi';
+
+        // ✅ DEBUG: Log setiap item pertama
+        if ($index === 0) {
+        \Log::info('Processing first publication in blade', [
+        'title' => $publication['title'] ?? 'No title',
+        'type' => $publicationType,
+        'type_is_default' => $publicationType === 'Publikasi',
+        'has_key_publication_type' => isset($publication['publication_type']),
+        'has_key_type' => isset($publication['type']),
+        'all_keys' => array_keys($publication),
+        ]);
+        }
+
+        // Generate placeholder URL
+        $placeholderUrl = route('placeholder.cover', [
+        'initials' => $initials,
+        'type' => $publicationType,
+        'title' => $publication['title'] ?? 'Untitled',
+        'category' => $publication['category'] ?? 'Umum',
+        'author' => $firstAuthor,
+        ]);
+
+        // Use cover if exists, otherwise use placeholder
+        $coverImage = !empty($publication['cover_url'])
+        ? $publication['cover_url']
+        : $placeholderUrl;
+
+        // ✅ DEBUG: Log URL yang di-generate untuk item pertama
+        if ($index === 0) {
+        \Log::info('Generated placeholder URL', [
+        'url' => $placeholderUrl,
+        'type_param' => $publicationType,
+        ]);
+        }
+        @endphp
+
+        <x-publication.card :title="$publication['title'] ?? 'Untitled'" :cover="$coverImage"
+            :category="$publication['category'] ?? 'Umum'" :publicationType="$publicationType"
+            :date="$publication['formatted_date'] ?? ''" :authors="$publication['authors'] ?? []"
+            :totalAuthors="$publication['total_authors'] ?? 0" :detailUrl="$publication['detail_url'] ?? '#'"
+            :slug="$publication['slug'] ?? ''" />
         @empty
         <div class="swiper-slide">
             <div class="bg-white p-12 rounded-2xl border-2 border-dashed border-[#EEF0F7] text-center">

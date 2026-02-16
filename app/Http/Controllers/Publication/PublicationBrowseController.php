@@ -21,7 +21,7 @@ class PublicationBrowseController extends Controller
         $filterCategory = $request->get('category');
         $filterYear = $request->get('year');
         $filterSort = $request->get('sort', 'latest');
-        $perPage = $request->get('perpage', 12);
+        $perPage = $request->get('per_page', 12); // ✅ Fixed typo: perpage -> per_page
 
         // Get publication types
         $publicationTypes = PublicationType::where('is_active', true)
@@ -34,7 +34,14 @@ class PublicationBrowseController extends Controller
             ->get();
 
         // Base query
-        $query = Publication::with(['publicationType', 'categories', 'authors', 'versions', 'viewLogs', 'downloadLogs'])
+        $query = Publication::with([
+            'publicationType',
+            'categories',
+            'authors.user', // ✅ Eager load authors with user
+            'versions',
+            'viewLogs',
+            'downloadLogs'
+        ])
             ->where('status', 'published')
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now());
@@ -61,7 +68,7 @@ class PublicationBrowseController extends Controller
         // Sorting
         switch ($filterSort) {
             case 'popular':
-                $query->withCount('viewLogs')->orderByDesc('view_logs_count');
+                $query->withCount('downloadLogs')->orderByDesc('download_logs_count'); // ✅ Changed to downloadLogs
                 break;
             case 'oldest':
                 $query->orderBy('published_at', 'asc');
@@ -92,7 +99,6 @@ class PublicationBrowseController extends Controller
             ->orderByDesc('publications_count')
             ->get();
 
-
         // Get available years
         $years = Publication::where('status', 'published')
             ->whereNotNull('published_at')
@@ -102,32 +108,45 @@ class PublicationBrowseController extends Controller
             ->orderByDesc('year')
             ->pluck('year');
 
-        // Format publications for view
+        // ✅ Format publications for view
         $formattedPublications = $publications->map(function ($publication) {
             $category = $publication->categories->first();
+
+            // ✅ Get publication type with fallback
+            $pubType = 'Publikasi';
+            if ($publication->publicationType) {
+                $pubType = $publication->publicationType->name;
+            }
+
+            // ✅ Get cover URL
+            $coverUrl = $this->getCoverUrl($publication);
+
             return [
                 'id' => $publication->id,
                 'title' => $publication->title,
                 'slug' => $publication->slug,
                 'abstract' => $publication->abstract ? Str::limit($publication->abstract, 150) : 'No abstract available',
-                'cover_url' => $this->getCoverUrl($publication),
+                'cover_url' => $coverUrl, // Bisa null
                 'category' => $category ? $category->name : 'Uncategorized',
                 'category_slug' => $category ? $category->slug : null,
-                'type' => $publication->publicationType->name,
-                'type_slug' => $publication->publicationType->slug,
+                'publication_type' => $pubType, // ✅ ADDED: Key name yang benar
+                'type' => $pubType, // ✅ Backward compatibility
+                'type_slug' => $publication->publicationType->slug ?? 'publikasi',
                 'formatted_date' => $publication->published_at?->locale('id_ID')->isoFormat('D MMM Y'),
                 'year' => $publication->published_at?->year,
                 'detail_url' => route('publikasi.show', $publication->slug),
                 'authors' => $publication->authors->take(3)->map(function ($author) {
                     return [
                         'name' => $author->name,
-                        'photo' => $author->photo_url,
+                        'photo' => $author->photo_url, // ✅ Use accessor
+                        'initials' => $author->initials, // ✅ ADDED
                         'profile_url' => route('author.profile', $author->user_id ?? $author->id),
                     ];
-                }),
+                })->toArray(), // ✅ ADDED: Convert to array
                 'total_authors' => $publication->authors->count(),
                 'views_count' => $publication->viewLogs->count(),
-                'downloads_count' => $publication->downloadLogs->count(),
+                'download_count' => $publication->downloadLogs->count(), // ✅ Changed key name
+                'downloads_count' => $publication->downloadLogs->count(), // ✅ Keep for backward compatibility
             ];
         });
 

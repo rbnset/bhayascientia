@@ -72,7 +72,7 @@ class PublicationController extends Controller
                 'abstract' => $currentType->content->description,
                 'download_count' => 0,
                 'detail_url' => '#',
-                'slug' => $currentType->slug, // ✅ TAMBAHAN untuk pattern ID
+                'slug' => $currentType->slug,
             ];
         }
 
@@ -162,18 +162,58 @@ class PublicationController extends Controller
         // Get Latest Publications
         $publications = $publicationsQuery->take(6)->get();
 
-        // Map Latest Publications dengan slug untuk pattern ID
+        // ✅ DEBUG: Log raw publications data
+        if ($publications->isNotEmpty()) {
+            \Log::info('Raw Publications Query Result', [
+                'count' => $publications->count(),
+                'first_pub_id' => $publications->first()->id,
+                'first_pub_title' => $publications->first()->title,
+                'first_pub_type_id' => $publications->first()->publication_type_id,
+                'first_pub_has_relation' => $publications->first()->relationLoaded('publicationType'),
+                'first_pub_type_name' => $publications->first()->publicationType?->name,
+            ]);
+        }
+
+        // ✅ Map Latest Publications dengan data BENAR
         $latestPublications = $publications->map(function ($pub) {
+            // Get first author name
+            $firstAuthor = $pub->authors->first();
+            $firstAuthorName = $firstAuthor ? $firstAuthor->name : 'Anonymous';
+
+            // ✅ PENTING: Pastikan publicationType ter-load dengan benar
+            $publicationType = 'Publikasi'; // Default fallback
+
+            if ($pub->relationLoaded('publicationType') && $pub->publicationType) {
+                $publicationType = $pub->publicationType->name;
+            } elseif ($pub->publication_type_id) {
+                // Emergency fallback jika relation tidak ter-load
+                $type = \App\Models\PublicationType::find($pub->publication_type_id);
+                $publicationType = $type ? $type->name : 'Publikasi';
+            }
+
+            // ✅ DEBUG: Log setiap mapping
+            \Log::info('Mapping Publication', [
+                'id' => $pub->id,
+                'title' => \Illuminate\Support\Str::limit($pub->title, 50),
+                'publication_type' => $publicationType,
+                'is_default' => $publicationType === 'Publikasi',
+            ]);
+
             return [
                 'id' => $pub->id,
                 'title' => $pub->title,
                 'slug' => $pub->slug,
                 'cover_url' => $this->getCoverUrl($pub),
                 'category' => $pub->category_name,
-                'publication_type' => $pub->publicationType->name ?? 'Publikasi',
+
+                // ✅ PENTING: Kirim nama type yang BENAR (Buku, Jurnal, dll)
+                'publication_type' => $publicationType,
+
                 'formatted_date' => $pub->formatted_date,
-                'status' => $pub->publicationType->requires_review ? 'Peer-reviewed' : 'Terverifikasi',
-                'type' => $pub->publicationType->name ?? 'Publikasi',
+                'status' => $pub->publicationType && $pub->publicationType->requires_review
+                    ? 'Peer-reviewed'
+                    : 'Terverifikasi',
+                'type' => $publicationType,
                 'detail_url' => route('publikasi.show', $pub->slug),
                 'authors' => $pub->authors->take(6)->map(function ($author) {
                     return [
@@ -184,8 +224,21 @@ class PublicationController extends Controller
                     ];
                 })->toArray(),
                 'total_authors' => $pub->authors->count(),
+                'first_author_name' => $firstAuthorName,
             ];
         })->toArray();
+
+        // ✅ DEBUG: Log final mapped data
+        if (!empty($latestPublications)) {
+            \Log::info('Final Latest Publications', [
+                'count' => count($latestPublications),
+                'first_item' => [
+                    'title' => \Illuminate\Support\Str::limit($latestPublications[0]['title'], 50),
+                    'publication_type' => $latestPublications[0]['publication_type'],
+                    'is_default' => $latestPublications[0]['publication_type'] === 'Publikasi',
+                ],
+            ]);
+        }
 
         // GET BEST AUTHORS - LIMIT 6
         $bestAuthors = $this->getBestAuthorsAction->execute($selectedType, 6);
@@ -210,30 +263,44 @@ class PublicationController extends Controller
         // Featured Publication
         $featuredPublication = null;
         if (!$featuredTypeContent && $popularPubs->first()) {
+            $featuredPub = $popularPubs->first();
+
+            // Get publication type untuk featured
+            $featuredPubType = 'Publikasi';
+            if ($featuredPub->publicationType) {
+                $featuredPubType = $featuredPub->publicationType->name;
+            }
+
             $featuredPublication = [
-                'id' => $popularPubs->first()->id,
-                'title' => $popularPubs->first()->title,
-                'slug' => $popularPubs->first()->slug,
-                'cover_url' => $this->getCoverUrl($popularPubs->first()),
-                'category' => $popularPubs->first()->category_name,
-                'publication_type' => $popularPubs->first()->publicationType->name ?? 'Publikasi',
-                'type' => $popularPubs->first()->publicationType->name ?? 'Publikasi',
-                'abstract' => \Illuminate\Support\Str::limit($popularPubs->first()->abstract, 120),
-                'download_count' => $popularPubs->first()->download_logs_count,
-                'detail_url' => route('publikasi.show', $popularPubs->first()->slug),
+                'id' => $featuredPub->id,
+                'title' => $featuredPub->title,
+                'slug' => $featuredPub->slug,
+                'cover_url' => $this->getCoverUrl($featuredPub),
+                'category' => $featuredPub->category_name,
+                'publication_type' => $featuredPubType,
+                'type' => $featuredPubType,
+                'abstract' => \Illuminate\Support\Str::limit($featuredPub->abstract, 120),
+                'download_count' => $featuredPub->download_logs_count,
+                'detail_url' => route('publikasi.show', $featuredPub->slug),
             ];
         }
 
         // Popular Publications List
         $skipCount = $featuredTypeContent ? 0 : 1;
         $popularPublications = $popularPubs->skip($skipCount)->take(6)->map(function ($pub) {
+            // Get publication type
+            $pubType = 'Publikasi';
+            if ($pub->publicationType) {
+                $pubType = $pub->publicationType->name;
+            }
+
             return [
                 'id' => $pub->id,
                 'title' => $pub->title,
                 'slug' => $pub->slug,
                 'cover_url' => $this->getCoverUrl($pub),
                 'category' => $pub->category_name,
-                'publication_type' => $pub->publicationType->name ?? 'Publikasi',
+                'publication_type' => $pubType,
                 'formatted_date' => $pub->formatted_date,
                 'download_count' => $pub->download_logs_count,
                 'views_count' => $pub->views_count,
@@ -265,6 +332,7 @@ class PublicationController extends Controller
             'searchQuery'
         ));
     }
+
 
     /**
      * ✅ Show publication detail

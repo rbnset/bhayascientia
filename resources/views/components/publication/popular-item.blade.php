@@ -35,6 +35,11 @@ $initials = '';
 foreach (array_slice($words, 0, 2) as $word) {
 $initials .= mb_strtoupper(mb_substr(trim($word), 0, 1));
 }
+
+// Ensure we have at least something for initials
+if (empty($initials)) {
+$initials = mb_strtoupper(mb_substr($title, 0, 2));
+}
 @endphp
 
 <a href="{{ $detailUrl }}"
@@ -45,18 +50,19 @@ $initials .= mb_strtoupper(mb_substr(trim($word), 0, 1));
 
         {{-- Cover --}}
         <div class="relative shrink-0">
-            <div
-                class="relative aspect-[2/3] w-[74px] overflow-hidden rounded-[16px] bg-[#F5F6FA] shadow-[0_12px_30px_-18px_rgba(0,0,0,0.6)] ring-1 ring-black/5 sm:w-[88px] lg:w-[104px]">
+            <div class="relative aspect-[2/3] w-[74px] overflow-hidden rounded-[16px] bg-[#F5F6FA] shadow-[0_12px_30px_-18px_rgba(0,0,0,0.6)] ring-1 ring-black/5 sm:w-[88px] lg:w-[104px]"
+                style="display: block;">
 
                 @if($coverUrl)
-                {{-- Real Cover Image --}}
+                {{-- ✅ Real Cover Image WITH INLINE STYLES --}}
                 <img src="{{ $coverUrl }}" alt="Cover {{ $title }}" class="object-cover w-full h-full cover-image"
                     loading="eager"
-                    onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                    style="width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; opacity: 1 !important; visibility: visible !important;"
+                    onerror="if(!this.dataset.errored){this.dataset.errored='1';this.style.display='none'; this.nextElementSibling.style.display='flex';}" />
 
                 {{-- ✅ Fallback Placeholder (ketika image error) --}}
-                <div
-                    class="absolute inset-0 hidden items-center justify-center bg-gradient-to-br {{ $selectedGradient }} text-white p-2">
+                <div class="absolute inset-0 hidden items-center justify-center bg-gradient-to-br {{ $selectedGradient }} text-white p-2"
+                    style="display: none;">
                     <div class="flex flex-col items-center justify-center h-full space-y-1 text-center">
                         {{-- Decorative Pattern --}}
                         <div class="absolute inset-0 opacity-10">

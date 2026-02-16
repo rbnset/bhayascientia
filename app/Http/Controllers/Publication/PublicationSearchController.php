@@ -3,17 +3,17 @@
 namespace App\Http\Controllers\Publication;
 
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\Traits\PublicationHelperTrait;  // ✅ TAMBAH
+use App\Http\Controllers\Traits\PublicationHelperTrait;
 use App\Models\Publication;
 use App\Models\PublicationType;
 use App\Models\Category;
 use App\Models\Keyword;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;  // ✅ TAMBAH untuk Str::limit
+use Illuminate\Support\Str;
 
 class PublicationSearchController extends Controller
 {
-    use PublicationHelperTrait;  // ✅ TAMBAH INI
+    use PublicationHelperTrait;
 
     public function search(Request $request)
     {
@@ -128,17 +128,37 @@ class PublicationSearchController extends Controller
         }
 
         $publications = $query->paginate(18)->withQueryString();
+
         $searchResults = $publications->map(function ($pub) {
+            // ✅ Get publication type with fallback
+            $pubType = 'Publikasi';
+            if ($pub->publicationType) {
+                $pubType = $pub->publicationType->name;
+            }
+
+            // ✅ Get cover URL using trait method (returns NULL if no cover)
+            $coverUrl = $this->getCoverUrl($pub);
+
+            // ✅ Get category name
+            $categoryName = $pub->category_name ?? 'Umum';
+
+            // ✅ Get formatted date
+            $formattedDate = $pub->formatted_date ?? ($pub->published_at ? $pub->published_at->locale('id_ID')->isoFormat('D MMM Y') : 'Tanggal tidak tersedia');
+
+            // ✅ Get abstract with limit
+            $abstract = Str::limit($pub->abstract ?? 'Tidak ada abstrak tersedia', 150);
+
             return [
                 'id' => $pub->id,
                 'title' => $pub->title,
                 'slug' => $pub->slug,
-                'cover_url' => $this->getCoverUrl($pub),  // ✅ FIX: use $this->getCoverUrl()
-                'category' => $pub->category_name ?? 'Umum',
-                'formatted_date' => $pub->formatted_date ?? $pub->published_at?->locale('id_ID')->isoFormat('D MMM Y'),
-                'status' => $pub->publicationType->requires_review ? 'Peer-reviewed Terverifikasi' : '',
-                'type' => $pub->publicationType->name ?? 'Publikasi',
-                'abstract' => Str::limit($pub->abstract ?? '', 150),
+                'cover_url' => $coverUrl, // NULL jika tidak ada cover
+                'category' => $categoryName,
+                'formatted_date' => $formattedDate,
+                'publication_type' => $pubType, // ✅ ADDED: For placeholder generation
+                'status' => $pub->publicationType && $pub->publicationType->requires_review ? 'Peer-reviewed Terverifikasi' : '',
+                'type' => $pubType,
+                'abstract' => $abstract,
                 'detail_url' => route('publikasi.show', $pub->slug),
                 'authors' => $pub->authors->take(6)->map(function ($author) {
                     return [

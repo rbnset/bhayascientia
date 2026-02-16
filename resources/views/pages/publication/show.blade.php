@@ -477,22 +477,8 @@
         {{-- ✅ RIGHT COLUMN: Cover + Action Buttons --}}
         <aside id="publication-sidebar">
             @php
-            // Generate gradient & initials untuk placeholder
-            $typeGradients = [
-            'Buku' => ['from' => '10B981', 'to' => '059669'],
-            'Jurnal' => ['from' => 'FF6B18', 'to' => 'E64627'],
-            'Opini' => ['from' => '3B82F6', 'to' => '1D4ED8'],
-            'Artikel' => ['from' => 'F59E0B', 'to' => 'D97706'],
-            'Penelitian' => ['from' => '8B5CF6', 'to' => '6D28D9'],
-            'Skripsi' => ['from' => 'EC4899', 'to' => 'BE185D'],
-            'Tesis' => ['from' => '06B6D4', 'to' => '0891B2'],
-            'Disertasi' => ['from' => 'EF4444', 'to' => 'DC2626'],
-            'Makalah' => ['from' => '14B8A6', 'to' => '0F766E'],
-            'Laporan' => ['from' => 'A855F7', 'to' => '7C3AED'],
-            'default' => ['from' => 'A3A6AE', 'to' => '6B7280'],
-            ];
-
-            $gradient = $typeGradients[$publication_type ?? 'default'] ?? $typeGradients['default'];
+            // ✅ Get publication type name
+            $publicationType = $publication->publicationType->name ?? 'Publikasi';
 
             // Generate initials from title
             $words = array_filter(explode(' ', $publication->title));
@@ -506,10 +492,16 @@
 
             // Format authors for placeholder
             $firstAuthor = $authors->count() > 0 ? ($authors->first()['name'] ?? 'Unknown') : 'Anonymous';
-            $authorDisplay = $firstAuthor;
-            if ($authors->count() > 1) {
-            $authorDisplay .= ' et al.';
-            }
+
+            // ✅ Generate placeholder URL dengan cache buster
+            $placeholderUrl = route('placeholder.cover', [
+            'initials' => $initials,
+            'type' => $publicationType,
+            'title' => $publication->title,
+            'category' => $category,
+            'author' => $firstAuthor,
+            'v' => time(), // Cache buster
+            ]);
             @endphp
 
             <div class="sticky-cover">
@@ -518,19 +510,7 @@
                     @if($cover_url)
                     {{-- Real Cover Image --}}
                     <img src="{{ $cover_url }}" alt="Cover {{ $publication->title }}" class="object-cover w-full h-full"
-                        onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
-
-                    {{-- Fallback Placeholder (hidden by default) --}}
-                    <div class="absolute inset-0 hidden">
-                        @include('components.publication.placeholder-cover', [
-                        'title' => $publication->title,
-                        'initials' => $initials,
-                        'category' => $category,
-                        'publicationType' => $publication_type ?? 'Publikasi',
-                        'authorDisplay' => $authorDisplay,
-                        'slug' => $publication->slug,
-                        ])
-                    </div>
+                        onerror="this.onerror=null; this.src='{{ $placeholderUrl }}';">
 
                     {{-- Enhanced Overlay for Fullscreen --}}
                     <div
@@ -545,17 +525,9 @@
                         </button>
                     </div>
                     @else
-                    {{-- Placeholder Cover (always visible when no cover) --}}
-                    <div class="absolute inset-0">
-                        @include('components.publication.placeholder-cover', [
-                        'title' => $publication->title,
-                        'initials' => $initials,
-                        'category' => $category,
-                        'publicationType' => $publication_type ?? 'Publikasi',
-                        'authorDisplay' => $authorDisplay,
-                        'slug' => $publication->slug,
-                        ])
-                    </div>
+                    {{-- Placeholder Cover (SVG dari controller) --}}
+                    <img src="{{ $placeholderUrl }}" alt="Cover {{ $publication->title }}"
+                        class="object-cover w-full h-full">
                     @endif
                 </div>
 
@@ -708,6 +680,7 @@
                 @endif
             </div>
         </aside>
+
 
 
     </div>

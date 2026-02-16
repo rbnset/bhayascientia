@@ -14,159 +14,100 @@
 // ✅ Use publicationType if available, fallback to type
 $displayType = $publicationType ?? $type ?? 'Publikasi';
 
-// Generate gradient berdasarkan publication type
-$typeGradients = [
-'Buku' => ['from' => '10B981', 'to' => '059669'],
-'Jurnal' => ['from' => 'FF6B18', 'to' => 'E64627'],
-'Opini' => ['from' => '3B82F6', 'to' => '1D4ED8'],
-'Artikel' => ['from' => 'F59E0B', 'to' => 'D97706'],
-'Penelitian' => ['from' => '8B5CF6', 'to' => '6D28D9'],
-'Skripsi' => ['from' => 'EC4899', 'to' => 'BE185D'],
-'Tesis' => ['from' => '06B6D4', 'to' => '0891B2'],
-'Disertasi' => ['from' => 'EF4444', 'to' => 'DC2626'],
-'default' => ['from' => 'A3A6AE', 'to' => '6B7280'],
-];
-
-$gradient = $typeGradients[$displayType] ?? $typeGradients['default'];
-$selectedGradient = "from-[#{$gradient['from']}] to-[#{$gradient['to']}]";
-
-// Generate initial dari title
+// Generate initials from title
 $words = array_filter(explode(' ', $title));
 $initials = '';
 foreach (array_slice($words, 0, 2) as $word) {
 $initials .= mb_strtoupper(mb_substr(trim($word), 0, 1));
 }
+if (empty($initials)) {
+$initials = mb_strtoupper(mb_substr($title, 0, 2));
+}
+
+// ✅ Generate placeholder URL
+$placeholderUrl = route('placeholder.cover', [
+'initials' => $initials,
+'type' => $displayType,
+'title' => $title,
+'category' => $category ?? 'Umum',
+'author' => 'Anonymous',
+'v' => time(), // Cache buster
+]);
+
+// ✅ Use cover or placeholder
+$finalCoverUrl = $coverUrl ?: $placeholderUrl;
 @endphp
+
+<style>
+    /* ✅ Featured Card Image Styles */
+    .featured-news-card {
+        position: relative;
+        display: flex;
+        overflow: hidden;
+    }
+
+    .featured-news-card .featured-bg-image {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+        transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .featured-news-card:hover .featured-bg-image {
+        transform: scale(1.1);
+    }
+
+    /* ✅ Ensure proper image rendering */
+    .featured-news-card img {
+        display: block;
+        max-width: none;
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
+    }
+
+    /* ✅ Prevent layout shift */
+    .featured-news-card::before {
+        content: '';
+        display: block;
+        padding-bottom: 56.25%;
+        /* 16:9 aspect ratio fallback */
+    }
+
+    @media (min-width: 1024px) {
+        .featured-news-card::before {
+            padding-bottom: 0;
+        }
+    }
+
+    /* ✅ Gradient overlay z-index fix */
+    .featured-news-card .gradient-overlay {
+        pointer-events: none;
+    }
+
+    /* ✅ Content visibility */
+    .featured-news-card .card-detail {
+        pointer-events: none;
+    }
+
+    .featured-news-card .card-detail>* {
+        pointer-events: auto;
+    }
+</style>
 
 <a href="{{ $detailUrl }}"
     class="featured-news-card group relative flex h-[260px] w-full overflow-hidden rounded-[20px] transition-transform duration-300 hover:scale-[1.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 sm:h-[320px] md:h-[380px] lg:h-[424px] lg:flex-1"
     aria-label="Baca publikasi featured: {{ $title }}">
 
-    @if($coverUrl)
-    {{-- Background Image --}}
-    <img src="{{ $coverUrl }}"
-        class="absolute inset-0 object-cover w-full h-full transition-transform duration-500 featured-bg-image thumbnail group-hover:scale-110"
-        alt="Cover {{ $title }}" loading="eager"
-        onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+    {{-- ✅ Background Image (always use img tag with fallback) --}}
+    <img src="{{ $finalCoverUrl }}" class="featured-bg-image" alt="Cover {{ $title }}" loading="eager"
+        onerror="console.error('Image failed to load:', this.src); this.onerror=null; this.src='{{ $placeholderUrl }}';">
 
-    {{-- ✅ Fallback Placeholder (ketika image error) --}}
+    {{-- Gradient Overlay (always visible) --}}
     <div
-        class="absolute inset-0 hidden items-center justify-center bg-gradient-to-br {{ $selectedGradient }} text-white p-6">
-        <div class="relative flex flex-col items-center justify-center h-full space-y-4 text-center">
-            {{-- Decorative Pattern Background --}}
-            <div class="absolute inset-0 opacity-10">
-                <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                        <pattern id="featured-pattern-{{ $slug }}" x="0" y="0" width="60" height="60"
-                            patternUnits="userSpaceOnUse">
-                            <circle cx="30" cy="30" r="2" fill="white" />
-                        </pattern>
-                    </defs>
-                    <rect width="100%" height="100%" fill="url(#featured-pattern-{{ $slug }})" />
-                </svg>
-            </div>
-
-            {{-- Gradient Overlay --}}
-            <div class="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-white/10"></div>
-
-            {{-- Large Initial/Monogram --}}
-            <div
-                class="relative z-10 font-black leading-none tracking-tight text-7xl sm:text-8xl md:text-9xl opacity-95 drop-shadow-2xl">
-                {{ $initials }}
-            </div>
-
-            {{-- Decorative Line --}}
-            <div class="relative z-10 flex items-center justify-center gap-3">
-                <div class="h-[3px] w-12 bg-white/60 rounded"></div>
-                <svg class="w-4 h-4 text-white/80" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                        clip-rule="evenodd" />
-                </svg>
-                <div class="h-[3px] w-12 bg-white/60 rounded"></div>
-            </div>
-
-            {{-- Title --}}
-            <div
-                class="relative z-10 max-w-2xl px-6 text-base font-bold leading-tight sm:text-lg md:text-xl opacity-90 line-clamp-3 drop-shadow-lg">
-                {{ $title }}
-            </div>
-
-            {{-- Type Badge --}}
-            <div
-                class="relative z-10 inline-block px-4 py-2 text-sm font-bold border-2 rounded-full bg-white/25 backdrop-blur-sm border-white/40">
-                {{ $displayType }}
-            </div>
-        </div>
-    </div>
-    @else
-    {{-- ✅ No Cover - Show Placeholder --}}
-    <div
-        class="absolute inset-0 flex items-center justify-center bg-gradient-to-br {{ $selectedGradient }} text-white p-6">
-        <div class="relative flex flex-col items-center justify-center h-full space-y-4 text-center">
-            {{-- Decorative Pattern Background --}}
-            <div class="absolute inset-0 opacity-10">
-                <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                        <pattern id="featured-pattern-nocover-{{ $slug }}" x="0" y="0" width="60" height="60"
-                            patternUnits="userSpaceOnUse">
-                            <circle cx="30" cy="30" r="2" fill="white" />
-                        </pattern>
-                    </defs>
-                    <rect width="100%" height="100%" fill="url(#featured-pattern-nocover-{{ $slug }})" />
-                </svg>
-            </div>
-
-            {{-- Gradient Overlay --}}
-            <div class="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-white/10"></div>
-
-            {{-- Large Initial/Monogram --}}
-            <div
-                class="relative z-10 font-black leading-none tracking-tight text-7xl sm:text-8xl md:text-9xl opacity-95 drop-shadow-2xl">
-                {{ $initials }}
-            </div>
-
-            {{-- Decorative Line --}}
-            <div class="relative z-10 flex items-center justify-center gap-3">
-                <div class="h-[3px] w-12 bg-white/60 rounded"></div>
-                <svg class="w-4 h-4 text-white/80" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                        clip-rule="evenodd" />
-                </svg>
-                <div class="h-[3px] w-12 bg-white/60 rounded"></div>
-            </div>
-
-            {{-- Title --}}
-            <div
-                class="relative z-10 max-w-2xl px-6 text-base font-bold leading-tight sm:text-lg md:text-xl opacity-90 line-clamp-3 drop-shadow-lg">
-                {{ $title }}
-            </div>
-
-            {{-- Type Badge --}}
-            <div
-                class="relative z-10 inline-block px-4 py-2 text-sm font-bold border-2 rounded-full bg-white/25 backdrop-blur-sm border-white/40">
-                {{ $displayType }}
-            </div>
-
-            {{-- Corner Decorations --}}
-            <div class="absolute top-0 right-0 w-32 h-32 pointer-events-none opacity-10">
-                <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M0 0L100 0L100 100C55.8172 100 20 64.1828 20 20C20 8.9543 8.9543 0 0 0Z" fill="white" />
-                </svg>
-            </div>
-            <div class="absolute bottom-0 left-0 w-32 h-32 rotate-180 pointer-events-none opacity-10">
-                <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M0 0L100 0L100 100C55.8172 100 20 64.1828 20 20C20 8.9543 8.9543 0 0 0Z" fill="white" />
-                </svg>
-            </div>
-        </div>
-    </div>
-    @endif
-
-    {{-- Gradient Overlay (selalu tampil) --}}
-    <div
-        class="absolute inset-0 z-10 bg-gradient-to-b from-[rgba(0,0,0,0)] via-[rgba(0,0,0,0.3)] to-[rgba(0,0,0,0.95)]">
+        class="gradient-overlay absolute inset-0 z-10 bg-gradient-to-b from-[rgba(0,0,0,0)] via-[rgba(0,0,0,0.3)] to-[rgba(0,0,0,0.95)]">
     </div>
 
     {{-- Content --}}
@@ -204,4 +145,13 @@ $initials .= mb_strtoupper(mb_substr(trim($word), 0, 1));
             @endif
         </div>
     </div>
+
+    {{-- ✅ Debug Info (remove in production) --}}
+    @if(app()->environment('local'))
+    <div class="absolute top-2 left-2 z-50 p-2 bg-black/80 text-white text-[10px] rounded max-w-[200px]">
+        <p class="truncate">Cover: {{ $coverUrl ? 'YES' : 'NO' }}</p>
+        <p class="truncate">Type: {{ $displayType }}</p>
+        <p class="truncate">Final: {{ basename($finalCoverUrl) }}</p>
+    </div>
+    @endif
 </a>

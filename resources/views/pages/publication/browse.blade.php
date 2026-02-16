@@ -36,6 +36,30 @@
         transform: translateY(-8px);
     }
 
+    /* ✅ Cover Image Styles - FIXED */
+    .publication-card-cover {
+        position: relative;
+        aspect-ratio: 3/4;
+        overflow: hidden;
+        background-color: #F8F9FC;
+        display: block;
+        /* ✅ ADDED */
+    }
+
+    .publication-card-cover img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+        transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        display: block;
+        /* ✅ ADDED */
+    }
+
+    .publication-card:hover .publication-card-cover img {
+        transform: scale(1.1);
+    }
+
     /* View Toggle Buttons */
     .view-toggle-btn {
         transition: all 0.3s ease;
@@ -329,7 +353,7 @@
                 class="grid grid-cols-1 gap-6 publications-grid md:grid-cols-2 lg:grid-cols-3">
                 @foreach($formattedPublications as $publication)
                 @php
-                // Generate initials for placeholder
+                // Generate initials
                 $words = array_filter(explode(' ', $publication['title']));
                 $initials = '';
                 foreach (array_slice($words, 0, 2) as $word) {
@@ -339,49 +363,40 @@
                 $initials = mb_strtoupper(mb_substr($publication['title'], 0, 2));
                 }
 
-                // Author display
-                $firstAuthor = count($publication['authors']) > 0 ? ($publication['authors'][0]['name'] ?? 'Unknown') :
-                'Anonymous';
-                $authorDisplay = $firstAuthor;
-                if ($publication['total_authors'] > 1) {
-                $authorDisplay .= ' et al.';
+                // Get first author
+                $firstAuthor = 'Anonymous';
+                if (isset($publication['authors']) && count($publication['authors']) > 0) {
+                $firstAuthor = $publication['authors'][0]['name'] ?? 'Unknown';
                 }
+
+                // ✅ Generate placeholder URL
+                $placeholderParams = http_build_query([
+                'initials' => $initials,
+                'type' => $publication['publication_type'] ?? 'Publikasi',
+                'title' => $publication['title'],
+                'category' => $publication['category'] ?? 'Umum',
+                'author' => $firstAuthor,
+                'v' => time(),
+                ]);
+
+                $placeholderUrl = route('placeholder.cover') . '?' . $placeholderParams;
+
+                // Fallback eksternal
+                $fallbackUrl = 'https://placehold.co/600x900/6B7280/white?text=' . urlencode($initials);
+
+                // ✅ Use cover or placeholder
+                $finalCoverUrl = $publication['cover_url'] ?? $placeholderUrl;
                 @endphp
 
                 <a href="{{ $publication['detail_url'] }}"
                     class="publication-card group bg-white rounded-2xl border-2 border-[#EEF0F7] hover:border-[#FF6B18] hover:shadow-xl transition-all duration-300 overflow-hidden">
 
-                    {{-- Cover Image --}}
-                    <div class="aspect-[3/4] overflow-hidden bg-[#F8F9FC] relative">
-                        @if($publication['cover_url'])
-                        <img src="{{ $publication['cover_url'] }}" alt="{{ $publication['title'] }}"
-                            class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110"
-                            onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
-
-                        {{-- Fallback Placeholder --}}
-                        <div class="absolute inset-0 hidden p-4">
-                            @include('components.publication.placeholder-cover', [
-                            'title' => $publication['title'],
-                            'initials' => $initials,
-                            'category' => $publication['category'],
-                            'publicationType' => $publication['publication_type'] ?? 'Publikasi',
-                            'authorDisplay' => $authorDisplay,
-                            'slug' => $publication['slug'],
-                            ])
-                        </div>
-                        @else
-                        {{-- Placeholder (no cover) --}}
-                        <div class="absolute inset-0 p-4">
-                            @include('components.publication.placeholder-cover', [
-                            'title' => $publication['title'],
-                            'initials' => $initials,
-                            'category' => $publication['category'],
-                            'publicationType' => $publication['publication_type'] ?? 'Publikasi',
-                            'authorDisplay' => $authorDisplay,
-                            'slug' => $publication['slug'],
-                            ])
-                        </div>
-                        @endif
+                    {{-- ✅ Cover Image WITH INLINE STYLES --}}
+                    <div class="publication-card-cover" style="display: block; background-color: #F8F9FC;">
+                        <img src="{{ $finalCoverUrl }}" alt="Cover {{ $publication['title'] }}" loading="lazy"
+                            decoding="async"
+                            style="width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; opacity: 1 !important; visibility: visible !important;"
+                            onerror="if(!this.dataset.errored){this.dataset.errored='1';this.src='{{ $fallbackUrl }}';}">
 
                         {{-- Stats Overlay --}}
                         <div
@@ -394,14 +409,14 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                     </svg>
-                                    {{ $publication['views_count'] }}
+                                    {{ number_format($publication['views_count'] ?? 0) }}
                                 </span>
                                 <span class="flex items-center gap-1">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                                     </svg>
-                                    {{ $publication['downloads_count'] }}
+                                    {{ number_format($publication['download_count'] ?? 0) }}
                                 </span>
                             </div>
                         </div>
@@ -411,7 +426,7 @@
                     <div class="p-5">
                         <div class="flex items-center gap-2 mb-3">
                             <span class="px-3 py-1 bg-[#FFF7F2] text-[#FF6B18] text-xs font-bold rounded-full">
-                                {{ $publication['category'] }}
+                                {{ $publication['category'] ?? 'Umum' }}
                             </span>
                             <span class="text-xs text-[#737373]">{{ $publication['formatted_date'] }}</span>
                         </div>
@@ -422,13 +437,13 @@
                         </h3>
 
                         <p class="text-sm text-[#737373] mb-4 line-clamp-2">
-                            {{ $publication['abstract'] }}
+                            {{ $publication['abstract'] ?? 'Tidak ada abstrak' }}
                         </p>
 
                         {{-- Authors --}}
                         <div class="flex items-center gap-2 pt-3 border-t border-[#EEF0F7]">
                             <div class="flex items-center -space-x-2">
-                                @foreach($publication['authors'] as $author)
+                                @foreach(array_slice($publication['authors'], 0, 3) as $author)
                                 <img src="{{ $author['photo'] }}" alt="{{ $author['name'] }}"
                                     class="object-cover w-8 h-8 border-2 border-white rounded-full"
                                     title="{{ $author['name'] }}">
@@ -462,33 +477,33 @@
 @push('scripts')
 <script>
     // Switch between grid and list view
-function switchView(viewType) {
-    const container = document.getElementById('publicationsContainer');
-    const buttons = document.querySelectorAll('.view-toggle-btn');
+    function switchView(viewType) {
+        const container = document.getElementById('publicationsContainer');
+        const buttons = document.querySelectorAll('.view-toggle-btn');
 
-    // Remove active class from all buttons
-    buttons.forEach(btn => btn.classList.remove('active'));
+        // Remove active class from all buttons
+        buttons.forEach(btn => btn.classList.remove('active'));
 
-    // Add active to clicked button
-    document.querySelector(`[data-view="${viewType}"]`).classList.add('active');
+        // Add active to clicked button
+        document.querySelector(`[data-view="${viewType}"]`).classList.add('active');
 
-    if (viewType === 'list') {
-        container.classList.remove('md:grid-cols-2', 'lg:grid-cols-3');
-        container.classList.add('grid-cols-1');
+        if (viewType === 'list') {
+            container.classList.remove('md:grid-cols-2', 'lg:grid-cols-3');
+            container.classList.add('grid-cols-1');
 
-        // Change card style to list
-        document.querySelectorAll('.publication-card').forEach(card => {
-            card.classList.add('list-view-card');
-        });
-    } else {
-        container.classList.add('md:grid-cols-2', 'lg:grid-cols-3');
-        container.classList.remove('grid-cols-1');
+            // Change card style to list
+            document.querySelectorAll('.publication-card').forEach(card => {
+                card.classList.add('list-view-card');
+            });
+        } else {
+            container.classList.add('md:grid-cols-2', 'lg:grid-cols-3');
+            container.classList.remove('grid-cols-1');
 
-        // Change card style to grid
-        document.querySelectorAll('.publication-card').forEach(card => {
-            card.classList.remove('list-view-card');
-        });
+            // Change card style to grid
+            document.querySelectorAll('.publication-card').forEach(card => {
+                card.classList.remove('list-view-card');
+            });
+        }
     }
-}
 </script>
 @endpush

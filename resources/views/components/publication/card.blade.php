@@ -10,29 +10,6 @@
 'slug' => '',
 ])
 
-@php
-// Generate initial dari title (2 huruf pertama dari 2 kata pertama)
-$words = array_filter(explode(' ', $title));
-$initials = '';
-foreach (array_slice($words, 0, 2) as $word) {
-$initials .= mb_strtoupper(mb_substr(trim($word), 0, 1));
-}
-// Fallback jika initials kosong
-if (empty($initials)) {
-$initials = mb_strtoupper(mb_substr($title, 0, 2));
-}
-
-// Format authors untuk placeholder (max 2)
-$firstAuthor = count($authors) > 0 ? ($authors[0]['name'] ?? 'Unknown') : 'Anonymous';
-$authorDisplay = $firstAuthor;
-if ($totalAuthors > 1) {
-$authorDisplay .= ' et al.';
-}
-
-// Generate unique ID untuk pattern SVG
-$uniqueId = $slug ?: 'card-' . uniqid();
-@endphp
-
 <div class="h-auto swiper-slide" style="overflow: visible !important;">
     <a href="{{ $detailUrl }}"
         class="publication-card-link group block h-full rounded-[22px] transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F4F6FB]"
@@ -46,63 +23,34 @@ $uniqueId = $slug ?: 'card-' . uniqid();
                 <div
                     class="relative aspect-[2/3] w-full overflow-hidden rounded-[20px] bg-[#F4F6FB] shadow-[0_18px_40px_-26px_rgba(0,0,0,0.65)] ring-1 ring-[#EEF0F7] transition-all duration-300 group-hover:shadow-[0_20px_45px_-28px_rgba(255,107,24,0.4)]">
 
-                    @if($cover)
-                    {{-- Real Cover Image --}}
-                    <img src="{{ $cover }}" class="object-cover w-full h-full cover-image publication-cover-image"
+                    {{-- Cover Image --}}
+                    <img src="{{ $cover }}"
+                        class="absolute inset-0 object-cover w-full h-full cover-image publication-cover-image"
                         alt="Cover publikasi {{ $title }}" loading="lazy" itemprop="image"
-                        onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                        onload="this.classList.add('loaded');" />
 
-                    {{-- ✅ Fallback Placeholder (hidden by default) --}}
-                    <div class="absolute inset-0 hidden">
-                        @include('components.publication.placeholder-cover', [
-                        'title' => $title,
-                        'initials' => $initials,
-                        'category' => $category,
-                        'publicationType' => $publicationType,
-                        'authorDisplay' => $authorDisplay,
-                        'slug' => $uniqueId,
-                        ])
-                    </div>
-                    @else
-                    {{-- ✅ Placeholder Cover (always visible when no cover) --}}
-                    <div class="absolute inset-0">
-                        @include('components.publication.placeholder-cover', [
-                        'title' => $title,
-                        'initials' => $initials,
-                        'category' => $category,
-                        'publicationType' => $publicationType,
-                        'authorDisplay' => $authorDisplay,
-                        'slug' => $uniqueId,
-                        ])
-                    </div>
-                    @endif
-
-                    {{-- Shadow & Shine overlays (always on top) --}}
+                    {{-- Shadow & Shine overlays --}}
                     <div class="absolute inset-y-0 left-0 w-[10%] bg-gradient-to-r from-black/16 to-transparent pointer-events-none z-10"
                         aria-hidden="true"></div>
                     <div class="absolute inset-0 z-10 pointer-events-none bg-gradient-to-tr from-white/0 via-white/0 to-white/10"
                         aria-hidden="true"></div>
 
-                    {{-- Category Badge (hanya untuk real cover) --}}
-                    @if($cover)
+                    {{-- Category Badge --}}
                     <span
                         class="absolute top-3 right-3 left-3 sm:top-4 sm:right-4 sm:left-4 bg-white/95 backdrop-blur-sm px-3 py-1.5 font-bold text-[10px] leading-[14px] sm:text-xs sm:leading-[18px] rounded-full ring-1 ring-black/5 shadow-sm transition-all duration-200 group-hover:bg-[#FF6B18] group-hover:text-white text-left z-20"
                         itemprop="articleSection">
                         {{ $category }}
                     </span>
-                    @endif
                 </div>
             </div>
 
-            {{-- CONTENT INFO --}}
+            {{-- CONTENT INFO (rest of the component stays the same) --}}
             <div class="flex flex-col flex-1 min-w-0 gap-2">
-                {{-- Title --}}
                 <h3 class="font-bold text-sm sm:text-base sm:leading-[24px] md:text-lg md:leading-[27px] leading-[20px] text-[#111827] transition-colors duration-200 group-hover:text-[#FF6B18]"
                     itemprop="headline">
                     <span class="line-clamp-3">{{ $title }}</span>
                 </h3>
 
-                {{-- Date --}}
                 @if($date)
                 <time
                     class="text-[11px] leading-[16px] sm:text-sm sm:leading-[21px] text-[#A3A6AE] transition-colors duration-200 group-hover:text-[#6B7280]"
@@ -111,9 +59,7 @@ $uniqueId = $slug ?: 'card-' . uniqid();
                 </time>
                 @endif
 
-                {{-- Authors & CTA --}}
                 <div class="gap-3 mt-auto pt-3 flex items-center justify-between border-t border-[#EEF0F7]">
-                    {{-- Avatar authors --}}
                     <div class="relative flex-shrink-0 min-w-0 author-avatars-container" style="z-index: 20;">
                         @if(is_array($authors) && count($authors) > 0)
                         <div class="flex items-center -space-x-2">
@@ -152,7 +98,6 @@ $uniqueId = $slug ?: 'card-' . uniqid();
                         @endif
                     </div>
 
-                    {{-- CTA Button --}}
                     <span
                         class="gap-1.5 sm:gap-2 inline-flex items-center text-[11px] sm:text-sm font-medium text-[#6B7280] transition-colors duration-200 group-hover:text-[#FF6B18] flex-shrink-0">
                         Baca detail
@@ -189,6 +134,11 @@ $uniqueId = $slug ?: 'card-' . uniqid();
     }
 
     .cover-image {
-        transition: opacity 0.3s ease-in-out;
+        opacity: 0;
+        transition: opacity 0.4s ease-in-out;
+    }
+
+    .cover-image.loaded {
+        opacity: 1;
     }
 </style>

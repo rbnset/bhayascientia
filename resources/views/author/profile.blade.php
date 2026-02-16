@@ -54,7 +54,6 @@
         position: relative;
         display: inline-block;
         padding: 3px;
-        /* ✅ Padding kecil untuk ketebalan gradient */
         background: linear-gradient(45deg, #FFD700, #FF6B18, #E64627, #FFD700);
         background-size: 300% 300%;
         border-radius: 50%;
@@ -82,13 +81,11 @@
         object-fit: cover;
         object-position: center;
         border: 3px solid white;
-        /* ✅ Border putih tipis di dalam */
         box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
         position: relative;
         z-index: 10;
         background: white;
         display: block;
-        /* ✅ Penting agar tidak ada gap */
     }
 
     /* ========================================
@@ -156,6 +153,47 @@
 
     .stat-card:hover .stat-icon {
         transform: rotate(5deg) scale(1.05);
+    }
+
+    /* ========================================
+       PUBLICATION CARDS
+       ======================================== */
+    .publication-card {
+        background: white;
+        border-radius: 20px;
+        border: 2px solid #EEF0F7;
+        overflow: hidden;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        height: 100%;
+    }
+
+    .publication-card:hover {
+        transform: translateY(-4px);
+        border-color: #FF6B18;
+        box-shadow: 0 12px 28px rgba(255, 107, 24, 0.12);
+    }
+
+    .publication-card-cover {
+        position: relative;
+        aspect-ratio: 3/4;
+        overflow: hidden;
+        background-color: #F8F9FC;
+        display: block;
+        /* ✅ ADDED */
+    }
+
+    .publication-card-cover img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+        transition: transform 0.3s ease;
+        display: block;
+        /* ✅ ADDED */
+    }
+
+    .publication-card:hover .publication-card-cover img {
+        transform: scale(1.05);
     }
 
     /* ========================================
@@ -278,14 +316,8 @@
             padding: 3rem 0 5rem 0;
         }
 
-        .author-avatar {
-            width: 120px;
-            height: 120px;
-            border: 5px solid white;
-        }
-
-        .author-avatar-wrapper {
-            padding: 5px;
+        .stats-section {
+            margin-top: -2.5rem;
         }
 
         .stat-card {
@@ -323,16 +355,6 @@
     @media (min-width: 1024px) {
         .author-hero {
             padding: 4rem 0 6rem 0;
-        }
-
-        .author-avatar {
-            width: 140px;
-            height: 140px;
-            border: 6px solid white;
-        }
-
-        .author-avatar-wrapper {
-            padding: 6px;
         }
 
         .stats-section {
@@ -540,15 +562,92 @@
         </div>
     </div>
 
-    @if($publications->count() > 0)
+    @if($formattedPublications->count() > 0)
     <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
-        @foreach($publications as $publication)
-        {{-- ✅ Gunakan komponen card yang sama --}}
-        <x-publication.card :title="$publication->title" :cover="$publication->cover_url ?? ''"
-            :category="$publication->categories->first()->name ?? 'Umum'"
-            :date="$publication->published_at ? $publication->published_at->locale('id')->isoFormat('D MMMM YYYY') : ''"
-            :authors="$publication->authors_data ?? []" :totalAuthors="$publication->authors->count()"
-            :detailUrl="route('publikasi.show', $publication->slug)" :slug="$publication->slug" />
+        @foreach($formattedPublications as $publication)
+        @php
+        // Generate initials
+        $words = array_filter(explode(' ', $publication['title']));
+        $initials = '';
+        foreach (array_slice($words, 0, 2) as $word) {
+        $initials .= mb_strtoupper(mb_substr(trim($word), 0, 1));
+        }
+        if (empty($initials)) {
+        $initials = mb_strtoupper(mb_substr($publication['title'], 0, 2));
+        }
+
+        // Get first author
+        $firstAuthor = 'Anonymous';
+        if (isset($publication['authors']) && count($publication['authors']) > 0) {
+        $firstAuthor = $publication['authors'][0]['name'] ?? 'Unknown';
+        }
+
+        // ✅ Generate placeholder URL
+        $placeholderParams = http_build_query([
+        'initials' => $initials,
+        'type' => $publication['publication_type'] ?? 'Publikasi',
+        'title' => $publication['title'],
+        'category' => $publication['category'] ?? 'Umum',
+        'author' => $firstAuthor,
+        'v' => time(),
+        ]);
+
+        $placeholderUrl = route('placeholder.cover') . '?' . $placeholderParams;
+
+        // Fallback eksternal
+        $fallbackUrl = 'https://placehold.co/600x900/6B7280/white?text=' . urlencode($initials);
+
+        // ✅ Use cover or placeholder
+        $finalCoverUrl = $publication['cover_url'] ?? $placeholderUrl;
+        @endphp
+
+        <a href="{{ $publication['detail_url'] }}" class="publication-card group">
+            {{-- ✅ Cover Image WITH INLINE STYLES --}}
+            <div class="publication-card-cover" style="display: block; background-color: #F8F9FC;">
+                <img src="{{ $finalCoverUrl }}" alt="Cover {{ $publication['title'] }}" loading="lazy" decoding="async"
+                    style="width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; opacity: 1 !important; visibility: visible !important;"
+                    onerror="if(!this.dataset.errored){this.dataset.errored='1';this.src='{{ $fallbackUrl }}';}">
+            </div>
+
+            {{-- Content --}}
+            <div class="p-5">
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="px-3 py-1 bg-[#FFF7F2] text-[#FF6B18] text-xs font-bold rounded-full">
+                        {{ $publication['category'] ?? 'Umum' }}
+                    </span>
+                    <span class="text-xs text-[#737373]">{{ $publication['formatted_date'] }}</span>
+                </div>
+
+                <h3
+                    class="font-bold text-lg text-[#1A1A1A] mb-2 line-clamp-2 group-hover:text-[#FF6B18] transition-colors">
+                    {{ $publication['title'] }}
+                </h3>
+
+                <p class="text-sm text-[#737373] mb-4 line-clamp-2">
+                    {{ $publication['abstract'] ?? 'Tidak ada abstrak' }}
+                </p>
+
+                {{-- Stats --}}
+                <div class="flex items-center gap-4 text-xs text-[#737373] pt-3 border-t border-[#EEF0F7]">
+                    <span class="flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        {{ number_format($publication['views_count'] ?? 0) }}
+                    </span>
+                    <span class="flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        {{ number_format($publication['download_count'] ?? 0) }}
+                    </span>
+                </div>
+            </div>
+        </a>
         @endforeach
     </div>
 
@@ -581,17 +680,16 @@
 
         <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 sm:gap-5 lg:gap-6">
             @foreach($coAuthors as $coAuthor)
-            <a href="{{ route('author.profile', $coAuthor->user_id ?? $coAuthor->id) }}"
-                class="collaborator-card group">
-                <img src="{{ $coAuthor->photo_url }}" alt="Foto profil {{ $coAuthor->name }}"
+            <a href="{{ $coAuthor['profile_url'] }}" class="collaborator-card group">
+                <img src="{{ $coAuthor['photo_url'] }}" alt="Foto profil {{ $coAuthor['name'] }}"
                     class="collaborator-avatar"
-                    onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode($coAuthor->name) }}&background=FF6B18&color=fff&size=128&bold=true'">
+                    onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode($coAuthor['name']) }}&background=FF6B18&color=fff&size=128&bold=true'">
                 <p
                     class="mb-1 text-xs sm:text-sm font-bold text-gray-900 line-clamp-2 group-hover:text-[#FF6B18] transition-colors">
-                    {{ $coAuthor->name }}
+                    {{ $coAuthor['name'] }}
                 </p>
                 <p class="text-xs font-semibold text-gray-500">
-                    <span class="text-[#FF6B18]">{{ $coAuthor->publications_count }}</span> karya
+                    <span class="text-[#FF6B18]">{{ $coAuthor['publications_count'] }}</span> karya
                 </p>
             </a>
             @endforeach

@@ -63,10 +63,12 @@ class PublicationIndexController extends Controller
                 'title' => $currentType->content->title ?? $currentType->name,
                 'cover_url' => $this->getTypeContentCover($currentType->content),
                 'category' => $currentType->name,
+                'publication_type' => $currentType->name, // ✅ TAMBAHKAN
                 'type' => $currentType->name,
                 'abstract' => $currentType->content->description,
                 'download_count' => 0,
                 'detail_url' => '',
+                'slug' => $currentType->slug, // ✅ TAMBAHKAN untuk pattern ID
             ];
         }
 
@@ -152,15 +154,22 @@ class PublicationIndexController extends Controller
         // Get Latest Publications
         $publications = $publicationsQuery->take(6)->get();
         $latestPublications = $publications->map(function ($pub) {
+            // ✅ Get publication type
+            $pubType = 'Publikasi';
+            if ($pub->publicationType) {
+                $pubType = $pub->publicationType->name;
+            }
+
             return [
                 'id' => $pub->id,
                 'title' => $pub->title,
                 'slug' => $pub->slug,
                 'cover_url' => $this->getCoverUrl($pub),
                 'category' => $pub->category_name,
+                'publication_type' => $pubType, // ✅ TAMBAHKAN
                 'formatted_date' => $pub->formatted_date,
                 'status' => $pub->publicationType->requires_review ? 'Peer-reviewed' : 'Terverifikasi',
-                'type' => $pub->publicationType->name ?? 'Publikasi',
+                'type' => $pubType, // Backward compatibility
                 'detail_url' => route('publikasi.show', $pub->slug),
                 'authors' => $pub->authors->take(6)->map(function ($author) {
                     return [
@@ -190,31 +199,47 @@ class PublicationIndexController extends Controller
             ->take(7)
             ->get();
 
-        // Featured Publication
+        // ✅ Featured Publication
         $featuredPublication = null;
         if (!$featuredTypeContent && $popularPubs->first()) {
+            $featuredPub = $popularPubs->first();
+
+            // Get publication type
+            $featuredPubType = 'Publikasi';
+            if ($featuredPub->publicationType) {
+                $featuredPubType = $featuredPub->publicationType->name;
+            }
+
             $featuredPublication = [
-                'id' => $popularPubs->first()->id,
-                'title' => $popularPubs->first()->title,
-                'slug' => $popularPubs->first()->slug,
-                'cover_url' => $this->getCoverUrl($popularPubs->first()),
-                'category' => $popularPubs->first()->category_name,
-                'type' => $popularPubs->first()->publicationType->name ?? 'Publikasi',
-                'abstract' => \Illuminate\Support\Str::limit($popularPubs->first()->abstract, 120),
-                'download_count' => $popularPubs->first()->download_logs_count,
-                'detail_url' => route('publikasi.show', $popularPubs->first()->slug),
+                'id' => $featuredPub->id,
+                'title' => $featuredPub->title,
+                'slug' => $featuredPub->slug,
+                'cover_url' => $this->getCoverUrl($featuredPub),
+                'category' => $featuredPub->category_name,
+                'publication_type' => $featuredPubType, // ✅ ADDED
+                'type' => $featuredPubType, // Backward compatibility
+                'abstract' => \Illuminate\Support\Str::limit($featuredPub->abstract, 120),
+                'download_count' => $featuredPub->download_logs_count,
+                'detail_url' => route('publikasi.show', $featuredPub->slug),
             ];
         }
 
-        // Popular Publications List
+        // ✅ Popular Publications List
         $skipCount = $featuredTypeContent ? 0 : 1;
         $popularPublications = $popularPubs->skip($skipCount)->take(6)->map(function ($pub) {
+            // Get publication type
+            $pubType = 'Publikasi';
+            if ($pub->publicationType) {
+                $pubType = $pub->publicationType->name;
+            }
+
             return [
                 'id' => $pub->id,
                 'title' => $pub->title,
                 'slug' => $pub->slug,
                 'cover_url' => $this->getCoverUrl($pub),
                 'category' => $pub->category_name,
+                'publication_type' => $pubType, // ✅ ADDED
                 'formatted_date' => $pub->formatted_date,
                 'download_count' => $pub->download_logs_count,
                 'views_count' => $pub->views_count,

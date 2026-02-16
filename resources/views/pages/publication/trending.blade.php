@@ -138,7 +138,7 @@
     <div class="space-y-3 sm:space-y-4">
         @forelse($trendingPublications as $index => $publication)
         @php
-        // Generate initials for placeholder
+        // Generate initials
         $words = array_filter(explode(' ', $publication['title']));
         $initials = '';
         foreach (array_slice($words, 0, 2) as $word) {
@@ -148,13 +148,29 @@
         $initials = mb_strtoupper(mb_substr($publication['title'], 0, 2));
         }
 
-        // Author display
-        $firstAuthor = count($publication['authors']) > 0 ? ($publication['authors'][0]['name'] ?? 'Unknown') :
-        'Anonymous';
-        $authorDisplay = $firstAuthor;
-        if ($publication['total_authors'] > 1) {
-        $authorDisplay .= ' et al.';
+        // Get first author
+        $firstAuthor = 'Anonymous';
+        if (isset($publication['authors']) && count($publication['authors']) > 0) {
+        $firstAuthor = $publication['authors'][0]['name'] ?? 'Unknown';
         }
+
+        // ✅ Generate placeholder URL dengan http_build_query
+        $placeholderParams = http_build_query([
+        'initials' => $initials,
+        'type' => $publication['publication_type'] ?? $publication['type'] ?? 'Publikasi',
+        'title' => $publication['title'],
+        'category' => $publication['category'] ?? 'Umum',
+        'author' => $firstAuthor,
+        'v' => time(),
+        ]);
+
+        $placeholderUrl = route('placeholder.cover') . '?' . $placeholderParams;
+
+        // Fallback eksternal
+        $fallbackUrl = 'https://placehold.co/600x900/6B7280/white?text=' . urlencode($initials);
+
+        // Final URL
+        $finalCoverUrl = $publication['cover_url'] ?? $placeholderUrl;
         @endphp
 
         <a href="{{ $publication['detail_url'] }}"
@@ -182,42 +198,17 @@
     @endif
     </div>
 
-    {{-- Cover with Placeholder (Mobile Optimized) --}}
-    <div
-        class="relative z-10 flex-shrink-0 w-16 h-20 sm:w-20 sm:h-28 md:w-24 md:h-32 overflow-hidden rounded-lg shadow-md group-hover:shadow-xl transition-shadow bg-[#F8F9FC]">
-        @if($publication['cover_url'])
-        <img src="{{ $publication['cover_url'] }}" alt="{{ $publication['title'] }}" class="object-cover w-full h-full"
-            onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
-
-        {{-- Fallback Placeholder --}}
-        <div class="absolute inset-0 hidden p-1">
-            @include('components.publication.placeholder-cover', [
-            'title' => $publication['title'],
-            'initials' => $initials,
-            'category' => $publication['category'] ?? 'Umum',
-            'publicationType' => $publication['type'] ?? 'Publikasi',
-            'authorDisplay' => $authorDisplay,
-            'slug' => 'trending-' . $index . '-' . ($publication['id'] ?? 'unknown'),
-            ])
-        </div>
-        @else
-        {{-- Placeholder (no cover) --}}
-        <div class="absolute inset-0 p-1">
-            @include('components.publication.placeholder-cover', [
-            'title' => $publication['title'],
-            'initials' => $initials,
-            'category' => $publication['category'] ?? 'Umum',
-            'publicationType' => $publication['type'] ?? 'Publikasi',
-            'authorDisplay' => $authorDisplay,
-            'slug' => 'trending-' . $index . '-' . ($publication['id'] ?? 'unknown'),
-            ])
-        </div>
-        @endif
+    {{-- ✅ Cover with Placeholder (FIXED WITH INLINE STYLES) --}}
+    <div class="relative z-10 flex-shrink-0 w-16 h-20 sm:w-20 sm:h-28 md:w-24 md:h-32 rounded-lg shadow-md group-hover:shadow-xl transition-shadow overflow-hidden"
+        style="display: block; background-color: #F8F9FC;">
+        <img src="{{ $finalCoverUrl }}" alt="Cover {{ $publication['title'] }}" loading="lazy" decoding="async"
+            style="width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; opacity: 1 !important; visibility: visible !important;"
+            onerror="if(!this.dataset.errored){this.dataset.errored='1';this.src='{{ $fallbackUrl }}';}">
 
         {{-- Type badge on cover --}}
         <div
             class="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 px-1.5 py-0.5 sm:px-2 sm:py-1 bg-[#FF6B18] text-white text-[10px] sm:text-xs font-bold rounded shadow z-10">
-            {{ $publication['type'] }}
+            {{ $publication['type'] ?? 'PUB' }}
         </div>
     </div>
 
@@ -282,7 +273,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
             </svg>
-            <span class="truncate max-w-[100px]">{{ $publication['category'] }}</span>
+            <span class="truncate max-w-[100px]">{{ $publication['category'] ?? 'Umum' }}</span>
         </span>
     </div>
     </div>
