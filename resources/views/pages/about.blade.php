@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Tentang Kami - BHAYASCIENTIA')
+@section('title', 'Tentang Kami - DABRAKA')
 @section('main_class', 'pb-16')
 
 @push('styles')
@@ -197,11 +197,12 @@
                         d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"
                         clip-rule="evenodd" />
                 </svg>
-                Sejak 2020
+                Where Knowledge
+                Shapes Policing
             </div>
 
             <h1 class="mb-4 text-3xl font-black leading-tight sm:text-4xl md:text-5xl lg:text-6xl sm:mb-6">
-                🚀 Tentang BHAYASCIENTIA
+                🚀 Tentang DABRAKA
             </h1>
             <p class="text-base leading-relaxed sm:text-xl md:text-2xl text-white/90">
                 Platform publikasi ilmiah terpercaya yang menghubungkan peneliti, akademisi, dan masyarakat dengan
@@ -287,61 +288,238 @@
 
 
 {{-- About Content --}}
-<section class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px] mb-12 sm:mb-16">
-    <div class="grid items-center grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-12">
-        {{-- Left: Image --}}
-        <div class="order-2 lg:order-1">
-            <div class="relative overflow-hidden rounded-2xl">
-                <img src="https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=800&h=600&fit=crop"
-                    alt="BHAYASCIENTIA Team" class="w-full h-[300px] sm:h-[400px] lg:h-[500px] object-cover">
-                <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-                <div class="absolute bottom-6 left-6 right-6">
-                    <p class="text-sm font-bold text-white sm:text-base">📚 Membangun Ekosistem Pengetahuan</p>
+<section class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px] mb-12 sm:mb-16 lg:mb-20">
+    <div class="grid items-start grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-12 xl:gap-16">
+
+        {{-- Left: Vertical Image Gallery --}}
+        <div class="order-2 lg:order-1 lg:sticky lg:top-24">
+            <div class="relative space-y-4">
+
+                {{-- Image 1: Large Featured --}}
+                <div class="relative overflow-hidden shadow-2xl rounded-2xl group">
+                    <img src="https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=800&h=500&fit=crop"
+                        alt="DABRAKA - Ekosistem Pengetahuan Kepolisian"
+                        class="w-full h-[280px] sm:h-[320px] lg:h-[360px] object-cover transition-transform duration-700 group-hover:scale-110">
+
+                    {{-- Gradient Overlay --}}
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+
+                    {{-- Caption with Icon --}}
+                    <div class="absolute bottom-0 left-0 right-0 p-5">
+                        <div class="flex items-start gap-3">
+                            <div class="flex-shrink-0 p-2.5 bg-white/20 backdrop-blur-md rounded-lg">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253">
+                                    </path>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="text-base font-bold text-white sm:text-lg">Ekosistem Pengetahuan</p>
+                                <p class="mt-1 text-xs text-white/90 sm:text-sm">Riset kepolisian & kebijakan publik</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Badge --}}
+                    <div class="absolute top-4 right-4">
+                        <span
+                            class="px-3 py-1.5 text-xs font-bold text-white bg-[#FF6B18] rounded-full shadow-lg backdrop-blur-sm">
+                            Featured
+                        </span>
+                    </div>
                 </div>
+
+                {{-- Grid 2 Images --}}
+                <div class="grid grid-cols-2 gap-4">
+
+                    {{-- Image 2: Kolaborasi --}}
+                    <div class="relative overflow-hidden shadow-lg rounded-xl group">
+                        <img src="https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=500&h=400&fit=crop"
+                            alt="Kolaborasi Akademik"
+                            class="w-full h-[160px] sm:h-[180px] lg:h-[200px] object-cover transition-transform duration-700 group-hover:scale-110">
+
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+
+                        {{-- Hover Overlay --}}
+                        <div
+                            class="absolute inset-0 bg-[#FF6B18]/0 group-hover:bg-[#FF6B18]/20 transition-all duration-300">
+                        </div>
+
+                        {{-- Icon Badge --}}
+                        <div class="absolute top-3 left-3">
+                            <div class="p-2 rounded-lg bg-white/30 backdrop-blur-sm">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
+                                    </path>
+                                </svg>
+                            </div>
+                        </div>
+
+                        <div class="absolute bottom-3 left-3 right-3">
+                            <p class="text-sm font-bold text-white">Kolaborasi</p>
+                            <p class="mt-0.5 text-xs text-white/80">Forum & Diskusi</p>
+                        </div>
+                    </div>
+
+                    {{-- Image 3: Riset --}}
+                    <div class="relative overflow-hidden shadow-lg rounded-xl group">
+                        <img src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=500&h=400&fit=crop"
+                            alt="Riset & Kajian Strategis"
+                            class="w-full h-[160px] sm:h-[180px] lg:h-[200px] object-cover transition-transform duration-700 group-hover:scale-110">
+
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+
+                        {{-- Hover Overlay --}}
+                        <div
+                            class="absolute inset-0 bg-[#FF6B18]/0 group-hover:bg-[#FF6B18]/20 transition-all duration-300">
+                        </div>
+
+                        {{-- Icon Badge --}}
+                        <div class="absolute top-3 left-3">
+                            <div class="p-2 rounded-lg bg-white/30 backdrop-blur-sm">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z">
+                                    </path>
+                                </svg>
+                            </div>
+                        </div>
+
+                        <div class="absolute bottom-3 left-3 right-3">
+                            <p class="text-sm font-bold text-white">Riset</p>
+                            <p class="mt-0.5 text-xs text-white/80">Kajian Strategis</p>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Stats Row --}}
+                <div class="grid grid-cols-3 gap-3">
+                    <div
+                        class="p-3 text-center bg-white border rounded-lg border-[#EEF0F7] hover:border-[#FF6B18] hover:shadow-lg transition-all group">
+                        <div class="text-xl font-black text-[#FF6B18] sm:text-2xl">500+</div>
+                        <div class="mt-1 text-xs text-[#737373] group-hover:text-[#1A1A1A] transition-colors">Publikasi
+                        </div>
+                    </div>
+                    <div
+                        class="p-3 text-center bg-white border rounded-lg border-[#EEF0F7] hover:border-[#FF6B18] hover:shadow-lg transition-all group">
+                        <div class="text-xl font-black text-[#FF6B18] sm:text-2xl">150+</div>
+                        <div class="mt-1 text-xs text-[#737373] group-hover:text-[#1A1A1A] transition-colors">
+                            Kontributor</div>
+                    </div>
+                    <div
+                        class="p-3 text-center bg-white border rounded-lg border-[#EEF0F7] hover:border-[#FF6B18] hover:shadow-lg transition-all group">
+                        <div class="text-xl font-black text-[#FF6B18] sm:text-2xl">20+</div>
+                        <div class="mt-1 text-xs text-[#737373] group-hover:text-[#1A1A1A] transition-colors">Event
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Decorative Elements --}}
+                <div class="absolute -z-10 -top-8 -right-8 w-40 h-40 bg-[#FF6B18]/10 rounded-full blur-3xl"></div>
+                <div class="absolute -z-10 -bottom-8 -left-8 w-48 h-48 bg-[#E64627]/10 rounded-full blur-3xl"></div>
             </div>
         </div>
 
         {{-- Right: Content --}}
         <div class="order-1 lg:order-2">
+            {{-- Badge --}}
             <div
-                class="inline-flex items-center gap-2 px-4 py-2 mb-4 text-xs font-bold rounded-full bg-[#FFF7F2] text-[#FF6B18] border border-[#FFE2D2]">
-                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                class="inline-flex items-center gap-2 px-4 py-2 mb-6 text-xs font-bold rounded-full bg-gradient-to-r from-[#FFF7F2] to-[#FFE2D2] text-[#FF6B18] border border-[#FFE2D2] shadow-sm">
+                <svg class="w-4 h-4 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd"
                         d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
                         clip-rule="evenodd" />
                 </svg>
-                Siapa Kami
+                Tentang Kami
             </div>
 
-            <h2 class="text-2xl sm:text-3xl md:text-4xl font-black text-[#1A1A1A] mb-4 sm:mb-6">
-                Platform Publikasi Ilmiah Terdepan di Indonesia
+            {{-- Heading --}}
+            <h2 class="text-3xl sm:text-4xl lg:text-5xl font-black text-[#1A1A1A] mb-3 leading-tight">
+                Where Knowledge
+                <span class="block mt-1 text-transparent bg-gradient-to-r from-[#FF6B18] to-[#E64627] bg-clip-text">
+                    Shapes Policing
+                </span>
             </h2>
 
-            <div class="space-y-4 text-sm sm:text-base text-[#737373] leading-relaxed">
-                <p>
-                    <strong class="text-[#1A1A1A]">BHAYASCIENTIA</strong> adalah platform digital yang didedikasikan
-                    untuk mempermudah akses ke publikasi ilmiah berkualitas tinggi. Kami percaya bahwa pengetahuan
-                    adalah hak semua orang, dan teknologi adalah kunci untuk membukanya.
+            <p class="text-base text-[#737373] mb-8 sm:text-lg">
+                Portal pengabdian intelektual untuk transformasi kepolisian Indonesia
+            </p>
+
+            {{-- Content with Better Typography --}}
+            <div class="space-y-6">
+                {{-- Paragraph 1 --}}
+                <div class="pl-4 border-l-4 border-[#FF6B18]">
+                    <p class="text-base leading-relaxed text-[#4A5568] lg:text-lg">
+                        <strong class="text-xl font-black text-[#1A1A1A] lg:text-2xl">DABRAKA</strong>
+                        <span class="ml-1 text-sm italic text-[#6B7280]">(Darma Brata Buana Cendekia)</span>
+                        <span class="block mt-2">
+                            merupakan wadah dan portal pengabdian intelektual yang menghimpun kontribusi pemikiran dari
+                            <strong class="text-[#FF6B18]">insan Bhayangkara</strong> serta
+                            <strong class="text-[#FF6B18]">kaum akademisi</strong> yang memiliki perhatian terhadap
+                            pengembangan ilmu kepolisian, keamanan, kebijakan publik, serta keilmuan terkait lainnya.
+                        </span>
+                    </p>
+                </div>
+
+                {{-- Paragraph 2 --}}
+                <div class="p-5 bg-gradient-to-br from-[#FFF7F2] to-white rounded-xl border border-[#FFE2D2]">
+                    <p class="text-base leading-relaxed text-[#4A5568] lg:text-lg">
+                        DABRAKA lahir dari kesadaran bahwa
+                        <strong class="text-[#FF6B18]">transformasi institusi</strong> tidak hanya ditopang
+                        oleh struktur dan regulasi, tetapi juga oleh
+                        <mark class="bg-[#FFE5D3] text-[#1A1A1A] px-2 py-0.5 rounded font-semibold">kekuatan gagasan,
+                            literasi, dan refleksi akademik</mark>
+                        yang berkelanjutan.
+                    </p>
+                </div>
+
+                {{-- Paragraph 3 --}}
+                <p class="text-base leading-relaxed text-[#4A5568] lg:text-lg">
+                    Di tengah dinamika keamanan global yang semakin kompleks, Polri membutuhkan
+                    <span class="font-semibold text-[#2D3748]">ekosistem pengetahuan yang hidup</span>, yang mampu
+                    menjembatani pengalaman lapangan dengan pendekatan ilmiah dan kebijakan berbasis bukti.
                 </p>
 
-                <p>
-                    Sejak didirikan pada tahun <strong class="text-[#1A1A1A]">2020</strong>, kami telah melayani lebih
-                    dari <strong class="text-[#1A1A1A]">50.000 pengguna aktif</strong> dari berbagai latar
-                    belakang—mulai dari mahasiswa, peneliti, dosen, hingga profesional yang haus akan pengetahuan.
-                </p>
+                {{-- Paragraph 4 with Highlight --}}
+                <div
+                    class="relative p-6 overflow-hidden bg-gradient-to-r from-[#1A1A1A] to-[#2D3748] rounded-xl shadow-lg">
+                    <div class="absolute top-0 right-0 w-40 h-40 -mt-20 -mr-20 rounded-full bg-white/5"></div>
+                    <p class="relative text-base leading-relaxed text-white lg:text-lg">
+                        Melalui publikasi, kajian strategis, forum ilmiah, dan jejaring nasional maupun internasional,
+                        DABRAKA berkomitmen menjadi
+                        <strong class="text-[#FFE5D3]">pusat referensi pemikiran kepolisian Indonesia</strong>
+                        yang progresif dan berwawasan global.
+                    </p>
+                </div>
 
-                <p>
-                    Dengan koleksi lebih dari <strong class="text-[#1A1A1A]">10.000 publikasi ilmiah</strong> yang
-                    ter-kurasi dengan baik, kami berkomitmen untuk terus berinovasi dan memperluas akses ke sumber
-                    pengetahuan berkualitas.
+                {{-- Closing Statement --}}
+                <p class="text-base leading-relaxed text-[#4A5568] lg:text-lg">
+                    Kami percaya bahwa
+                    <span class="relative inline-block group cursor-help">
+                        <span class="relative z-10 font-bold text-[#1A1A1A]">pengabdian intelektual</span>
+                        <span
+                            class="absolute bottom-0 left-0 w-full h-2 bg-[#FFE5D3] -z-10 transition-all group-hover:h-full group-hover:bg-[#FFE5D3]/30"></span>
+                    </span>
+                    adalah bagian dari ikrar moral untuk memperkuat institusi, melayani masyarakat, dan berkontribusi
+                    bagi kemajuan bangsa.
                 </p>
             </div>
 
-            <div class="flex flex-col gap-3 mt-6 sm:flex-row sm:mt-8">
+            {{-- CTA Buttons --}}
+            <div class="flex flex-col gap-4 mt-8 sm:flex-row sm:mt-10">
                 <a href="{{ route('publikasi.index') }}"
-                    class="group px-6 py-3 bg-gradient-to-r from-[#FF6B18] to-[#E64627] text-white text-sm font-bold rounded-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-2">
-                    <span>Jelajahi Publikasi</span>
-                    <svg class="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none"
+                    class="group relative px-8 py-4 bg-gradient-to-r from-[#FF6B18] to-[#E64627] text-white text-sm font-bold rounded-xl hover:shadow-2xl hover:shadow-[#FF6B18]/30 hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-3 overflow-hidden">
+                    <span
+                        class="absolute inset-0 w-full h-full transition-transform duration-500 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:translate-x-full"></span>
+                    <svg class="relative w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253">
+                        </path>
+                    </svg>
+                    <span class="relative">Jelajahi Publikasi</span>
+                    <svg class="relative w-4 h-4 transition-transform group-hover:translate-x-1" fill="none"
                         stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M13 7l5 5m0 0l-5 5m5-5H6" />
@@ -349,85 +527,243 @@
                 </a>
 
                 <a href="{{ route('kontak') }}"
-                    class="px-6 py-3 border-2 border-[#EEF0F7] text-[#737373] text-sm font-bold rounded-xl hover:border-[#FF6B18] hover:text-[#FF6B18] hover:bg-[#FFF7F2] transition-all flex items-center justify-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    class="group px-8 py-4 bg-white border-2 border-[#EEF0F7] text-[#737373] text-sm font-bold rounded-xl hover:border-[#FF6B18] hover:text-[#FF6B18] hover:bg-[#FFF7F2] transition-all duration-300 flex items-center justify-center gap-3 hover:shadow-lg">
+                    <svg class="w-5 h-5 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
                     <span>Hubungi Kami</span>
                 </a>
             </div>
+
+            {{-- Trust Indicators --}}
+            <div class="flex flex-wrap items-center gap-6 mt-10 pt-8 border-t border-[#EEF0F7]">
+                <div class="flex items-center gap-2 text-sm text-[#737373]">
+                    <svg class="w-5 h-5 text-[#FF6B18]" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                            d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    <span class="font-semibold">Terverifikasi Resmi</span>
+                </div>
+                <div class="flex items-center gap-2 text-sm text-[#737373]">
+                    <svg class="w-5 h-5 text-[#FF6B18]" fill="currentColor" viewBox="0 0 20 20">
+                        <path
+                            d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                    </svg>
+                    <span class="font-semibold">150+ Kontributor Aktif</span>
+                </div>
+            </div>
         </div>
     </div>
 </section>
 
+
 {{-- Mission & Vision --}}
-<section class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px] mb-12 sm:mb-16">
-    <div class="mb-8 text-center sm:mb-12">
-        <h2 class="text-2xl sm:text-3xl md:text-4xl font-black text-[#1A1A1A] mb-3 sm:mb-4">🎯 Visi & Misi Kami</h2>
-        <p class="text-sm sm:text-base md:text-lg text-[#737373] max-w-2xl mx-auto">
-            Membangun masa depan yang lebih cerah melalui akses pengetahuan yang merata
+<section class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1280px] mb-12 sm:mb-16 lg:mb-20">
+    {{-- Header --}}
+    <div class="mb-10 text-center sm:mb-12 lg:mb-16">
+        <div
+            class="inline-flex items-center gap-2 px-4 py-2 mb-4 text-xs font-bold rounded-full bg-gradient-to-r from-[#FFF7F2] to-[#FFE2D2] text-[#FF6B18] border border-[#FFE2D2] shadow-sm">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                    d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z" />
+            </svg>
+            Visi & Misi
+        </div>
+
+        <h2 class="text-3xl sm:text-4xl lg:text-5xl font-black text-[#1A1A1A] mb-3 sm:mb-4">
+            Visi & Misi
+            <span class="block mt-2 text-transparent bg-gradient-to-r from-[#FF6B18] to-[#E64627] bg-clip-text">
+                DABRAKA
+            </span>
+        </h2>
+        <p class="text-base sm:text-lg lg:text-xl text-[#737373] max-w-3xl mx-auto leading-relaxed">
+            Membangun masa depan yang lebih cerah melalui ekosistem pengetahuan kepolisian yang kolaboratif dan
+            berstandar global
         </p>
     </div>
 
-    <div class="grid grid-cols-1 gap-6 md:grid-cols-2 sm:gap-8">
-        {{-- Vision --}}
-        <div class="bg-gradient-to-br from-[#FFF7F2] to-[#FFE8DC] rounded-2xl border-2 border-[#FFE2D2] p-6 sm:p-8">
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-10 xl:gap-12">
+
+        {{-- Vision Card --}}
+        <div
+            class="group relative overflow-hidden bg-gradient-to-br from-[#FFF7F2] via-[#FFE8DC] to-[#FFE2D2] rounded-2xl border-2 border-[#FFE2D2] p-6 sm:p-8 lg:p-10 hover:shadow-2xl hover:border-[#FF6B18] transition-all duration-300">
+            {{-- Decorative Background --}}
             <div
-                class="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-[#FF6B18] to-[#E64627] rounded-2xl flex items-center justify-center mb-4 sm:mb-6">
-                <svg class="text-white w-7 h-7 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
+                class="absolute top-0 right-0 w-40 h-40 -mt-20 -mr-20 transition-transform duration-700 rounded-full bg-white/20 group-hover:scale-150">
             </div>
-            <h3 class="text-xl sm:text-2xl font-black text-[#1A1A1A] mb-3 sm:mb-4">Visi</h3>
-            <p class="text-sm sm:text-base text-[#737373] leading-relaxed">
-                Menjadi platform publikasi ilmiah terdepan di Asia Tenggara yang demokratis, mudah diakses, dan
-                terpercaya untuk mendukung kemajuan ilmu pengetahuan dan teknologi.
-            </p>
+            <div
+                class="absolute bottom-0 left-0 w-32 h-32 bg-[#FF6B18]/10 rounded-full -ml-16 -mb-16 group-hover:scale-150 transition-transform duration-700">
+            </div>
+
+            {{-- Content --}}
+            <div class="relative">
+                {{-- Icon --}}
+                <div
+                    class="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-[#FF6B18] to-[#E64627] rounded-2xl mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                    <svg class="w-8 h-8 text-white sm:w-10 sm:h-10" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                </div>
+
+                {{-- Title --}}
+                <h3 class="text-2xl sm:text-3xl lg:text-4xl font-black text-[#1A1A1A] mb-4 sm:mb-6">Visi</h3>
+
+                {{-- Content --}}
+                <div class="space-y-4">
+                    <p class="text-base sm:text-lg lg:text-xl text-[#4A5568] leading-relaxed">
+                        Menjadi <strong class="text-[#FF6B18] font-bold">portal pengabdian intelektual
+                            Bhayangkara</strong> yang kolaboratif dan berstandar global dalam pengembangan:
+                    </p>
+
+                    <ul class="space-y-3">
+                        <li class="flex items-start gap-3">
+                            <div class="flex-shrink-0 w-2 h-2 mt-2.5 bg-[#FF6B18] rounded-full"></div>
+                            <span class="text-base sm:text-lg text-[#4A5568]">Ilmu kepolisian</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <div class="flex-shrink-0 w-2 h-2 mt-2.5 bg-[#FF6B18] rounded-full"></div>
+                            <span class="text-base sm:text-lg text-[#4A5568]">Keamanan publik</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <div class="flex-shrink-0 w-2 h-2 mt-2.5 bg-[#FF6B18] rounded-full"></div>
+                            <span class="text-base sm:text-lg text-[#4A5568]">Kebijakan berbasis bukti</span>
+                        </li>
+                    </ul>
+
+                    <div class="pt-4 mt-6 border-t-2 border-[#FF6B18]/20">
+                        <p class="text-base sm:text-lg text-[#4A5568] leading-relaxed">
+                            Guna mendukung <strong class="text-[#1A1A1A]">transformasi Polri</strong> yang unggul,
+                            adaptif, dan berbasis pengetahuan.
+                        </p>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        {{-- Mission --}}
-        <div class="bg-white rounded-2xl border-2 border-[#EEF0F7] p-6 sm:p-8">
+        {{-- Mission Card --}}
+        <div
+            class="group relative overflow-hidden bg-white rounded-2xl border-2 border-[#EEF0F7] p-6 sm:p-8 lg:p-10 hover:shadow-2xl hover:border-[#FF6B18] transition-all duration-300">
+            {{-- Decorative Background --}}
             <div
-                class="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-[#FF6B18] to-[#E64627] rounded-2xl flex items-center justify-center mb-4 sm:mb-6">
-                <svg class="text-white w-7 h-7 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-                </svg>
+                class="absolute top-0 right-0 w-40 h-40 bg-[#FF6B18]/5 rounded-full -mr-20 -mt-20 group-hover:scale-150 transition-transform duration-700">
             </div>
-            <h3 class="text-xl sm:text-2xl font-black text-[#1A1A1A] mb-3 sm:mb-4">Misi</h3>
-            <ul class="space-y-2 text-sm sm:text-base text-[#737373]">
-                <li class="flex items-start gap-2">
-                    <svg class="w-5 h-5 text-[#FF6B18] flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd"
-                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                            clip-rule="evenodd" />
+
+            {{-- Content --}}
+            <div class="relative">
+                {{-- Icon --}}
+                <div
+                    class="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-[#FF6B18] to-[#E64627] rounded-2xl mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                    <svg class="w-8 h-8 text-white sm:w-10 sm:h-10" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                     </svg>
-                    <span>Menyediakan akses gratis ke publikasi ilmiah berkualitas</span>
-                </li>
-                <li class="flex items-start gap-2">
-                    <svg class="w-5 h-5 text-[#FF6B18] flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd"
-                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                            clip-rule="evenodd" />
-                    </svg>
-                    <span>Membangun ekosistem kolaborasi antar peneliti</span>
-                </li>
-                <li class="flex items-start gap-2">
-                    <svg class="w-5 h-5 text-[#FF6B18] flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd"
-                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                            clip-rule="evenodd" />
-                    </svg>
-                    <span>Mendorong inovasi melalui berbagi pengetahuan</span>
-                </li>
-            </ul>
+                </div>
+
+                {{-- Title --}}
+                <h3 class="text-2xl sm:text-3xl lg:text-4xl font-black text-[#1A1A1A] mb-4 sm:mb-6">Misi</h3>
+
+                {{-- Mission List --}}
+                <ul class="space-y-4 sm:space-y-5">
+                    <li class="flex items-start gap-3 group/item">
+                        <div class="flex-shrink-0 mt-1">
+                            <div
+                                class="flex items-center justify-center w-6 h-6 rounded-full bg-[#FF6B18]/10 group-hover/item:bg-[#FF6B18] transition-colors">
+                                <svg class="w-4 h-4 text-[#FF6B18] group-hover/item:text-white transition-colors"
+                                    fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd"
+                                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                        clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                        </div>
+                        <span class="text-base sm:text-lg text-[#4A5568] leading-relaxed">
+                            Menghimpun dan mempublikasikan gagasan strategis dari insan Polri dan intelektual sipil
+                        </span>
+                    </li>
+
+                    <li class="flex items-start gap-3 group/item">
+                        <div class="flex-shrink-0 mt-1">
+                            <div
+                                class="flex items-center justify-center w-6 h-6 rounded-full bg-[#FF6B18]/10 group-hover/item:bg-[#FF6B18] transition-colors">
+                                <svg class="w-4 h-4 text-[#FF6B18] group-hover/item:text-white transition-colors"
+                                    fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd"
+                                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                        clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                        </div>
+                        <span class="text-base sm:text-lg text-[#4A5568] leading-relaxed">
+                            Mendorong budaya literasi, riset, dan diskursus ilmiah berbasis bukti (evidence-based
+                            policy)
+                        </span>
+                    </li>
+
+                    <li class="flex items-start gap-3 group/item">
+                        <div class="flex-shrink-0 mt-1">
+                            <div
+                                class="flex items-center justify-center w-6 h-6 rounded-full bg-[#FF6B18]/10 group-hover/item:bg-[#FF6B18] transition-colors">
+                                <svg class="w-4 h-4 text-[#FF6B18] group-hover/item:text-white transition-colors"
+                                    fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd"
+                                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                        clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                        </div>
+                        <span class="text-base sm:text-lg text-[#4A5568] leading-relaxed">
+                            Membangun jejaring kolaboratif nasional dan internasional antara Polri, akademisi, dan
+                            komunitas keilmuan
+                        </span>
+                    </li>
+
+                    <li class="flex items-start gap-3 group/item">
+                        <div class="flex-shrink-0 mt-1">
+                            <div
+                                class="flex items-center justify-center w-6 h-6 rounded-full bg-[#FF6B18]/10 group-hover/item:bg-[#FF6B18] transition-colors">
+                                <svg class="w-4 h-4 text-[#FF6B18] group-hover/item:text-white transition-colors"
+                                    fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd"
+                                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                        clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                        </div>
+                        <span class="text-base sm:text-lg text-[#4A5568] leading-relaxed">
+                            Mengembangkan ekosistem pengetahuan kepolisian yang progresif, inklusif, dan relevan dengan
+                            dinamika global
+                        </span>
+                    </li>
+
+                    <li class="flex items-start gap-3 group/item">
+                        <div class="flex-shrink-0 mt-1">
+                            <div
+                                class="flex items-center justify-center w-6 h-6 rounded-full bg-[#FF6B18]/10 group-hover/item:bg-[#FF6B18] transition-colors">
+                                <svg class="w-4 h-4 text-[#FF6B18] group-hover/item:text-white transition-colors"
+                                    fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd"
+                                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                        clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                        </div>
+                        <span class="text-base sm:text-lg text-[#4A5568] leading-relaxed">
+                            Menjadi ruang refleksi dan kontribusi intelektual bagi transformasi kelembagaan Polri
+                        </span>
+                    </li>
+                </ul>
+            </div>
         </div>
     </div>
 </section>
+
 
 {{-- Values --}}
 <section class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px] mb-12 sm:mb-16">
@@ -528,7 +864,7 @@
                     Memimpin visi strategis dan pertumbuhan platform
                 </p>
                 <div class="flex items-center justify-center gap-2">
-                    <a href="mailto:ahmad@bhayascientia.id"
+                    <a href="mailto:ahmad@DABRAKA.id"
                         class="flex items-center justify-center transition-all rounded-lg w-9 h-9 bg-white/20 hover:bg-white/30">
                         <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -577,7 +913,7 @@
                     Mengawasi pengembangan teknologi dan infrastruktur platform
                 </p>
                 <div class="flex items-center justify-center gap-2">
-                    <a href="mailto:budi@bhayascientia.id"
+                    <a href="mailto:budi@DABRAKA.id"
                         class="w-8 h-8 bg-[#EEF0F7] hover:bg-[#FF6B18] hover:text-white rounded-lg flex items-center justify-center transition-all">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -616,7 +952,7 @@
                     Mengelola operasional harian dan efisiensi organisasi
                 </p>
                 <div class="flex items-center justify-center gap-2">
-                    <a href="mailto:siti@bhayascientia.id"
+                    <a href="mailto:siti@DABRAKA.id"
                         class="w-8 h-8 bg-[#EEF0F7] hover:bg-[#FF6B18] hover:text-white rounded-lg flex items-center justify-center transition-all">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -655,7 +991,7 @@
                     Memimpin strategi pemasaran dan komunikasi brand
                 </p>
                 <div class="flex items-center justify-center gap-2">
-                    <a href="mailto:andi@bhayascientia.id"
+                    <a href="mailto:andi@DABRAKA.id"
                         class="w-8 h-8 bg-[#EEF0F7] hover:bg-[#FF6B18] hover:text-white rounded-lg flex items-center justify-center transition-all">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
