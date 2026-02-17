@@ -2,8 +2,8 @@
 'brandHref' => '/',
 'brandLogo' => 'assets/images/logos/logo.png',
 'brandAlt' => 'BHAYASCIENTIA',
-'brandDesc' => 'Publikasi akademik non-formal untuk penulis yang ingin naskahnya lebih rapi, risetnya lebih kuat, dan
-prosesnya lebih jelas.',
+'brandDesc' => 'Kami mendorong budaya literasi, riset, dan kolaborasi untuk mendukung transformasi Polri yang unggul,
+adaptif, dan berstandar global.',
 
 'primaryCtaText' => 'Buka publikasi',
 'primaryCtaHref' => '/publikasi',

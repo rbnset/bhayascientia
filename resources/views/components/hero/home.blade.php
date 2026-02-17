@@ -1,9 +1,9 @@
 {{-- resources/views/components/hero/home.blade.php (IMPROVED) --}}
 
 @props([
-'title' => 'BHAYASCIENTIA, jembatan menuju publikasi.',
-'description' => 'Review gratis naskah jurnal, buku, dan opini. Hak cipta tetap milikmu - naskah hasil review tayang di
-platform kami.',
+'title' => 'DABRAKA, portal pengabdian intelektual.',
+'description' => 'Menghimpun gagasan dan karya insan Polri yang berkolaborasi dengan intelektual di bidang kepolisian,
+keamanan, kebijakan publik, serta keilmuan terkait lainnya.',
 'primaryLabel' => 'Mulai gratis',
 'primaryUrl' => 'http://bhayascientia.test/admin/register',
 
@@ -12,7 +12,7 @@ platform kami.',
 'youtubeId' => 'ZWZfwmObdvc',
 
 // Badge
-'badgeText' => 'Bantu naskahmu naik kelas.',
+'badgeText' => 'Where Knowledge Shapes Policing.',
 'badgeIcon' => 'assets/icons/crown.svg',
 
 // Thumbnails
@@ -66,13 +66,13 @@ platform kami.',
                 <h1 class="text-[28px] font-black leading-tight text-[#111827] sm:text-[36px]">
                     <mark
                         class="inline-block rounded-lg bg-gradient-to-r from-[#FF6B18] to-[#E64627] px-2 py-1 text-white">
-                        BHAYASCIENTIA
+                        DABRAKA
                     </mark>
                     <br class="sm:hidden">
-                    jembatan menuju
+                    portal pengabdian
                     <mark
                         class="inline-block rounded-lg bg-gradient-to-r from-[#FF6B18] to-[#E64627] px-2 py-1 text-white">
-                        publikasi
+                        intelektual
                     </mark>
                 </h1>
 
@@ -140,17 +140,17 @@ platform kami.',
                 </div>
 
                 {{-- Title --}}
-                <h1 class="text-[42px] font-black leading-tight text-[#111827] xl:text-[52px]">
+                <h1 class="text-[42px] font-black leading-tight text-[#111827] xl:text-[50px]">
                     <mark
                         class="inline-block rounded-lg bg-gradient-to-r from-[#FF6B18] to-[#E64627] px-2 py-1 text-white">
-                        BHAYASCIENTIA
+                        DABRAKA
                     </mark>
                     <br>
-                    jembatan menuju
+                    portal pengabdian
                     <br>
                     <mark
                         class="inline-block rounded-lg bg-gradient-to-r from-[#FF6B18] to-[#E64627] px-2 py-1 text-white">
-                        publikasi
+                        intelektual
                     </mark>
                 </h1>
 
@@ -249,7 +249,7 @@ platform kami.',
                     <path
                         d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" />
                 </svg>
-                Demo BHAYASCIENTIA
+                Demo DABRAKA
             </h3>
 
             <button type="button" data-video-close
