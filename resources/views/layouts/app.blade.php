@@ -14,6 +14,9 @@
     <link rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap">
 
+    {{-- ✅ Flickity CSS for Carousel --}}
+    <link rel="stylesheet" href="https://unpkg.com/flickity@2/dist/flickity.min.css">
+
     {{-- Alpine.js --}}
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
@@ -45,6 +48,75 @@
             max-width: 100%;
             overflow-x: hidden;
         }
+
+        /* ✅ Flickity carousel fixes */
+        .flickity-enabled {
+            position: relative;
+        }
+
+        .flickity-enabled:focus {
+            outline: none;
+        }
+
+        .flickity-viewport {
+            overflow: hidden;
+            position: relative;
+            height: 100%;
+        }
+
+        .flickity-slider {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Fix untuk gambar carousel tidak muncul */
+        .main-carousel .featured-news-card {
+            width: 100%;
+            min-height: 420px;
+        }
+
+        .main-carousel img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Custom flickity button styles */
+        .flickity-button {
+            background: transparent;
+            border: none;
+            color: white;
+        }
+
+        .flickity-button:hover {
+            background: transparent;
+        }
+
+        .flickity-button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .flickity-prev-next-button {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .flickity-prev-next-button:hover {
+            background: rgba(255, 107, 24, 0.9);
+        }
+
+        .flickity-prev-next-button .flickity-button-icon {
+            position: absolute;
+            left: 20%;
+            top: 20%;
+            width: 60%;
+            height: 60%;
+        }
     </style>
 
     @stack('styles')
@@ -74,6 +146,9 @@
 
     {{-- Bottom navigation stack --}}
     @stack('bottom_nav')
+
+    {{-- ✅ Flickity JS for Carousel (before custom scripts) --}}
+    <script src="https://unpkg.com/flickity@2/dist/flickity.pkgd.min.js"></script>
 
     {{-- Scripts --}}
     @stack('scripts')
