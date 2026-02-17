@@ -11,7 +11,7 @@
 {{-- ✨ Wrapper dengan overflow control --}}
 <div class="w-full overflow-x-hidden">
 
-    <x-hero.home badge-icon="assets/images/icons/crown.svg" badge-text="Bantu Naskahmu Naik Kelas."
+    <x-hero.home badge-icon="assets/images/icons/crown.svg" badge-text="Where Knowledge Shapes Policing."
         youtube-id="rJQOQCe30EY" />
 
     <x-sections.steps />
