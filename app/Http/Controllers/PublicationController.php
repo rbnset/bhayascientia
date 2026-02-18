@@ -159,45 +159,44 @@ class PublicationController extends Controller
 
         $bestAuthors = $this->getBestAuthorsAction->execute($selectedType, 6);
 
-        // ✅ Popular Publications - ALL TIME TRENDING
-        // Skor = total_views + (total_downloads * 2), pakai selectRaw semua sekalian
+        // ✅ Popular Publications — pisah query agar tidak konflik selectRaw + with()
         $popularPubs = Publication::with(['authors.user', 'publicationType', 'categories'])
-            ->selectRaw('
-        publications.*,
-        (SELECT COUNT(*) FROM view_logs WHERE view_logs.publication_id = publications.id) as total_views,
-        (SELECT COUNT(*) FROM download_logs WHERE download_logs.publication_id = publications.id) as total_downloads,
-        (
-            (SELECT COUNT(*) FROM view_logs WHERE view_logs.publication_id = publications.id) +
-            (SELECT COUNT(*) FROM download_logs WHERE download_logs.publication_id = publications.id) * 2
-        ) as trending_score
-    ')
+            ->withCount([
+                'viewLogs as total_views',
+                'downloadLogs as total_downloads',
+            ])
             ->where('status', 'published')
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now())
-            ->whereHas('publicationType', fn($q) => $q->where('slug', $selectedType)->where('is_active', true))
-            ->orderByDesc('trending_score')
-            ->orderByDesc('total_downloads')
-            ->orderByDesc('total_views')
-            ->orderByDesc('published_at')
+            ->whereHas('publicationType', function ($q) use ($selectedType) {
+                $q->where('slug', $selectedType)->where('is_active', true);
+            })
+            ->get()
+            ->map(function ($pub) {
+                // ✅ Hitung trending_score di PHP — pasti akurat, tidak bergantung SQL subquery
+                $pub->trending_score = (int) $pub->total_views + ((int) $pub->total_downloads * 2);
+                return $pub;
+            })
+            ->sortByDesc('trending_score')
             ->take(6)
-            ->get();
+            ->values();
 
-        // ✅ Kiri selalu dari featuredTypeContent, tidak pakai featured dari publication
         $featuredPublication = null;
 
         $popularPublications = $popularPubs->map(function ($pub) {
             $pubType = $pub->publicationType?->name ?? 'Publikasi';
+
             return [
                 'id'               => $pub->id,
                 'title'            => $pub->title,
                 'slug'             => $pub->slug,
-                'cover_url'        => $this->getCoverUrl($pub),
-                'category'         => $pub->category_name,
+                'cover_url'        => $this->getCoverUrl($pub),   // null = tidak ada cover, tetap masuk
+                'category'         => $pub->category_name ?? ($pub->categories->first()?->name ?? 'Umum'),
                 'publication_type' => $pubType,
-                'formatted_date'   => $pub->formatted_date,
-                'download_count'   => (int) ($pub->total_downloads ?? 0),
-                'views_count'      => (int) ($pub->total_views ?? 0),
-                'trending_score'   => (int) ($pub->trending_score ?? 0),
+                'formatted_date'   => $pub->formatted_date ?? ($pub->published_at?->locale('id')->isoFormat('D MMMM YYYY') ?? ''),
+                'download_count'   => (int) $pub->total_downloads,
+                'views_count'      => (int) $pub->total_views,
+                'trending_score'   => (int) $pub->trending_score,
                 'detail_url'       => route('publikasi.show', $pub->slug),
                 'authors'          => $pub->authors->take(6)->map(fn($a) => [
                     'id'       => $a->id,
@@ -208,6 +207,7 @@ class PublicationController extends Controller
                 'total_authors'    => $pub->authors->count(),
             ];
         });
+
 
 
         return view('pages.publication.index', compact(

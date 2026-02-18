@@ -24,7 +24,7 @@ trait PublicationHelperTrait
     }
 
     /**
-     * ✅ Log publication view with throttling
+     * ✅ Log publication view with throttling (5 menit per IP per publikasi)
      */
     private function logPublicationView(Publication $publication): void
     {
@@ -37,104 +37,138 @@ trait PublicationHelperTrait
     }
 
     /**
-     * ✅ Clean storage path (remove 'public/' prefix)
+     * ✅ Clean storage path (remove 'public/' prefix jika ada)
      */
     private function cleanPath(?string $path): ?string
     {
         if (!$path) return null;
+
+        // Hapus prefix 'public/' kalau ada
         if (str_starts_with($path, 'public/')) {
-            return substr($path, 7);
+            $path = substr($path, 7);
         }
-        return $path;
+
+        // Hapus leading slash
+        return ltrim($path, '/');
     }
 
     /**
-     * ✅ Get Type Content Cover - Return NULL jika tidak ada
+     * ✅ Cek apakah path valid dan file exists di storage
      */
-    private function getTypeContentCover($content): ?string
+    private function storageFileExists(?string $path): bool
     {
-        if (!$content || !$content->image_path) {
-            return null; // ← UBAH: Return NULL instead of placeholder
-        }
-
-        $cleanPath = $this->cleanPath($content->image_path);
-
-        if (Storage::disk('public')->exists($cleanPath)) {
-            return asset('storage/' . $cleanPath);
-        }
-
-        // Log warning if file not found
-        if (config('app.debug')) {
-            \Log::warning('Type content cover not found', [
-                'content_id' => $content->id ?? null,
-                'image_path' => $content->image_path,
-                'clean_path' => $cleanPath,
-            ]);
-        }
-
-        return null; // ← UBAH: Return NULL instead of placeholder
+        if (!$path) return false;
+        $cleanPath = $this->cleanPath($path);
+        return !empty($cleanPath) && Storage::disk('public')->exists($cleanPath);
     }
 
     /**
-     * ✅ Get Cover URL - Return NULL jika tidak ada (untuk support custom placeholder di blade)
+     * ✅ Konversi storage path ke public URL
      */
-    private function getCoverUrl($publication): ?string
+    private function storageFileUrl(string $path): string
     {
-        // ✅ UBAH: Return NULL jika tidak ada cover_image_path
-        if (!$publication->cover_image_path) {
-            return null;
+        return asset('storage/' . $this->cleanPath($path));
+    }
+
+    /**
+     * ✅ Get Cover URL dari Publication
+     * Priority: cover_image_path (langsung) → versions (relasi) → null
+     * Selalu return NULL kalau tidak ada, TIDAK pernah return string kosong
+     */
+    protected function getCoverUrl($publication): ?string
+    {
+        // 1️⃣ Cek cover_image_path langsung di publication
+        if (!empty($publication->cover_image_path)) {
+            $cleanPath = $this->cleanPath($publication->cover_image_path);
+            if ($cleanPath && Storage::disk('public')->exists($cleanPath)) {
+                return asset('storage/' . $cleanPath);
+            }
+
+            if (config('app.debug')) {
+                \Log::warning('Cover image not found in storage', [
+                    'publication_id' => $publication->id,
+                    'title'          => $publication->title,
+                    'cover_path'     => $publication->cover_image_path,
+                    'clean_path'     => $cleanPath,
+                ]);
+            }
         }
 
-        $cleanPath = $this->cleanPath($publication->cover_image_path);
-
-        // Check if file exists in storage
-        if (Storage::disk('public')->exists($cleanPath)) {
-            return asset('storage/' . $cleanPath);
+        // 2️⃣ Cek dari relasi versions (kalau sudah di-load)
+        if ($publication->relationLoaded('versions') && $publication->versions->isNotEmpty()) {
+            foreach ($publication->versions as $version) {
+                if (!empty($version->cover_image_path)) {
+                    $cleanPath = $this->cleanPath($version->cover_image_path);
+                    if ($cleanPath && Storage::disk('public')->exists($cleanPath)) {
+                        return asset('storage/' . $cleanPath);
+                    }
+                }
+            }
         }
 
-        // Log warning jika file tidak ditemukan (hanya di development)
-        if (config('app.debug')) {
-            \Log::warning('Cover image not found', [
-                'publication_id' => $publication->id,
-                'title' => $publication->title,
-                'cover_path' => $publication->cover_image_path,
-                'clean_path' => $cleanPath,
-                'expected_location' => storage_path('app/public/' . $cleanPath),
-            ]);
-        }
+        // 3️⃣ Cek dari versions via query (kalau relasi belum di-load, hindari N+1)
+        // Hanya lakukan kalau benar-benar perlu (gunakan dengan hati-hati)
+        // if (!$publication->relationLoaded('versions')) {
+        //     $version = $publication->versions()
+        //         ->whereNotNull('cover_image_path')
+        //         ->orderBy('version_number', 'desc')
+        //         ->first();
+        //     if ($version && $this->storageFileExists($version->cover_image_path)) {
+        //         return $this->storageFileUrl($version->cover_image_path);
+        //     }
+        // }
 
-        // ✅ UBAH: Return NULL instead of placeholder
-        // Custom placeholder akan di-handle di blade component
+        // ✅ Tidak ada cover → return null, bukan string kosong
         return null;
     }
 
     /**
-     * ✅ Get Placeholder Cover (untuk backward compatibility - OPTIONAL)
-     * Method ini TIDAK dipanggil lagi, tapi tetap ada jika ada kode lama yang membutuhkan
+     * ✅ Get Cover URL dari PublicationTypeContent
+     * Return NULL kalau tidak ada atau file tidak ditemukan
      */
-    private function getPlaceholderCover($publication): string
+    private function getTypeContentCover($content): ?string
     {
-        $categoryName = 'Publikasi';
-        if ($publication->relationLoaded('categories') && $publication->categories->isNotEmpty()) {
-            $categoryName = $publication->categories->first()->name;
+        if (!$content) return null;
+
+        // Cek image_path
+        if (!empty($content->image_path)) {
+            $cleanPath = $this->cleanPath($content->image_path);
+            if ($cleanPath && Storage::disk('public')->exists($cleanPath)) {
+                return asset('storage/' . $cleanPath);
+            }
+
+            if (config('app.debug')) {
+                \Log::warning('Type content cover not found', [
+                    'content_id' => $content->id ?? null,
+                    'image_path' => $content->image_path,
+                    'clean_path' => $cleanPath ?? null,
+                ]);
+            }
         }
 
-        $titleShort = Str::limit($publication->title, 25);
+        // Cek image_url kalau ada (beberapa model pakai ini)
+        if (!empty($content->image_url) && filter_var($content->image_url, FILTER_VALIDATE_URL)) {
+            return $content->image_url;
+        }
 
-        return 'https://placehold.co/400x600/FF6B18/white?text=' . urlencode($titleShort);
+        return null;
     }
 
     /**
-     * ✅ Check if publication has valid cover
+     * ✅ Cek apakah publication punya cover yang valid
      */
     private function hasValidCover($publication): bool
     {
-        if (!$publication->cover_image_path) {
-            return false;
-        }
+        return $this->getCoverUrl($publication) !== null;
+    }
 
-        $cleanPath = $this->cleanPath($publication->cover_image_path);
-
-        return Storage::disk('public')->exists($cleanPath);
+    /**
+     * ✅ Get Placeholder Cover (backward compatibility)
+     * Sebaiknya tidak dipakai — biarkan Blade yang handle placeholder
+     */
+    private function getPlaceholderCover($publication): string
+    {
+        $titleShort = Str::limit($publication->title ?? 'Publikasi', 25);
+        return 'https://placehold.co/400x600/FF6B18/white?text=' . urlencode($titleShort);
     }
 }

@@ -10,24 +10,83 @@
 'slug' => '',
 ])
 
+@php
+$typeGradients = [
+'Buku' => ['from' => '10B981', 'to' => '059669'],
+'Jurnal' => ['from' => 'FF6B18', 'to' => 'E64627'],
+'Opini' => ['from' => '3B82F6', 'to' => '1D4ED8'],
+'Artikel' => ['from' => 'F59E0B', 'to' => 'D97706'],
+'Penelitian' => ['from' => '8B5CF6', 'to' => '6D28D9'],
+'Skripsi' => ['from' => 'EC4899', 'to' => 'BE185D'],
+'Tesis' => ['from' => '06B6D4', 'to' => '0891B2'],
+'Disertasi' => ['from' => 'EF4444', 'to' => 'DC2626'],
+'default' => ['from' => 'A3A6AE', 'to' => '6B7280'],
+];
+
+$gradient = $typeGradients[$publicationType] ?? $typeGradients['default'];
+$selectedGradient = "from-[#{$gradient['from']}] to-[#{$gradient['to']}]";
+
+// Generate initials dari title
+$words = array_filter(explode(' ', $title ?? ''));
+$initials = '';
+foreach (array_slice($words, 0, 2) as $word) {
+$initials .= mb_strtoupper(mb_substr(trim($word), 0, 1));
+}
+if (empty($initials)) {
+$initials = mb_strtoupper(mb_substr($title ?? 'NN', 0, 2));
+}
+
+// First author
+$firstAuthor = (is_array($authors) && count($authors) > 0)
+? ($authors[0]['name'] ?? 'Anonymous')
+: 'Anonymous';
+
+// ✅ Normalize cover
+$hasCover = !empty($cover)
+&& $cover !== 'null'
+&& $cover !== 'undefined'
+&& filter_var($cover, FILTER_VALIDATE_URL) !== false;
+
+// ✅ Placeholder SVG via PlaceholderCoverController
+$placeholderUrl = route('placeholder.cover', [
+'initials' => $initials,
+'type' => $publicationType,
+'title' => \Illuminate\Support\Str::limit($title ?? '', 60),
+'category' => $category,
+'author' => \Illuminate\Support\Str::limit($firstAuthor, 35),
+]);
+
+// ✅ Final cover
+$finalCover = $hasCover ? $cover : $placeholderUrl;
+
+$uniqueId = 'card-' . md5(($slug ?? '') . ($title ?? ''));
+$patId = 'pat-' . $uniqueId;
+@endphp
+
 <div class="h-auto swiper-slide" style="overflow: visible !important;">
     <a href="{{ $detailUrl }}"
         class="publication-card-link group block h-full rounded-[22px] transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F4F6FB]"
-        aria-label="Baca publikasi: {{ Str::limit($title, 60) }}">
+        aria-label="Baca publikasi: {{ \Illuminate\Support\Str::limit($title, 60) }}">
         <article
             class="publication-card-inner bg-white p-4 mt-2 ml-1 mr-1 sm:p-5 gap-3 flex h-full flex-col rounded-[22px] ring-1 ring-[#EEF0F7] transition-all duration-300 group-hover:ring-[#FF6B18]/20 group-hover:shadow-lg group-hover:shadow-[#FF6B18]/5"
             itemscope itemtype="https://schema.org/ScholarlyArticle">
 
-            {{-- COVER IMAGE --}}
+            {{-- COVER --}}
             <div class="relative">
                 <div
                     class="relative aspect-[2/3] w-full overflow-hidden rounded-[20px] bg-[#F4F6FB] shadow-[0_18px_40px_-26px_rgba(0,0,0,0.65)] ring-1 ring-[#EEF0F7] transition-all duration-300 group-hover:shadow-[0_20px_45px_-28px_rgba(255,107,24,0.4)]">
 
-                    {{-- Cover Image --}}
-                    <img src="{{ $cover }}"
+                    {{-- ✅ Selalu tampilkan img, fallback ke placeholder SVG kalau error --}}
+                    <img id="img-{{ $uniqueId }}" src="{{ $finalCover }}"
                         class="absolute inset-0 object-cover w-full h-full cover-image publication-cover-image"
                         alt="Cover publikasi {{ $title }}" loading="lazy" itemprop="image"
-                        onload="this.classList.add('loaded');" />
+                        onload="this.classList.add('loaded');" onerror="
+                            if(!this.dataset.errored){
+                                this.dataset.errored='1';
+                                this.src='{{ $placeholderUrl }}';
+                                this.classList.add('loaded');
+                            }
+                        " />
 
                     {{-- Shadow & Shine overlays --}}
                     <div class="absolute inset-y-0 left-0 w-[10%] bg-gradient-to-r from-black/16 to-transparent pointer-events-none z-10"
@@ -44,7 +103,7 @@
                 </div>
             </div>
 
-            {{-- CONTENT INFO (rest of the component stays the same) --}}
+            {{-- CONTENT INFO --}}
             <div class="flex flex-col flex-1 min-w-0 gap-2">
                 <h3 class="font-bold text-sm sm:text-base sm:leading-[24px] md:text-lg md:leading-[27px] leading-[20px] text-[#111827] transition-colors duration-200 group-hover:text-[#FF6B18]"
                     itemprop="headline">
@@ -70,7 +129,7 @@
                                     class="author-photo block h-8 w-8 rounded-full object-cover ring-2 ring-white transition-all duration-200 hover:scale-110 hover:ring-[#FF6B18]"
                                     alt="Foto {{ $author['name'] ?? 'Penulis' }}"
                                     title="{{ $author['name'] ?? 'Penulis ' . ($index + 1) }}" loading="lazy"
-                                    onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ urlencode($author['name'] ?? 'UN') }}&background=FF6B18&color=fff&size=128&bold=true&font-size=0.4&length=2';" />
+                                    onerror="this.onerror=null;this.src='https://ui-avatars.com/api/?name={{ urlencode($author['name'] ?? 'UN') }}&background=FF6B18&color=fff&size=128&bold=true&font-size=0.4&length=2';" />
                             </div>
                             @endforeach
 

@@ -13,32 +13,40 @@
 ])
 
 @php
-$typeGradients = [
-'Buku' => ['from' => '10B981', 'to' => '059669'],
-'Jurnal' => ['from' => 'FF6B18', 'to' => 'E64627'],
-'Opini' => ['from' => '3B82F6', 'to' => '1D4ED8'],
-'Artikel' => ['from' => 'F59E0B', 'to' => 'D97706'],
-'Penelitian' => ['from' => '8B5CF6', 'to' => '6D28D9'],
-'Skripsi' => ['from' => 'EC4899', 'to' => 'BE185D'],
-'Tesis' => ['from' => '06B6D4', 'to' => '0891B2'],
-'Disertasi' => ['from' => 'EF4444', 'to' => 'DC2626'],
-'default' => ['from' => 'A3A6AE', 'to' => '6B7280'],
-];
-
-$gradient = $typeGradients[$publicationType] ?? $typeGradients['default'];
-$selectedGradient = "from-[#{$gradient['from']}] to-[#{$gradient['to']}]";
-
+// Generate initials dari title
 $words = array_filter(explode(' ', $title ?? ''));
 $initials = '';
 foreach (array_slice($words, 0, 2) as $word) {
 $initials .= mb_strtoupper(mb_substr(trim($word), 0, 1));
 }
 if (empty($initials)) {
-$initials = mb_strtoupper(mb_substr($title ?? 'UN', 0, 2));
+$initials = mb_strtoupper(mb_substr($title ?? 'NN', 0, 2));
 }
 
-// ID unik untuk tiap card agar onerror JS tidak salah target
-$uniqueId = 'pi-' . md5($slug . $title);
+// First author name
+$firstAuthor = (is_array($authors) && count($authors) > 0)
+? ($authors[0]['name'] ?? 'Anonymous')
+: 'Anonymous';
+
+// ✅ Normalize coverUrl: null kalau kosong/string 'null'/'undefined'
+$hasCover = !empty($coverUrl)
+&& $coverUrl !== 'null'
+&& $coverUrl !== 'undefined'
+&& filter_var($coverUrl, FILTER_VALIDATE_URL) !== false;
+
+// ✅ Placeholder SVG via PlaceholderCoverController
+$placeholderUrl = route('placeholder.cover', [
+'initials' => $initials,
+'type' => $publicationType,
+'title' => Str::limit($title ?? '', 60),
+'category' => $category,
+'author' => Str::limit($firstAuthor, 35),
+]);
+
+// ✅ Final cover: asli kalau ada, placeholder kalau tidak
+$finalCover = $hasCover ? $coverUrl : $placeholderUrl;
+
+$uniqueId = 'pi-' . md5(($slug ?? '') . ($title ?? ''));
 @endphp
 
 <a href="{{ $detailUrl }}"
@@ -47,102 +55,34 @@ $uniqueId = 'pi-' . md5($slug . $title);
     <article
         class="flex items-center gap-4 rounded-[22px] border border-[#EEF0F7] bg-white p-3 transition duration-300 hover:-translate-y-[1px] hover:shadow-sm hover:ring-2 hover:ring-[#FF6B18] hover:ring-inset sm:p-[14px]">
 
-        {{-- Cover --}}
+        {{-- ===================== COVER ===================== --}}
         <div class="relative shrink-0">
             <div
                 class="relative aspect-[2/3] w-[74px] overflow-hidden rounded-[16px] bg-[#F5F6FA] shadow-[0_12px_30px_-18px_rgba(0,0,0,0.6)] ring-1 ring-black/5 sm:w-[88px] lg:w-[104px]">
 
-                @if($coverUrl)
-                {{-- ✅ Real Cover: pakai id unik untuk fallback yang akurat --}}
-                <img id="img-{{ $uniqueId }}" src="{{ $coverUrl }}" alt="Cover {{ $title }}"
-                    class="absolute inset-0 object-cover object-center w-full h-full" loading="eager" onerror="
-                            if(!this.dataset.errored){
-                                this.dataset.errored='1';
-                                this.style.display='none';
-                                var fb=document.getElementById('fb-{{ $uniqueId }}');
-                                if(fb){fb.style.display='flex';}
-                            }
-                        " />
-                {{-- ✅ Fallback placeholder (tersembunyi, muncul saat img error) --}}
-                <div id="fb-{{ $uniqueId }}"
-                    class="absolute inset-0 items-center justify-center bg-gradient-to-br {{ $selectedGradient }} text-white p-2"
-                    style="display: none;">
-                    <div class="flex flex-col items-center justify-center w-full h-full space-y-1 text-center">
-                        <div class="absolute inset-0 opacity-10">
-                            <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-                                <defs>
-                                    <pattern id="pat-{{ $uniqueId }}" x="0" y="0" width="20" height="20"
-                                        patternUnits="userSpaceOnUse">
-                                        <circle cx="10" cy="10" r="1" fill="white" />
-                                    </pattern>
-                                </defs>
-                                <rect width="100%" height="100%" fill="url(#pat-{{ $uniqueId }})" />
-                            </svg>
-                        </div>
-                        <div class="relative z-10 text-2xl font-black leading-none opacity-95 drop-shadow">{{ $initials
-                            }}</div>
-                        <div class="relative z-10 flex items-center justify-center gap-1">
-                            <div class="h-[1.5px] w-3 bg-white/60 rounded"></div>
-                            <svg class="w-2 h-2 text-white/80" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd"
-                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                    clip-rule="evenodd" />
-                            </svg>
-                            <div class="h-[1.5px] w-3 bg-white/60 rounded"></div>
-                        </div>
-                        <div
-                            class="relative z-10 px-1.5 py-0.5 text-[8px] font-bold bg-white/25 backdrop-blur-sm rounded-full border border-white/30">
-                            {{ $publicationType }}
-                        </div>
-                    </div>
-                </div>
-                @else
-                {{-- ✅ Tidak ada cover sama sekali --}}
-                <div
-                    class="absolute inset-0 flex items-center justify-center bg-gradient-to-br {{ $selectedGradient }} text-white p-2">
-                    <div class="flex flex-col items-center justify-center w-full h-full space-y-1 text-center">
-                        <div class="absolute inset-0 opacity-10">
-                            <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-                                <defs>
-                                    <pattern id="pat-nc-{{ $uniqueId }}" x="0" y="0" width="20" height="20"
-                                        patternUnits="userSpaceOnUse">
-                                        <circle cx="10" cy="10" r="1" fill="white" />
-                                    </pattern>
-                                </defs>
-                                <rect width="100%" height="100%" fill="url(#pat-nc-{{ $uniqueId }})" />
-                            </svg>
-                        </div>
-                        <div class="relative z-10 text-2xl font-black leading-none opacity-95 drop-shadow">{{ $initials
-                            }}</div>
-                        <div class="relative z-10 flex items-center justify-center gap-1">
-                            <div class="h-[1.5px] w-3 bg-white/60 rounded"></div>
-                            <svg class="w-2 h-2 text-white/80" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd"
-                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                    clip-rule="evenodd" />
-                            </svg>
-                            <div class="h-[1.5px] w-3 bg-white/60 rounded"></div>
-                        </div>
-                        <div
-                            class="relative z-10 px-1.5 py-0.5 text-[8px] font-bold bg-white/25 backdrop-blur-sm rounded-full border border-white/30">
-                            {{ $publicationType }}
-                        </div>
-                    </div>
-                </div>
-                @endif
+                {{-- ✅ Selalu tampilkan img — pakai placeholder SVG kalau tidak ada cover --}}
+                <img id="img-{{ $uniqueId }}" src="{{ $finalCover }}" alt="Cover {{ $title }}"
+                    class="absolute inset-0 object-cover object-center w-full h-full transition-opacity duration-300 opacity-0"
+                    loading="eager" onload="this.style.opacity='1';" onerror="
+                        if(!this.dataset.errored){
+                            this.dataset.errored='1';
+                            this.src='{{ $placeholderUrl }}';
+                            this.style.opacity='1';
+                        }
+                    " />
 
                 {{-- Book spine shadow --}}
                 <div
-                    class="absolute inset-y-0 left-0 w-[10%] bg-gradient-to-r from-black/15 to-transparent pointer-events-none">
+                    class="absolute inset-y-0 left-0 w-[10%] bg-gradient-to-r from-black/15 to-transparent pointer-events-none z-10">
                 </div>
                 {{-- Glossy overlay --}}
                 <div
-                    class="absolute inset-0 pointer-events-none bg-gradient-to-tr from-white/0 via-white/0 to-white/12">
+                    class="absolute inset-0 z-10 pointer-events-none bg-gradient-to-tr from-white/0 via-white/0 to-white/12">
                 </div>
             </div>
         </div>
 
-        {{-- Content --}}
+        {{-- ===================== CONTENT ===================== --}}
         <div class="flex flex-col self-stretch flex-1 min-w-0">
             <h3
                 class="font-bold text-sm leading-[20px] text-[#111827] sm:text-base sm:leading-[24px] lg:text-lg lg:leading-[27px] transition-colors group-hover:text-[#FF6B18]">
@@ -182,6 +122,7 @@ $uniqueId = 'pi-' . md5($slug . $title);
             </div>
 
             <div class="flex items-center justify-between gap-3 mt-2">
+                {{-- Authors --}}
                 <div class="flex items-center -space-x-2 shrink-0">
                     @if(is_array($authors) && count($authors) > 0)
                     @foreach(array_slice($authors, 0, 3) as $index => $author)
@@ -213,6 +154,7 @@ $uniqueId = 'pi-' . md5($slug . $title);
                     @endif
                 </div>
 
+                {{-- CTA --}}
                 <span
                     class="inline-flex items-center gap-2 text-[11px] text-[#6B7280] transition group-hover:text-[#FF6B18] sm:text-sm">
                     Baca detail
