@@ -145,13 +145,4 @@ $finalCoverUrl = $coverUrl ?: $placeholderUrl;
             @endif
         </div>
     </div>
-
-    {{-- ✅ Debug Info (remove in production) --}}
-    @if(app()->environment('local'))
-    <div class="absolute top-2 left-2 z-50 p-2 bg-black/80 text-white text-[10px] rounded max-w-[200px]">
-        <p class="truncate">Cover: {{ $coverUrl ? 'YES' : 'NO' }}</p>
-        <p class="truncate">Type: {{ $displayType }}</p>
-        <p class="truncate">Final: {{ basename($finalCoverUrl) }}</p>
-    </div>
-    @endif
 </a>

@@ -106,4 +106,5 @@
     :featuredPublication="$featuredPublication ?? null" :publications="$popularPublications ?? collect([])"
     :selectedType="$selectedType" :exploreAllUrl="route('publikasi.browse', ['type' => $selectedType])" />
 
+
 @endsection

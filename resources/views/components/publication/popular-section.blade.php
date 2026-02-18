@@ -35,13 +35,14 @@
 
         {{-- Left: Featured (Prioritas: TypeContent > Publication) --}}
         @if($featuredTypeContent)
-        {{-- ✅ Prioritas 1: Featured dari PublicationTypeContent --}}
-        <x-publication.featured-card :title="$featuredTypeContent['title']"
-            :coverUrl="$featuredTypeContent['cover_url']" :category="$featuredTypeContent['category']"
-            :publicationType="$featuredTypeContent['publication_type'] ?? $featuredTypeContent['type'] ?? 'Publikasi'"
-            :type="$featuredTypeContent['type']" :abstract="$featuredTypeContent['abstract'] ?? null"
-            :downloadCount="$featuredTypeContent['download_count'] ?? 0" :detailUrl="$featuredTypeContent['detail_url']"
-            :slug="$featuredTypeContent['slug'] ?? ''" />
+        {{-- ✅ Featured dari PublicationTypeContent (masih bentuk array) --}}
+        <x-publication.featured-card
+            :title="$featuredTypeContent['title'] ?? ($featuredTypeContent['publication_type'] ?? 'Publikasi')"
+            :coverUrl="$featuredTypeContent['cover_url'] ?? null" :category="$featuredTypeContent['category'] ?? 'Umum'"
+            :publicationType="$featuredTypeContent['publication_type'] ?? 'Publikasi'"
+            :type="$featuredTypeContent['type'] ?? 'publikasi'" :abstract="$featuredTypeContent['abstract'] ?? null"
+            :downloadCount="$featuredTypeContent['download_count'] ?? 0"
+            :detailUrl="$featuredTypeContent['detail_url'] ?? '#'" :slug="$featuredTypeContent['slug'] ?? ''" />
         @elseif($featuredPublication)
         {{-- ✅ Prioritas 2: Featured dari Publication paling populer --}}
         <x-publication.featured-card :title="$featuredPublication['title']"
@@ -51,6 +52,7 @@
             :downloadCount="$featuredPublication['download_count'] ?? 0" :detailUrl="$featuredPublication['detail_url']"
             :slug="$featuredPublication['slug'] ?? ''" />
         @endif
+
 
         {{-- Right: List --}}
         @if($publications->isNotEmpty())
