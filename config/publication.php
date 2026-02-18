@@ -2,14 +2,11 @@
 // config/publication.php
 
 return [
-    /**
-     * ✅ UNIFIED NAVIGATION - Single source untuk desktop & mobile
-     */
     'navigation' => [
         [
             'label'     => 'Browse',
-            'href'      => 'publikasi.browse',
-            'active'    => ['publikasi.browse', 'publikasi.index'],
+            'href'      => 'publikasi.index',   // ✅ klik Browse → halaman index
+            'active'    => ['publikasi.index', 'publikasi.show', 'publikasi.browse'],
             'icon'      => 'assets/images/icons/3dcube.svg',
             'iconWhite' => 'assets/images/icons/3dcube-white.svg',
             'badge'     => null,
@@ -17,8 +14,8 @@ return [
         ],
         [
             'label'     => 'Categories',
-            'href'      => 'publikasi.category',           // ✅ diperbaiki dari 'publikasi.categories'
-            'active'    => ['publikasi.category', 'publikasi.category.show'],  // ✅ include show
+            'href'      => 'publikasi.category',
+            'active'    => ['publikasi.category', 'publikasi.category.show'],
             'icon'      => 'assets/images/icons/calendar-date-range-dark.svg',
             'iconWhite' => 'assets/images/icons/calendar-date-range-white.svg',
             'badge'     => null,
@@ -43,13 +40,10 @@ return [
                 ? auth()->user()->savedPublications()->count()
                 : 0,
             'new'       => false,
-            'auth'      => false, // ✅ tampil selalu, tapi konten locked jika belum login
+            'auth'      => false,
         ],
     ],
 
-    /**
-     * Publication Types (untuk filter)
-     */
     'publication_types' => [
         'all'     => 'Semua',
         'book'    => 'Buku',
