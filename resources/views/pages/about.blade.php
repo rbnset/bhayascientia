@@ -5,7 +5,10 @@
 
 @push('styles')
 <style>
-    /* Stats Counter Animation */
+    /* =============================================
+       1. KEYFRAME ANIMATIONS
+       ============================================= */
+
     @keyframes countUp {
         from {
             opacity: 0;
@@ -18,68 +21,10 @@
         }
     }
 
-    /* ✅ Animate on Scroll — pakai class bukan inline style */
-    .animate-hidden {
-        opacity: 0;
-        transform: translateY(20px);
-        transition: opacity 0.6s ease-out, transform 0.6s ease-out;
-    }
-
-    .animate-visible {
-        opacity: 1 !important;
-        transform: translateY(0) !important;
-    }
-
-    /* ✅ Paksa team-image selalu visible — tidak ikut animasi */
-    .team-image {
-        opacity: 1 !important;
-        transition: transform 0.3s ease;
-    }
-
-
-    .stat-card {
-        animation: countUp 0.6s ease-out forwards;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .stat-card:hover {
-        transform: translateY(-8px);
-        box-shadow: 0 20px 40px rgba(255, 107, 24, 0.15);
-    }
-
-    /* Timeline Line Animation */
-    .timeline-line {
-        position: relative;
-        background: linear-gradient(180deg, #FF6B18 0%, #E64627 100%);
-    }
-
-    .timeline-line::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 0%;
-        background: linear-gradient(180deg, #FFD4BA 0%, #FF6B18 100%);
-        animation: fillTimeline 2s ease-out forwards;
-    }
-
     @keyframes fillTimeline {
         to {
             height: 100%;
         }
-    }
-
-    /* Timeline Item */
-    .timeline-item {
-        opacity: 0;
-        transform: translateX(-30px);
-        animation: slideInLeft 0.6s ease-out forwards;
-    }
-
-    .timeline-item:nth-child(even) {
-        transform: translateX(30px);
-        animation: slideInRight 0.6s ease-out forwards;
     }
 
     @keyframes slideInLeft {
@@ -96,59 +41,6 @@
         }
     }
 
-    /* Team Card Hover */
-    .team-card {
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .team-card:hover {
-        transform: translateY(-8px);
-        box-shadow: 0 20px 40px rgba(255, 107, 24, 0.15);
-    }
-
-    .team-card:hover .team-image {
-        transform: scale(1.05);
-    }
-
-    .team-image {
-        transition: transform 0.3s ease;
-    }
-
-    /* Value Card */
-    .value-card {
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .value-card:hover {
-        transform: translateY(-4px);
-        border-color: #FF6B18;
-    }
-
-    .value-card:hover .value-icon {
-        transform: rotate(10deg) scale(1.1);
-    }
-
-    .value-icon {
-        transition: transform 0.3s ease;
-    }
-
-    /* Parallax Effect */
-    .parallax-bg {
-        background-attachment: fixed;
-        background-position: center;
-        background-repeat: no-repeat;
-        background-size: cover;
-    }
-
-    /* Gradient Text */
-    .gradient-text {
-        background: linear-gradient(135deg, #FF6B18 0%, #E64627 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
-
-    /* Floating Animation */
     @keyframes float {
 
         0%,
@@ -161,11 +53,238 @@
         }
     }
 
+    /* =============================================
+       2. ANIMATE ON SCROLL (pakai class, bukan inline style)
+       ============================================= */
+
+    .animate-hidden {
+        opacity: 0;
+        transform: translateY(20px);
+        transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+    }
+
+    .animate-visible {
+        opacity: 1 !important;
+        transform: translateY(0) !important;
+    }
+
+    /* =============================================
+       3. STAT CARD
+       ============================================= */
+
+    .stat-card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .stat-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 40px rgba(255, 107, 24, 0.15);
+    }
+
+    /* =============================================
+       4. TEAM CARD + TEAM IMAGE
+       ============================================= */
+
+    .team-card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .team-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 40px rgba(255, 107, 24, 0.15);
+    }
+
+    /* ✅ opacity 1 !important — tidak ikut animate-hidden */
+    .team-image {
+        opacity: 1 !important;
+        transition: transform 0.3s ease;
+    }
+
+    .team-card:hover .team-image {
+        transform: scale(1.05);
+    }
+
+    /* =============================================
+       5. VALUE CARD
+       ============================================= */
+
+    .value-card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .value-card:hover {
+        transform: translateY(-4px);
+        border-color: #FF6B18;
+    }
+
+    .value-icon {
+        transition: transform 0.3s ease;
+    }
+
+    .value-card:hover .value-icon {
+        transform: rotate(10deg) scale(1.1);
+    }
+
+    /* =============================================
+       6. TIMELINE
+       ============================================= */
+
+    .timeline-line {
+        position: relative;
+        background: linear-gradient(180deg, #FF6B18 0%, #E64627 100%);
+    }
+
+    .timeline-line::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 0%;
+        background: linear-gradient(180deg, #FFD4BA 0%, #FF6B18 100%);
+        animation: fillTimeline 2s ease-out forwards;
+    }
+
+    .timeline-item {
+        opacity: 0;
+        transform: translateX(-30px);
+        animation: slideInLeft 0.6s ease-out forwards;
+    }
+
+    .timeline-item:nth-child(even) {
+        transform: translateX(30px);
+        animation: slideInRight 0.6s ease-out forwards;
+    }
+
+    /* =============================================
+       7. UTILITIES
+       ============================================= */
+
+    .gradient-text {
+        background: linear-gradient(135deg, #FF6B18 0%, #E64627 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .parallax-bg {
+        background-attachment: fixed;
+        background-position: center;
+        background-repeat: no-repeat;
+        background-size: cover;
+    }
+
     .float-animation {
         animation: float 3s ease-in-out infinite;
     }
+
+    /* =============================================
+       8. ABOUT CONTENT GRID — Equal Height + UX Scroll
+       ============================================= */
+
+    .about-content-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+
+    @media (min-width: 1024px) {
+        .about-content-grid {
+            grid-template-columns: 1fr 1fr;
+            align-items: stretch;
+            min-height: 600px;
+        }
+
+        /* Kiri: sticky, tidak scroll */
+        .about-left-panel {
+            position: sticky;
+            top: 6rem;
+            height: fit-content;
+            max-height: calc(100vh - 7rem);
+            overflow: hidden;
+        }
+
+        /* Kanan: flex column, tinggi sama dengan kiri */
+        .about-right-panel {
+            display: flex;
+            flex-direction: column;
+            max-height: calc(100vh - 7rem);
+            position: sticky;
+            top: 6rem;
+        }
+
+        /* Heading — sticky di atas panel kanan */
+        .about-right-sticky-top {
+            flex-shrink: 0;
+            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #EEF0F7;
+            background: white;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Wrapper scroll — flex grow, overflow hidden untuk fade */
+        .about-right-scrollable-wrapper {
+            position: relative;
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Fade gradient di bawah scroll area */
+        .about-right-scrollable-wrapper::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0.75rem;
+            height: 52px;
+            background: linear-gradient(to bottom, transparent, white);
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        /* Area scroll sesungguhnya */
+        .about-right-scrollable {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 0.75rem;
+            padding-bottom: 3rem;
+            /* ruang untuk fade gradient */
+            scrollbar-width: thin;
+            scrollbar-color: #FF6B18 #EEF0F7;
+        }
+
+        .about-right-scrollable::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .about-right-scrollable::-webkit-scrollbar-track {
+            background: #EEF0F7;
+            border-radius: 999px;
+        }
+
+        .about-right-scrollable::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #FF6B18, #E64627);
+            border-radius: 999px;
+        }
+
+        /* CTA — sticky di bawah panel kanan */
+        .about-right-sticky-bottom {
+            flex-shrink: 0;
+            padding-top: 1rem;
+            margin-top: 0.5rem;
+            border-top: 2px solid #EEF0F7;
+            background: white;
+            position: relative;
+            z-index: 1;
+        }
+    }
 </style>
 @endpush
+
 
 @section('custom_navbar')
 <x-navbar ctaLabel="Browse Publikasi" ctaRoute="publikasi.index" ctaIcon="book" :showAvatarWhenAuth="false"
@@ -308,29 +427,26 @@
 
 {{-- About Content --}}
 <section class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px] mb-12 sm:mb-16 lg:mb-20">
-    <div class="grid items-start grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-12 xl:gap-16">
+    <div class="about-content-grid">
 
-        {{-- Left: Vertical Image Gallery --}}
-        <div class="order-2 lg:order-1 lg:sticky lg:top-24">
+        {{-- ============================================ --}}
+        {{-- KIRI: Image Gallery (Sticky) --}}
+        {{-- ============================================ --}}
+        <div class="order-2 lg:order-1 about-left-panel">
             <div class="relative space-y-4">
 
-                {{-- Image 1: Large Featured --}}
+                {{-- Image 1 --}}
                 <div class="relative overflow-hidden shadow-2xl rounded-2xl group">
                     <img src="https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=800&h=500&fit=crop"
                         alt="DABRAKA - Ekosistem Pengetahuan Kepolisian"
-                        class="w-full h-[280px] sm:h-[320px] lg:h-[360px] object-cover transition-transform duration-700 group-hover:scale-110">
-
-                    {{-- Gradient Overlay --}}
+                        class="w-full h-[220px] sm:h-[260px] lg:h-[280px] object-cover transition-transform duration-700 group-hover:scale-110">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
-
-                    {{-- Caption with Icon --}}
                     <div class="absolute bottom-0 left-0 right-0 p-5">
                         <div class="flex items-start gap-3">
                             <div class="flex-shrink-0 p-2.5 bg-white/20 backdrop-blur-md rounded-lg">
                                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253">
-                                    </path>
+                                        d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                                 </svg>
                             </div>
                             <div>
@@ -339,8 +455,6 @@
                             </div>
                         </div>
                     </div>
-
-                    {{-- Badge --}}
                     <div class="absolute top-4 right-4">
                         <span
                             class="px-3 py-1.5 text-xs font-bold text-white bg-[#FF6B18] rounded-full shadow-lg backdrop-blur-sm">
@@ -351,61 +465,44 @@
 
                 {{-- Grid 2 Images --}}
                 <div class="grid grid-cols-2 gap-4">
-
-                    {{-- Image 2: Kolaborasi --}}
                     <div class="relative overflow-hidden shadow-lg rounded-xl group">
                         <img src="https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=500&h=400&fit=crop"
                             alt="Kolaborasi Akademik"
-                            class="w-full h-[160px] sm:h-[180px] lg:h-[200px] object-cover transition-transform duration-700 group-hover:scale-110">
-
+                            class="w-full h-[140px] sm:h-[160px] object-cover transition-transform duration-700 group-hover:scale-110">
                         <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
-
-                        {{-- Hover Overlay --}}
                         <div
                             class="absolute inset-0 bg-[#FF6B18]/0 group-hover:bg-[#FF6B18]/20 transition-all duration-300">
                         </div>
-
-                        {{-- Icon Badge --}}
                         <div class="absolute top-3 left-3">
                             <div class="p-2 rounded-lg bg-white/30 backdrop-blur-sm">
                                 <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
-                                    </path>
+                                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                                 </svg>
                             </div>
                         </div>
-
                         <div class="absolute bottom-3 left-3 right-3">
                             <p class="text-sm font-bold text-white">Kolaborasi</p>
                             <p class="mt-0.5 text-xs text-white/80">Forum & Diskusi</p>
                         </div>
                     </div>
 
-                    {{-- Image 3: Riset --}}
                     <div class="relative overflow-hidden shadow-lg rounded-xl group">
                         <img src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=500&h=400&fit=crop"
                             alt="Riset & Kajian Strategis"
-                            class="w-full h-[160px] sm:h-[180px] lg:h-[200px] object-cover transition-transform duration-700 group-hover:scale-110">
-
+                            class="w-full h-[140px] sm:h-[160px] object-cover transition-transform duration-700 group-hover:scale-110">
                         <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
-
-                        {{-- Hover Overlay --}}
                         <div
                             class="absolute inset-0 bg-[#FF6B18]/0 group-hover:bg-[#FF6B18]/20 transition-all duration-300">
                         </div>
-
-                        {{-- Icon Badge --}}
                         <div class="absolute top-3 left-3">
                             <div class="p-2 rounded-lg bg-white/30 backdrop-blur-sm">
                                 <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z">
-                                    </path>
+                                        d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                                 </svg>
                             </div>
                         </div>
-
                         <div class="absolute bottom-3 left-3 right-3">
                             <p class="text-sm font-bold text-white">Riset</p>
                             <p class="mt-0.5 text-xs text-white/80">Kajian Strategis</p>
@@ -435,148 +532,163 @@
                     </div>
                 </div>
 
-                {{-- Decorative Elements --}}
                 <div class="absolute -z-10 -top-8 -right-8 w-40 h-40 bg-[#FF6B18]/10 rounded-full blur-3xl"></div>
                 <div class="absolute -z-10 -bottom-8 -left-8 w-48 h-48 bg-[#E64627]/10 rounded-full blur-3xl"></div>
             </div>
         </div>
 
-        {{-- Right: Content --}}
-        <div class="order-1 lg:order-2">
-            {{-- Badge --}}
-            <div
-                class="inline-flex items-center gap-2 px-4 py-2 mb-6 text-xs font-bold rounded-full bg-gradient-to-r from-[#FFF7F2] to-[#FFE2D2] text-[#FF6B18] border border-[#FFE2D2] shadow-sm">
-                <svg class="w-4 h-4 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd"
-                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                        clip-rule="evenodd" />
-                </svg>
-                Tentang Kami
-            </div>
+        {{-- ============================================ --}}
+        {{-- KANAN: Sticky Top + Scroll Middle + Sticky Bottom --}}
+        {{-- ============================================ --}}
+        <div class="order-1 lg:order-2 about-right-panel">
 
-            {{-- Heading --}}
-            <h2 class="text-3xl sm:text-4xl lg:text-5xl font-black text-[#1A1A1A] mb-3 leading-tight">
-                Where Knowledge
-                <span class="block mt-1 text-transparent bg-gradient-to-r from-[#FF6B18] to-[#E64627] bg-clip-text">
-                    Shapes Policing
-                </span>
-            </h2>
-
-            <p class="text-base text-[#737373] mb-8 sm:text-lg">
-                Portal pengabdian intelektual untuk transformasi kepolisian Indonesia
-            </p>
-
-            {{-- Content with Better Typography --}}
-            <div class="space-y-6">
-                {{-- Paragraph 1 --}}
-                <div class="pl-4 border-l-4 border-[#FF6B18]">
-                    <p class="text-base leading-relaxed text-[#4A5568] lg:text-lg">
-                        <strong class="text-xl font-black text-[#1A1A1A] lg:text-2xl">DABRAKA</strong>
-                        <span class="ml-1 text-sm italic text-[#6B7280]">(Darma Brata Buana Cendekia)</span>
-                        <span class="block mt-2">
-                            merupakan wadah dan portal pengabdian intelektual yang menghimpun kontribusi pemikiran dari
-                            <strong class="text-[#FF6B18]">insan Bhayangkara</strong> serta
-                            <strong class="text-[#FF6B18]">kaum akademisi</strong> yang memiliki perhatian terhadap
-                            pengembangan ilmu kepolisian, keamanan, kebijakan publik, serta keilmuan terkait lainnya.
-                        </span>
-                    </p>
-                </div>
-
-                {{-- Paragraph 2 --}}
-                <div class="p-5 bg-gradient-to-br from-[#FFF7F2] to-white rounded-xl border border-[#FFE2D2]">
-                    <p class="text-base leading-relaxed text-[#4A5568] lg:text-lg">
-                        DABRAKA lahir dari kesadaran bahwa
-                        <strong class="text-[#FF6B18]">transformasi institusi</strong> tidak hanya ditopang
-                        oleh struktur dan regulasi, tetapi juga oleh
-                        <mark class="bg-[#FFE5D3] text-[#1A1A1A] px-2 py-0.5 rounded font-semibold">kekuatan gagasan,
-                            literasi, dan refleksi akademik</mark>
-                        yang berkelanjutan.
-                    </p>
-                </div>
-
-                {{-- Paragraph 3 --}}
-                <p class="text-base leading-relaxed text-[#4A5568] lg:text-lg">
-                    Di tengah dinamika keamanan global yang semakin kompleks, Polri membutuhkan
-                    <span class="font-semibold text-[#2D3748]">ekosistem pengetahuan yang hidup</span>, yang mampu
-                    menjembatani pengalaman lapangan dengan pendekatan ilmiah dan kebijakan berbasis bukti.
-                </p>
-
-                {{-- Paragraph 4 with Highlight --}}
+            {{-- ✅ STICKY TOP — Heading (tidak scroll) --}}
+            <div class="about-right-sticky-top">
                 <div
-                    class="relative p-6 overflow-hidden bg-gradient-to-r from-[#1A1A1A] to-[#2D3748] rounded-xl shadow-lg">
-                    <div class="absolute top-0 right-0 w-40 h-40 -mt-20 -mr-20 rounded-full bg-white/5"></div>
-                    <p class="relative text-base leading-relaxed text-white lg:text-lg">
-                        Melalui publikasi, kajian strategis, forum ilmiah, dan jejaring nasional maupun internasional,
-                        DABRAKA berkomitmen menjadi
-                        <strong class="text-[#FFE5D3]">pusat referensi pemikiran kepolisian Indonesia</strong>
-                        yang progresif dan berwawasan global.
-                    </p>
-                </div>
-
-                {{-- Closing Statement --}}
-                <p class="text-base leading-relaxed text-[#4A5568] lg:text-lg">
-                    Kami percaya bahwa
-                    <span class="relative inline-block group cursor-help">
-                        <span class="relative z-10 font-bold text-[#1A1A1A]">pengabdian intelektual</span>
-                        <span
-                            class="absolute bottom-0 left-0 w-full h-2 bg-[#FFE5D3] -z-10 transition-all group-hover:h-full group-hover:bg-[#FFE5D3]/30"></span>
-                    </span>
-                    adalah bagian dari ikrar moral untuk memperkuat institusi, melayani masyarakat, dan berkontribusi
-                    bagi kemajuan bangsa.
-                </p>
-            </div>
-
-            {{-- CTA Buttons --}}
-            <div class="flex flex-col gap-4 mt-8 sm:flex-row sm:mt-10">
-                <a href="{{ route('publikasi.index') }}"
-                    class="group relative px-8 py-4 bg-gradient-to-r from-[#FF6B18] to-[#E64627] text-white text-sm font-bold rounded-xl hover:shadow-2xl hover:shadow-[#FF6B18]/30 hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-3 overflow-hidden">
-                    <span
-                        class="absolute inset-0 w-full h-full transition-transform duration-500 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:translate-x-full"></span>
-                    <svg class="relative w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253">
-                        </path>
-                    </svg>
-                    <span class="relative">Jelajahi Publikasi</span>
-                    <svg class="relative w-4 h-4 transition-transform group-hover:translate-x-1" fill="none"
-                        stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                    </svg>
-                </a>
-
-                <a href="{{ route('kontak') }}"
-                    class="group px-8 py-4 bg-white border-2 border-[#EEF0F7] text-[#737373] text-sm font-bold rounded-xl hover:border-[#FF6B18] hover:text-[#FF6B18] hover:bg-[#FFF7F2] transition-all duration-300 flex items-center justify-center gap-3 hover:shadow-lg">
-                    <svg class="w-5 h-5 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                    <span>Hubungi Kami</span>
-                </a>
-            </div>
-
-            {{-- Trust Indicators --}}
-            <div class="flex flex-wrap items-center gap-6 mt-10 pt-8 border-t border-[#EEF0F7]">
-                <div class="flex items-center gap-2 text-sm text-[#737373]">
-                    <svg class="w-5 h-5 text-[#FF6B18]" fill="currentColor" viewBox="0 0 20 20">
+                    class="inline-flex items-center gap-2 px-4 py-2 mb-4 text-xs font-bold rounded-full bg-gradient-to-r from-[#FFF7F2] to-[#FFE2D2] text-[#FF6B18] border border-[#FFE2D2] shadow-sm">
+                    <svg class="w-4 h-4 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd"
-                            d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
                             clip-rule="evenodd" />
                     </svg>
-                    <span class="font-semibold">Terverifikasi Resmi</span>
+                    Tentang Kami
                 </div>
-                <div class="flex items-center gap-2 text-sm text-[#737373]">
-                    <svg class="w-5 h-5 text-[#FF6B18]" fill="currentColor" viewBox="0 0 20 20">
-                        <path
-                            d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
-                    </svg>
-                    <span class="font-semibold">150+ Kontributor Aktif</span>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
 
+                <h2 class="text-2xl sm:text-3xl lg:text-4xl font-black text-[#1A1A1A] mb-2 leading-tight">
+                    Where Knowledge
+                    <span class="block mt-1 text-transparent bg-gradient-to-r from-[#FF6B18] to-[#E64627] bg-clip-text">
+                        Shapes Policing
+                    </span>
+                </h2>
+                <p class="text-sm text-[#737373] sm:text-base">
+                    Portal pengabdian intelektual untuk transformasi kepolisian Indonesia
+                </p>
+            </div>
+
+            {{-- ✅ SCROLLABLE MIDDLE — Konten panjang --}}
+            <div class="about-right-scrollable-wrapper">
+                <div class="about-right-scrollable">
+                    <div class="space-y-5">
+
+                        <div class="pl-4 border-l-4 border-[#FF6B18]">
+                            <p class="text-sm leading-relaxed text-[#4A5568] lg:text-base">
+                                <strong class="text-lg font-black text-[#1A1A1A] lg:text-xl">DABRAKA</strong>
+                                <span class="ml-1 text-xs italic text-[#6B7280]">(Darma Brata Buana Cendekia)</span>
+                                <span class="block mt-2">
+                                    merupakan wadah dan portal pengabdian intelektual yang menghimpun kontribusi
+                                    pemikiran dari
+                                    <strong class="text-[#FF6B18]">insan Bhayangkara</strong> serta
+                                    <strong class="text-[#FF6B18]">kaum akademisi</strong> yang memiliki perhatian
+                                    terhadap
+                                    pengembangan ilmu kepolisian, keamanan, kebijakan publik, serta keilmuan terkait
+                                    lainnya.
+                                </span>
+                            </p>
+                        </div>
+
+                        <div class="p-4 bg-gradient-to-br from-[#FFF7F2] to-white rounded-xl border border-[#FFE2D2]">
+                            <p class="text-sm leading-relaxed text-[#4A5568] lg:text-base">
+                                DABRAKA lahir dari kesadaran bahwa
+                                <strong class="text-[#FF6B18]">transformasi institusi</strong> tidak hanya ditopang
+                                oleh struktur dan regulasi, tetapi juga oleh
+                                <mark class="bg-[#FFE5D3] text-[#1A1A1A] px-1.5 py-0.5 rounded font-semibold">
+                                    kekuatan gagasan, literasi, dan refleksi akademik
+                                </mark>
+                                yang berkelanjutan.
+                            </p>
+                        </div>
+
+                        <p class="text-sm leading-relaxed text-[#4A5568] lg:text-base">
+                            Di tengah dinamika keamanan global yang semakin kompleks, Polri membutuhkan
+                            <span class="font-semibold text-[#2D3748]">ekosistem pengetahuan yang hidup</span>, yang
+                            mampu
+                            menjembatani pengalaman lapangan dengan pendekatan ilmiah dan kebijakan berbasis bukti.
+                        </p>
+
+                        <div
+                            class="relative p-5 overflow-hidden bg-gradient-to-r from-[#1A1A1A] to-[#2D3748] rounded-xl shadow-lg">
+                            <div class="absolute top-0 right-0 w-32 h-32 -mt-16 -mr-16 rounded-full bg-white/5"></div>
+                            <p class="relative text-sm leading-relaxed text-white lg:text-base">
+                                Melalui publikasi, kajian strategis, forum ilmiah, dan jejaring nasional maupun
+                                internasional,
+                                DABRAKA berkomitmen menjadi
+                                <strong class="text-[#FFE5D3]">pusat referensi pemikiran kepolisian Indonesia</strong>
+                                yang progresif dan berwawasan global.
+                            </p>
+                        </div>
+
+                        <p class="text-sm leading-relaxed text-[#4A5568] lg:text-base">
+                            Kami percaya bahwa
+                            <span class="relative inline-block group cursor-help">
+                                <span class="relative z-10 font-bold text-[#1A1A1A]">pengabdian intelektual</span>
+                                <span
+                                    class="absolute bottom-0 left-0 w-full h-2 bg-[#FFE5D3] -z-10 transition-all group-hover:h-full group-hover:bg-[#FFE5D3]/30"></span>
+                            </span>
+                            adalah bagian dari ikrar moral untuk memperkuat institusi, melayani masyarakat, dan
+                            berkontribusi
+                            bagi kemajuan bangsa.
+                        </p>
+
+                    </div>
+                </div>
+            </div>{{-- end scrollable wrapper --}}
+
+            {{-- ✅ STICKY BOTTOM — CTA + Trust (tidak scroll) --}}
+            <div class="about-right-sticky-bottom">
+
+                {{-- CTA Buttons --}}
+                <div class="flex flex-col gap-3 sm:flex-row">
+                    <a href="{{ route('publikasi.index') }}"
+                        class="group relative px-6 py-3 bg-gradient-to-r from-[#FF6B18] to-[#E64627] text-white text-sm font-bold rounded-xl hover:shadow-xl hover:shadow-[#FF6B18]/30 hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center gap-2 overflow-hidden">
+                        <span
+                            class="absolute inset-0 w-full h-full transition-transform duration-500 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:translate-x-full"></span>
+                        <svg class="relative w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                        </svg>
+                        <span class="relative">Jelajahi Publikasi</span>
+                        <svg class="relative w-4 h-4 transition-transform group-hover:translate-x-1" fill="none"
+                            stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                        </svg>
+                    </a>
+
+                    <a href="{{ route('kontak') }}"
+                        class="group px-6 py-3 bg-white border-2 border-[#EEF0F7] text-[#737373] text-sm font-bold rounded-xl hover:border-[#FF6B18] hover:text-[#FF6B18] hover:bg-[#FFF7F2] transition-all duration-300 flex items-center justify-center gap-2 hover:shadow-md">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                        <span>Hubungi Kami</span>
+                    </a>
+                </div>
+
+                {{-- Trust Indicators --}}
+                <div class="flex flex-wrap items-center gap-4 mt-4">
+                    <div class="flex items-center gap-2 text-xs text-[#737373]">
+                        <svg class="w-4 h-4 text-[#FF6B18]" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd"
+                                d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                clip-rule="evenodd" />
+                        </svg>
+                        <span class="font-semibold">Terverifikasi Resmi</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-xs text-[#737373]">
+                        <svg class="w-4 h-4 text-[#FF6B18]" fill="currentColor" viewBox="0 0 20 20">
+                            <path
+                                d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                        </svg>
+                        <span class="font-semibold">150+ Kontributor Aktif</span>
+                    </div>
+                </div>
+
+            </div>{{-- end sticky bottom --}}
+
+        </div>{{-- end about-right-panel --}}
+
+    </div>{{-- end about-content-grid --}}
+</section>
 
 {{-- Mission & Vision --}}
 <section class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1280px] mb-12 sm:mb-16 lg:mb-20">
