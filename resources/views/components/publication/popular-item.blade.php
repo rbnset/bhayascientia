@@ -1,9 +1,9 @@
 @props([
 'title',
-'coverUrl',
+'coverUrl' => null,
 'category' => 'Umum',
 'publicationType' => 'Publikasi',
-'formattedDate',
+'formattedDate' => '',
 'authors' => [],
 'totalAuthors' => 0,
 'downloadCount' => 0,
@@ -13,7 +13,6 @@
 ])
 
 @php
-// Generate gradient berdasarkan publication type
 $typeGradients = [
 'Buku' => ['from' => '10B981', 'to' => '059669'],
 'Jurnal' => ['from' => 'FF6B18', 'to' => 'E64627'],
@@ -29,60 +28,59 @@ $typeGradients = [
 $gradient = $typeGradients[$publicationType] ?? $typeGradients['default'];
 $selectedGradient = "from-[#{$gradient['from']}] to-[#{$gradient['to']}]";
 
-// Generate initial dari title
-$words = array_filter(explode(' ', $title));
+$words = array_filter(explode(' ', $title ?? ''));
 $initials = '';
 foreach (array_slice($words, 0, 2) as $word) {
 $initials .= mb_strtoupper(mb_substr(trim($word), 0, 1));
 }
-
-// Ensure we have at least something for initials
 if (empty($initials)) {
-$initials = mb_strtoupper(mb_substr($title, 0, 2));
+$initials = mb_strtoupper(mb_substr($title ?? 'UN', 0, 2));
 }
+
+// ID unik untuk tiap card agar onerror JS tidak salah target
+$uniqueId = 'pi-' . md5($slug . $title);
 @endphp
 
 <a href="{{ $detailUrl }}"
-    class="group block rounded-[22px] focus:outline-none focus-visible:ring-2 focus-visual:ring-[#FF6B18] focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+    class="group block rounded-[22px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 focus-visible:ring-offset-white"
     aria-label="Baca detail: {{ $title }}">
     <article
         class="flex items-center gap-4 rounded-[22px] border border-[#EEF0F7] bg-white p-3 transition duration-300 hover:-translate-y-[1px] hover:shadow-sm hover:ring-2 hover:ring-[#FF6B18] hover:ring-inset sm:p-[14px]">
 
         {{-- Cover --}}
         <div class="relative shrink-0">
-            <div class="relative aspect-[2/3] w-[74px] overflow-hidden rounded-[16px] bg-[#F5F6FA] shadow-[0_12px_30px_-18px_rgba(0,0,0,0.6)] ring-1 ring-black/5 sm:w-[88px] lg:w-[104px]"
-                style="display: block;">
+            <div
+                class="relative aspect-[2/3] w-[74px] overflow-hidden rounded-[16px] bg-[#F5F6FA] shadow-[0_12px_30px_-18px_rgba(0,0,0,0.6)] ring-1 ring-black/5 sm:w-[88px] lg:w-[104px]">
 
                 @if($coverUrl)
-                {{-- ✅ Real Cover Image WITH INLINE STYLES --}}
-                <img src="{{ $coverUrl }}" alt="Cover {{ $title }}" class="object-cover w-full h-full cover-image"
-                    loading="eager"
-                    style="width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; opacity: 1 !important; visibility: visible !important;"
-                    onerror="if(!this.dataset.errored){this.dataset.errored='1';this.style.display='none'; this.nextElementSibling.style.display='flex';}" />
-
-                {{-- ✅ Fallback Placeholder (ketika image error) --}}
-                <div class="absolute inset-0 hidden items-center justify-center bg-gradient-to-br {{ $selectedGradient }} text-white p-2"
+                {{-- ✅ Real Cover: pakai id unik untuk fallback yang akurat --}}
+                <img id="img-{{ $uniqueId }}" src="{{ $coverUrl }}" alt="Cover {{ $title }}"
+                    class="absolute inset-0 object-cover object-center w-full h-full" loading="eager" onerror="
+                            if(!this.dataset.errored){
+                                this.dataset.errored='1';
+                                this.style.display='none';
+                                var fb=document.getElementById('fb-{{ $uniqueId }}');
+                                if(fb){fb.style.display='flex';}
+                            }
+                        " />
+                {{-- ✅ Fallback placeholder (tersembunyi, muncul saat img error) --}}
+                <div id="fb-{{ $uniqueId }}"
+                    class="absolute inset-0 items-center justify-center bg-gradient-to-br {{ $selectedGradient }} text-white p-2"
                     style="display: none;">
-                    <div class="flex flex-col items-center justify-center h-full space-y-1 text-center">
-                        {{-- Decorative Pattern --}}
+                    <div class="flex flex-col items-center justify-center w-full h-full space-y-1 text-center">
                         <div class="absolute inset-0 opacity-10">
                             <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
                                 <defs>
-                                    <pattern id="item-pattern-{{ $slug }}" x="0" y="0" width="20" height="20"
+                                    <pattern id="pat-{{ $uniqueId }}" x="0" y="0" width="20" height="20"
                                         patternUnits="userSpaceOnUse">
                                         <circle cx="10" cy="10" r="1" fill="white" />
                                     </pattern>
                                 </defs>
-                                <rect width="100%" height="100%" fill="url(#item-pattern-{{ $slug }})" />
+                                <rect width="100%" height="100%" fill="url(#pat-{{ $uniqueId }})" />
                             </svg>
                         </div>
-
-                        {{-- Initial --}}
-                        <div class="relative z-10 text-2xl font-black leading-none opacity-95 drop-shadow">
-                            {{ $initials }}
-                        </div>
-
-                        {{-- Small decorative line --}}
+                        <div class="relative z-10 text-2xl font-black leading-none opacity-95 drop-shadow">{{ $initials
+                            }}</div>
                         <div class="relative z-10 flex items-center justify-center gap-1">
                             <div class="h-[1.5px] w-3 bg-white/60 rounded"></div>
                             <svg class="w-2 h-2 text-white/80" fill="currentColor" viewBox="0 0 20 20">
@@ -92,8 +90,6 @@ $initials = mb_strtoupper(mb_substr($title, 0, 2));
                             </svg>
                             <div class="h-[1.5px] w-3 bg-white/60 rounded"></div>
                         </div>
-
-                        {{-- Type badge --}}
                         <div
                             class="relative z-10 px-1.5 py-0.5 text-[8px] font-bold bg-white/25 backdrop-blur-sm rounded-full border border-white/30">
                             {{ $publicationType }}
@@ -101,29 +97,23 @@ $initials = mb_strtoupper(mb_substr($title, 0, 2));
                     </div>
                 </div>
                 @else
-                {{-- ✅ No Cover - Show Placeholder --}}
+                {{-- ✅ Tidak ada cover sama sekali --}}
                 <div
                     class="absolute inset-0 flex items-center justify-center bg-gradient-to-br {{ $selectedGradient }} text-white p-2">
-                    <div class="flex flex-col items-center justify-center h-full space-y-1 text-center">
-                        {{-- Decorative Pattern --}}
+                    <div class="flex flex-col items-center justify-center w-full h-full space-y-1 text-center">
                         <div class="absolute inset-0 opacity-10">
                             <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
                                 <defs>
-                                    <pattern id="item-pattern-nocover-{{ $slug }}" x="0" y="0" width="20" height="20"
+                                    <pattern id="pat-nc-{{ $uniqueId }}" x="0" y="0" width="20" height="20"
                                         patternUnits="userSpaceOnUse">
                                         <circle cx="10" cy="10" r="1" fill="white" />
                                     </pattern>
                                 </defs>
-                                <rect width="100%" height="100%" fill="url(#item-pattern-nocover-{{ $slug }})" />
+                                <rect width="100%" height="100%" fill="url(#pat-nc-{{ $uniqueId }})" />
                             </svg>
                         </div>
-
-                        {{-- Initial --}}
-                        <div class="relative z-10 text-2xl font-black leading-none opacity-95 drop-shadow">
-                            {{ $initials }}
-                        </div>
-
-                        {{-- Small decorative line --}}
+                        <div class="relative z-10 text-2xl font-black leading-none opacity-95 drop-shadow">{{ $initials
+                            }}</div>
                         <div class="relative z-10 flex items-center justify-center gap-1">
                             <div class="h-[1.5px] w-3 bg-white/60 rounded"></div>
                             <svg class="w-2 h-2 text-white/80" fill="currentColor" viewBox="0 0 20 20">
@@ -133,8 +123,6 @@ $initials = mb_strtoupper(mb_substr($title, 0, 2));
                             </svg>
                             <div class="h-[1.5px] w-3 bg-white/60 rounded"></div>
                         </div>
-
-                        {{-- Type badge --}}
                         <div
                             class="relative z-10 px-1.5 py-0.5 text-[8px] font-bold bg-white/25 backdrop-blur-sm rounded-full border border-white/30">
                             {{ $publicationType }}
@@ -147,7 +135,6 @@ $initials = mb_strtoupper(mb_substr($title, 0, 2));
                 <div
                     class="absolute inset-y-0 left-0 w-[10%] bg-gradient-to-r from-black/15 to-transparent pointer-events-none">
                 </div>
-
                 {{-- Glossy overlay --}}
                 <div
                     class="absolute inset-0 pointer-events-none bg-gradient-to-tr from-white/0 via-white/0 to-white/12">
@@ -157,7 +144,6 @@ $initials = mb_strtoupper(mb_substr($title, 0, 2));
 
         {{-- Content --}}
         <div class="flex flex-col self-stretch flex-1 min-w-0">
-            {{-- Title --}}
             <h3
                 class="font-bold text-sm leading-[20px] text-[#111827] sm:text-base sm:leading-[24px] lg:text-lg lg:leading-[27px] transition-colors group-hover:text-[#FF6B18]">
                 <span class="line-clamp-2 sm:line-clamp-3 md:line-clamp-4 lg:line-clamp-3">
@@ -165,13 +151,11 @@ $initials = mb_strtoupper(mb_substr($title, 0, 2));
                 </span>
             </h3>
 
-            {{-- Date & Stats --}}
             <div class="flex flex-wrap items-center gap-3 mt-2">
                 <p class="text-[11px] leading-[16px] text-[#A3A6AE] sm:text-sm sm:leading-[21px]">
                     {{ $formattedDate }}
                 </p>
 
-                {{-- ✅ Views Count --}}
                 @if($viewsCount > 0)
                 <span class="inline-flex items-center gap-1 text-[10px] text-[#6B7280] sm:text-xs"
                     title="{{ number_format($viewsCount) }} views">
@@ -185,7 +169,6 @@ $initials = mb_strtoupper(mb_substr($title, 0, 2));
                 </span>
                 @endif
 
-                {{-- ✅ Download Count --}}
                 @if($downloadCount > 0)
                 <span class="inline-flex items-center gap-1 text-[10px] text-[#6B7280] sm:text-xs"
                     title="{{ number_format($downloadCount) }} downloads">
@@ -198,9 +181,7 @@ $initials = mb_strtoupper(mb_substr($title, 0, 2));
                 @endif
             </div>
 
-            {{-- Authors & CTA --}}
             <div class="flex items-center justify-between gap-3 mt-2">
-                {{-- Authors --}}
                 <div class="flex items-center -space-x-2 shrink-0">
                     @if(is_array($authors) && count($authors) > 0)
                     @foreach(array_slice($authors, 0, 3) as $index => $author)
@@ -209,7 +190,7 @@ $initials = mb_strtoupper(mb_substr($title, 0, 2));
                         alt="{{ $author['name'] ?? 'Penulis' }}"
                         title="{{ $author['name'] ?? 'Penulis ' . ($index + 1) }}" loading="eager"
                         style="z-index: {{ 10 - $index }};"
-                        onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ urlencode($author['initials'] ?? $author['name'] ?? 'UN') }}&background=FF6B18&color=fff&size=64&bold=true&font-size=0.5';" />
+                        onerror="this.onerror=null;this.src='https://ui-avatars.com/api/?name={{ urlencode($author['initials'] ?? $author['name'] ?? 'UN') }}&background=FF6B18&color=fff&size=64&bold=true&font-size=0.5';" />
                     @endforeach
 
                     @if($totalAuthors > 3)
@@ -232,7 +213,6 @@ $initials = mb_strtoupper(mb_substr($title, 0, 2));
                     @endif
                 </div>
 
-                {{-- CTA --}}
                 <span
                     class="inline-flex items-center gap-2 text-[11px] text-[#6B7280] transition group-hover:text-[#FF6B18] sm:text-sm">
                     Baca detail

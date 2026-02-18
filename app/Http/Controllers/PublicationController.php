@@ -24,7 +24,6 @@ class PublicationController extends Controller
      */
     public function index(Request $request)
     {
-        // Load publication types WITH content (hasOne relationship)
         $publicationTypes = PublicationType::with('content')
             ->where('is_active', true)
             ->orderBy('name')
@@ -32,107 +31,82 @@ class PublicationController extends Controller
 
         if ($publicationTypes->isEmpty()) {
             return view('pages.publication.index', [
-                'latestPublications'   => [],
-                'publicationTypes'     => $publicationTypes,
-                'selectedType'         => null,
-                'bestAuthors'          => collect([]),
-                'popularPublications'  => collect([]),
-                'featuredPublication'  => null,
-                'featuredTypeContent'  => null,
-                'categories'           => collect([]),
+                'latestPublications'  => [],
+                'publicationTypes'    => $publicationTypes,
+                'selectedType'        => null,
+                'bestAuthors'         => collect([]),
+                'popularPublications' => collect([]),
+                'featuredPublication' => null,
+                'featuredTypeContent' => null,
+                'categories'          => collect([]),
                 'years'               => collect([]),
-                'topKeywords'          => collect([]),
-                'filterSort'           => 'latest',
-                'searchQuery'          => null,
+                'topKeywords'         => collect([]),
+                'filterSort'          => 'latest',
+                'searchQuery'         => null,
             ]);
         }
 
-        // Simple parameters: type & sort only
         $selectedType = $request->query('type', $publicationTypes->first()->slug);
         $filterSort   = $request->query('sort', 'latest');
         $searchQuery  = null;
 
-        $typeExists = $publicationTypes->contains('slug', $selectedType);
-        if (!$typeExists) {
+        if (!$publicationTypes->contains('slug', $selectedType)) {
             $selectedType = $publicationTypes->first()->slug;
         }
 
-        // Get current PublicationType object untuk ambil content
         $currentType = $publicationTypes->firstWhere('slug', $selectedType);
 
-        /**
-         * ✅ Featured Type Content:
-         * SEKARANG: langsung kirim instance model PublicationTypeContent (bisa null)
-         */
-        $featuredTypeContent = $currentType?->content; // bisa null
+        // ✅ Featured Type Content: instance model langsung
+        $featuredTypeContent = $currentType?->content;
 
-        // GET FILTER OPTIONS DATA (for search modal)
-        $categories = \App\Models\Category::whereHas('publications', function ($query) use ($selectedType) {
-            $query->where('status', 'published')
+        // Filter options
+        $categories = \App\Models\Category::whereHas('publications', function ($q) use ($selectedType) {
+            $q->where('status', 'published')
                 ->whereNotNull('published_at')
                 ->where('published_at', '<=', now())
-                ->whereHas('publicationType', function ($q) use ($selectedType) {
-                    $q->where('slug', $selectedType)->where('is_active', true);
-                });
+                ->whereHas('publicationType', fn($q2) => $q2->where('slug', $selectedType)->where('is_active', true));
         })
-            ->withCount(['publications' => function ($query) use ($selectedType) {
-                $query->where('status', 'published')
+            ->withCount(['publications' => function ($q) use ($selectedType) {
+                $q->where('status', 'published')
                     ->whereNotNull('published_at')
                     ->where('published_at', '<=', now())
-                    ->whereHas('publicationType', function ($q) use ($selectedType) {
-                        $q->where('slug', $selectedType)->where('is_active', true);
-                    });
+                    ->whereHas('publicationType', fn($q2) => $q2->where('slug', $selectedType)->where('is_active', true));
             }])
             ->orderBy('name')
             ->get();
 
-        // Publication years untuk current type
         $years = Publication::selectRaw('YEAR(published_at) as year')
             ->where('status', 'published')
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now())
-            ->whereHas('publicationType', function ($query) use ($selectedType) {
-                $query->where('slug', $selectedType)->where('is_active', true);
-            })
+            ->whereHas('publicationType', fn($q) => $q->where('slug', $selectedType)->where('is_active', true))
             ->groupBy('year')
             ->orderByDesc('year')
             ->pluck('year');
 
-        // Top keywords untuk current type
-        $topKeywords = \App\Models\Keyword::whereHas('publications', function ($query) use ($selectedType) {
-            $query->where('status', 'published')
+        $topKeywords = \App\Models\Keyword::whereHas('publications', function ($q) use ($selectedType) {
+            $q->where('status', 'published')
                 ->whereNotNull('published_at')
                 ->where('published_at', '<=', now())
-                ->whereHas('publicationType', function ($q) use ($selectedType) {
-                    $q->where('slug', $selectedType)->where('is_active', true);
-                });
+                ->whereHas('publicationType', fn($q2) => $q2->where('slug', $selectedType)->where('is_active', true));
         })
-            ->withCount(['publications' => function ($query) use ($selectedType) {
-                $query->where('status', 'published')
+            ->withCount(['publications' => function ($q) use ($selectedType) {
+                $q->where('status', 'published')
                     ->whereNotNull('published_at')
                     ->where('published_at', '<=', now())
-                    ->whereHas('publicationType', function ($q) use ($selectedType) {
-                        $q->where('slug', $selectedType)->where('is_active', true);
-                    });
+                    ->whereHas('publicationType', fn($q2) => $q2->where('slug', $selectedType)->where('is_active', true));
             }])
             ->orderByDesc('publications_count')
             ->limit(20)
             ->get();
 
-        // SIMPLIFIED QUERY - Only type & sort filter
-        $publicationsQuery = Publication::with([
-            'authors.user',
-            'publicationType',
-            'categories'
-        ])
+        // Latest publications
+        $publicationsQuery = Publication::with(['authors.user', 'publicationType', 'categories'])
             ->where('status', 'published')
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now())
-            ->whereHas('publicationType', function ($query) use ($selectedType) {
-                $query->where('slug', $selectedType)->where('is_active', true);
-            });
+            ->whereHas('publicationType', fn($q) => $q->where('slug', $selectedType)->where('is_active', true));
 
-        // Apply sorting only
         switch ($filterSort) {
             case 'popular':
                 $publicationsQuery->withCount('downloadLogs')->orderByDesc('download_logs_count');
@@ -143,20 +117,14 @@ class PublicationController extends Controller
             case 'title':
                 $publicationsQuery->orderBy('title', 'asc');
                 break;
-            case 'latest':
             default:
                 $publicationsQuery->orderBy('published_at', 'desc');
                 break;
         }
 
-        // Get Latest Publications
         $publications = $publicationsQuery->take(6)->get();
 
-        // Map Latest Publications
         $latestPublications = $publications->map(function ($pub) {
-            $firstAuthor = $pub->authors->first();
-            $firstAuthorName = $firstAuthor ? $firstAuthor->name : 'Anonymous';
-
             $publicationType = 'Publikasi';
             if ($pub->relationLoaded('publicationType') && $pub->publicationType) {
                 $publicationType = $pub->publicationType->name;
@@ -165,84 +133,60 @@ class PublicationController extends Controller
                 $publicationType = $type ? $type->name : 'Publikasi';
             }
 
+            $firstAuthor = $pub->authors->first();
+
             return [
-                'id'               => $pub->id,
-                'title'            => $pub->title,
-                'slug'             => $pub->slug,
-                'cover_url'        => $this->getCoverUrl($pub),
-                'category'         => $pub->category_name,
-                'publication_type' => $publicationType,
-                'formatted_date'   => $pub->formatted_date,
-                'status'           => $pub->publicationType && $pub->publicationType->requires_review
-                    ? 'Peer-reviewed'
-                    : 'Terverifikasi',
-                'type'             => $publicationType,
-                'detail_url'       => route('publikasi.show', $pub->slug),
-                'authors'          => $pub->authors->take(6)->map(function ($author) {
-                    return [
-                        'id'        => $author->id,
-                        'name'      => $author->name,
-                        'photo'     => $author->photo_url,
-                        'initials'  => $author->initials,
-                    ];
-                })->toArray(),
-                'total_authors'    => $pub->authors->count(),
-                'first_author_name' => $firstAuthorName,
+                'id'                => $pub->id,
+                'title'             => $pub->title,
+                'slug'              => $pub->slug,
+                'cover_url'         => $this->getCoverUrl($pub),
+                'category'          => $pub->category_name,
+                'publication_type'  => $publicationType,
+                'formatted_date'    => $pub->formatted_date,
+                'status'            => $pub->publicationType?->requires_review ? 'Peer-reviewed' : 'Terverifikasi',
+                'type'              => $publicationType,
+                'detail_url'        => route('publikasi.show', $pub->slug),
+                'authors'           => $pub->authors->take(6)->map(fn($a) => [
+                    'id'       => $a->id,
+                    'name'     => $a->name,
+                    'photo'    => $a->photo_url,
+                    'initials' => $a->initials,
+                ])->toArray(),
+                'total_authors'     => $pub->authors->count(),
+                'first_author_name' => $firstAuthor?->name ?? 'Anonymous',
             ];
         })->toArray();
 
-        // GET BEST AUTHORS - LIMIT 6
         $bestAuthors = $this->getBestAuthorsAction->execute($selectedType, 6);
 
-        // Get Popular Publications
-        $popularPubs = Publication::with([
-            'authors.user',
-            'publicationType',
-            'categories'
-        ])
-            ->withCount('downloadLogs')
+        // ✅ Popular Publications - ALL TIME TRENDING
+        // Skor = total_views + (total_downloads * 2), pakai selectRaw semua sekalian
+        $popularPubs = Publication::with(['authors.user', 'publicationType', 'categories'])
+            ->selectRaw('
+        publications.*,
+        (SELECT COUNT(*) FROM view_logs WHERE view_logs.publication_id = publications.id) as total_views,
+        (SELECT COUNT(*) FROM download_logs WHERE download_logs.publication_id = publications.id) as total_downloads,
+        (
+            (SELECT COUNT(*) FROM view_logs WHERE view_logs.publication_id = publications.id) +
+            (SELECT COUNT(*) FROM download_logs WHERE download_logs.publication_id = publications.id) * 2
+        ) as trending_score
+    ')
             ->where('status', 'published')
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now())
-            ->whereHas('publicationType', function ($query) use ($selectedType) {
-                $query->where('slug', $selectedType)->where('is_active', true);
-            })
-            ->orderByDesc('download_logs_count')
-            ->take(7)
+            ->whereHas('publicationType', fn($q) => $q->where('slug', $selectedType)->where('is_active', true))
+            ->orderByDesc('trending_score')
+            ->orderByDesc('total_downloads')
+            ->orderByDesc('total_views')
+            ->orderByDesc('published_at')
+            ->take(6)
             ->get();
 
-        // Featured Publication (fallback kalau tidak ada content custom)
+        // ✅ Kiri selalu dari featuredTypeContent, tidak pakai featured dari publication
         $featuredPublication = null;
-        if (!$featuredTypeContent && $popularPubs->first()) {
-            $featuredPub = $popularPubs->first();
 
-            $featuredPubType = 'Publikasi';
-            if ($featuredPub->publicationType) {
-                $featuredPubType = $featuredPub->publicationType->name;
-            }
-
-            $featuredPublication = [
-                'id'               => $featuredPub->id,
-                'title'            => $featuredPub->title,
-                'slug'             => $featuredPub->slug,
-                'cover_url'        => $this->getCoverUrl($featuredPub),
-                'category'         => $featuredPub->category_name,
-                'publication_type' => $featuredPubType,
-                'type'             => $featuredPubType,
-                'abstract'         => \Illuminate\Support\Str::limit($featuredPub->abstract, 120),
-                'download_count'   => $featuredPub->download_logs_count,
-                'detail_url'       => route('publikasi.show', $featuredPub->slug),
-            ];
-        }
-
-        // Popular Publications List
-        $skipCount = $featuredTypeContent ? 0 : 1;
-        $popularPublications = $popularPubs->skip($skipCount)->take(6)->map(function ($pub) {
-            $pubType = 'Publikasi';
-            if ($pub->publicationType) {
-                $pubType = $pub->publicationType->name;
-            }
-
+        $popularPublications = $popularPubs->map(function ($pub) {
+            $pubType = $pub->publicationType?->name ?? 'Publikasi';
             return [
                 'id'               => $pub->id,
                 'title'            => $pub->title,
@@ -251,27 +195,27 @@ class PublicationController extends Controller
                 'category'         => $pub->category_name,
                 'publication_type' => $pubType,
                 'formatted_date'   => $pub->formatted_date,
-                'download_count'   => $pub->download_logs_count,
-                'views_count'      => $pub->views_count,
+                'download_count'   => (int) ($pub->total_downloads ?? 0),
+                'views_count'      => (int) ($pub->total_views ?? 0),
+                'trending_score'   => (int) ($pub->trending_score ?? 0),
                 'detail_url'       => route('publikasi.show', $pub->slug),
-                'authors'          => $pub->authors->take(6)->map(function ($author) {
-                    return [
-                        'id'        => $author->id,
-                        'name'      => $author->name,
-                        'photo'     => $author->photo_url,
-                        'initials'  => $author->initials,
-                    ];
-                })->toArray(),
+                'authors'          => $pub->authors->take(6)->map(fn($a) => [
+                    'id'       => $a->id,
+                    'name'     => $a->name,
+                    'photo'    => $a->photo_url,
+                    'initials' => $a->initials,
+                ])->toArray(),
                 'total_authors'    => $pub->authors->count(),
             ];
         });
+
 
         return view('pages.publication.index', compact(
             'latestPublications',
             'publicationTypes',
             'selectedType',
             'bestAuthors',
-            'popularPubliclications',
+            'popularPublications',
             'featuredPublication',
             'featuredTypeContent',
             'categories',
