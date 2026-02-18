@@ -18,6 +18,25 @@
         }
     }
 
+    /* ✅ Animate on Scroll — pakai class bukan inline style */
+    .animate-hidden {
+        opacity: 0;
+        transform: translateY(20px);
+        transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+    }
+
+    .animate-visible {
+        opacity: 1 !important;
+        transform: translateY(0) !important;
+    }
+
+    /* ✅ Paksa team-image selalu visible — tidak ikut animasi */
+    .team-image {
+        opacity: 1 !important;
+        transition: transform 0.3s ease;
+    }
+
+
     .stat-card {
         animation: countUp 0.6s ease-out forwards;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -831,23 +850,45 @@
 
 {{-- Team Structure / Organizational Chart --}}
 <section class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px] mb-12 sm:mb-16">
+
+    {{-- Header --}}
     <div class="mb-8 text-center sm:mb-12">
-        <h2 class="text-2xl sm:text-3xl md:text-4xl font-black text-[#1A1A1A] mb-3 sm:mb-4">👥 Struktur Organisasi</h2>
+        <h2 class="text-2xl sm:text-3xl md:text-4xl font-black text-[#1A1A1A] mb-3 sm:mb-4">
+            👥 Struktur Organisasi
+        </h2>
         <p class="text-sm sm:text-base md:text-lg text-[#737373] max-w-2xl mx-auto">
             Tim profesional yang berdedikasi untuk memberikan layanan terbaik
         </p>
     </div>
 
-    {{-- Leadership / Top Management --}}
+    {{-- ===================================================== --}}
+    {{-- LEADERSHIP --}}
+    {{-- ===================================================== --}}
+    @if(isset($leadership) && $leadership->isNotEmpty())
     <div class="mb-8 sm:mb-12">
-        <div class="flex justify-center">
+        <div class="flex flex-wrap justify-center gap-6">
+            @foreach($leadership as $member)
+            @php
+            // ✅ Resolve foto: storage path atau UI Avatars fallback
+            $photoUrl = (!empty($member->photo) && !filter_var($member->photo, FILTER_VALIDATE_URL))
+            ? asset('storage/' . ltrim($member->photo, '/'))
+            : ($member->photo ?? null);
+
+            $fallbackUrl = 'https://ui-avatars.com/api/?name=' . urlencode($member->name)
+            . '&size=200&background=ffffff&color=FF6B18&bold=true';
+
+            $finalPhoto = $photoUrl ?? $fallbackUrl;
+            @endphp
             <div
-                class="team-card bg-gradient-to-br from-[#FF6B18] to-[#E64627] rounded-2xl border-2 border-[#FF6B18] p-6 sm:p-8 text-center max-w-sm w-full shadow-xl">
+                class="team-card bg-gradient-to-br from-[#FF6B18] to-[#E64627] rounded-2xl border-2 border-[#FF6B18] p-6 sm:p-8 text-center max-w-sm w-full shadow-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
+
+                {{-- Foto --}}
                 <div class="relative inline-block mb-4">
                     <div
-                        class="w-24 h-24 mx-auto overflow-hidden border-4 border-white shadow-lg sm:w-28 sm:h-28 rounded-2xl">
-                        <img src="https://ui-avatars.com/api/?name=Dr+Ahmad+Setiawan&size=200&background=fff&color=FF6B18&bold=true"
-                            alt="CEO" class="object-cover w-full h-full team-image">
+                        class="w-24 h-24 mx-auto overflow-hidden border-4 border-white shadow-lg sm:w-28 sm:h-28 rounded-2xl bg-white/20">
+                        <img src="{{ $finalPhoto }}" alt="{{ $member->name }}"
+                            class="object-cover w-full h-full team-image" loading="lazy"
+                            onerror="this.onerror=null;this.src='{{ $fallbackUrl }}';" />
                     </div>
                     <div
                         class="absolute flex items-center justify-center w-10 h-10 bg-white shadow-lg -bottom-2 -right-2 rounded-xl">
@@ -858,164 +899,168 @@
                         </svg>
                     </div>
                 </div>
-                <h3 class="mb-1 text-xl font-black text-white sm:text-2xl">Dr. Ahmad Setiawan</h3>
-                <p class="mb-2 text-sm font-semibold sm:text-base text-white/90">Chief Executive Officer</p>
-                <p class="mb-4 text-xs leading-relaxed sm:text-sm text-white/80">
-                    Memimpin visi strategis dan pertumbuhan platform
-                </p>
+
+                {{-- Info --}}
+                <h3 class="mb-1 text-xl font-black text-white sm:text-2xl">{{ $member->name }}</h3>
+                <p class="mb-2 text-sm font-semibold sm:text-base text-white/90">{{ $member->title }}</p>
+                @if($member->description)
+                <p class="mb-4 text-xs leading-relaxed sm:text-sm text-white/80">{{ $member->description }}</p>
+                @endif
+
+                {{-- Kontak --}}
                 <div class="flex items-center justify-center gap-2">
-                    <a href="mailto:ahmad@DABRAKA.id"
-                        class="flex items-center justify-center transition-all rounded-lg w-9 h-9 bg-white/20 hover:bg-white/30">
+                    @if($member->email)
+                    <a href="mailto:{{ $member->email }}"
+                        class="flex items-center justify-center transition-all rounded-lg w-9 h-9 bg-white/20 hover:bg-white/40"
+                        title="Email {{ $member->name }}">
                         <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                         </svg>
                     </a>
-                    <a href="#"
-                        class="flex items-center justify-center transition-all rounded-lg w-9 h-9 bg-white/20 hover:bg-white/30">
+                    @endif
+                    @if($member->linkedin)
+                    <a href="{{ $member->linkedin }}" target="_blank" rel="noopener noreferrer"
+                        class="flex items-center justify-center transition-all rounded-lg w-9 h-9 bg-white/20 hover:bg-white/40"
+                        title="LinkedIn {{ $member->name }}">
                         <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
                             <path
                                 d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
                         </svg>
                     </a>
+                    @endif
                 </div>
             </div>
+            @endforeach
         </div>
 
-        {{-- Connector Line --}}
-        <div class="flex justify-center my-4">
+        @if(isset($management) && $management->isNotEmpty())
+        <div class="flex justify-center my-4 sm:my-6">
             <div class="w-0.5 h-8 bg-gradient-to-b from-[#FF6B18] to-[#EEF0F7]"></div>
         </div>
+        @endif
     </div>
+    @endif
 
-    {{-- Management Team --}}
+    {{-- ===================================================== --}}
+    {{-- MANAGEMENT --}}
+    {{-- ===================================================== --}}
+    @if(isset($management) && $management->isNotEmpty())
     <div class="mb-8 sm:mb-12">
         <div class="grid max-w-5xl grid-cols-1 gap-6 mx-auto sm:grid-cols-2 lg:grid-cols-3">
-            {{-- CTO --}}
-            <div class="team-card bg-white rounded-2xl border-2 border-[#EEF0F7] p-6 text-center">
+            @foreach($management as $member)
+            @php
+            $photoUrl = (!empty($member->photo) && !filter_var($member->photo, FILTER_VALIDATE_URL))
+            ? asset('storage/' . ltrim($member->photo, '/'))
+            : ($member->photo ?? null);
+
+            $fallbackUrl = 'https://ui-avatars.com/api/?name=' . urlencode($member->name)
+            . '&size=200&background=FFF7F2&color=FF6B18&bold=true';
+
+            $finalPhoto = $photoUrl ?? $fallbackUrl;
+            @endphp
+            <div
+                class="team-card bg-white rounded-2xl border-2 border-[#EEF0F7] p-6 text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-[#FF6B18]/30">
+
+                {{-- Foto --}}
                 <div class="relative inline-block mb-4">
                     <div
-                        class="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-4 border-[#FFF7F2] mx-auto">
-                        <img src="https://ui-avatars.com/api/?name=Budi+Santoso&size=200&background=FFF7F2&color=FF6B18&bold=true"
-                            alt="CTO" class="object-cover w-full h-full team-image">
+                        class="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-4 border-[#FFF7F2] mx-auto bg-[#FFF7F2]">
+                        <img src="{{ $finalPhoto }}" alt="{{ $member->name }}"
+                            class="object-cover w-full h-full team-image" loading="lazy"
+                            onerror="this.onerror=null;this.src='{{ $fallbackUrl }}';" />
                     </div>
+                    {{-- Icon badge per icon_type --}}
                     <div
                         class="absolute -bottom-2 -right-2 w-8 h-8 bg-gradient-to-br from-[#FF6B18] to-[#E64627] rounded-lg flex items-center justify-center shadow-lg">
+                        @switch($member->icon_type)
+                        @case('code')
                         <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
                         </svg>
-                    </div>
-                </div>
-                <h3 class="text-lg sm:text-xl font-black text-[#1A1A1A] mb-1">Budi Santoso, M.Kom</h3>
-                <p class="text-sm text-[#FF6B18] font-semibold mb-2">Chief Technology Officer</p>
-                <p class="text-xs sm:text-sm text-[#737373] leading-relaxed mb-4">
-                    Mengawasi pengembangan teknologi dan infrastruktur platform
-                </p>
-                <div class="flex items-center justify-center gap-2">
-                    <a href="mailto:budi@DABRAKA.id"
-                        class="w-8 h-8 bg-[#EEF0F7] hover:bg-[#FF6B18] hover:text-white rounded-lg flex items-center justify-center transition-all">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                        </svg>
-                    </a>
-                    <a href="#"
-                        class="w-8 h-8 bg-[#EEF0F7] hover:bg-[#FF6B18] hover:text-white rounded-lg flex items-center justify-center transition-all">
-                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                            <path
-                                d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
-                        </svg>
-                    </a>
-                </div>
-            </div>
-
-            {{-- COO --}}
-            <div class="team-card bg-white rounded-2xl border-2 border-[#EEF0F7] p-6 text-center">
-                <div class="relative inline-block mb-4">
-                    <div
-                        class="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-4 border-[#FFF7F2] mx-auto">
-                        <img src="https://ui-avatars.com/api/?name=Siti+Nurhaliza&size=200&background=FFF7F2&color=FF6B18&bold=true"
-                            alt="COO" class="object-cover w-full h-full team-image">
-                    </div>
-                    <div
-                        class="absolute -bottom-2 -right-2 w-8 h-8 bg-gradient-to-br from-[#FF6B18] to-[#E64627] rounded-lg flex items-center justify-center shadow-lg">
+                        @break
+                        @case('operations')
                         <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                         </svg>
-                    </div>
-                </div>
-                <h3 class="text-lg sm:text-xl font-black text-[#1A1A1A] mb-1">Siti Nurhaliza, S.E., M.M.</h3>
-                <p class="text-sm text-[#FF6B18] font-semibold mb-2">Chief Operating Officer</p>
-                <p class="text-xs sm:text-sm text-[#737373] leading-relaxed mb-4">
-                    Mengelola operasional harian dan efisiensi organisasi
-                </p>
-                <div class="flex items-center justify-center gap-2">
-                    <a href="mailto:siti@DABRAKA.id"
-                        class="w-8 h-8 bg-[#EEF0F7] hover:bg-[#FF6B18] hover:text-white rounded-lg flex items-center justify-center transition-all">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                        </svg>
-                    </a>
-                    <a href="#"
-                        class="w-8 h-8 bg-[#EEF0F7] hover:bg-[#FF6B18] hover:text-white rounded-lg flex items-center justify-center transition-all">
-                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                            <path
-                                d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
-                        </svg>
-                    </a>
-                </div>
-            </div>
-
-            {{-- CMO --}}
-            <div class="team-card bg-white rounded-2xl border-2 border-[#EEF0F7] p-6 text-center">
-                <div class="relative inline-block mb-4">
-                    <div
-                        class="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-4 border-[#FFF7F2] mx-auto">
-                        <img src="https://ui-avatars.com/api/?name=Andi+Wijaya&size=200&background=FFF7F2&color=FF6B18&bold=true"
-                            alt="CMO" class="object-cover w-full h-full team-image">
-                    </div>
-                    <div
-                        class="absolute -bottom-2 -right-2 w-8 h-8 bg-gradient-to-br from-[#FF6B18] to-[#E64627] rounded-lg flex items-center justify-center shadow-lg">
+                        @break
+                        @case('marketing')
                         <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
                         </svg>
+                        @break
+                        @case('content')
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        @break
+                        @case('support')
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                        @break
+                        @default
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        @endswitch
                     </div>
                 </div>
-                <h3 class="text-lg sm:text-xl font-black text-[#1A1A1A] mb-1">Andi Wijaya, S.Sos., M.M.</h3>
-                <p class="text-sm text-[#FF6B18] font-semibold mb-2">Chief Marketing Officer</p>
-                <p class="text-xs sm:text-sm text-[#737373] leading-relaxed mb-4">
-                    Memimpin strategi pemasaran dan komunikasi brand
-                </p>
+
+                {{-- Info --}}
+                <h3 class="text-lg sm:text-xl font-black text-[#1A1A1A] mb-1">{{ $member->name }}</h3>
+                <p class="text-sm text-[#FF6B18] font-semibold mb-2">{{ $member->title }}</p>
+                @if($member->description)
+                <p class="text-xs sm:text-sm text-[#737373] leading-relaxed mb-4">{{ $member->description }}</p>
+                @endif
+
+                {{-- Kontak --}}
                 <div class="flex items-center justify-center gap-2">
-                    <a href="mailto:andi@DABRAKA.id"
-                        class="w-8 h-8 bg-[#EEF0F7] hover:bg-[#FF6B18] hover:text-white rounded-lg flex items-center justify-center transition-all">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    @if($member->email)
+                    <a href="mailto:{{ $member->email }}"
+                        class="w-8 h-8 bg-[#EEF0F7] hover:bg-[#FF6B18] rounded-lg flex items-center justify-center transition-all group"
+                        title="Email {{ $member->name }}">
+                        <svg class="w-4 h-4 text-[#6B7280] group-hover:text-white transition-colors" fill="none"
+                            stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                         </svg>
                     </a>
-                    <a href="#"
-                        class="w-8 h-8 bg-[#EEF0F7] hover:bg-[#FF6B18] hover:text-white rounded-lg flex items-center justify-center transition-all">
-                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    @endif
+                    @if($member->linkedin)
+                    <a href="{{ $member->linkedin }}" target="_blank" rel="noopener noreferrer"
+                        class="w-8 h-8 bg-[#EEF0F7] hover:bg-[#FF6B18] rounded-lg flex items-center justify-center transition-all group"
+                        title="LinkedIn {{ $member->name }}">
+                        <svg class="w-4 h-4 text-[#6B7280] group-hover:text-white transition-colors" fill="currentColor"
+                            viewBox="0 0 24 24">
                             <path
                                 d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
                         </svg>
                     </a>
+                    @endif
                 </div>
             </div>
+            @endforeach
         </div>
 
-        {{-- Connector Line --}}
-        <div class="flex justify-center my-4">
+        @if(isset($departments) && $departments->isNotEmpty())
+        <div class="flex justify-center my-4 sm:my-6">
             <div class="w-0.5 h-8 bg-gradient-to-b from-[#EEF0F7] to-transparent"></div>
         </div>
+        @endif
     </div>
+    @endif
 
-    {{-- Department Teams --}}
+    {{-- ===================================================== --}}
+    {{-- DEPARTMENTS --}}
+    {{-- ===================================================== --}}
+    @if(isset($departments) && $departments->isNotEmpty())
     <div>
         <div class="mb-6 text-center sm:mb-8">
             <h3 class="text-xl sm:text-2xl font-black text-[#1A1A1A] mb-2">Tim Departemen</h3>
@@ -1023,87 +1068,94 @@
         </div>
 
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
-            {{-- Development Team --}}
-            <div class="team-card bg-white rounded-xl border-2 border-[#EEF0F7] p-5">
+            @foreach($departments as $dept)
+            <div
+                class="team-card bg-white rounded-xl border-2 border-[#EEF0F7] p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-[#FF6B18]/30">
+
+                {{-- Icon --}}
                 <div
                     class="w-12 h-12 bg-gradient-to-br from-[#FF6B18]/10 to-[#E64627]/10 rounded-xl flex items-center justify-center mb-4">
+                    @switch($dept->icon_type)
+                    @case('code')
                     <svg class="w-6 h-6 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
                     </svg>
-                </div>
-                <h4 class="text-base sm:text-lg font-black text-[#1A1A1A] mb-2">Tim Pengembangan</h4>
-                <p class="text-xs sm:text-sm text-[#737373] mb-3">Mengembangkan dan memelihara platform</p>
-                <div class="flex items-center gap-2 text-xs text-[#737373]">
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path
-                            d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
-                    </svg>
-                    <span class="font-semibold">8 Anggota</span>
-                </div>
-            </div>
-
-            {{-- Content Team --}}
-            <div class="team-card bg-white rounded-xl border-2 border-[#EEF0F7] p-5">
-                <div
-                    class="w-12 h-12 bg-gradient-to-br from-[#FF6B18]/10 to-[#E64627]/10 rounded-xl flex items-center justify-center mb-4">
+                    @break
+                    @case('content')
                     <svg class="w-6 h-6 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                     </svg>
-                </div>
-                <h4 class="text-base sm:text-lg font-black text-[#1A1A1A] mb-2">Tim Konten</h4>
-                <p class="text-xs sm:text-sm text-[#737373] mb-3">Kurasi dan review publikasi ilmiah</p>
-                <div class="flex items-center gap-2 text-xs text-[#737373]">
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path
-                            d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
-                    </svg>
-                    <span class="font-semibold">6 Anggota</span>
-                </div>
-            </div>
-
-            {{-- Marketing Team --}}
-            <div class="team-card bg-white rounded-xl border-2 border-[#EEF0F7] p-5">
-                <div
-                    class="w-12 h-12 bg-gradient-to-br from-[#FF6B18]/10 to-[#E64627]/10 rounded-xl flex items-center justify-center mb-4">
+                    @break
+                    @case('marketing')
                     <svg class="w-6 h-6 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
                     </svg>
-                </div>
-                <h4 class="text-base sm:text-lg font-black text-[#1A1A1A] mb-2">Tim Pemasaran</h4>
-                <p class="text-xs sm:text-sm text-[#737373] mb-3">Strategi marketing dan outreach</p>
-                <div class="flex items-center gap-2 text-xs text-[#737373]">
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path
-                            d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                    @break
+                    @case('operations')
+                    <svg class="w-6 h-6 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                     </svg>
-                    <span class="font-semibold">5 Anggota</span>
-                </div>
-            </div>
-
-            {{-- Support Team --}}
-            <div class="team-card bg-white rounded-xl border-2 border-[#EEF0F7] p-5">
-                <div
-                    class="w-12 h-12 bg-gradient-to-br from-[#FF6B18]/10 to-[#E64627]/10 rounded-xl flex items-center justify-center mb-4">
+                    @break
+                    @case('support')
                     <svg class="w-6 h-6 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
                     </svg>
+                    @break
+                    @default
+                    <svg class="w-6 h-6 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    @endswitch
                 </div>
-                <h4 class="text-base sm:text-lg font-black text-[#1A1A1A] mb-2">Tim Dukungan</h4>
-                <p class="text-xs sm:text-sm text-[#737373] mb-3">Customer support dan bantuan teknis</p>
+
+                {{-- Info --}}
+                <h4 class="text-base sm:text-lg font-black text-[#1A1A1A] mb-2">{{ $dept->name }}</h4>
+                @if($dept->description)
+                <p class="text-xs sm:text-sm text-[#737373] mb-3 leading-relaxed">{{ $dept->description }}</p>
+                @endif
+                @if($dept->member_count > 0)
                 <div class="flex items-center gap-2 text-xs text-[#737373]">
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <svg class="w-4 h-4 text-[#FF6B18]" fill="currentColor" viewBox="0 0 20 20">
                         <path
                             d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
                     </svg>
-                    <span class="font-semibold">4 Anggota</span>
+                    <span class="font-semibold">{{ $dept->member_count }} Anggota</span>
                 </div>
+                @endif
             </div>
+            @endforeach
         </div>
     </div>
+    @endif
+
+    {{-- ===================================================== --}}
+    {{-- EMPTY STATE --}}
+    {{-- ===================================================== --}}
+    @if(
+    (!isset($leadership) || $leadership->isEmpty()) &&
+    (!isset($management) || $management->isEmpty()) &&
+    (!isset($departments) || $departments->isEmpty())
+    )
+    <div class="flex flex-col items-center justify-center py-16 text-center">
+        <div class="flex h-20 w-20 items-center justify-center rounded-2xl bg-[#FFF5ED] mb-4">
+            <svg class="w-10 h-10 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+        </div>
+        <h3 class="text-lg font-black text-[#1A1A1A] mb-2">Data tim belum ditambahkan</h3>
+        <p class="text-sm text-[#A3A6AE] max-w-xs leading-relaxed">
+            Tambahkan anggota tim melalui panel admin untuk menampilkan struktur organisasi.
+        </p>
+    </div>
+    @endif
+
 </section>
 
 
@@ -1159,8 +1211,11 @@
 
 @push('scripts')
 <script>
-    (function() {
-    // Smooth Scroll
+    (function () {
+
+    // =========================================
+    // 1. Smooth Scroll
+    // =========================================
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function (e) {
             e.preventDefault();
@@ -1171,27 +1226,60 @@
         });
     });
 
-    // Animate on Scroll
-    const observerOptions = {
-        threshold: 0.1,
-        rootMargin: '0px 0px -50px 0px'
-    };
-
+    // =========================================
+    // 2. Animate on Scroll — fix opacity issue
+    // =========================================
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
-                entry.target.style.opacity = '1';
-                entry.target.style.transform = 'translateY(0)';
+                requestAnimationFrame(() => {
+                    entry.target.classList.remove('animate-hidden');
+                    entry.target.classList.add('animate-visible');
+                });
+                observer.unobserve(entry.target); // ✅ stop setelah muncul
             }
         });
-    }, observerOptions);
+    }, {
+        threshold: 0.05,                    // ✅ lebih kecil agar tidak miss
+        rootMargin: '0px 0px -30px 0px'    // ✅ kurangi margin agar tidak skip
+    });
 
+    // ✅ Pakai class, bukan el.style.opacity — inline style tidak bisa di-override CSS
     document.querySelectorAll('.stat-card, .value-card, .team-card').forEach(el => {
-        el.style.opacity = '0';
-        el.style.transform = 'translateY(20px)';
-        el.style.transition = 'all 0.6s ease-out';
+        el.classList.add('animate-hidden');
         observer.observe(el);
     });
+
+    // =========================================
+    // 3. Stats Counter Animation
+    // =========================================
+    const counterObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const el = entry.target;
+                const target = parseInt(el.getAttribute('data-count') || '0');
+                if (!target || el.dataset.counted) return;
+
+                el.dataset.counted = true;
+                let current = 0;
+                const duration = 1500;
+                const step = Math.ceil(target / (duration / 16));
+
+                const timer = setInterval(() => {
+                    current = Math.min(current + step, target);
+                    el.textContent = new Intl.NumberFormat('id-ID').format(current) + '+';
+                    if (current >= target) clearInterval(timer);
+                }, 16);
+
+                counterObserver.unobserve(el);
+            }
+        });
+    }, { threshold: 0.3 });
+
+    document.querySelectorAll('[data-count]').forEach(el => {
+        counterObserver.observe(el);
+    });
+
 })();
 </script>
 @endpush
