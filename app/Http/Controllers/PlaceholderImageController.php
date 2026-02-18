@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Intervention\Image\Facades\Image;
+use Intervention\Image\Laravel\Facades\Image;
 
 class PlaceholderImageController extends Controller
 {
@@ -41,17 +41,17 @@ class PlaceholderImageController extends Controller
 
         // ✅ Gradient colors berdasarkan type (LOWERCASE KEYS)
         $gradients = [
-            'buku' => ['start' => [59, 130, 246], 'end' => [29, 78, 216]],     // Blue
-            'jurnal' => ['start' => [255, 107, 24], 'end' => [230, 70, 39]],   // Orange
-            'opini' => ['start' => [16, 185, 129], 'end' => [5, 150, 105]],    // Green
-            'artikel' => ['start' => [245, 158, 11], 'end' => [217, 119, 6]],  // Yellow
+            'buku' => ['start' => [59, 130, 246], 'end' => [29, 78, 216]],      // Blue
+            'jurnal' => ['start' => [255, 107, 24], 'end' => [230, 70, 39]],    // Orange
+            'opini' => ['start' => [16, 185, 129], 'end' => [5, 150, 105]],     // Green
+            'artikel' => ['start' => [245, 158, 11], 'end' => [217, 119, 6]],   // Yellow
             'penelitian' => ['start' => [139, 92, 246], 'end' => [109, 40, 217]], // Purple
-            'skripsi' => ['start' => [236, 72, 153], 'end' => [190, 24, 93]],  // Pink
-            'tesis' => ['start' => [6, 182, 212], 'end' => [8, 145, 178]],     // Cyan
-            'disertasi' => ['start' => [239, 68, 68], 'end' => [220, 38, 38]], // Red
-            'makalah' => ['start' => [20, 184, 166], 'end' => [15, 118, 110]], // Teal
-            'laporan' => ['start' => [168, 85, 247], 'end' => [124, 58, 237]], // Light Purple
-            'default' => ['start' => [107, 114, 128], 'end' => [75, 85, 99]],  // Gray
+            'skripsi' => ['start' => [236, 72, 153], 'end' => [190, 24, 93]],   // Pink
+            'tesis' => ['start' => [6, 182, 212], 'end' => [8, 145, 178]],      // Cyan
+            'disertasi' => ['start' => [239, 68, 68], 'end' => [220, 38, 38]],  // Red
+            'makalah' => ['start' => [20, 184, 166], 'end' => [15, 118, 110]],  // Teal
+            'laporan' => ['start' => [168, 85, 247], 'end' => [124, 58, 237]],  // Light Purple
+            'default' => ['start' => [107, 114, 128], 'end' => [75, 85, 99]],   // Gray
         ];
 
         $gradient = $gradients[$typeNormalized] ?? $gradients['default'];

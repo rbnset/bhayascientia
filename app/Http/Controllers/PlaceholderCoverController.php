@@ -10,186 +10,229 @@ class PlaceholderCoverController extends Controller
 {
     public function generate(Request $request)
     {
-        // Get parameters dengan validation
         $initials = strtoupper(substr($request->input('initials', 'NN'), 0, 3));
-        $type = $request->input('type', 'Publikasi');
-        $title = $request->input('title', 'Untitled');
+        $type     = $request->input('type', 'Publikasi');
+        $title    = $request->input('title', 'Untitled');
         $category = $request->input('category', 'Umum');
-        $author = $request->input('author', 'Anonymous');
+        $author   = $request->input('author', 'Anonymous');
 
-        // ✅ Normalize type (trim & lowercase untuk matching)
         $typeNormalized = mb_strtolower(trim($type));
 
-        // Cache key berdasarkan parameter
-        $cacheKey = 'placeholder_svg_' . md5($initials . $typeNormalized . $title . $category . $author);
+        // Version-aware cache key
+        $version  = $request->input('v', '1');
+        $cacheKey = 'placeholder_svg_v6_' . md5($initials . $typeNormalized . $title . $category . $author . $version);
 
-        // Cache SVG selama 7 hari (lebih pendek untuk development)
         $svg = Cache::remember($cacheKey, 60 * 24 * 7, function () use ($initials, $type, $typeNormalized, $title, $category, $author) {
             return $this->createSVG($initials, $type, $typeNormalized, $title, $category, $author);
         });
 
         return response($svg)
             ->header('Content-Type', 'image/svg+xml')
-            ->header('Cache-Control', 'public, max-age=604800'); // 7 days
+            ->header('Cache-Control', 'public, max-age=604800');
     }
 
     private function createSVG($initials, $typeOriginal, $typeNormalized, $title, $category, $author)
     {
-        // ✅ Gradient colors berdasarkan type (LOWERCASE KEYS)
+        // ✅ Gradient palette (same keys as referensi)
         $gradients = [
-            // Indonesian names
-            'jurnal' => ['start' => '#FF6B18', 'end' => '#E64627'],      // 🟠 Orange
-            'buku' => ['start' => '#3B82F6', 'end' => '#1D4ED8'],        // 🔵 Blue
-            'opini' => ['start' => '#10B981', 'end' => '#059669'],       // 🟢 Green
-            'artikel' => ['start' => '#F59E0B', 'end' => '#D97706'],     // 🟡 Yellow
-            'penelitian' => ['start' => '#8B5CF6', 'end' => '#6D28D9'],  // 🟣 Purple
-            'skripsi' => ['start' => '#EC4899', 'end' => '#BE185D'],     // 🩷 Pink
-            'tesis' => ['start' => '#06B6D4', 'end' => '#0891B2'],       // 🔷 Cyan
-            'disertasi' => ['start' => '#EF4444', 'end' => '#DC2626'],   // 🔴 Red
-            'makalah' => ['start' => '#14B8A6', 'end' => '#0F766E'],     // 🐚 Teal
-            'laporan' => ['start' => '#A855F7', 'end' => '#7C3AED'],     // 💜 Light Purple
-            'prosiding' => ['start' => '#F97316', 'end' => '#EA580C'],   // 🟠 Orange Red
-            'konferensi' => ['start' => '#84CC16', 'end' => '#65A30D'],  // 🟩 Lime
-
-            // English variants
-            'journal' => ['start' => '#FF6B18', 'end' => '#E64627'],
-            'book' => ['start' => '#3B82F6', 'end' => '#1D4ED8'],
-            'opinion' => ['start' => '#10B981', 'end' => '#059669'],
-            'article' => ['start' => '#F59E0B', 'end' => '#D97706'],
-            'research' => ['start' => '#8B5CF6', 'end' => '#6D28D9'],
-            'thesis' => ['start' => '#06B6D4', 'end' => '#0891B2'],
+            // Indonesian
+            'jurnal'     => ['start' => '#FF6B18', 'end' => '#E64627'],
+            'buku'       => ['start' => '#3B82F6', 'end' => '#1D4ED8'],
+            'opini'      => ['start' => '#10B981', 'end' => '#059669'],
+            'artikel'    => ['start' => '#F59E0B', 'end' => '#D97706'],
+            'penelitian' => ['start' => '#8B5CF6', 'end' => '#6D28D9'],
+            'skripsi'    => ['start' => '#EC4899', 'end' => '#BE185D'],
+            'tesis'      => ['start' => '#06B6D4', 'end' => '#0891B2'],
+            'disertasi'  => ['start' => '#EF4444', 'end' => '#DC2626'],
+            'makalah'    => ['start' => '#14B8A6', 'end' => '#0F766E'],
+            'laporan'    => ['start' => '#A855F7', 'end' => '#7C3AED'],
+            'prosiding'  => ['start' => '#F97316', 'end' => '#EA580C'],
+            'konferensi' => ['start' => '#84CC16', 'end' => '#65A30D'],
+            // English
+            'journal'     => ['start' => '#FF6B18', 'end' => '#E64627'],
+            'book'        => ['start' => '#3B82F6', 'end' => '#1D4ED8'],
+            'opinion'     => ['start' => '#10B981', 'end' => '#059669'],
+            'article'     => ['start' => '#F59E0B', 'end' => '#D97706'],
+            'research'    => ['start' => '#8B5CF6', 'end' => '#6D28D9'],
+            'thesis'      => ['start' => '#06B6D4', 'end' => '#0891B2'],
             'dissertation' => ['start' => '#EF4444', 'end' => '#DC2626'],
-            'paper' => ['start' => '#14B8A6', 'end' => '#0F766E'],
-            'report' => ['start' => '#A855F7', 'end' => '#7C3AED'],
-            'proceeding' => ['start' => '#F97316', 'end' => '#EA580C'],
-
-            // Default fallback (Gray)
-            'default' => ['start' => '#6B7280', 'end' => '#4B5563'],
+            'paper'       => ['start' => '#14B8A6', 'end' => '#0F766E'],
+            'report'      => ['start' => '#A855F7', 'end' => '#7C3AED'],
+            'proceeding'  => ['start' => '#F97316', 'end' => '#EA580C'],
+            // Default
+            'default'    => ['start' => '#6B7280', 'end' => '#4B5563'],
         ];
 
-        // ✅ Get gradient with fallback
         $gradient = $gradients[$typeNormalized] ?? $gradients['default'];
 
-        // ✅ Log untuk debugging (hanya di development)
         if (config('app.debug')) {
             \Log::info('SVG Cover Generation', [
-                'type_original' => $typeOriginal,
+                'type_original'  => $typeOriginal,
                 'type_normalized' => $typeNormalized,
-                'gradient_used' => $gradient,
-                'is_default' => !isset($gradients[$typeNormalized]),
+                'gradient_used'  => $gradient,
+                'is_default'     => !isset($gradients[$typeNormalized]),
             ]);
         }
 
-        // Wrap text untuk title (max 35 chars per line, max 3 lines)
-        $wrappedTitle = $this->wrapText($title, 35, 3);
+        $authorsDisplay   = $this->formatAuthors($author);
+        $wrappedTitle     = $this->wrapText($title, 30, 4);
+        $truncatedCategory = Str::limit($category, 32, '...');
 
-        // Truncate strings
-        $truncatedAuthor = Str::limit($author, 35, '...');
-        $truncatedCategory = Str::limit($category, 30, '...');
+        // Unique IDs
+        $gradientId = 'grad-'    . uniqid();
+        $patternId  = 'pattern-' . uniqid();
+        $overlayId  = 'overlay-' . uniqid();
+        $noiseId    = 'noise-'   . uniqid();
+        $glowId     = 'glow-'    . uniqid();
 
-        // Generate unique IDs untuk avoid collision
-        $gradientId = 'grad-' . uniqid();
-        $patternId = 'pattern-' . uniqid();
-        $overlayId = 'overlay-' . uniqid();
+        $titleSVG    = $this->generateTextLines($wrappedTitle, 300, 455, 38);
+        $typeBadge   = $this->escapeXml(strtoupper($typeOriginal));
+        $authorSVG   = $this->escapeXml($authorsDisplay);
+        $categorySVG = $this->escapeXml($truncatedCategory);
+        $initialsSVG = $this->escapeXml($initials);
 
         $svg = <<<SVG
 <?xml version="1.0" encoding="UTF-8"?>
-<svg width="600" height="900" viewBox="0 0 600 900" xmlns="http://www.w3.org/2000/svg">
+<svg width="600" height="900" viewBox="0 0 600 900" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
     <defs>
-        <!-- Main Gradient Background -->
+
+        <!-- ░░ Background Gradient ░░ -->
         <linearGradient id="{$gradientId}" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style="stop-color:{$gradient['start']};stop-opacity:1" />
-            <stop offset="100%" style="stop-color:{$gradient['end']};stop-opacity:1" />
+            <stop offset="0%"   stop-color="{$gradient['start']}" stop-opacity="1"/>
+            <stop offset="55%"  stop-color="{$gradient['end']}"   stop-opacity="1"/>
+            <stop offset="100%" stop-color="{$gradient['start']}" stop-opacity="0.88"/>
         </linearGradient>
 
-        <!-- Dot Pattern -->
-        <pattern id="{$patternId}" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
-            <circle cx="20" cy="20" r="1.5" fill="white" opacity="0.1"/>
+        <!-- ░░ Subtle Dot Pattern ░░ -->
+        <pattern id="{$patternId}" x="0" y="0" width="44" height="44" patternUnits="userSpaceOnUse">
+            <circle cx="22" cy="22" r="1.4" fill="white" opacity="0.09"/>
         </pattern>
 
-        <!-- Overlay Gradient (subtle) -->
+        <!-- ░░ Top-to-bottom vignette ░░ -->
         <linearGradient id="{$overlayId}" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" style="stop-color:white;stop-opacity:0.08" />
-            <stop offset="50%" style="stop-color:transparent;stop-opacity:0" />
-            <stop offset="100%" style="stop-color:black;stop-opacity:0.15" />
+            <stop offset="0%"   stop-color="rgba(255,255,255,0.10)"/>
+            <stop offset="45%"  stop-color="rgba(0,0,0,0.0)"/>
+            <stop offset="100%" stop-color="rgba(0,0,0,0.28)"/>
         </linearGradient>
+
+        <!-- ░░ Logo Drop-shadow glow ░░ -->
+        <filter id="{$glowId}" x="-15%" y="-15%" width="130%" height="130%">
+            <feDropShadow dx="0" dy="0" stdDeviation="5"
+                          flood-color="rgba(255,255,255,0.55)"/>
+        </filter>
+
     </defs>
 
-    <!-- Base Background -->
+    <!-- ─── BACKGROUND ─────────────────────────────── -->
     <rect width="600" height="900" fill="url(#{$gradientId})"/>
-
-    <!-- Pattern Overlay -->
     <rect width="600" height="900" fill="url(#{$patternId})"/>
-
-    <!-- Gradient Overlay -->
     <rect width="600" height="900" fill="url(#{$overlayId})"/>
 
-    <!-- Top Logo Container (Minimal Circle) -->
-    <g transform="translate(50, 50)">
-        <circle cx="0" cy="0" r="35" fill="white" opacity="0.15"/>
-        <circle cx="0" cy="0" r="35" fill="none" stroke="white" stroke-width="2" opacity="0.3"/>
-        <text x="0" y="8" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="white" text-anchor="middle">
-            {$this->escapeXml(substr($initials, 0, 1))}
-        </text>
+    <!-- ─── CORNER ORNAMENTS ──────────────────────── -->
+    <!-- Top-right -->
+    <polygon points="600,0 600,100 500,0" fill="rgba(255,255,255,0.06)"/>
+    <!-- Bottom-left -->
+    <polygon points="0,900 100,900 0,800" fill="rgba(255,255,255,0.06)"/>
+
+    <!-- ─── TOP SECTION ───────────────────────────── -->
+
+    <!-- LOGO 110×110 polos, tanpa elemen apapun -->
+    <image xlink:href="/assets/images/logos/logo.svg"
+           x="32" y="28"
+           width="110" height="110"
+           preserveAspectRatio="xMidYMid meet"
+           opacity="1"
+           filter="url(#{$glowId})"/>
+
+    <!-- Type Badge (top-right, glassmorphism) -->
+    <g transform="translate(418, 44)">
+        <rect x="0" y="0" width="162" height="46" rx="23"
+              fill="rgba(255,255,255,0.18)"
+              stroke="rgba(255,255,255,0.45)" stroke-width="1.4"/>
+        <rect x="4" y="4" width="154" height="38" rx="19"
+              fill="rgba(255,255,255,0.08)"/>
+        <text x="81" y="30"
+              font-family="Arial, sans-serif" font-size="16"
+              font-weight="800" fill="white" text-anchor="middle"
+              letter-spacing="1.2">{$typeBadge}</text>
     </g>
 
-    <!-- Publication Type Badge (Top Right) -->
-    <g transform="translate(400, 50)">
-        <rect x="0" y="0" width="160" height="44" rx="22" fill="white" opacity="0.2"/>
-        <rect x="0" y="0" width="160" height="44" rx="22" fill="none" stroke="white" stroke-width="1.5" opacity="0.4"/>
-        <text x="80" y="28" font-family="Arial, sans-serif" font-size="15" font-weight="700" fill="white" text-anchor="middle">
-            {$this->escapeXml(strtoupper($typeOriginal))}
-        </text>
+    <!-- ─── CENTER INITIALS ───────────────────────── -->
+    <text x="300" y="330"
+          font-family="Arial Black, Arial, sans-serif"
+          font-size="158" font-weight="900"
+          fill="white" opacity="0.97"
+          text-anchor="middle"
+          stroke="rgba(0,0,0,0.12)" stroke-width="2">{$initialsSVG}</text>
+
+    <!-- ─── DIVIDER ───────────────────────────────── -->
+    <line x1="222" y1="372" x2="288" y2="372"
+          stroke="rgba(255,255,255,0.65)" stroke-width="4"
+          stroke-linecap="round"/>
+    <circle cx="300" cy="372" r="7"
+            fill="white" opacity="0.92"/>
+    <line x1="312" y1="372" x2="378" y2="372"
+          stroke="rgba(255,255,255,0.65)" stroke-width="4"
+          stroke-linecap="round"/>
+
+    <!-- ─── TITLE (safe side padding 60px) ──────── -->
+    {$titleSVG}
+
+    <!-- ─── SEPARATOR BEFORE META ────────────────── -->
+    <line x1="60" y1="670" x2="540" y2="670"
+          stroke="rgba(255,255,255,0.18)" stroke-width="1"
+          stroke-linecap="round"/>
+
+    <!-- ─── CATEGORY BADGE ───────────────────────── -->
+    <g transform="translate(300, 720)">
+        <rect x="-110" y="-24" width="220" height="48" rx="24"
+              fill="rgba(255,255,255,0.18)"
+              stroke="rgba(255,255,255,0.42)" stroke-width="1.4"/>
+        <text y="7"
+              font-family="Arial, sans-serif" font-size="20"
+              font-weight="700" fill="white" opacity="0.98"
+              text-anchor="middle" letter-spacing="0.5">{$categorySVG}</text>
     </g>
 
-    <!-- Large Initials (Center) -->
-    <text x="300" y="310" font-family="Arial, sans-serif" font-size="140" font-weight="900" fill="white" opacity="0.95" text-anchor="middle">
-        {$this->escapeXml($initials)}
-    </text>
+    <!-- ─── AUTHOR ────────────────────────────────── -->
+    <text x="300" y="793"
+          font-family="Arial, sans-serif" font-size="20"
+          font-weight="600" fill="white" opacity="0.95"
+          text-anchor="middle" letter-spacing="0.3">{$authorSVG}</text>
 
-    <!-- Decorative Line -->
-    <line x1="220" y1="350" x2="280" y2="350" stroke="white" stroke-width="3" opacity="0.5" stroke-linecap="round"/>
-    <circle cx="300" cy="350" r="5" fill="white" opacity="0.7"/>
-    <line x1="320" y1="350" x2="380" y2="350" stroke="white" stroke-width="3" opacity="0.5" stroke-linecap="round"/>
+    <!-- ─── TAGLINE ───────────────────────────────── -->
+    <text x="300" y="838"
+          font-family="Arial, sans-serif" font-size="16.5"
+          font-weight="400" font-style="italic"
+          fill="rgba(255,255,255,0.88)" text-anchor="middle"
+          letter-spacing="0.9">Where Knowledge Shapes Policing</text>
 
-    <!-- Title (Wrapped, Multi-line) -->
-    {$this->generateTextLines($wrappedTitle, 300, 410, 30)}
+    <!-- ─── BOTTOM ACCENT ─────────────────────────── -->
+    <line x1="232" y1="870" x2="368" y2="870"
+          stroke="rgba(255,255,255,0.45)" stroke-width="3.5"
+          stroke-linecap="round"/>
+    <circle cx="300" cy="870" r="6"
+            fill="white" opacity="0.82"/>
 
-    <!-- Category Badge (Bottom Section) -->
-    <g transform="translate(300, 740)">
-        <rect x="-80" y="-18" width="160" height="36" rx="18" fill="white" opacity="0.15"/>
-        <text y="8" font-family="Arial, sans-serif" font-size="17" font-weight="600" fill="white" opacity="0.9" text-anchor="middle">
-            {$this->escapeXml($truncatedCategory)}
-        </text>
-    </g>
-
-    <!-- Author Name (Bottom) -->
-    <g transform="translate(300, 810)">
-        <text y="0" font-family="Arial, sans-serif" font-size="16" font-weight="500" fill="white" opacity="0.85" text-anchor="middle">
-            {$this->escapeXml($truncatedAuthor)}
-        </text>
-    </g>
-
-    <!-- Bottom Decorative Line -->
-    <line x1="240" y1="860" x2="360" y2="860" stroke="white" stroke-width="2" opacity="0.3" stroke-linecap="round"/>
-
-    <!-- Corner Decorations -->
-    <g transform="translate(540, 0)" opacity="0.08">
-        <path d="M0 0L60 0L60 60Q45 60 33 48Q21 36 9 21Q0 9 0 0Z" fill="white"/>
-    </g>
-    <g transform="translate(60, 900) scale(1, -1)" opacity="0.08">
-        <path d="M0 0L60 0L60 60Q45 60 33 48Q21 36 9 21Q0 9 0 0Z" fill="white"/>
-    </g>
 </svg>
 SVG;
 
         return $svg;
     }
 
-    /**
-     * ✅ Wrap text dengan max chars per line dan max lines
-     */
-    private function wrapText($text, $maxChars, $maxLines)
+    // ─── Format authors + et al. ────────────────────────────────────────────
+    private function formatAuthors(string $author): string
+    {
+        $authors = array_values(array_filter(array_map('trim', explode(',', $author))));
+        return match (true) {
+            count($authors) === 0 => 'Anonymous',
+            count($authors) <= 2  => implode(', ', $authors),
+            default               => $authors[0] . ', ' . $authors[1] . ' et al.',
+        };
+    }
+
+    // ─── Wrap text ──────────────────────────────────────────────────────────
+    private function wrapText(string $text, int $maxChars, int $maxLines): array
     {
         $words = explode(' ', $text);
         $lines = [];
@@ -197,18 +240,12 @@ SVG;
 
         foreach ($words as $word) {
             $testLine = $currentLine ? $currentLine . ' ' . $word : $word;
-
             if (mb_strlen($testLine) <= $maxChars) {
                 $currentLine = $testLine;
             } else {
-                if ($currentLine) {
-                    $lines[] = $currentLine;
-                }
+                if ($currentLine) $lines[] = $currentLine;
                 $currentLine = $word;
-
-                if (count($lines) >= $maxLines - 1) {
-                    break;
-                }
+                if (count($lines) >= $maxLines - 1) break;
             }
         }
 
@@ -216,10 +253,11 @@ SVG;
             $lines[] = $currentLine;
         }
 
-        // Add ellipsis if truncated
-        if (count($lines) == $maxLines) {
-            $remainingWords = array_slice($words, count(explode(' ', implode(' ', $lines))));
-            if (!empty($remainingWords)) {
+        // Ellipsis jika kepotong
+        if (count($lines) === $maxLines) {
+            $joined   = implode(' ', $lines);
+            $remaining = array_slice($words, count(explode(' ', $joined)));
+            if (!empty($remaining)) {
                 $lines[$maxLines - 1] = rtrim($lines[$maxLines - 1], '.') . '...';
             }
         }
@@ -227,31 +265,39 @@ SVG;
         return $lines;
     }
 
-    /**
-     * ✅ Generate SVG text elements for multi-line title
-     */
-    private function generateTextLines($lines, $x, $startY, $lineHeight)
+    // ─── Render title tspan ─────────────────────────────────────────────────
+    private function generateTextLines(array $lines, int $x, int $startY, int $lineHeight): string
     {
-        if (empty($lines)) {
-            return '';
+        if (empty($lines)) return '';
+
+        // Vertical-center multi-line title dalam zona 455–630
+        $totalHeight = (count($lines) - 1) * $lineHeight;
+        $adjustedY   = $startY - ($totalHeight / 2);
+
+        $out = '<text'
+            . ' x="'           . $x         . '"'
+            . ' y="'           . $adjustedY  . '"'
+            . ' font-family="Arial Black, Arial, sans-serif"'
+            . ' font-size="28"'
+            . ' font-weight="800"'
+            . ' fill="white"'
+            . ' opacity="0.97"'
+            . ' text-anchor="middle"'
+            . ' letter-spacing="0.4"'
+            . '>';
+
+        foreach ($lines as $i => $line) {
+            $dy   = $i === 0 ? '0' : $lineHeight;
+            $out .= '<tspan x="' . $x . '" dy="' . $dy . '">'
+                . $this->escapeXml($line)
+                . '</tspan>';
         }
 
-        $textElements = '<text x="' . $x . '" y="' . $startY . '" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="white" opacity="0.95" text-anchor="middle">';
-
-        foreach ($lines as $index => $line) {
-            $dy = $index === 0 ? '0' : $lineHeight;
-            $textElements .= '<tspan x="' . $x . '" dy="' . $dy . '">' . $this->escapeXml($line) . '</tspan>';
-        }
-
-        $textElements .= '</text>';
-
-        return $textElements;
+        return $out . '</text>';
     }
 
-    /**
-     * ✅ Escape XML special characters
-     */
-    private function escapeXml($text)
+    // ─── Escape XML ─────────────────────────────────────────────────────────
+    private function escapeXml(string $text): string
     {
         return htmlspecialchars($text, ENT_XML1 | ENT_QUOTES, 'UTF-8');
     }
