@@ -195,6 +195,3 @@ MOBILE BOTTOM NAV (< sm)========================================================
         </div>
     </div>
     </nav>
-
-    {{-- Safe area spacer --}}
-    <div class="h-20 sm:hidden" aria-hidden="true"></div>
