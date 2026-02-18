@@ -227,6 +227,138 @@ class PublicationController extends Controller
     }
 
     /**
+     * ✅ Display publications by category
+     */
+    public function category(Request $request, ?string $categorySlug = null)
+    {
+        $selectedType   = $request->query('type', 'all');
+        $filterSort     = $request->query('sort', 'latest');
+        $searchQuery    = $request->query('search');
+        $filterCategory = $categorySlug ?? $request->query('category');
+        $filterYear     = $request->query('year');
+        $filterKeyword  = $request->query('keyword');
+
+        // PublicationTypes
+        $publicationTypes = PublicationType::where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'slug', 'name']);
+
+        // Categories dengan publications_count
+        $categories = \App\Models\Category::withCount([
+            'publications' => fn($q) => $q->where('status', 'published')
+                ->whereNotNull('published_at')
+                ->where('published_at', '<=', now())
+        ])
+            ->having('publications_count', '>', 0)
+            ->orderBy('name')
+            ->get();
+
+        // Years
+        $yearsQuery = Publication::selectRaw('YEAR(published_at) as year')
+            ->where('status', 'published')
+            ->whereNotNull('published_at')
+            ->where('published_at', '<=', now());
+
+        if ($selectedType !== 'all') {
+            $yearsQuery->whereHas(
+                'publicationType',
+                fn($q) => $q->where('slug', $selectedType)->where('is_active', true)
+            );
+        }
+
+        $years = $yearsQuery->groupBy('year')->orderByDesc('year')->pluck('year');
+
+        // TopKeywords
+        $topKeywords = \App\Models\Keyword::withCount([
+            'publications' => fn($q) => $q->where('status', 'published')
+                ->whereNotNull('published_at')
+                ->where('published_at', '<=', now())
+        ])
+            ->having('publications_count', '>', 0)
+            ->orderByDesc('publications_count')
+            ->limit(20)
+            ->get();
+
+        // Current Category object
+        $currentCategory = null;
+        if ($filterCategory) {
+            $currentCategory = \App\Models\Category::where('slug', $filterCategory)->first();
+        }
+
+        // Publications query
+        $publicationsQuery = Publication::with(['authors.user', 'publicationType', 'categories'])
+            ->where('status', 'published')
+            ->whereNotNull('published_at')
+            ->where('published_at', '<=', now());
+
+        if ($selectedType !== 'all') {
+            $publicationsQuery->whereHas(
+                'publicationType',
+                fn($q) => $q->where('slug', $selectedType)->where('is_active', true)
+            );
+        }
+
+        if ($filterCategory) {
+            $publicationsQuery->whereHas(
+                'categories',
+                fn($q) => $q->where('slug', $filterCategory)
+            );
+        }
+
+        if ($filterYear) {
+            $publicationsQuery->whereYear('published_at', $filterYear);
+        }
+
+        if ($filterKeyword) {
+            $publicationsQuery->whereHas(
+                'keywords',
+                fn($q) => $q->where('slug', $filterKeyword)
+            );
+        }
+
+        if ($searchQuery) {
+            $publicationsQuery->where(function ($q) use ($searchQuery) {
+                $q->where('title', 'like', "%{$searchQuery}%")
+                    ->orWhere('abstract', 'like', "%{$searchQuery}%");
+            });
+        }
+
+        // Sort
+        switch ($filterSort) {
+            case 'popular':
+                $publicationsQuery->withCount('downloadLogs')->orderByDesc('download_logs_count');
+                break;
+            case 'oldest':
+                $publicationsQuery->orderBy('published_at', 'asc');
+                break;
+            case 'title':
+                $publicationsQuery->orderBy('title', 'asc');
+                break;
+            default:
+                $publicationsQuery->orderBy('published_at', 'desc');
+                break;
+        }
+
+        $publications = $publicationsQuery->paginate(12)->withQueryString();
+
+        return view('pages.publication.categories', [
+            'publications'     => $publications,
+            'publicationTypes' => $publicationTypes,
+            'categories'       => $categories,
+            'years'            => $years,
+            'topKeywords'      => $topKeywords,
+            'currentCategory'  => $currentCategory,
+            'selectedType'     => $selectedType,
+            'filterSort'       => $filterSort,
+            'searchQuery'      => $searchQuery,
+            'filterCategory'   => $filterCategory,
+            'filterYear'       => $filterYear,
+            'filterKeyword'    => $filterKeyword,
+        ]);
+    }
+
+
+    /**
      * ✅ Show publication detail
      */
     public function show($slug)

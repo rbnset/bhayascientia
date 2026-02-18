@@ -22,27 +22,29 @@ use App\Models\PublicationVersion;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 
+/*
+|--------------------------------------------------------------------------
+| Manuscript Routes
+|--------------------------------------------------------------------------
+*/
+
 Route::get('/manuscripts/{version}', function (PublicationVersion $version) {
     abort_unless(auth()->check(), 403);
 
     $version->loadMissing('publication');
-
     abort_unless(filled($version->pdf_file_path), 404);
 
-    // Pastikan path di DB itu RELATIF terhadap disk public, mis: "manuscripts/abc.pdf"
     $absolutePath = Storage::disk('public')->path($version->pdf_file_path);
-
     abort_unless(is_file($absolutePath), 404);
 
     $publication = $version->publication;
 
-    // Buat PDF hasil watermark/rotation lalu ambil sebagai STRING
-    $pdf = new \App\Support\PdfWithRotation();
+    $pdf       = new \App\Support\PdfWithRotation();
     $pageCount = $pdf->setSourceFile($absolutePath);
 
     for ($pageNo = 1; $pageNo <= $pageCount; $pageNo++) {
         $tplId = $pdf->importPage($pageNo);
-        $size = $pdf->getTemplateSize($tplId);
+        $size  = $pdf->getTemplateSize($tplId);
 
         $pdf->AddPage($size['orientation'], [$size['width'], $size['height']]);
         $pdf->useTemplate($tplId);
@@ -62,20 +64,18 @@ Route::get('/manuscripts/{version}', function (PublicationVersion $version) {
         }
     }
 
-    // 'S' = return as string (lebih aman untuk Laravel response)
     $content = $pdf->Output('S');
 
     return response($content, 200, [
-        'Content-Type' => 'application/pdf',
+        'Content-Type'        => 'application/pdf',
         'Content-Disposition' => 'inline; filename="manuscript.pdf"',
-        'Content-Length' => strlen($content),
-        'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+        'Content-Length'      => strlen($content),
+        'Cache-Control'       => 'no-store, no-cache, must-revalidate, max-age=0',
     ]);
 })->name('manuscripts.view');
 
 Route::get('/manuscripts/{version}/download', function (PublicationVersion $version) {
     abort_unless(auth()->check(), 403);
-
     abort_unless(filled($version->pdf_file_path), 404);
 
     return Storage::disk('public')->download(
@@ -84,44 +84,40 @@ Route::get('/manuscripts/{version}/download', function (PublicationVersion $vers
     );
 })->name('manuscripts.download');
 
-
-
-
 /*
 |--------------------------------------------------------------------------
-| Static Pages Routes
+| Static Pages
 |--------------------------------------------------------------------------
 */
-
 Route::view('/', 'pages.home')->name('home');
 Route::view('/event', 'pages.event')->name('event');
 Route::view('/tentang', 'pages.about')->name('tentang');
 Route::view('/kontak', 'pages.contact')->name('kontak');
 
-
-// ========================================
-// ✅ GUEST ROUTES (Belum Login)
-// ========================================
+/*
+|--------------------------------------------------------------------------
+| Auth Routes (Guest Only)
+|--------------------------------------------------------------------------
+*/
 Route::middleware('guest')->group(function () {
-    // Manual Login & Register
     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 
     Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('register');
     Route::post('/register', [AuthController::class, 'register'])->name('register.post');
 
-    // ✅ Google OAuth Routes
     Route::get('auth/google', [GoogleAuthController::class, 'redirectToGoogle'])->name('auth.google');
     Route::get('auth/google/callback', [GoogleAuthController::class, 'handleGoogleCallback'])->name('auth.google.callback');
 
-    // ✅ Facebook OAuth Routes (jika Anda juga pakai Facebook)
     Route::get('auth/facebook', [GoogleAuthController::class, 'redirectToFacebook'])->name('auth.facebook');
     Route::get('auth/facebook/callback', [GoogleAuthController::class, 'handleFacebookCallback'])->name('auth.facebook.callback');
 });
 
-// ========================================
-// ✅ AUTHENTICATED ROUTES (Sudah Login)
-// ========================================
+/*
+|--------------------------------------------------------------------------
+| Auth Routes (Authenticated Only)
+|--------------------------------------------------------------------------
+*/
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
@@ -129,38 +125,64 @@ Route::middleware('auth')->group(function () {
         return redirect()->route('publikasi.library');
     })->name('dashboard');
 });
+
 /*
 |--------------------------------------------------------------------------
 | Publikasi Routes
+| ⚠️ URUTAN PENTING: specific routes SEBELUM wildcard {slug}
 |--------------------------------------------------------------------------
 */
 Route::prefix('publikasi')->name('publikasi.')->group(function () {
+
+    // ✅ Index
     Route::get('/', [PublicationIndexController::class, 'index'])->name('index');
 
+    // ✅ Static/specific routes — HARUS di atas {slug}
     Route::get('/jelajahi', [PublicationBrowseController::class, 'browse'])->name('browse');
     Route::get('/search', [PublicationSearchController::class, 'search'])->name('search');
-    Route::get('/categories', [PublicationCategoriesController::class, 'categories'])->name('categories');
     Route::get('/trending', [PublicationTrendingController::class, 'trending'])->name('trending');
     Route::get('/library', [PublicationLibraryController::class, 'library'])->name('library');
+
+    // ✅ Category routes — pakai PublicationCategoriesController yang sudah ada
+    Route::get('/kategori', [PublicationCategoriesController::class, 'categories'])
+        ->name('category');
+    Route::get('/kategori/{categorySlug}', [PublicationCategoriesController::class, 'categories'])
+        ->name('category.show');
+
+    // ✅ Wildcard {slug} — HARUS paling bawah
     Route::get('/{slug}', [PublicationController::class, 'show'])->name('show');
     Route::get('/{slug}/download', [PublicationController::class, 'download'])->name('download');
     Route::get('/{slug}/read', [PublicationController::class, 'read'])->name('read');
 });
 
-Route::get('/author/{identifier}', [AuthorController::class, 'show'])->name('author.profile');
-
-
+// ✅ Favorite & Save (POST — di luar prefix group)
 Route::post('/publikasi/{slug}/favorite', [PublicationController::class, 'toggleFavorite'])
     ->name('publikasi.favorite');
-
 Route::post('/publikasi/{slug}/save', [PublicationController::class, 'toggleSaved'])
     ->name('publikasi.save');
 
+/*
+|--------------------------------------------------------------------------
+| Author
+|--------------------------------------------------------------------------
+*/
+Route::get('/author/{identifier}', [AuthorController::class, 'show'])->name('author.profile');
+
+/*
+|--------------------------------------------------------------------------
+| Contact
+|--------------------------------------------------------------------------
+*/
 Route::get('/kontak', [ContactController::class, 'index'])->name('kontak');
 Route::post('/kontak', [ContactController::class, 'submit'])->name('kontak.submit');
 
+/*
+|--------------------------------------------------------------------------
+| Authenticated User Routes
+|--------------------------------------------------------------------------
+*/
 Route::middleware(['auth'])->group(function () {
-    // Subscription routes
+    // Subscription
     Route::get('/subscription', [SubscriptionController::class, 'index'])->name('subscription.index');
     Route::post('/subscription', [SubscriptionController::class, 'store'])->name('subscription.store');
     Route::put('/subscription', [SubscriptionController::class, 'update'])->name('subscription.update');
@@ -168,7 +190,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/subscription/reactivate', [SubscriptionController::class, 'reactivate'])->name('subscription.reactivate');
     Route::post('/subscription/get-categories', [SubscriptionController::class, 'getCategories'])->name('subscription.getCategories');
 
-    // Profile routes
+    // Profile
     Route::get('/profil-saya', [ProfileController::class, 'index'])->name('profil.saya');
     Route::post('/profil-saya/update', [ProfileController::class, 'update'])->name('profil.update');
     Route::post('/profil-saya/update-photo', [ProfileController::class, 'updatePhoto'])->name('profil.updatePhoto');
@@ -176,6 +198,11 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/profil-saya/update-password', [ProfileController::class, 'updatePassword'])->name('profil.updatePassword');
 });
 
+/*
+|--------------------------------------------------------------------------
+| Other Pages
+|--------------------------------------------------------------------------
+*/
 Route::get('/submission-guidelines', [SubmissionGuidelineController::class, 'index'])
     ->name('submission-guidelines');
 
@@ -186,10 +213,12 @@ Route::controller(LegalController::class)->group(function () {
 
 Route::get('/tentang', [AboutController::class, 'index'])->name('tentang');
 
-
-Route::get('/test-card', function () {
-    return view('test-card');
-});
+/*
+|--------------------------------------------------------------------------
+| Utility / Dev Routes
+|--------------------------------------------------------------------------
+*/
+Route::get('/test-card', fn() => view('test-card'));
 
 Route::get('/placeholder-image', [PlaceholderImageController::class, 'generate'])
     ->name('placeholder.image');

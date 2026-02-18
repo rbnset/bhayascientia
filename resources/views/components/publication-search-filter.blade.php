@@ -1,14 +1,26 @@
 @props([
 'selectedType' => 'all',
-'categories' => collect([]),
-'years' => collect([]),
-'topKeywords' => collect([]),
+'categories' => null,
+'years' => null,
+'topKeywords' => null,
 'filterCategory' => null,
 'filterYear' => null,
 'filterKeyword' => null,
 'filterSort' => 'latest',
 'searchQuery' => null,
 ])
+
+@php
+// ✅ Normalize semua ke Collection — tanpa use statement
+$categories = ($categories instanceof \Illuminate\Support\Collection)
+? $categories : collect((array) ($categories ?? []));
+
+$years = ($years instanceof \Illuminate\Support\Collection)
+? $years : collect((array) ($years ?? []));
+
+$topKeywords = ($topKeywords instanceof \Illuminate\Support\Collection)
+? $topKeywords : collect((array) ($topKeywords ?? []));
+@endphp
 
 {{-- Advanced Search & Filter Modal --}}
 <div id="publicationSearchModal"
@@ -52,7 +64,7 @@
                 {{-- Scrollable Content --}}
                 <div class="flex-1 p-4 space-y-4 overflow-y-auto sm:p-6 sm:space-y-6">
 
-                    {{-- ✅ SEARCH BAR - Priority #1 --}}
+                    {{-- Search Bar --}}
                     <div
                         class="bg-gradient-to-br from-[#FFF7F2] to-white rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-[#FF6B18]/20 shadow-sm">
                         <label
@@ -121,10 +133,17 @@
                             <select name="category"
                                 class="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-[#EEF0F7] rounded-xl focus:ring-1 focus:ring-[#FF6B18] focus:border-[#FF6B18] outline-none transition-all text-sm sm:text-base font-medium">
                                 <option value="">Semua Kategori</option>
+                                {{-- ✅ Satu loop saja, support array & Eloquent object --}}
                                 @foreach($categories as $category)
-                                <option value="{{ $category->slug }}" {{ ($filterCategory ?? '' )==$category->slug ?
-                                    'selected' : '' }}>
-                                    {{ $category->name }} ({{ $category->publications_count }})
+                                @php
+                                $catSlug = is_array($category) ? ($category['slug'] ?? '') : ($category->slug ?? '');
+                                $catName = is_array($category) ? ($category['name'] ?? '') : ($category->name ?? '');
+                                $catCount = is_array($category) ? ($category['publications_count'] ?? 0) :
+                                ($category->publications_count ?? 0);
+                                @endphp
+                                <option value="{{ $catSlug }}" {{ ($filterCategory ?? '' )==$catSlug ? 'selected' : ''
+                                    }}>
+                                    {{ $catName }}{{ $catCount > 0 ? ' ('.$catCount.')' : '' }}
                                 </option>
                                 @endforeach
                             </select>
@@ -155,6 +174,7 @@
                             </select>
                         </div>
                         @endif
+
                     </div>
 
                     {{-- Sort --}}
@@ -170,38 +190,22 @@
                             <span class="leading-tight">Urutkan Berdasarkan</span>
                         </label>
                         <div class="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
+                            @foreach([
+                            ['value' => 'latest', 'label' => '🕐 Terbaru'],
+                            ['value' => 'popular', 'label' => '🔥 Populer'],
+                            ['value' => 'oldest', 'label' => '📅 Terlama'],
+                            ['value' => 'title', 'label' => '🔤 A-Z'],
+                            ] as $sortOption)
                             <label
                                 class="relative flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2.5 sm:py-3 bg-[#F8F9FC] rounded-xl cursor-pointer hover:bg-[#FFF7F2] transition-all border border-transparent has-[:checked]:border-[#FF6B18] has-[:checked]:bg-[#FFF7F2]">
-                                <input type="radio" name="sort" value="latest" {{ ($filterSort ?? 'latest' )=='latest'
-                                    ? 'checked' : '' }} class="sr-only">
+                                <input type="radio" name="sort" value="{{ $sortOption['value'] }}" {{ ($filterSort
+                                    ?? 'latest' )==$sortOption['value'] ? 'checked' : '' }} class="sr-only">
                                 <span
-                                    class="text-xs sm:text-sm font-semibold text-[#1A1A1A] text-center leading-tight whitespace-nowrap">🕐
-                                    Terbaru</span>
+                                    class="text-xs sm:text-sm font-semibold text-[#1A1A1A] text-center leading-tight whitespace-nowrap">
+                                    {{ $sortOption['label'] }}
+                                </span>
                             </label>
-                            <label
-                                class="relative flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2.5 sm:py-3 bg-[#F8F9FC] rounded-xl cursor-pointer hover:bg-[#FFF7F2] transition-all border border-transparent has-[:checked]:border-[#FF6B18] has-[:checked]:bg-[#FFF7F2]">
-                                <input type="radio" name="sort" value="popular" {{ ($filterSort ?? '' )=='popular'
-                                    ? 'checked' : '' }} class="sr-only">
-                                <span
-                                    class="text-xs sm:text-sm font-semibold text-[#1A1A1A] text-center leading-tight whitespace-nowrap">🔥
-                                    Populer</span>
-                            </label>
-                            <label
-                                class="relative flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2.5 sm:py-3 bg-[#F8F9FC] rounded-xl cursor-pointer hover:bg-[#FFF7F2] transition-all border border-transparent has-[:checked]:border-[#FF6B18] has-[:checked]:bg-[#FFF7F2]">
-                                <input type="radio" name="sort" value="oldest" {{ ($filterSort ?? '' )=='oldest'
-                                    ? 'checked' : '' }} class="sr-only">
-                                <span
-                                    class="text-xs sm:text-sm font-semibold text-[#1A1A1A] text-center leading-tight whitespace-nowrap">📅
-                                    Terlama</span>
-                            </label>
-                            <label
-                                class="relative flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2.5 sm:py-3 bg-[#F8F9FC] rounded-xl cursor-pointer hover:bg-[#FFF7F2] transition-all border border-transparent has-[:checked]:border-[#FF6B18] has-[:checked]:bg-[#FFF7F2]">
-                                <input type="radio" name="sort" value="title" {{ ($filterSort ?? '' )=='title'
-                                    ? 'checked' : '' }} class="sr-only">
-                                <span
-                                    class="text-xs sm:text-sm font-semibold text-[#1A1A1A] text-center leading-tight whitespace-nowrap">🔤
-                                    A-Z</span>
-                            </label>
+                            @endforeach
                         </div>
                     </div>
 
@@ -219,14 +223,22 @@
                             <span class="text-[10px] sm:text-xs font-normal text-[#737373]">Opsional</span>
                         </label>
                         <div class="flex flex-wrap gap-2 overflow-y-auto max-h-40 sm:max-h-48">
+                            {{-- ✅ Satu loop saja, support array & Eloquent object --}}
                             @foreach($topKeywords->take(15) as $keyword)
+                            @php
+                            $kwSlug = is_array($keyword) ? ($keyword['slug'] ?? '') : ($keyword->slug ?? '');
+                            $kwName = is_array($keyword) ? ($keyword['name'] ?? '') : ($keyword->name ?? '');
+                            $kwCount = is_array($keyword) ? ($keyword['publications_count'] ?? 0) :
+                            ($keyword->publications_count ?? 0);
+                            @endphp
                             <label
                                 class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-[#F8F9FC] rounded-full cursor-pointer hover:bg-[#FFF7F2] transition-all border border-transparent hover:border-[#FF6B18] has-[:checked]:bg-[#FF6B18] has-[:checked]:text-white has-[:checked]:border-[#FF6B18]">
-                                <input type="radio" name="keyword" value="{{ $keyword->slug }}" {{ ($filterKeyword ?? ''
-                                    )==$keyword->slug ? 'checked' : '' }} class="sr-only">
-                                <span class="text-xs font-medium leading-tight sm:text-sm">{{ $keyword->name }}</span>
-                                <span class="text-[10px] sm:text-xs opacity-75 leading-tight">({{
-                                    $keyword->publications_count }})</span>
+                                <input type="radio" name="keyword" value="{{ $kwSlug }}" {{ ($filterKeyword ?? ''
+                                    )==$kwSlug ? 'checked' : '' }} class="sr-only">
+                                <span class="text-xs font-medium leading-tight sm:text-sm">{{ $kwName }}</span>
+                                @if($kwCount > 0)
+                                <span class="text-[10px] sm:text-xs opacity-75 leading-tight">({{ $kwCount }})</span>
+                                @endif
                             </label>
                             @endforeach
                         </div>
@@ -235,7 +247,7 @@
 
                 </div>
 
-                {{-- Footer Actions - Sticky --}}
+                {{-- Footer Actions --}}
                 <div
                     class="flex-shrink-0 bg-white border-t border-[#EEF0F7] px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
                     <button type="button" onclick="resetPublicationSearch()"
@@ -256,8 +268,8 @@
                         <span>Cari Sekarang</span>
                     </button>
                 </div>
-            </form>
 
+            </form>
         </div>
     </div>
 </div>
@@ -265,7 +277,7 @@
 @push('scripts')
 <script>
     function openPublicationSearch() {
-    const modal = document.getElementById('publicationSearchModal');
+    const modal   = document.getElementById('publicationSearchModal');
     const content = document.getElementById('publicationSearchContent');
 
     modal.classList.remove('hidden');
@@ -280,7 +292,7 @@
 }
 
 function closePublicationSearch() {
-    const modal = document.getElementById('publicationSearchModal');
+    const modal   = document.getElementById('publicationSearchModal');
     const content = document.getElementById('publicationSearchContent');
 
     modal.classList.add('opacity-0');
@@ -297,7 +309,8 @@ function resetPublicationSearch() {
     const form = document.getElementById('publicationSearchForm');
     form.querySelectorAll('input[type="radio"]:checked').forEach(el => el.checked = false);
     form.querySelectorAll('select').forEach(el => el.value = '');
-    form.querySelector('input[name="search"]').value = '';
+    const searchInput = form.querySelector('input[name="search"]');
+    if (searchInput) searchInput.value = '';
 
     const latestRadio = form.querySelector('input[name="sort"][value="latest"]');
     if (latestRadio) latestRadio.checked = true;
@@ -309,6 +322,10 @@ document.getElementById('publicationSearchModal')?.addEventListener('click', fun
 
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') closePublicationSearch();
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        openPublicationSearch();
+    }
 });
 
 document.getElementById('searchInput')?.addEventListener('keydown', function(e) {
