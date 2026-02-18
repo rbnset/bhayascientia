@@ -31,6 +31,39 @@
         :types="$publicationTypes ?? []" :selectedType="$selectedType" :filterSort="$filterSort"
         :hasActiveFilters="false" />
 
+    {{-- ✅ TAMBAHKAN INI: Search Trigger Bar --}}
+    <div class="flex items-center gap-3 mt-4 mb-8">
+
+        {{-- Search Input (sebagai trigger, bukan form langsung) --}}
+        <button onclick="openPublicationSearch()"
+            class="flex-1 flex items-center gap-3 px-5 py-3.5 bg-white border-2 border-[#EEF0F7] rounded-2xl hover:border-[#FF6B18] hover:shadow-md transition-all group text-left">
+            <svg class="w-5 h-5 text-[#A3A6AE] group-hover:text-[#FF6B18] transition-colors flex-shrink-0" fill="none"
+                stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <span class="text-sm text-[#A3A6AE] group-hover:text-[#737373] transition-colors">
+                {{ $searchQuery ? '"'.$searchQuery.'"' : 'Cari judul, penulis, kata kunci...' }}
+            </span>
+            @if($searchQuery)
+            <span class="ml-auto text-xs font-bold text-[#FF6B18] bg-[#FFF7F2] px-2 py-1 rounded-lg">
+                Aktif
+            </span>
+            @endif
+        </button>
+
+        {{-- Filter Button --}}
+        <button onclick="openPublicationSearch()"
+            class="flex items-center gap-2 px-4 py-3.5 bg-white border-2 border-[#EEF0F7] rounded-2xl hover:border-[#FF6B18] hover:bg-[#FFF7F2] hover:text-[#FF6B18] transition-all text-[#737373] font-semibold text-sm">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+            </svg>
+            <span class="hidden sm:inline">Filter</span>
+        </button>
+
+    </div>
+
     {{-- Latest Publications Grid/Swiper --}}
     <x-publication.swiper-section title="Tulisan Terbaru <br />Untuk Diskursus yang Bertanggung Jawab" badge="TERKINI"
         swiperClass="upToDateSwiper">
