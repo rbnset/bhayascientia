@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Authors;
 use App\Filament\Resources\Authors\Pages\CreateAuthor;
 use App\Filament\Resources\Authors\Pages\EditAuthor;
 use App\Filament\Resources\Authors\Pages\ListAuthors;
+use App\Filament\Resources\Authors\Pages\ViewAuthor;
 use App\Filament\Resources\Authors\Schemas\AuthorForm;
 use App\Filament\Resources\Authors\Tables\AuthorsTable;
 use App\Models\Author;
@@ -50,6 +51,7 @@ class AuthorResource extends Resource
         return [
             'index'  => ListAuthors::route('/'),
             'create' => CreateAuthor::route('/create'),
+            'view'   => ViewAuthor::route('/{record}'),
             'edit'   => EditAuthor::route('/{record}/edit'),
         ];
     }
