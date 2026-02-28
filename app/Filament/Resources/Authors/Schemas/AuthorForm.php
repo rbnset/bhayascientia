@@ -115,7 +115,7 @@ class AuthorForm
                                             'author',
                                             fn($q) => $q->when(
                                                 $record?->id,
-                                                fn($q) => $q->where('id', '!=', $record->id) // exclude diri sendiri saat edit
+                                                fn($q) => $q->where('id', '!=', $record->id)
                                             )
                                         )
                                     )
@@ -124,7 +124,9 @@ class AuthorForm
                                     ->nullable()
                                     ->placeholder('Tidak terhubung ke akun')
                                     ->prefixIcon('heroicon-o-link')
-                                    ->helperText('Opsional: hubungkan author ke akun pengguna yang ada'),
+                                    ->helperText('Opsional: hubungkan author ke akun pengguna yang ada')
+                                    ->visible(fn() => auth()->user()?->hasAnyRole(['admin', 'super_admin']))
+                                    ->disabled(fn() => ! auth()->user()?->hasAnyRole(['admin', 'super_admin'])),
                             ]),
                     ]),
             ]);
