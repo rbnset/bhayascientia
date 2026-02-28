@@ -184,6 +184,11 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
     // ✅ RELATIONSHIPS
     // ========================================
 
+    public function author()
+    {
+        return $this->hasOne(Author::class);
+    }
+
     /**
      * Relasi ke Author profile
      */

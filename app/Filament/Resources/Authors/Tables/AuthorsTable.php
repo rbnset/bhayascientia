@@ -3,9 +3,11 @@
 namespace App\Filament\Resources\Authors\Tables;
 
 use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Notifications\Notification;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -80,6 +82,16 @@ class AuthorsTable
                 ViewAction::make()
                     ->label('Lihat')
                     ->icon('heroicon-o-eye'),
+
+                DeleteAction::make()
+                    ->label('Hapus')
+                    ->icon('heroicon-o-trash')
+                    ->successNotification(
+                        fn() => Notification::make()
+                            ->danger()
+                            ->title('Author berhasil dihapus')
+                            ->body('Data author telah dihapus secara permanen.')
+                    ),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\Authors\Schemas;
 
-use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Select;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Grid;
 use Filament\Forms\Components\TextInput;
@@ -21,7 +21,7 @@ class AuthorForm
                 Grid::make()
                     ->columns([
                         'default' => 1,
-                        'lg'      => 3,  // 3 kolom di desktop
+                        'lg'      => 3,
                     ])
                     ->schema([
 
@@ -34,7 +34,6 @@ class AuthorForm
                                 'lg'      => 1,
                             ])
                             ->schema([
-                                // Foto profil di tengah atas
                                 FileUpload::make('photo_path')
                                     ->label('Foto Profil')
                                     ->avatar()
@@ -52,6 +51,7 @@ class AuthorForm
                                     ->extraAttributes([
                                         'class' => 'flex flex-col items-center justify-center',
                                     ]),
+
                             ]),
 
                         // =============================================
@@ -65,9 +65,6 @@ class AuthorForm
                                 'lg'      => 2,
                             ])
                             ->schema([
-                                Hidden::make('user_id')
-                                    ->default(fn() => auth()->id())
-                                    ->dehydrated(),
 
                                 Grid::make()
                                     ->columns([
@@ -107,6 +104,27 @@ class AuthorForm
                                     ->live(debounce: 500)
                                     ->placeholder('Tulis biografi singkat penulis...')
                                     ->helperText('Maksimal 1000 karakter'),
+
+                                // ← Hidden dihapus, diganti Select opsional
+                                Select::make('user_id')
+                                    ->label('Akun Pengguna')
+                                    ->relationship(
+                                        name: 'user',
+                                        titleAttribute: 'name',
+                                        modifyQueryUsing: fn($query, $record) => $query->whereDoesntHave(
+                                            'author',
+                                            fn($q) => $q->when(
+                                                $record?->id,
+                                                fn($q) => $q->where('id', '!=', $record->id) // exclude diri sendiri saat edit
+                                            )
+                                        )
+                                    )
+                                    ->searchable()
+                                    ->preload()
+                                    ->nullable()
+                                    ->placeholder('Tidak terhubung ke akun')
+                                    ->prefixIcon('heroicon-o-link')
+                                    ->helperText('Opsional: hubungkan author ke akun pengguna yang ada'),
                             ]),
                     ]),
             ]);
