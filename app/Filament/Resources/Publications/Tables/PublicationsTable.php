@@ -23,9 +23,8 @@ class PublicationsTable
                 // =====================
                 // COVER (BOOK PORTRAIT)
                 // =====================
-                ImageColumn::make('cover_image_path')
+                ImageColumn::make('cover_url')
                     ->label('')
-                    ->disk('public')
                     ->defaultImageUrl(url('/images/placeholder-publication.png'))
                     ->width(44)
                     ->height(64)
