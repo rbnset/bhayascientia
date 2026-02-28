@@ -34,7 +34,21 @@ class AdminPanelProvider extends PanelProvider
             'danger' => Color::Red,
             'gray' => Color::Zinc,
             'info' => Color::Blue,
-            'primary' => '#d8A23b',
+            'primary' => [
+                // Light Mode — hue kuning #F8B811
+                50  => 'oklch(0.97 0.075 82.8)',
+                100 => 'oklch(0.93 0.078 82.8)',
+                200 => 'oklch(0.87 0.083 82.8)',
+                300 => 'oklch(0.78 0.090 82.8)',
+                400 => 'oklch(0.67 0.098 82.8)',
+                500 => 'oklch(0.58 0.105 82.8)',
+                // Dark Mode — hue biru #122966
+                600 => 'oklch(0.50 0.166 264.8)',
+                700 => 'oklch(0.43 0.158 264.8)',
+                800 => 'oklch(0.36 0.150 264.8)',
+                900 => 'oklch(0.28 0.141 264.8)',
+                950 => 'oklch(0.20 0.131 264.8)',
+            ],
             'success' => Color::Green,
             'warning' => Color::Amber,
         ]);
@@ -46,6 +60,11 @@ class AdminPanelProvider extends PanelProvider
             ->viteTheme('resources/css/filament/admin/theme.css')
             ->login()
             ->registration()
+            ->brandName('Dabraka')
+            ->brandLogo(asset('assets/images/logos/logo-light.svg'))
+            ->darkModeBrandLogo(asset('assets/images/logos/logo-dark.svg'))
+            ->brandLogoHeight('2.5rem')
+            ->favicon(asset('favicon.png'))
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([
