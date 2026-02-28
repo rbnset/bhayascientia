@@ -65,6 +65,8 @@ class AdminPanelProvider extends PanelProvider
             ->darkModeBrandLogo(asset('assets/images/logos/logo-dark.svg'))
             ->brandLogoHeight('2.5rem')
             ->favicon(asset('favicon.png'))
+            ->sidebarFullyCollapsibleOnDesktop()
+            ->globalSearch(false)
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([
@@ -88,7 +90,6 @@ class AdminPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([
                 AccountWidget::class,
-                FilamentInfoWidget::class,
             ])
             ->databaseNotifications()
             ->databaseNotificationsPolling('30s')
