@@ -15,7 +15,7 @@ class AuthorsTable
     {
         return $table
             ->columns([
-                ImageColumn::make('avatar_url')
+                ImageColumn::make('photo_url')      // ← sesuaikan dengan nama accessor di model
                     ->label('')
                     ->circular()
                     ->size(40)
