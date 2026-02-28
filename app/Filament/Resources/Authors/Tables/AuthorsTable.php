@@ -6,6 +6,8 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteAction;
+use Filament\Actions\RestoreAction;
 use Filament\Actions\ViewAction;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\ImageColumn;
@@ -13,6 +15,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -74,6 +77,8 @@ class AuthorsTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                TrashedFilter::make(),
+
                 // 1. Filter: apakah author terhubung ke akun User atau tidak
                 TernaryFilter::make('account_status')
                     ->label('Account Status')
@@ -150,6 +155,16 @@ class AuthorsTable
                     ->label('Lihat')
                     ->icon('heroicon-o-eye'),
 
+                RestoreAction::make()
+                    ->label('Restore')
+                    ->icon('heroicon-o-arrow-uturn-left')
+                    ->successNotification(
+                        Notification::make()
+                            ->success()
+                            ->title('Author berhasil di-restore')
+                            ->body('Data author telah dipulihkan.')
+                    ),
+
                 DeleteAction::make()
                     ->label('Hapus')
                     ->icon('heroicon-o-trash')
@@ -159,6 +174,11 @@ class AuthorsTable
                             ->title('Author berhasil dihapus')
                             ->body('Data author telah dihapus secara permanen.')
                     ),
+
+                ForceDeleteAction::make()
+                    ->label('Hapus Permanen')
+                    ->icon('heroicon-o-x-circle'),
+
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
