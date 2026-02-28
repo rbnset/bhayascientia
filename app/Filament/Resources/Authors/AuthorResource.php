@@ -42,17 +42,15 @@ class AuthorResource extends Resource
 
     public static function getRelations(): array
     {
-        return [
-            //
-        ];
+        return [];
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => ListAuthors::route('/'),
+            'index'  => ListAuthors::route('/'),
             'create' => CreateAuthor::route('/create'),
-            'edit' => EditAuthor::route('/{record}/edit'),
+            'edit'   => EditAuthor::route('/{record}/edit'),
         ];
     }
 }
