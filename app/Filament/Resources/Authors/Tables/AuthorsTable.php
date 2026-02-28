@@ -10,7 +10,11 @@ use Filament\Actions\ViewAction;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class AuthorsTable
 {
@@ -18,7 +22,7 @@ class AuthorsTable
     {
         return $table
             ->columns([
-                ImageColumn::make('photo_url')      // ← sesuaikan dengan nama accessor di model
+                ImageColumn::make('photo_url')
                     ->label('')
                     ->circular()
                     ->size(40)
@@ -27,18 +31,15 @@ class AuthorsTable
                     ))
                     ->toggleable(),
 
-                // Nama utama: kalau authors.name kosong, pakai user.name [web:861]
                 TextColumn::make('display_name')
                     ->label('Author')
                     ->state(fn($record) => $record->name ?: ($record->user?->name ?? '—'))
                     ->searchable(query: function ($query, string $search) {
-                        // cari di authors.name dan users.name (relasi) [web:861]
                         $query
                             ->where('name', 'like', "%{$search}%")
                             ->orWhereHas('user', fn($q) => $q->where('name', 'like', "%{$search}%"));
                     })
                     ->sortable(query: function ($query, string $direction) {
-                        // sorting tetap pakai authors.name sebagai default
                         $query->orderBy('name', $direction);
                     })
                     ->weight('medium')
@@ -59,7 +60,6 @@ class AuthorsTable
                     ->searchable()
                     ->placeholder('—'),
 
-                // Optional: indikator apakah terhubung ke User
                 TextColumn::make('user_id')
                     ->label('Account')
                     ->state(fn($record) => $record->user_id ? 'Linked' : 'External')
@@ -72,6 +72,73 @@ class AuthorsTable
                     ->date('d M Y')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
+            ])
+            ->filters([
+                // 1. Filter: apakah author terhubung ke akun User atau tidak
+                TernaryFilter::make('account_status')
+                    ->label('Account Status')
+                    ->placeholder('Semua Author')
+                    ->trueLabel('Linked (punya akun)')
+                    ->falseLabel('External (tanpa akun)')
+                    ->queries(
+                        true: fn(Builder $query) => $query->whereNotNull('user_id'),
+                        false: fn(Builder $query) => $query->whereNull('user_id'),
+                        blank: fn(Builder $query) => $query,
+                    ),
+
+                // 2. Filter: berdasarkan affiliation (distinct dari DB)
+                SelectFilter::make('affiliation')
+                    ->label('Affiliation')
+                    ->options(
+                        fn() => \App\Models\Author::query()
+                            ->whereNotNull('affiliation')
+                            ->distinct()
+                            ->orderBy('affiliation')
+                            ->pluck('affiliation', 'affiliation')
+                            ->toArray()
+                    )
+                    ->searchable()
+                    ->placeholder('Semua Affiliasi'),
+
+                // 3. Filter: author yang punya email (baik di authors maupun via relasi user)
+                Filter::make('has_email')
+                    ->label('Punya Email')
+                    ->query(fn(Builder $query) => $query->where(function ($q) {
+                        $q->whereNotNull('email')
+                            ->orWhereHas('user', fn($u) => $u->whereNotNull('email'));
+                    }))
+                    ->toggle(),
+
+                // 4. Filter: rentang tanggal dibuat
+                Filter::make('created_at')
+                    ->label('Tanggal Dibuat')
+                    ->form([
+                        \Filament\Forms\Components\DatePicker::make('created_from')
+                            ->label('Dari'),
+                        \Filament\Forms\Components\DatePicker::make('created_until')
+                            ->label('Sampai'),
+                    ])
+                    ->query(function (Builder $query, array $data) {
+                        return $query
+                            ->when(
+                                $data['created_from'],
+                                fn($q, $date) => $q->whereDate('created_at', '>=', $date)
+                            )
+                            ->when(
+                                $data['created_until'],
+                                fn($q, $date) => $q->whereDate('created_at', '<=', $date)
+                            );
+                    })
+                    ->indicateUsing(function (array $data): array {
+                        $indicators = [];
+                        if ($data['created_from'] ?? null) {
+                            $indicators['created_from'] = 'Dari: ' . \Carbon\Carbon::parse($data['created_from'])->format('d M Y');
+                        }
+                        if ($data['created_until'] ?? null) {
+                            $indicators['created_until'] = 'Sampai: ' . \Carbon\Carbon::parse($data['created_until'])->format('d M Y');
+                        }
+                        return $indicators;
+                    }),
             ])
             ->defaultSort('created_at', 'desc')
             ->recordActions([
