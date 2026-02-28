@@ -70,4 +70,14 @@ class PublicationResource extends Resource
                 SoftDeletingScope::class,
             ]);
     }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->with([
+                'publicationType',
+                'categories',
+                'authors',
+            ]);
+    }
 }

@@ -23,14 +23,14 @@ class PublicationsTable
                 // =====================
                 // COVER (BOOK PORTRAIT)
                 // =====================
-                ImageColumn::make('cover_url')
+                ImageColumn::make('cover_url')   // ← accessor, bukan raw column
                     ->label('')
-                    ->defaultImageUrl(url('/images/placeholder-publication.png'))
                     ->width(44)
                     ->height(64)
                     ->extraImgAttributes([
                         'class' => 'object-cover rounded-md ring-1 ring-gray-200 dark:ring-gray-700',
                     ]),
+
 
                 // =====================
                 // TITLE + TYPE (below)

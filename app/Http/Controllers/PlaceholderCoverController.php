@@ -11,76 +11,79 @@ class PlaceholderCoverController extends Controller
     public function generate(Request $request)
     {
         $initials = strtoupper(substr($request->input('initials', 'NN'), 0, 3));
-        $type     = $request->input('type', 'Publikasi');
-        $title    = $request->input('title', 'Untitled');
-        $category = $request->input('category', 'Umum');
-        $author   = $request->input('author', 'Anonymous');
+        $type     = Str::limit(strip_tags($request->input('type', 'Publikasi')), 50);
+        $title    = Str::limit(strip_tags($request->input('title', 'Untitled')), 100);
+        $category = Str::limit(strip_tags($request->input('category', 'Umum')), 50);
+        $author   = Str::limit(strip_tags($request->input('author', 'Anonymous')), 100);
 
         $typeNormalized = mb_strtolower(trim($type));
+        $version        = $request->input('v', '1');
+        $cacheKey       = 'placeholder_svg_v7_' . md5($initials . $typeNormalized . $title . $category . $author . $version);
 
-        $version  = $request->input('v', '1');
-        $cacheKey = 'placeholder_svg_v7_' . md5($initials . $typeNormalized . $title . $category . $author . $version);
-
-        $svg = Cache::remember($cacheKey, 60 * 24 * 7, function () use ($initials, $type, $typeNormalized, $title, $category, $author) {
+        $svg = Cache::remember($cacheKey, now()->addDays(7), function () use ($initials, $type, $typeNormalized, $title, $category, $author) {
             return $this->createSVG($initials, $type, $typeNormalized, $title, $category, $author);
         });
 
         return response($svg)
             ->header('Content-Type', 'image/svg+xml')
-            ->header('Cache-Control', 'public, max-age=604800');
+            ->header('Cache-Control', 'public, max-age=604800')
+            ->header('X-Content-Type-Options', 'nosniff');
     }
 
     // ─── Ambil logo sebagai Base64 ──────────────────────────────────────────
     private function getLogoBase64(): string
     {
-        // ✅ FIX UTAMA: Embed logo sebagai Base64 agar muncul di semua halaman!
-        $logoPath = public_path('assets/images/logos/logo.svg');
+        // Cache logo Base64 agar tidak baca file berulang kali
+        return Cache::remember('placeholder_logo_base64', now()->addDay(), function () {
+            $logoPath = public_path('assets/images/logos/logo.svg');
 
-        if (!file_exists($logoPath)) {
-            return ''; // Kosong jika tidak ada file
-        }
+            if (!file_exists($logoPath)) {
+                return '';
+            }
 
-        $logoContent = file_get_contents($logoPath);
-        $mimeType    = 'image/svg+xml';
+            $logoContent = file_get_contents($logoPath);
+            $ext         = strtolower(pathinfo($logoPath, PATHINFO_EXTENSION));
 
-        // Jika logo adalah PNG/JPG, ubah mime type
-        $ext = strtolower(pathinfo($logoPath, PATHINFO_EXTENSION));
-        if ($ext === 'png') $mimeType = 'image/png';
-        if ($ext === 'jpg' || $ext === 'jpeg') $mimeType = 'image/jpeg';
-        if ($ext === 'webp') $mimeType = 'image/webp';
+            $mimeType = match ($ext) {
+                'png'         => 'image/png',
+                'jpg', 'jpeg' => 'image/jpeg',
+                'webp'        => 'image/webp',
+                default       => 'image/svg+xml',
+            };
 
-        return 'data:' . $mimeType . ';base64,' . base64_encode($logoContent);
+            return 'data:' . $mimeType . ';base64,' . base64_encode($logoContent);
+        });
     }
 
-    private function createSVG($initials, $typeOriginal, $typeNormalized, $title, $category, $author)
+    private function createSVG(string $initials, string $typeOriginal, string $typeNormalized, string $title, string $category, string $author): string
     {
         $gradients = [
             // Indonesian
-            'jurnal'      => ['start' => '#FF6B18', 'end' => '#E64627'],
-            'buku'        => ['start' => '#3B82F6', 'end' => '#1D4ED8'],
-            'opini'       => ['start' => '#10B981', 'end' => '#059669'],
-            'artikel'     => ['start' => '#F59E0B', 'end' => '#D97706'],
-            'penelitian'  => ['start' => '#8B5CF6', 'end' => '#6D28D9'],
-            'skripsi'     => ['start' => '#EC4899', 'end' => '#BE185D'],
-            'tesis'       => ['start' => '#06B6D4', 'end' => '#0891B2'],
-            'disertasi'   => ['start' => '#EF4444', 'end' => '#DC2626'],
-            'makalah'     => ['start' => '#14B8A6', 'end' => '#0F766E'],
-            'laporan'     => ['start' => '#A855F7', 'end' => '#7C3AED'],
-            'prosiding'   => ['start' => '#F97316', 'end' => '#EA580C'],
-            'konferensi'  => ['start' => '#84CC16', 'end' => '#65A30D'],
+            'jurnal'       => ['start' => '#FF6B18', 'end' => '#E64627'],
+            'buku'         => ['start' => '#3B82F6', 'end' => '#1D4ED8'],
+            'opini'        => ['start' => '#10B981', 'end' => '#059669'],
+            'artikel'      => ['start' => '#F59E0B', 'end' => '#D97706'],
+            'penelitian'   => ['start' => '#8B5CF6', 'end' => '#6D28D9'],
+            'skripsi'      => ['start' => '#EC4899', 'end' => '#BE185D'],
+            'tesis'        => ['start' => '#06B6D4', 'end' => '#0891B2'],
+            'disertasi'    => ['start' => '#EF4444', 'end' => '#DC2626'],
+            'makalah'      => ['start' => '#14B8A6', 'end' => '#0F766E'],
+            'laporan'      => ['start' => '#A855F7', 'end' => '#7C3AED'],
+            'prosiding'    => ['start' => '#F97316', 'end' => '#EA580C'],
+            'konferensi'   => ['start' => '#84CC16', 'end' => '#65A30D'],
             // English
-            'journal'     => ['start' => '#FF6B18', 'end' => '#E64627'],
-            'book'        => ['start' => '#3B82F6', 'end' => '#1D4ED8'],
-            'opinion'     => ['start' => '#10B981', 'end' => '#059669'],
-            'article'     => ['start' => '#F59E0B', 'end' => '#D97706'],
-            'research'    => ['start' => '#8B5CF6', 'end' => '#6D28D9'],
-            'thesis'      => ['start' => '#06B6D4', 'end' => '#0891B2'],
+            'journal'      => ['start' => '#FF6B18', 'end' => '#E64627'],
+            'book'         => ['start' => '#3B82F6', 'end' => '#1D4ED8'],
+            'opinion'      => ['start' => '#10B981', 'end' => '#059669'],
+            'article'      => ['start' => '#F59E0B', 'end' => '#D97706'],
+            'research'     => ['start' => '#8B5CF6', 'end' => '#6D28D9'],
+            'thesis'       => ['start' => '#06B6D4', 'end' => '#0891B2'],
             'dissertation' => ['start' => '#EF4444', 'end' => '#DC2626'],
-            'paper'       => ['start' => '#14B8A6', 'end' => '#0F766E'],
-            'report'      => ['start' => '#A855F7', 'end' => '#7C3AED'],
-            'proceeding'  => ['start' => '#F97316', 'end' => '#EA580C'],
+            'paper'        => ['start' => '#14B8A6', 'end' => '#0F766E'],
+            'report'       => ['start' => '#A855F7', 'end' => '#7C3AED'],
+            'proceeding'   => ['start' => '#F97316', 'end' => '#EA580C'],
             // Default
-            'default'     => ['start' => '#6B7280', 'end' => '#4B5563'],
+            'default'      => ['start' => '#122966', 'end' => '#1a3a8a'], // ← sesuai brand kamu
         ];
 
         $gradient = $gradients[$typeNormalized] ?? $gradients['default'];
@@ -98,26 +101,24 @@ class PlaceholderCoverController extends Controller
         $wrappedTitle      = $this->wrapText($title, 30, 4);
         $truncatedCategory = Str::limit($category, 32, '...');
 
-        // Unique IDs
-        $gradientId = 'grad-'    . uniqid();
-        $patternId  = 'pattern-' . uniqid();
-        $overlayId  = 'overlay-' . uniqid();
-        $glowId     = 'glow-'    . uniqid();
+        // Unique IDs per render (penting agar tidak konflik jika multiple SVG di halaman)
+        $uid        = substr(md5(uniqid()), 0, 8);
+        $gradientId = 'grad-'    . $uid;
+        $patternId  = 'pattern-' . $uid;
+        $overlayId  = 'overlay-' . $uid;
+        $glowId     = 'glow-'    . $uid;
 
-        // ✅ FIX: Logo sebagai Base64 Data URI
-        $logoBase64 = $this->getLogoBase64();
-
+        $logoBase64  = $this->getLogoBase64();
         $titleSVG    = $this->generateTextLines($wrappedTitle, 300, 455, 38);
         $typeBadge   = $this->escapeXml(strtoupper($typeOriginal));
         $authorSVG   = $this->escapeXml($authorsDisplay);
         $categorySVG = $this->escapeXml($truncatedCategory);
         $initialsSVG = $this->escapeXml($initials);
 
-        // ─── Logo SVG element (hanya jika file ada) ──────────────────────
-        $logoElement = '';
+        // ─── Logo element ────────────────────────────────────────────────────
         if (!empty($logoBase64)) {
             $logoElement = <<<LOGO
-    <!-- ─── LOGO (Base64 Embedded - Muncul Di Semua Halaman) ─── -->
+    <!-- LOGO (Base64 Embedded) -->
     <image href="{$logoBase64}"
            xlink:href="{$logoBase64}"
            x="32" y="28"
@@ -127,10 +128,9 @@ class PlaceholderCoverController extends Controller
            filter="url(#{$glowId})"/>
 LOGO;
         } else {
-            // Fallback: tampilkan initials huruf pertama jika logo tidak ada
             $firstInitial = $this->escapeXml(substr($initials, 0, 1));
             $logoElement  = <<<FALLBACK
-    <!-- ─── LOGO FALLBACK (Initial) ─── -->
+    <!-- LOGO FALLBACK (Initial) -->
     <g transform="translate(32, 28)">
         <rect x="0" y="0" width="110" height="110" rx="16"
               fill="rgba(255,255,255,0.15)"
@@ -143,38 +143,29 @@ LOGO;
 FALLBACK;
         }
 
-        $svg = <<<SVG
+        return <<<SVG
 <?xml version="1.0" encoding="UTF-8"?>
 <svg width="600" height="900" viewBox="0 0 600 900"
      xmlns="http://www.w3.org/2000/svg"
      xmlns:xlink="http://www.w3.org/1999/xlink">
     <defs>
-
-        <!-- Background Gradient -->
         <linearGradient id="{$gradientId}" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%"   stop-color="{$gradient['start']}" stop-opacity="1"/>
             <stop offset="55%"  stop-color="{$gradient['end']}"   stop-opacity="1"/>
             <stop offset="100%" stop-color="{$gradient['start']}" stop-opacity="0.88"/>
         </linearGradient>
-
-        <!-- Dot Pattern -->
         <pattern id="{$patternId}" x="0" y="0" width="44" height="44" patternUnits="userSpaceOnUse">
             <circle cx="22" cy="22" r="1.4" fill="white" opacity="0.09"/>
         </pattern>
-
-        <!-- Vignette Overlay -->
         <linearGradient id="{$overlayId}" x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%"   stop-color="rgba(255,255,255,0.10)"/>
             <stop offset="45%"  stop-color="rgba(0,0,0,0.0)"/>
             <stop offset="100%" stop-color="rgba(0,0,0,0.28)"/>
         </linearGradient>
-
-        <!-- Logo Glow Filter -->
         <filter id="{$glowId}" x="-15%" y="-15%" width="130%" height="130%">
             <feDropShadow dx="0" dy="0" stdDeviation="5"
                           flood-color="rgba(255,255,255,0.55)"/>
         </filter>
-
     </defs>
 
     <!-- Background Layers -->
@@ -211,21 +202,17 @@ FALLBACK;
 
     <!-- Divider -->
     <line x1="222" y1="372" x2="288" y2="372"
-          stroke="rgba(255,255,255,0.65)" stroke-width="4"
-          stroke-linecap="round"/>
-    <circle cx="300" cy="372" r="7"
-            fill="white" opacity="0.92"/>
+          stroke="rgba(255,255,255,0.65)" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="300" cy="372" r="7" fill="white" opacity="0.92"/>
     <line x1="312" y1="372" x2="378" y2="372"
-          stroke="rgba(255,255,255,0.65)" stroke-width="4"
-          stroke-linecap="round"/>
+          stroke="rgba(255,255,255,0.65)" stroke-width="4" stroke-linecap="round"/>
 
     <!-- Title -->
     {$titleSVG}
 
     <!-- Separator -->
     <line x1="60" y1="670" x2="540" y2="670"
-          stroke="rgba(255,255,255,0.18)" stroke-width="1"
-          stroke-linecap="round"/>
+          stroke="rgba(255,255,255,0.18)" stroke-width="1" stroke-linecap="round"/>
 
     <!-- Category Badge -->
     <g transform="translate(300, 720)">
@@ -253,15 +240,11 @@ FALLBACK;
 
     <!-- Bottom Accent -->
     <line x1="232" y1="870" x2="368" y2="870"
-          stroke="rgba(255,255,255,0.45)" stroke-width="3.5"
-          stroke-linecap="round"/>
-    <circle cx="300" cy="870" r="6"
-            fill="white" opacity="0.82"/>
+          stroke="rgba(255,255,255,0.45)" stroke-width="3.5" stroke-linecap="round"/>
+    <circle cx="300" cy="870" r="6" fill="white" opacity="0.82"/>
 
 </svg>
 SVG;
-
-        return $svg;
     }
 
     private function formatAuthors(string $author): string
@@ -276,8 +259,8 @@ SVG;
 
     private function wrapText(string $text, int $maxChars, int $maxLines): array
     {
-        $words = explode(' ', $text);
-        $lines = [];
+        $words       = explode(' ', $text);
+        $lines       = [];
         $currentLine = '';
 
         foreach ($words as $word) {
@@ -291,7 +274,9 @@ SVG;
             }
         }
 
-        if ($currentLine && count($lines) < $maxLines) $lines[] = $currentLine;
+        if ($currentLine && count($lines) < $maxLines) {
+            $lines[] = $currentLine;
+        }
 
         if (count($lines) === $maxLines) {
             $joined    = implode(' ', $lines);
@@ -312,8 +297,8 @@ SVG;
         $adjustedY   = $startY - ($totalHeight / 2);
 
         $out = '<text'
-            . ' x="'           . $x        . '"'
-            . ' y="'           . $adjustedY . '"'
+            . ' x="' . $x . '"'
+            . ' y="' . $adjustedY . '"'
             . ' font-family="Arial Black, Arial, sans-serif"'
             . ' font-size="28"'
             . ' font-weight="800"'

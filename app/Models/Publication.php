@@ -198,41 +198,54 @@ class Publication extends Model
     /**
      * ✅ Accessor untuk URL cover image - Return NULL untuk support custom placeholder
      */
-    public function getCoverUrlAttribute()
+    public function getCoverUrlAttribute(): string  // ← string, bukan nullable
     {
-        // Return cached value jika ada
         if ($this->coverUrlCache !== null) {
             return $this->coverUrlCache;
         }
 
-        // ✅ Jika tidak ada cover image path, return NULL
-        if (!$this->cover_image_path) {
-            return $this->coverUrlCache = null;
+        if ($this->cover_image_path) {
+            $cleanPath = Str::startsWith($this->cover_image_path, 'public/')
+                ? Str::after($this->cover_image_path, 'public/')
+                : $this->cover_image_path;
+
+            if (Storage::disk('public')->exists($cleanPath)) {
+                return $this->coverUrlCache = Storage::disk('public')->url($cleanPath);
+            }
         }
 
-        // Clean path: remove 'public/' prefix jika ada
-        $cleanPath = $this->cover_image_path;
-        if (Str::startsWith($cleanPath, 'public/')) {
-            $cleanPath = Str::after($cleanPath, 'public/');
+        return $this->coverUrlCache = $this->generatePlaceholderUrl();
+    }
+
+    private function generatePlaceholderUrl(): string
+    {
+        $authorName = 'Anonymous';
+        if ($this->relationLoaded('authors') && $this->authors->isNotEmpty()) {
+            $authorName = $this->authors->pluck('name')->join(', ');
         }
 
-        // Cek apakah file ada di storage/app/public
-        if (Storage::disk('public')->exists($cleanPath)) {
-            return $this->coverUrlCache = asset('storage/' . $cleanPath);
+        $categoryName = 'Umum';
+        if ($this->relationLoaded('categories') && $this->categories->isNotEmpty()) {
+            $categoryName = $this->categories->first()->name;
         }
 
-        // Log warning jika file tidak ditemukan (hanya di development)
-        if (config('app.debug')) {
-            \Log::warning("Cover image not found for publication #{$this->id}", [
-                'title' => $this->title,
-                'cover_path' => $this->cover_image_path,
-                'clean_path' => $cleanPath,
-                'expected_location' => storage_path('app/public/' . $cleanPath),
-            ]);
+        $typeName = 'Publikasi';
+        if ($this->relationLoaded('publicationType') && $this->publicationType) {
+            $typeName = $this->publicationType->name;
         }
 
-        // ✅ Return NULL jika file tidak ada (custom placeholder akan handle di blade)
-        return $this->coverUrlCache = null;
+        $words    = explode(' ', trim($this->title));
+        $initials = count($words) >= 2
+            ? strtoupper(substr($words[0], 0, 1) . substr($words[1], 0, 1))
+            : strtoupper(substr($this->title, 0, 2));
+
+        return route('placeholder.cover', [
+            'initials' => $initials,
+            'type'     => $typeName,
+            'title'    => Str::limit($this->title, 60),
+            'category' => $categoryName,
+            'author'   => $authorName,
+        ]);
     }
 
     /**
