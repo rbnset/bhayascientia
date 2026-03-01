@@ -41,7 +41,7 @@ class PublicationsTable
                     ->sortable()
                     ->weight('semibold')
                     ->wrap()
-                    ->lineClamp(3) // max 3 baris [page:8]
+                    ->lineClamp(3) // max 3 baris
                     ->words(14, end: '...') // potong per kata + "..."
                     // hover: tampilkan judul lengkap (tanpa syarat)
                     ->tooltip(fn(TextColumn $column): ?string => (string) $column->getState())
