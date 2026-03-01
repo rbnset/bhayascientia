@@ -1,7 +1,7 @@
 @props([
 'brandHref' => '/',
-'brandLogo' => 'assets/images/logos/logo.png',
-'brandAlt' => 'BHAYASCIENTIA',
+'brandLogo' => 'assets/images/logos/logo-dark.svg',
+'brandAlt' => 'DABRAKA',
 'brandDesc' => 'Kami mendorong budaya literasi, riset, dan kolaborasi untuk mendukung transformasi Polri yang unggul,
 adaptif, dan berstandar global.',
 
@@ -24,16 +24,16 @@ adaptif, dan berstandar global.',
 ['text' => 'Pencarian', 'href' => '/publikasi?search='],
 ],
 
-'contactEmail' => 'halo@bhayascientia.id',
+'contactEmail' => 'halo@dabraka.id',
 'contactWhatsapp' => '+62 812-3456-7890',
 'contactWhatsappLink' => 'https://wa.me/6281234567890',
 'contactAddress' => 'Depok, Sleman, Yogyakarta',
 'contactAddressLink' => 'https://maps.google.com/?q=Depok,Sleman,Yogyakarta', // ✨ Google Maps link
 
 'socialLinks' => [
-['label' => 'Instagram', 'text' => 'IG', 'href' => 'https://instagram.com/bhayascientia', 'icon' => 'instagram'],
-['label' => 'X (Twitter)', 'text' => 'X', 'href' => 'https://twitter.com/bhayascientia', 'icon' => 'twitter'],
-['label' => 'LinkedIn', 'text' => 'in', 'href' => 'https://linkedin.com/company/bhayascientia', 'icon' => 'linkedin'],
+['label' => 'Instagram', 'text' => 'IG', 'href' => 'https://instagram.com/dabraka', 'icon' => 'instagram'],
+['label' => 'X (Twitter)', 'text' => 'X', 'href' => 'https://twitter.com/dabraka', 'icon' => 'twitter'],
+['label' => 'LinkedIn', 'text' => 'in', 'href' => 'https://linkedin.com/company/dabraka', 'icon' => 'linkedin'],
 ],
 
 'privacyHref' => route('privacy-policy'),
