@@ -62,9 +62,9 @@ class ReviewResource extends Resource
                 SoftDeletingScope::class,
             ])
             ->with([
-                'publicationVersion.publication', // ← untuk cover_url & data publikasi
-                'reviewer',                        // ← untuk kolom reviewer.name
-                'attachments',                     // ← untuk tombol download_revision
+                'publicationVersion.publication', // ← cover_url & data publikasi
+                'reviewer',                        // ← kolom reviewer.name
+                'attachments',                     // ← tombol download_revision
             ]);
     }
 }
