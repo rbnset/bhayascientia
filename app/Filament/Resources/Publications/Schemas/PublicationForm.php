@@ -558,7 +558,7 @@ class PublicationForm
                         ]),
 
                 ])
-                    ->skippable()                              // ← icon step bisa diklik bebas [web:42]
+                    ->skippable()                              // ← icon step bisa diklik bebas
                     ->persistStepInQueryString()               // ← step tersimpan di URL saat refresh
                     ->nextAction(
                         fn(Action $action) => $action
