@@ -14,9 +14,9 @@ keamanan, kebijakan publik, serta keilmuan terkait lainnya.',
 'badgeIcon' => 'assets/icons/crown.svg',
 
 // Thumbnails
-'imageMain' => 'assets/images/thumbnails/overview.png',
-'imageBottomLeft' => 'assets/images/thumbnails/review.png',
-'imageTopRight' => 'assets/images/thumbnails/sitasi.png',
+'imageMain' => 'assets/images/thumbnails/hero.png',
+'imageBottomLeft' => 'assets/images/thumbnails/kutipan.png',
+'imageTopRight' => 'assets/images/thumbnails/tagline.png',
 ])
 
 <section class="relative w-full overflow-hidden bg-gradient-to-b from-white to-[#F8F9FC] pb-12 sm:pb-16 lg:pb-20">
