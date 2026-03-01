@@ -14,7 +14,7 @@ terdaftar, kamu bisa langsung mengakses dashboard untuk submit naskah pertamamu.
 'benefits' => [
 'Gratis dan tanpa biaya tersembunyi',
 'Akses penuh ke dashboard penulis',
-'Notifikasi real-time via email',
+'Notifikasi real-time platform',
 'Profil penulis yang dapat dikustomisasi',
 'Riwayat submission lengkap'
 ],
@@ -25,7 +25,7 @@ terdaftar, kamu bisa langsung mengakses dashboard untuk submit naskah pertamamu.
 'title' => 'Submit & revisi',
 'desc' => 'Kirim naskahmu. Kami review, kamu revisi sampai lebih rapi dan siap dibaca.',
 'icon' => 'assets/images/icons/crown.svg',
-'details' => 'Upload naskahmu dalam format PDF atau Word. Tim reviewer kami akan melakukan review dalam 3-5 hari kerja.
+'details' => 'Upload naskahmu dalam format PDF. Tim reviewer kami akan melakukan review dalam 3-5 hari kerja.
 Kamu akan mendapat feedback detail untuk perbaikan jika diperlukan.',
 'benefits' => [
 'Review profesional dari tim ahli',
@@ -41,11 +41,10 @@ Kamu akan mendapat feedback detail untuk perbaikan jika diperlukan.',
 'title' => 'Terbit otomatis',
 'desc' => 'Jika diterima, naskah akan tayang otomatis di platform kami sebagai portofolio publikasi awalmu.',
 'icon' => 'assets/images/icons/crown.svg',
-'details' => 'Setelah naskah disetujui, publikasi dilakukan otomatis dalam 24 jam. Naskahmu akan mendapat DOI, dapat
+'details' => 'Setelah naskah disetujui, publikasi dilakukan otomatis dalam 24 jam. Naskahmu dapat
 diakses publik, dan diindeks di berbagai search engine untuk meningkatkan visibilitas.',
 'benefits' => [
-'DOI otomatis untuk setiap publikasi',
-'Indexing di Google Scholar & Crossref',
+'Indexing di Google',
 'Dashboard statistik views & downloads',
 'Sertifikat publikasi digital',
 'Share link profesional ke sosial media'
