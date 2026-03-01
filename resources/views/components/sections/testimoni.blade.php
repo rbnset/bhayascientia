@@ -2,49 +2,50 @@
 
 @props([
 'badge' => 'Testimoni',
-'title' => 'Kata penulis & pembaca',
-'description' => 'Cerita singkat dari mereka yang pernah ikut menulis, review, atau membaca publikasi di BHAYACIENTIA.',
+'title' => 'Kata Author & Pembaca',
+'description' => 'Pengalaman nyata dari penulis yang berhasil publish dan pembaca yang menemukan riset berharga di
+Dabraka.',
 'items' => [
 [
 'stars' => 5,
-'text' => 'Alurnya jelas. Dari daftar author sampai revisi, semuanya kebaca dan tidak bikin panik.',
-'name' => 'Dita A.',
+'text' => '"Upload naskah mudah, review transparan, publikasi cepat. Naskah saya akhirnya tayang!"',
+'name' => 'Dr. Andi S.',
 'role' => 'Author',
 'avatar' => 'assets/images/photos/photo.png',
 ],
 [
 'stars' => 5,
-'text' => 'Format dan struktur tulisan jadi lebih rapi. Checklistnya membantu banget buat memastikan sitasi konsisten.',
-'name' => 'Raka P.',
-'role' => 'Editor',
+'text' => '"Pencarian canggih! Filter kategori & author, langsung nemu riset yang relevan."',
+'name' => 'Rina P.',
+'role' => 'Mahasiswa',
 'avatar' => 'assets/images/photos/photo1.png',
 ],
 [
 'stars' => 5,
-'text' => 'Reviewnya detail tapi tetap sopan. Revisi jadi terasa terarah, bukan sekadar "benerin ini-itu".',
-'name' => 'Bagas S.',
-'role' => 'Reviewer',
+'text' => '"Library pribadi praktis! Favorites + history baca otomatis tersimpan."',
+'name' => 'Budi K.',
+'role' => 'Peneliti',
 'avatar' => 'assets/images/photos/photo2.png',
 ],
 [
 'stars' => 5,
-'text' => 'Naskah jadi lebih rapi karena ada alur review yang konsisten dan tidak "loncat-loncat".',
-'name' => 'Nisa K.',
+'text' => '"Review jelas, catatan revisi spesifik. Notifikasi dashboard bikin tenang."',
+'name' => 'Sari W.',
 'role' => 'Author',
 'avatar' => 'assets/images/photos/photo3.png',
 ],
 [
 'stars' => 5,
-'text' => 'Progress naskah bisa dipantau, jadi komunikasinya lebih enak dan tidak tercecer di chat.',
-'name' => 'Dita A.',
-'role' => 'Author',
+'text' => '"Trending & top author keren! Langsung tahu publikasi terbaik."',
+'name' => 'Teguh M.',
+'role' => 'Pembaca',
 'avatar' => 'assets/images/photos/photo.png',
 ],
 [
 'stars' => 5,
-'text' => 'Cara penyajiannya ringkas tapi padat. Cocok buat pembaca yang pengin cepat nangkep inti argumen.',
-'name' => 'Sinta R.',
-'role' => 'Pembaca',
+'text' => '"Gratis + download PDF langsung. Nggak ribet registrasi!"',
+'name' => 'Lina H.',
+'role' => 'Dosen',
 'avatar' => 'assets/images/photos/photo2.png',
 ],
 ],
@@ -54,6 +55,7 @@
 [2, 1, 5],
 ],
 ])
+
 
 @php
 $starsText = fn ($n) => str_repeat('★', max(1, min(5, (int) $n)));
