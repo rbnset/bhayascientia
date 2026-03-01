@@ -5,7 +5,7 @@
 'description' => 'Menghimpun gagasan dan karya insan Polri yang berkolaborasi dengan intelektual di bidang kepolisian,
 keamanan, kebijakan publik, serta keilmuan terkait lainnya.',
 'primaryLabel' => 'Mulai gratis',
-'primaryUrl' => 'http://bhayascientia.test/admin/register',
+'primaryUrl' => 'https://dabraka.rbnset.me/login',
 
 // Demo video
 'secondaryLabel' => 'Lihat demo',
