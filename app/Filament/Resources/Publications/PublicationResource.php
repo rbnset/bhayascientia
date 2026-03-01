@@ -19,7 +19,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use UnitEnum;
 
-
 class PublicationResource extends Resource
 {
     protected static ?string $model = Publication::class;
@@ -57,9 +56,9 @@ class PublicationResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => ListPublications::route('/'),
+            'index'  => ListPublications::route('/'),
             'create' => CreatePublication::route('/create'),
-            'edit' => EditPublication::route('/{record}/edit'),
+            'edit'   => EditPublication::route('/{record}/edit'),
         ];
     }
 
@@ -74,10 +73,14 @@ class PublicationResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
+            ->withoutGlobalScopes([
+                SoftDeletingScope::class, // ← tambahan: agar TrashedFilter berfungsi
+            ])
             ->with([
-                'publicationType',
-                'categories',
-                'authors',
+                'publicationType', // ← description di TextColumn title
+                'categories',      // ← TextColumn categories.name
+                'authors',         // ← TextColumn authors.name
+                'method',          // ← tambahan: TextColumn method.name
             ]);
     }
 }

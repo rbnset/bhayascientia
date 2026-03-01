@@ -23,10 +23,14 @@ class ReviewsTable
     {
         return $table
             ->columns([
-                ImageColumn::make('publicationVersion.publication.cover_image_path')
+                // =====================
+                // COVER (dari relasi publication)
+                // =====================
+                ImageColumn::make('cover_url')
                     ->label('')
-                    ->disk('public')
-                    ->defaultImageUrl(url('/images/placeholder-publication.png'))
+                    ->getStateUsing(
+                        fn($record) => $record->publicationVersion?->publication?->cover_url
+                    )
                     ->width(44)
                     ->height(64)
                     ->extraImgAttributes([
@@ -56,15 +60,15 @@ class ReviewsTable
                     ->badge()
                     ->color(fn(?string $state): string => match ($state) {
                         'revision_required' => 'warning',
-                        'accepted' => 'success',
-                        'rejected' => 'danger',
-                        default => 'gray',
+                        'accepted'          => 'success',
+                        'rejected'          => 'danger',
+                        default             => 'gray',
                     })
                     ->formatStateUsing(fn($state) => match ($state) {
                         'revision_required' => 'Revision Required',
-                        'accepted' => 'Accepted',
-                        'rejected' => 'Rejected',
-                        default => '—',
+                        'accepted'          => 'Accepted',
+                        'rejected'          => 'Rejected',
+                        default             => '—',
                     })
                     ->sortable(),
 
@@ -81,36 +85,33 @@ class ReviewsTable
             ->defaultSort('created_at', 'desc')
 
             ->filters([
-                TrashedFilter::make(), // tampilkan: Without trashed / With trashed / Only trashed [web:176]
+                TrashedFilter::make(),
 
                 SelectFilter::make('decision')
                     ->label('Decision')
                     ->options([
                         'revision_required' => 'Revision Required',
-                        'accepted' => 'Accepted',
-                        'rejected' => 'Rejected',
+                        'accepted'          => 'Accepted',
+                        'rejected'          => 'Rejected',
                     ])
                     ->preload(),
 
-                // Filter reviewer (relasi)
                 SelectFilter::make('reviewer_id')
                     ->label('Reviewer')
                     ->relationship('reviewer', 'name')
                     ->searchable()
                     ->preload(),
 
-                // Filter by publication status (relasi jauh)
-                // ini pakai whereHas karena status ada di publication
                 SelectFilter::make('publication_status')
                     ->label('Publication Status')
                     ->options([
-                        'draft' => 'Draft',
-                        'submitted' => 'Submitted',
-                        'in_review' => 'In Review',
+                        'draft'             => 'Draft',
+                        'submitted'         => 'Submitted',
+                        'in_review'         => 'In Review',
                         'revision_required' => 'Revision Required',
-                        'accepted' => 'Accepted',
-                        'rejected' => 'Rejected',
-                        'published' => 'Published',
+                        'accepted'          => 'Accepted',
+                        'rejected'          => 'Rejected',
+                        'published'         => 'Published',
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         $value = $data['value'] ?? null;
@@ -119,7 +120,10 @@ class ReviewsTable
                             return $query;
                         }
 
-                        return $query->whereHas('publicationVersion.publication', fn(Builder $q) => $q->where('status', $value));
+                        return $query->whereHas(
+                            'publicationVersion.publication',
+                            fn(Builder $q) => $q->where('status', $value)
+                        );
                     }),
             ])
 
@@ -161,8 +165,7 @@ class ReviewsTable
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make()
-                        // biasanya reviewer boleh delete miliknya, tapi Anda sebelumnya matikan untuk reviewer
-                        ->visible(fn() => ! (auth()->user()?->hasRole('reviewer'))),
+                        ->visible(fn() => !(auth()->user()?->hasRole('reviewer'))),
 
                     RestoreBulkAction::make(),
                     ForceDeleteBulkAction::make(),

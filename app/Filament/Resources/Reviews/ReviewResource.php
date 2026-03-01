@@ -43,17 +43,15 @@ class ReviewResource extends Resource
 
     public static function getRelations(): array
     {
-        return [
-            //
-        ];
+        return [];
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => ListReviews::route('/'),
+            'index'  => ListReviews::route('/'),
             'create' => CreateReview::route('/create'),
-            'edit' => EditReview::route('/{record}/edit'),
+            'edit'   => EditReview::route('/{record}/edit'),
         ];
     }
 
@@ -62,6 +60,11 @@ class ReviewResource extends Resource
         return parent::getEloquentQuery()
             ->withoutGlobalScopes([
                 SoftDeletingScope::class,
+            ])
+            ->with([
+                'publicationVersion.publication', // ← untuk cover_url & data publikasi
+                'reviewer',                        // ← untuk kolom reviewer.name
+                'attachments',                     // ← untuk tombol download_revision
             ]);
     }
 }
