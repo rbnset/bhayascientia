@@ -1,5 +1,3 @@
-{{-- resources/views/components/hero/home.blade.php (IMPROVED) --}}
-
 @props([
 'title' => 'DABRAKA, portal pengabdian intelektual.',
 'description' => 'Menghimpun gagasan dan karya insan Polri yang berkolaborasi dengan intelektual di bidang kepolisian,

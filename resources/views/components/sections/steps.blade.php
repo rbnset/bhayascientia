@@ -3,7 +3,7 @@
 @props([
 'badge' => 'Cara kerja',
 'title' => '3 langkah, naskah siap tayang.',
-'description' => 'Daftar, submit, revisi. Naskah diterima? kami publikasikan otomatis di BHAYACIENTIA.',
+'description' => 'Daftar, submit, revisi. Naskah diterima? kami publikasikan otomatis di DABRAKA.',
 'steps' => [
 [
 'title' => 'Daftar akun',
