@@ -9,7 +9,7 @@ proses yang transparan dari satu platform.',
 [
 'step' => 'Fitur 1',
 'label' => 'Akses',
-'icon' => 'assets/images/icons/crown.svg',
+'icon' => 'assets/images/icons/akses.svg',
 'title' => 'Baca Gratis Tanpa Batas',
 'description' => 'Nikmati akses penuh ke semua publikasi ilmiah tanpa biaya atau registrasi.',
 'features' => [
@@ -25,7 +25,7 @@ proses yang transparan dari satu platform.',
 [
 'step' => 'Fitur 2',
 'label' => 'Library',
-'icon' => 'assets/images/icons/note-2.svg',
+'icon' => 'assets/images/icons/library.svg',
 'title' => 'Koleksi Pribadi Pintar',
 'description' => 'Atur, simpan, dan lanjutkan membaca karya favorit dengan mudah.',
 'features' => [
@@ -41,7 +41,7 @@ proses yang transparan dari satu platform.',
 [
 'step' => 'Fitur 3',
 'label' => 'Discovery',
-'icon' => 'assets/images/icons/device-message.svg',
+'icon' => 'assets/images/icons/discovery.svg',
 'title' => 'Temukan Karya Terbaik',
 'description' => 'Pencarian canggih dan rekomendasi berbasis tren untuk riset tepat sasaran.',
 'features' => [
@@ -57,7 +57,7 @@ proses yang transparan dari satu platform.',
 [
 'step' => 'Fitur 4',
 'label' => 'Author',
-'icon' => 'assets/images/icons/lock.svg',
+'icon' => 'assets/images/icons/author.svg',
 'title' => 'Publikasi Mudah & Transparan',
 'description' => 'Upload naskah, dapatkan review profesional, dan tayang di platform terpercaya.',
 'features' => [
