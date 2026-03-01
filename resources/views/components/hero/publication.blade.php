@@ -1,33 +1,34 @@
 @props([
-'badgeText' => 'Ruang antara jurnal dan opini bebas',
+'badgeText' => 'Where Knowledge Shapes Policing',
 'slides' => [
 [
-'image' => '/assets/images/thumbnails/lms.jpg', // ✅ Tambah / di depan
-'title' => 'Tulis dengan data. Terbit dengan tanggung jawab.',
-'excerpt' => 'Platform publikasi akademik non-formal untuk penulis yang ingin naskahnya lebih rapi, risetnya lebih kuat,
-dan prosesnya lebih jelas—tanpa klaim peer-review jurnal.',
-'url' => '/submission-guidelines',
-'alt' => 'Publikasi akademik berbasis data',
-],
-[
-'image' => '/assets/images/thumbnails/event.jpg', // ✅ Tambah / di depan
-'title' => 'Dari ide ke publikasi. Kami dampingi prosesnya.',
-'excerpt' => 'Dapatkan feedback editorial untuk struktur, argumentasi, dan sitasi. Publikasikan karya Anda dengan
-standar akademik yang terukur dan kredibel.',
-'url' => '/publikasi',
-'alt' => 'Proses editorial akademik',
-],
-[
-'image' => '/assets/images/thumbnails/konsultasi.jpg', // ✅ Tambah / di depan
-'title' => 'Riset kuat. Tulisan jelas. Publikasi etis.',
-'excerpt' => 'Tidak sekadar opini. Tidak sekaku jurnal. BHAYASCIENTIA hadir sebagai jembatan antara pemikiran ilmiah dan
-aksesibilitas publik.',
+'image' => '/assets/images/thumbnails/lms.jpg',
+'title' => 'Portal Pengabdian Intelektual Bhayangkara',
+'excerpt' => 'DABRAKA (Darma Brata Buana Cendekia): wadah publikasi terbuka untuk insan Polri & akademisi. Kontribusi
+pemikiran ilmu kepolisian, keamanan publik, dan kebijakan evidence-based.',
 'url' => '/tentang',
-'alt' => 'Standar etika akademik',
+'alt' => 'Dabraka - Transformasi kepolisian Indonesia',
+],
+[
+'image' => '/assets/images/thumbnails/event.jpg',
+'title' => 'Jembatan Lapangan ↔ Ilmiah ↔ Kebijakan',
+'excerpt' => 'Transformasi Polri butuh kekuatan gagasan. Dari pengalaman praktisi Bhayangkara ke refleksi akademik
+berkelanjutan. Ekosistem pengetahuan hidup untuk dinamika keamanan global.',
+'url' => '/publikasi',
+'alt' => 'Ekosistem pengetahuan kepolisian',
+],
+[
+'image' => '/assets/images/thumbnails/konsultasi.jpg',
+'title' => 'Pusat Referensi Pemikiran Kepolisian Indonesia',
+'excerpt' => 'Publikasi, kajian strategis, forum ilmiah, jejaring global. Pengabdian intelektual untuk memperkuat
+institusi Polri, melayani masyarakat, dan kemajuan bangsa.',
+'url' => '/upload',
+'alt' => 'Pengabdian intelektual Bhayangkara',
 ],
 ],
-'arrowIcon' => '/assets/images/icons/arrow.svg', // ✅ Tambah / di depan
+'arrowIcon' => '/assets/images/icons/arrow.svg',
 ])
+
 
 <section id="Featured" data-featured-carousel
     class="mt-2 relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen max-w-none">
