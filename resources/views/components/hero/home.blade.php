@@ -7,7 +7,7 @@ keamanan, kebijakan publik, serta keilmuan terkait lainnya.',
 
 // Demo video
 'secondaryLabel' => 'Lihat demo',
-'youtubeId' => 'https://www.instagram.com/reel/DRTjxJCEThZ/?igsh=Z3o4czNodDUxOG4=',
+'youtubeId' => 'kBO2C2e4Az0',
 
 // Badge
 'badgeText' => 'Where Knowledge Shapes Policing.',
