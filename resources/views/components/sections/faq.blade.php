@@ -3,7 +3,7 @@
 @props([
 'badge' => 'FAQ',
 'title' => 'Pertanyaan yang sering ditanyakan',
-'description' => 'Tidak menemukan jawaban? Hubungi tim BHAYASCIENTIA, nanti dibantu.',
+'description' => 'Tidak menemukan jawaban? Hubungi tim DABRAKA, nanti dibantu.',
 
 'ctaText' => 'Tanya Tim Support',
 'ctaHref' => '/kontak',
