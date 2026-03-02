@@ -17,12 +17,17 @@ class PublicationSearchController extends Controller
 
     public function search(Request $request)
     {
-        $searchQuery = $request->query('search');
-        $selectedType = $request->query('type', 'all');
+        $searchQuery    = $request->query('search');
+        $selectedType   = $request->query('type', 'all');
         $filterCategory = $request->query('category');
-        $filterYear = $request->query('year');
-        $filterKeyword = $request->query('keyword');
-        $filterSort = $request->query('sort', 'latest');
+        $filterYear     = $request->query('year');
+        $filterSort     = $request->query('sort', 'latest');
+
+        // ✅ FIX: normalize keyword jadi array
+        $filterKeyword = $request->input('keyword', []);
+        $filterKeyword = is_array($filterKeyword)
+            ? array_values(array_filter($filterKeyword))
+            : array_filter([$filterKeyword]);
 
         // Publication types
         $publicationTypes = PublicationType::where('is_active', true)
@@ -73,14 +78,12 @@ class PublicationSearchController extends Controller
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now());
 
-        // Filter by type
         if ($selectedType !== 'all') {
             $query->whereHas('publicationType', function ($q) use ($selectedType) {
                 $q->where('slug', $selectedType)->where('is_active', true);
             });
         }
 
-        // Search query
         if ($searchQuery) {
             $query->where(function ($q) use ($searchQuery) {
                 $q->where('title', 'LIKE', "%{$searchQuery}%")
@@ -91,26 +94,23 @@ class PublicationSearchController extends Controller
             });
         }
 
-        // Filter category
         if ($filterCategory) {
             $query->whereHas('categories', function ($q) use ($filterCategory) {
                 $q->where('slug', $filterCategory);
             });
         }
 
-        // Filter year
         if ($filterYear) {
             $query->whereYear('published_at', $filterYear);
         }
 
-        // Filter keyword
-        if ($filterKeyword) {
+        // ✅ FIX: support multi keyword (array)
+        if (!empty($filterKeyword)) {
             $query->whereHas('keywords', function ($q) use ($filterKeyword) {
-                $q->where('slug', $filterKeyword);
+                $q->whereIn('slug', $filterKeyword);
             });
         }
 
-        // Sorting
         switch ($filterSort) {
             case 'popular':
                 $query->withCount('downloadLogs')->orderByDesc('download_logs_count');
@@ -127,48 +127,40 @@ class PublicationSearchController extends Controller
                 break;
         }
 
-        $publications = $query->paginate(18)->withQueryString();
+        // ✅ 9 per halaman
+        $publications = $query->paginate(9)->withQueryString();
 
         $searchResults = $publications->map(function ($pub) {
-            // ✅ Get publication type with fallback
-            $pubType = 'Publikasi';
-            if ($pub->publicationType) {
-                $pubType = $pub->publicationType->name;
-            }
-
-            // ✅ Get cover URL using trait method (returns NULL if no cover)
-            $coverUrl = $this->getCoverUrl($pub);
-
-            // ✅ Get category name
+            $pubType      = $pub->publicationType?->name ?? 'Publikasi';
+            $coverUrl     = $this->getCoverUrl($pub);
             $categoryName = $pub->category_name ?? 'Umum';
-
-            // ✅ Get formatted date
-            $formattedDate = $pub->formatted_date ?? ($pub->published_at ? $pub->published_at->locale('id_ID')->isoFormat('D MMM Y') : 'Tanggal tidak tersedia');
-
-            // ✅ Get abstract with limit
+            $formattedDate = $pub->formatted_date
+                ?? ($pub->published_at
+                    ? $pub->published_at->locale('id_ID')->isoFormat('D MMM Y')
+                    : 'Tanggal tidak tersedia');
             $abstract = Str::limit($pub->abstract ?? 'Tidak ada abstrak tersedia', 150);
 
             return [
-                'id' => $pub->id,
-                'title' => $pub->title,
-                'slug' => $pub->slug,
-                'cover_url' => $coverUrl, // NULL jika tidak ada cover
-                'category' => $categoryName,
-                'formatted_date' => $formattedDate,
-                'publication_type' => $pubType, // ✅ ADDED: For placeholder generation
-                'status' => $pub->publicationType && $pub->publicationType->requires_review ? 'Peer-reviewed Terverifikasi' : '',
-                'type' => $pubType,
-                'abstract' => $abstract,
-                'detail_url' => route('publikasi.show', $pub->slug),
-                'authors' => $pub->authors->take(6)->map(function ($author) {
-                    return [
-                        'id' => $author->id,
-                        'name' => $author->name,
-                        'photo' => $author->photo_url,
-                        'initials' => $author->initials,
-                    ];
-                })->toArray(),
-                'total_authors' => $pub->authors->count(),
+                'id'               => $pub->id,
+                'title'            => $pub->title,
+                'slug'             => $pub->slug,
+                'cover_url'        => $coverUrl,
+                'category'         => $categoryName,
+                'formatted_date'   => $formattedDate,
+                'publication_type' => $pubType,
+                'status'           => $pub->publicationType?->requires_review
+                    ? 'Peer-reviewed'
+                    : 'Terverifikasi',
+                'type'             => $pubType,
+                'abstract'         => $abstract,
+                'detail_url'       => route('publikasi.show', $pub->slug),
+                'authors'          => $pub->authors->take(6)->map(fn($a) => [
+                    'id'       => $a->id,
+                    'name'     => $a->name,
+                    'photo'    => $a->photo_url,
+                    'initials' => $a->initials,
+                ])->toArray(),
+                'total_authors'    => $pub->authors->count(),
             ];
         });
 
