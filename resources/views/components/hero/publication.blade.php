@@ -14,7 +14,7 @@ pemikiran ilmu kepolisian, keamanan publik, dan kebijakan evidence-based.',
 'title' => 'Jembatan Lapangan ↔ Ilmiah ↔ Kebijakan',
 'excerpt' => 'Transformasi Polri butuh kekuatan gagasan. Dari pengalaman praktisi Bhayangkara ke refleksi akademik
 berkelanjutan. Ekosistem pengetahuan hidup untuk dinamika keamanan global.',
-'url' => '/publikasi',
+'url' => '/publikasi/jelajahi',
 'alt' => 'Ekosistem pengetahuan kepolisian',
 ],
 [
@@ -22,7 +22,7 @@ berkelanjutan. Ekosistem pengetahuan hidup untuk dinamika keamanan global.',
 'title' => 'Pusat Referensi Pemikiran Kepolisian Indonesia',
 'excerpt' => 'Publikasi, kajian strategis, forum ilmiah, jejaring global. Pengabdian intelektual untuk memperkuat
 institusi Polri, melayani masyarakat, dan kemajuan bangsa.',
-'url' => '/upload',
+'url' => '/publikasi/search',
 'alt' => 'Pengabdian intelektual Bhayangkara',
 ],
 ],
