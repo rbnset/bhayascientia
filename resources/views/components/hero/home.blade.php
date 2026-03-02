@@ -7,7 +7,7 @@ keamanan, kebijakan publik, serta keilmuan terkait lainnya.',
 
 // Demo video
 'secondaryLabel' => 'Lihat demo',
-'youtubeId' => 'ZWZfwmObdvc',
+'youtubeId' => 'https://www.instagram.com/reel/DRTjxJCEThZ/?igsh=Z3o4czNodDUxOG4=',
 
 // Badge
 'badgeText' => 'Where Knowledge Shapes Policing.',
@@ -261,7 +261,7 @@ keamanan, kebijakan publik, serta keilmuan terkait lainnya.',
 
         {{-- Video Container --}}
         <div class="bg-black">
-            <iframe id="videoFrame" class="w-full aspect-video" src="" title="Demo BHAYASCIENTIA" frameborder="0"
+            <iframe id="videoFrame" class="w-full aspect-video" src="" title="Demo DABRAKA" frameborder="0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 referrerpolicy="strict-origin-when-cross-origin" allowfullscreen>
             </iframe>
