@@ -149,7 +149,7 @@ MOBILE BOTTOM NAV (< sm)========================================================
                     onerror="this.style.display='none'">
                 @endif
 
-                <span class="text-sm font-bold leading-none text-white whitespace-nowrap">
+                <span class="text-sm font-bold leading-none text-black whitespace-nowrap">
                     {{ $item['label'] }}
                 </span>
 
