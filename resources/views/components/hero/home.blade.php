@@ -14,7 +14,7 @@ keamanan, kebijakan publik, serta keilmuan terkait lainnya.',
 'badgeIcon' => 'assets/icons/crown.svg',
 
 // Thumbnails
-'imageMain' => 'assets/images/thumbnails/hero-image.png',
+'imageMain' => 'assets/images/thumbnails/main.png',
 'imageBottomLeft' => 'assets/images/thumbnails/quote.png',
 'imageTopRight' => 'assets/images/thumbnails/tagline.png',
 ])
