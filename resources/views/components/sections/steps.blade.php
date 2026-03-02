@@ -7,7 +7,7 @@
 'steps' => [
 [
 'title' => 'Daftar akun',
-'desc' => 'Buat akun untuk mulai submit naskah jurnal, buku, atau opini.',
+'desc' => 'Buat akun dan lengkpai data diri untuk mulai submit naskah jurnal, buku, atau opini.',
 'icon' => 'assets/images/icons/crown.svg',
 'details' => 'Proses pendaftaran sangat mudah dan cepat. Cukup isi email, buat password, dan verifikasi akun. Setelah
 terdaftar, kamu bisa langsung mengakses dashboard untuk submit naskah pertamamu.',
