@@ -3,6 +3,7 @@
 use App\Http\Controllers\AboutController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\GoogleAuthController;
+use App\Http\Controllers\Auth\OtpController;
 use App\Http\Controllers\PublicationController;
 use App\Http\Controllers\AuthorController;
 use App\Http\Controllers\ContactController;
@@ -126,6 +127,19 @@ Route::middleware('auth')->group(function () {
 
 /*
 |--------------------------------------------------------------------------
+| OTP Verification
+| ⚠️ Pakai middleware 'auth' saja — BUKAN 'verified.otp'
+| Supaya user yang belum verified tetap bisa akses halaman ini
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth'])->group(function () {
+    Route::get('/verify-email', [OtpController::class, 'show'])->name('otp.show');
+    Route::post('/verify-email', [OtpController::class, 'verify'])->name('otp.verify');
+    Route::post('/verify-email/resend', [OtpController::class, 'resend'])->name('otp.resend');
+});
+
+/*
+|--------------------------------------------------------------------------
 | Publikasi Routes
 | ⚠️ URUTAN PENTING: specific routes SEBELUM wildcard {slug}
 |--------------------------------------------------------------------------
@@ -182,10 +196,10 @@ Route::get('/submission-guidelines', [SubmissionGuidelineController::class, 'ind
 
 /*
 |--------------------------------------------------------------------------
-| Authenticated User Routes
+| Authenticated + Verified User Routes
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'verified.otp'])->group(function () {
 
     // ── Subscription ────────────────────────────────────────────────────────
     Route::get('/langganan', [SubscriptionController::class, 'index'])->name('subscription.index');
@@ -193,8 +207,6 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/langganan', [SubscriptionController::class, 'update'])->name('subscription.update');
     Route::delete('/langganan', [SubscriptionController::class, 'destroy'])->name('subscription.destroy');
     Route::post('/langganan/reactivate', [SubscriptionController::class, 'reactivate'])->name('subscription.reactivate');
-
-    // AJAX — ⚠️ harus di atas /langganan/{wildcard} jika ada
     Route::get('/langganan/categories', [SubscriptionController::class, 'getCategoriesAjax'])->name('subscription.categories');
 
     // ── Profile ─────────────────────────────────────────────────────────────
@@ -216,64 +228,11 @@ Route::get('/placeholder-cover', [PlaceholderCoverController::class, 'generate']
 
 /*
 |--------------------------------------------------------------------------
-| TEMPORARY — Preview Email (Hapus setelah testing!)
+| TEMPORARY — Preview Email OTP (Hapus setelah testing!)
 |--------------------------------------------------------------------------
 */
-// Route::get('/preview-autoreply', function () {
-//     $data = [
-//         'name'    => 'Robin Setiyawan',
-//         'email'   => 'rbn.setiyawan@gmail.com',
-//         'phone'   => '085669877959',
-//         'subject' => 'Saran Fitur Platform',
-//         'message' => "Halo tim DABRAKA,\n\nSaya ingin memberikan saran terkait fitur pencarian publikasi.\n\nTerima kasih.",
-//     ];
-//     return view('emails.contact-autoreply', compact('data'));
-// });
-
-// Route::get('/preview-admin', function () {
-//     $data = [
-//         'name'    => 'Robin Setiyawan',
-//         'email'   => 'rbn.setiyawan@gmail.com',
-//         'phone'   => '085669877959',
-//         'subject' => 'Saran Fitur Platform',
-//         'message' => "Halo tim DABRAKA,\n\nSaya ingin memberikan saran terkait fitur pencarian publikasi.\n\nTerima kasih.",
-//     ];
-//     return view('emails.contact', compact('data'));
-// });
-
-
-// // TEMPORARY — hapus setelah testing!
-// Route::get('/preview-langganan', function () {
-//     return app(App\Http\Controllers\SubscriptionController::class)->index();
-// });
-
-// // TEMPORARY — hapus setelah testing!
-// Route::get('/preview-email-subscription', function () {
-//     $user = App\Models\User::first();
-//     $publications = App\Models\Publication::where('status', 'published')
-//         ->latest('published_at')
-//         ->take(5)
-//         ->get();
-
-//     return view('emails.subscription-digest', compact('user', 'publications'));
-// });
-
-// TEMPORARY — hapus setelah testing!
-// Route::get('/preview-digest/{type}', function (string $type) {
-//     $subscription = App\Models\Subscription::with('user')->active()->first();
-
-//     abort_unless($subscription, 404, 'Belum ada subscriber aktif.');
-
-//     $publications = App\Models\Publication::with(['publicationType', 'categories', 'authors'])
-//         ->where('status', 'published')
-//         ->latest('published_at')
-//         ->take(5)
-//         ->get();
-
-//     return new App\Mail\SubscriptionDigestMail(
-//         subscription: $subscription,
-//         publications: $publications,
-//         digestType: $type,
-//         periodLabel: 'Preview – ' . now()->format('d M Y'),
-//     );
-// })->middleware('auth');
+Route::get('/preview-otp', function () {
+    $user = App\Models\User::first();
+    $otp  = $user->generateOtp();
+    return new App\Mail\OtpVerificationMail($otp);
+});

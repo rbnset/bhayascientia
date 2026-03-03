@@ -160,14 +160,6 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
     }
 
     /**
-     * Check if email is verified
-     */
-    public function isEmailVerified(): bool
-    {
-        return !is_null($this->email_verified_at);
-    }
-
-    /**
      * Get provider display name
      */
     public function getProviderNameAttribute(): string
@@ -320,5 +312,29 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
     public function isSaved($publicationId)
     {
         return $this->savedPublications()->where('publication_id', $publicationId)->exists();
+    }
+
+    // Tambahkan di dalam class User
+
+    public function otpCodes()
+    {
+        return $this->hasMany(OtpCode::class);
+    }
+
+    public function isEmailVerified(): bool
+    {
+        return !is_null($this->email_verified_at);
+    }
+
+    public function generateOtp(): OtpCode
+    {
+        // Hapus OTP lama yang belum dipakai
+        $this->otpCodes()->where('is_used', false)->delete();
+
+        return $this->otpCodes()->create([
+            'code'       => str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT),
+            'expires_at' => now()->addMinutes(10),
+            'is_used'    => false,
+        ]);
     }
 }
