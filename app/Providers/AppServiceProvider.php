@@ -2,14 +2,14 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
-use App\Services\AuthorService;
-use App\Repositories\AuthorRepository;
 use App\Actions\Author\GetBestAuthorsAction;
-use Illuminate\Support\Facades\RateLimiter;
+use App\Repositories\AuthorRepository;
+use App\Services\AuthorService;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
-
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\URL;
+use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -18,7 +18,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // Register Author-related services sebagai singleton
         $this->app->singleton(AuthorService::class);
         $this->app->singleton(AuthorRepository::class);
         $this->app->singleton(GetBestAuthorsAction::class);
@@ -29,6 +28,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // ── HTTPS Enforce (production only) ──────────────────────────────────
+        if (config('app.env') === 'production') {
+            URL::forceScheme('https');
+        }
+
         $this->configureRateLimiting();
     }
 
@@ -41,6 +45,17 @@ class AppServiceProvider extends ServiceProvider
                 ->response(function () {
                     return back()->withErrors([
                         'email' => 'Terlalu banyak percobaan login. Coba lagi dalam 1 menit.',
+                    ]);
+                });
+        });
+
+        // Register: maks 5x per 10 menit per IP
+        RateLimiter::for('register', function (Request $request) {
+            return Limit::perMinutes(10, 5)
+                ->by($request->ip())
+                ->response(function () {
+                    return back()->withErrors([
+                        'email' => 'Terlalu banyak percobaan daftar. Coba lagi dalam 10 menit.',
                     ]);
                 });
         });
@@ -67,13 +82,13 @@ class AppServiceProvider extends ServiceProvider
                 });
         });
 
-        // Register: maks 5x per 10 menit per IP (cegah spam akun)
-        RateLimiter::for('register', function (Request $request) {
+        // Kontak: maks 5x per 10 menit per IP (cegah spam form kontak)
+        RateLimiter::for('kontak', function (Request $request) {
             return Limit::perMinutes(10, 5)
                 ->by($request->ip())
                 ->response(function () {
                     return back()->withErrors([
-                        'email' => 'Terlalu banyak percobaan daftar. Coba lagi dalam 10 menit.',
+                        'message' => 'Terlalu banyak pesan dikirim. Coba lagi dalam 10 menit.',
                     ]);
                 });
         });
