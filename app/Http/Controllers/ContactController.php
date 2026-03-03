@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Mail\ContactAutoReplyMail;
 use App\Mail\ContactFormMail;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -44,7 +45,6 @@ class ContactController extends Controller
                     'ip'      => $request->ip(),
                 ]);
 
-                // Score < 0.5 dianggap bot (0.0 = pasti bot, 1.0 = pasti manusia)
                 if (!($result['success'] ?? false) || $score < 0.5) {
                     Log::warning('reCAPTCHA bot detected', [
                         'score' => $score,
@@ -56,7 +56,6 @@ class ContactController extends Controller
                         ->with('error', 'Verifikasi keamanan gagal. Silakan coba lagi.');
                 }
             } catch (\Exception $e) {
-                // Kalau koneksi ke Google gagal, tetap lanjut (jangan blokir user)
                 Log::warning('reCAPTCHA verification error', ['error' => $e->getMessage()]);
             }
         }
@@ -85,13 +84,35 @@ class ContactController extends Controller
         $validated['message'] = strip_tags($validated['message']);
         $validated['phone']   = $validated['phone'] ? strip_tags($validated['phone']) : null;
 
-        // ── 5. Kirim email ────────────────────────────────────────────────────
+        // ── 5. Anti-duplicate submission ──────────────────────────────────────
+        // Hash dibuat dari email + subject + 100 karakter pertama pesan
+        // Tujuan: konten sama dari email sama dalam 5 menit = duplikat
+        $duplicateKey = 'contact_duplicate:' . md5(
+            strtolower(trim($validated['email'])) .
+                strtolower(trim($validated['subject'])) .
+                substr(strtolower(trim($validated['message'])), 0, 100)
+        );
+
+        if (Cache::has($duplicateKey)) {
+            Log::info('Duplicate contact form submission blocked', [
+                'email'   => $validated['email'],
+                'subject' => $validated['subject'],
+                'ip'      => $request->ip(),
+            ]);
+
+            return back()->with('error', 'Pesan serupa sudah pernah dikirim. Silakan tunggu beberapa menit sebelum mengirim ulang.');
+        }
+
+        // ── 6. Kirim email ────────────────────────────────────────────────────
         try {
             Mail::to(config('mail.admin_email'))
                 ->send(new ContactFormMail($validated));
 
             Mail::to($validated['email'])
                 ->send(new ContactAutoReplyMail($validated));
+
+            // Simpan hash ke cache selama 5 menit setelah email berhasil terkirim
+            Cache::put($duplicateKey, true, now()->addMinutes(5));
 
             Log::info('Contact form submitted', [
                 'name'    => $validated['name'],
