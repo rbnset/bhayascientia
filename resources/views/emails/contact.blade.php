@@ -101,7 +101,7 @@
     <div class="container">
         <div class="header">
             <h1>📩 Pesan Baru Masuk</h1>
-            <p>Ada pesan baru dari form kontak BHAYASCIENTIA</p>
+            <p>Ada pesan baru dari form kontak DABRAKA</p>
         </div>
         <div class="body">
             <div class="field">
@@ -130,7 +130,7 @@
             <a href="mailto:{{ $data['email'] }}" class="reply-btn">Balas Pesan →</a>
         </div>
         <div class="footer">
-            Dikirim otomatis dari form kontak BHAYASCIENTIA<br>
+            Dikirim otomatis dari form kontak DABRAKA<br>
             {{ now()->setTimezone('Asia/Jakarta')->format('d M Y, H:i') }} WIB
         </div>
     </div>
