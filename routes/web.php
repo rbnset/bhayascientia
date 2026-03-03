@@ -259,21 +259,21 @@ Route::get('/placeholder-cover', [PlaceholderCoverController::class, 'generate']
 // });
 
 // TEMPORARY — hapus setelah testing!
-Route::get('/preview-digest/{type}', function (string $type) {
-    $subscription = App\Models\Subscription::with('user')->active()->first();
+// Route::get('/preview-digest/{type}', function (string $type) {
+//     $subscription = App\Models\Subscription::with('user')->active()->first();
 
-    abort_unless($subscription, 404, 'Belum ada subscriber aktif.');
+//     abort_unless($subscription, 404, 'Belum ada subscriber aktif.');
 
-    $publications = App\Models\Publication::with(['publicationType', 'categories', 'authors'])
-        ->where('status', 'published')
-        ->latest('published_at')
-        ->take(5)
-        ->get();
+//     $publications = App\Models\Publication::with(['publicationType', 'categories', 'authors'])
+//         ->where('status', 'published')
+//         ->latest('published_at')
+//         ->take(5)
+//         ->get();
 
-    return new App\Mail\SubscriptionDigestMail(
-        subscription: $subscription,
-        publications: $publications,
-        digestType: $type,
-        periodLabel: 'Preview – ' . now()->format('d M Y'),
-    );
-})->middleware('auth');
+//     return new App\Mail\SubscriptionDigestMail(
+//         subscription: $subscription,
+//         publications: $publications,
+//         digestType: $type,
+//         periodLabel: 'Preview – ' . now()->format('d M Y'),
+//     );
+// })->middleware('auth');
