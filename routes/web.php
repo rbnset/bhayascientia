@@ -242,7 +242,13 @@ Route::get('/preview-admin', function () {
 });
 
 
-// TEMPORARY di web.php
-Route::get('/preview-subscription', function () {
-    return app(App\Http\Controllers\SubscriptionController::class)->index();
-})->middleware('auth');
+// TEMPORARY — hapus setelah testing!
+Route::get('/preview-email-subscription', function () {
+    $user = App\Models\User::first();
+    $publications = App\Models\Publication::where('status', 'published')
+        ->latest('published_at')
+        ->take(5)
+        ->get();
+
+    return view('emails.subscription-digest', compact('user', 'publications'));
+});
