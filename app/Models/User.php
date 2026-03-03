@@ -10,7 +10,6 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Traits\HasRoles;
-use Illuminate\Support\Facades\Hash;
 
 class User extends Authenticatable implements FilamentUser, HasAvatar
 {
@@ -21,7 +20,7 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         'email',
         'password',
         'email_verified_at',
-        'profile_photo',    // ✅ Field utama untuk photo
+        'profile_photo',
         'whatsapp_number',
         'job_title',
         'username',
@@ -29,7 +28,7 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         'affiliation',
         'google_id',
         'facebook_id',
-        'avatar',           // ✅ Hanya untuk URL dari social login (Google/Facebook)
+        'avatar',
         'provider',
     ];
 
@@ -42,25 +41,20 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
     {
         return [
             'email_verified_at' => 'datetime',
-            'password' => 'hashed',
+            'password'          => 'hashed',
         ];
     }
 
     // ========================================
-    // ✅ ACCESSORS
+    // ACCESSORS
     // ========================================
 
-    /**
-     * ✅ PERBAIKAN: Accessor untuk photo URL dengan prioritas yang benar
-     */
     public function getPhotoUrlAttribute(): string
     {
-        // Prioritas 1: Avatar dari social login (Google/Facebook) - ini URL langsung
         if ($this->avatar && filter_var($this->avatar, FILTER_VALIDATE_URL)) {
             return $this->avatar;
         }
 
-        // Prioritas 2: Profile photo yang diupload manual - ini path storage
         if ($this->profile_photo) {
             $cleanPath = str_starts_with($this->profile_photo, 'public/')
                 ? substr($this->profile_photo, 7)
@@ -71,14 +65,10 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
             }
         }
 
-        // Prioritas 3: Default UI Avatars
         return 'https://ui-avatars.com/api/?name=' . urlencode($this->name) .
             '&background=FF6B18&color=fff&size=128&bold=true&font-size=0.4';
     }
 
-    /**
-     * ✅ Accessor untuk initials
-     */
     public function getInitialsAttribute(): string
     {
         $words = explode(' ', trim($this->name));
@@ -90,9 +80,6 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         return strtoupper(substr($this->name, 0, 2));
     }
 
-    /**
-     * ✅ Accessor untuk short bio
-     */
     public function getShortBioAttribute(): ?string
     {
         if (!$this->bio) {
@@ -105,20 +92,15 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
     }
 
     // ========================================
-    // ✅ FILAMENT METHODS
+    // FILAMENT METHODS
     // ========================================
 
-    /**
-     * ✅ Filament avatar URL (prioritaskan avatar dari social media)
-     */
     public function getFilamentAvatarUrl(): ?string
     {
-        // Prioritas 1: Avatar dari social login (URL langsung)
         if ($this->avatar && filter_var($this->avatar, FILTER_VALIDATE_URL)) {
             return $this->avatar;
         }
 
-        // Prioritas 2: Profile photo upload (path storage)
         if ($this->profile_photo) {
             $cleanPath = str_starts_with($this->profile_photo, 'public/')
                 ? substr($this->profile_photo, 7)
@@ -132,49 +114,37 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         return null;
     }
 
-    /**
-     * ✅ Determine if user can access Filament panel
-     */
     public function canAccessPanel(Panel $panel): bool
     {
         return true;
     }
 
     // ========================================
-    // ✅ SOCIAL LOGIN HELPERS
+    // SOCIAL LOGIN HELPERS
     // ========================================
 
-    /**
-     * Check if user logged in via social provider
-     */
     public function isSocialLogin(): bool
     {
         return in_array($this->provider, ['google', 'facebook']);
     }
 
-    /**
-     * Check if user has password (manual registration)
-     */
     public function hasPassword(): bool
     {
         return !is_null($this->password) && !empty($this->password);
     }
 
-    /**
-     * Get provider display name
-     */
     public function getProviderNameAttribute(): string
     {
         return match ($this->provider) {
-            'google' => 'Google',
+            'google'   => 'Google',
             'facebook' => 'Facebook',
-            'manual' => 'Email',
-            default => 'Unknown'
+            'manual'   => 'Email',
+            default    => 'Unknown',
         };
     }
 
     // ========================================
-    // ✅ RELATIONSHIPS
+    // RELATIONSHIPS
     // ========================================
 
     public function author()
@@ -182,17 +152,11 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         return $this->hasOne(Author::class);
     }
 
-    /**
-     * Relasi ke Author profile
-     */
     public function authorProfile()
     {
         return $this->hasOne(Author::class);
     }
 
-    /**
-     * Publications through Author
-     */
     public function publications()
     {
         return $this->hasManyThrough(
@@ -205,9 +169,6 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         )->distinct();
     }
 
-    /**
-     * Direct publications relationship
-     */
     public function directPublications()
     {
         return $this->belongsToMany(Publication::class, 'author_publication', 'author_id', 'publication_id')
@@ -218,18 +179,12 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
             });
     }
 
-    /**
-     * Favorite publications
-     */
     public function favoritePublications()
     {
         return $this->belongsToMany(Publication::class, 'user_favorite_publications')
             ->withTimestamps();
     }
 
-    /**
-     * Read publications
-     */
     public function readPublications()
     {
         return $this->belongsToMany(Publication::class, 'user_read_publications')
@@ -238,38 +193,36 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
             ->using(UserReadPublication::class);
     }
 
-    /**
-     * Saved publications
-     */
     public function savedPublications()
     {
         return $this->belongsToMany(Publication::class, 'user_saved_publications')
             ->withTimestamps();
     }
 
-    /**
-     * Subscription relationship
-     */
     public function subscription()
     {
         return $this->hasOne(Subscription::class);
     }
 
-    // ========================================
-    // ✅ PUBLICATION INTERACTION METHODS
-    // ========================================
+    // ── OTP Relationship ──────────────────────────────────────────────────────
 
     /**
-     * Get saved publications count
+     * Relasi ke tabel otp_codes (tabel terpisah — lebih baik untuk normalisasi)
      */
+    public function otpCodes()
+    {
+        return $this->hasMany(OtpCode::class);
+    }
+
+    // ========================================
+    // PUBLICATION INTERACTION METHODS
+    // ========================================
+
     public function getSavedPublicationsCountAttribute()
     {
         return $this->savedPublications()->count();
     }
 
-    /**
-     * Toggle favorite status
-     */
     public function toggleFavorite($publicationId)
     {
         $exists = $this->favoritePublications()->where('publication_id', $publicationId)->exists();
@@ -283,9 +236,6 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         return ['status' => 'added', 'message' => 'Ditambahkan ke favorit'];
     }
 
-    /**
-     * Toggle saved status
-     */
     public function toggleSaved($publicationId)
     {
         $exists = $this->savedPublications()->where('publication_id', $publicationId)->exists();
@@ -299,85 +249,76 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         return ['status' => 'added', 'message' => 'Disimpan untuk nanti'];
     }
 
-    /**
-     * Check if publication is favorited
-     */
     public function isFavorited($publicationId)
     {
         return $this->favoritePublications()->where('publication_id', $publicationId)->exists();
     }
 
-    /**
-     * Check if publication is saved
-     */
     public function isSaved($publicationId)
     {
         return $this->savedPublications()->where('publication_id', $publicationId)->exists();
     }
 
-    // Tambahkan di dalam class User
+    // ========================================
+    // OTP METHODS — pakai tabel otp_codes
+    // ========================================
 
-    public function otpCodes()
-    {
-        return $this->hasMany(OtpCode::class);
-    }
-
-    // =========================================================================
-    // OTP: Generate kode baru
-    // =========================================================================
-
+    /**
+     * Generate OTP baru — simpan ke tabel otp_codes
+     */
     public function generateOtp(): string
     {
-        // Buat kode 6 digit acak
         $code = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
-        $this->update([
-            'otp_code'       => Hash::make($code),  // simpan sebagai hash
-            'otp_expires_at' => now()->addMinutes(10),
+        // Hapus semua OTP lama milik user ini dulu
+        $this->otpCodes()->delete();
+
+        // Buat OTP baru di tabel terpisah
+        $this->otpCodes()->create([
+            'code'       => bcrypt($code), // hash sebelum simpan
+            'expires_at' => now()->addMinutes(10),
+            'is_used'    => false,
         ]);
 
-        return $code; // return plain code untuk dikirim via email
+        return $code;
     }
 
-    // =========================================================================
-    // OTP: Verifikasi kode
-    // =========================================================================
-
+    /**
+     * Verifikasi OTP — ambil dari tabel otp_codes
+     */
     public function verifyOtp(string $code): bool
     {
-        // Tidak ada OTP tersimpan
-        if (!$this->otp_code || !$this->otp_expires_at) {
+        // Ambil OTP terbaru yang belum dipakai langsung dari DB (no cache)
+        $otp = $this->otpCodes()
+            ->where('is_used', false)
+            ->latest()
+            ->first();
+
+        // Tidak ada OTP
+        if (!$otp) {
             return false;
         }
 
-        // Kode sudah kadaluarsa
-        if (now()->isAfter($this->otp_expires_at)) {
-            // Hapus OTP kadaluarsa
-            $this->update([
-                'otp_code'       => null,
-                'otp_expires_at' => null,
-            ]);
+        // Sudah kadaluarsa
+        if ($otp->isExpired()) {
+            $otp->delete();
             return false;
         }
 
-        // Timing-safe comparison (cegah timing attack)
-        if (!Hash::check($code, $this->otp_code)) {
+        // Timing-safe comparison
+        if (!\Illuminate\Support\Facades\Hash::check($code, $otp->code)) {
             return false;
         }
 
-        // One-time use: hapus OTP setelah berhasil dipakai
-        $this->update([
-            'otp_code'       => null,
-            'otp_expires_at' => null,
-        ]);
+        // One-time use: hapus setelah berhasil
+        $otp->delete();
 
         return true;
     }
 
-    // =========================================================================
-    // Cek apakah email sudah diverifikasi
-    // =========================================================================
-
+    /**
+     * Cek apakah email sudah diverifikasi
+     */
     public function isEmailVerified(): bool
     {
         return !is_null($this->email_verified_at);

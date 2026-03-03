@@ -11,20 +11,21 @@ class OtpCode extends Model
         'code',
         'expires_at',
         'is_used',
-        'resend_count',
-        'last_resend_at',
     ];
 
     protected $casts = [
-        'expires_at'     => 'datetime',
-        'last_resend_at' => 'datetime',
-        'is_used'        => 'boolean',
+        'expires_at' => 'datetime',
+        'is_used'    => 'boolean',
     ];
+
+    // ── Relationship ──────────────────────────────────────────────────────────
 
     public function user()
     {
         return $this->belongsTo(User::class);
     }
+
+    // ── Helper Methods ────────────────────────────────────────────────────────
 
     public function isExpired(): bool
     {
@@ -34,17 +35,5 @@ class OtpCode extends Model
     public function isValid(): bool
     {
         return !$this->is_used && !$this->isExpired();
-    }
-
-    public function canResend(): bool
-    {
-        // Maksimal 3x resend, interval minimal 60 detik
-        if ($this->resend_count >= 3) return false;
-
-        if ($this->last_resend_at && now()->diffInSeconds($this->last_resend_at) < 60) {
-            return false;
-        }
-
-        return true;
     }
 }
