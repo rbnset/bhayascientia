@@ -1,11 +1,10 @@
 @extends('layouts.app')
 
-@section('title', 'Hubungi Kami - BHAYASCIENTIA')
+@section('title', 'Hubungi Kami - DABRAKA')
 @section('main_class', 'pb-16')
 
 @push('styles')
 <style>
-    /* Contact Form Animations */
     .form-input-wrapper {
         position: relative;
     }
@@ -20,7 +19,6 @@
         transform: translateY(-2px);
     }
 
-    /* Floating Label Effect */
     .floating-label {
         position: absolute;
         left: 1rem;
@@ -44,7 +42,6 @@
         font-weight: 600;
     }
 
-    /* Hero Contact Buttons */
     .hero-contact-btn {
         backdrop-filter: blur(12px);
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -56,7 +53,6 @@
         background: rgba(255, 255, 255, 0.25);
     }
 
-    /* Quick Topic Buttons */
     .topic-btn {
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         position: relative;
@@ -84,7 +80,6 @@
         box-shadow: 0 8px 16px rgba(255, 107, 24, 0.3);
     }
 
-    /* Info Card Hover */
     .info-card {
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
@@ -94,7 +89,6 @@
         box-shadow: 0 12px 24px rgba(255, 107, 24, 0.15);
     }
 
-    /* Character Counter */
     .char-counter {
         font-size: 0.75rem;
         color: #A3A6AE;
@@ -124,7 +118,6 @@
         }
     }
 
-    /* Form Progress Bar */
     .form-progress {
         height: 4px;
         background: #EEF0F7;
@@ -140,7 +133,6 @@
         box-shadow: 0 0 10px rgba(255, 107, 24, 0.5);
     }
 
-    /* Security Notice Popup */
     .security-notice {
         position: absolute;
         bottom: calc(100% + 0.5rem);
@@ -197,7 +189,6 @@
         animation: shake 0.5s ease;
     }
 
-    /* Social Media Icons */
     .social-icon {
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
@@ -206,7 +197,6 @@
         transform: translateY(-4px) scale(1.05);
     }
 
-    /* Modal Styles */
     .modal-overlay {
         position: fixed;
         inset: 0;
@@ -254,6 +244,11 @@
         height: 500px;
     }
 
+    /* reCAPTCHA badge posisi kiri bawah */
+    .grecaptcha-badge {
+        visibility: hidden !important;
+    }
+
     @media (max-width: 768px) {
         .modal-content {
             width: 95vw;
@@ -270,7 +265,6 @@
         }
     }
 
-    /* Success/Error Alert Animation */
     @keyframes slideInDown {
         from {
             opacity: 0;
@@ -296,10 +290,9 @@
 
 @section('content')
 
-{{-- Hero Section with Contact Info --}}
+{{-- Hero Section --}}
 <section
     class="bg-gradient-to-br from-[#FF6B18] via-[#E64627] to-[#D63A25] relative overflow-hidden rounded-2xl sm:rounded-[28px]">
-    {{-- Background Pattern --}}
     <div class="absolute inset-0 opacity-10">
         <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
             <defs>
@@ -312,7 +305,6 @@
     </div>
 
     <div class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px] py-12 sm:py-16 md:py-20 lg:py-24 relative z-10">
-        {{-- Breadcrumb --}}
         <nav class="flex items-center gap-2 mb-6 text-xs sm:text-sm text-white/80 sm:mb-8" aria-label="Breadcrumb">
             <a href="{{ route('home') }}" class="transition-colors hover:text-white">Beranda</a>
             <svg class="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -321,9 +313,7 @@
             <span class="font-bold text-white">Kontak</span>
         </nav>
 
-        {{-- Header Content --}}
         <div class="max-w-3xl mx-auto mb-8 text-center text-white sm:mb-12">
-            {{-- Badge --}}
             <div
                 class="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 mb-4 sm:mb-6 text-[10px] sm:text-xs font-bold rounded-full bg-white/20 backdrop-blur-sm border border-white/30">
                 <span class="relative flex w-2 h-2">
@@ -333,7 +323,6 @@
                 </span>
                 Tim Kami Siap Membantu 24/7
             </div>
-
             <h1 class="mb-4 text-3xl font-black leading-tight sm:text-4xl md:text-5xl lg:text-6xl sm:mb-6">
                 💬 Hubungi Kami
             </h1>
@@ -342,10 +331,8 @@
             </p>
         </div>
 
-        {{-- Quick Contact Buttons --}}
         <div class="grid max-w-4xl grid-cols-1 gap-3 mx-auto sm:grid-cols-3 sm:gap-4">
-            {{-- Email Button --}}
-            <a href="mailto:info@bhayascientia.id"
+            <a href="mailto:info@dabraka.id"
                 class="flex items-center gap-3 p-4 border-2 hero-contact-btn group sm:gap-4 sm:p-5 bg-white/15 border-white/30 rounded-xl sm:rounded-2xl">
                 <div
                     class="flex items-center justify-center flex-shrink-0 w-12 h-12 transition-colors sm:w-14 sm:h-14 bg-white/20 rounded-xl group-hover:bg-white/30">
@@ -356,11 +343,10 @@
                 </div>
                 <div class="flex-1 min-w-0 text-left">
                     <p class="text-[10px] sm:text-xs text-white/70 font-semibold mb-1">EMAIL</p>
-                    <p class="text-xs font-bold text-white truncate sm:text-sm">info@bhayascientia.id</p>
+                    <p class="text-xs font-bold text-white truncate sm:text-sm">info@dabraka.id</p>
                 </div>
             </a>
 
-            {{-- WhatsApp Button --}}
             <a href="https://wa.me/6281200000000" target="_blank" rel="noopener noreferrer"
                 class="flex items-center gap-3 p-4 border-2 hero-contact-btn group sm:gap-4 sm:p-5 bg-white/15 border-white/30 rounded-xl sm:rounded-2xl">
                 <div
@@ -376,7 +362,6 @@
                 </div>
             </a>
 
-            {{-- Address Button with Modal Trigger --}}
             <button onclick="openMapModal()" type="button"
                 class="flex items-center gap-3 p-4 border-2 hero-contact-btn group sm:gap-4 sm:p-5 bg-white/15 border-white/30 rounded-xl sm:rounded-2xl">
                 <div
@@ -402,7 +387,7 @@
     </div>
 </section>
 
-{{-- Success/Error Alert --}}
+{{-- Success Alert --}}
 @if(session('success'))
 <div class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px] mt-6 sm:mt-8">
     <div
@@ -416,7 +401,7 @@
             <h3 class="mb-1 text-sm font-bold text-green-900 sm:text-base">✅ Berhasil Terkirim!</h3>
             <p class="text-xs text-green-700 sm:text-sm">{{ session('success') }}</p>
         </div>
-        <button onclick="this.parentElement.remove()"
+        <button onclick="this.closest('.alert-animate').remove()"
             class="flex-shrink-0 text-green-600 transition-colors hover:text-green-800">
             <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -426,6 +411,7 @@
 </div>
 @endif
 
+{{-- Error Alert --}}
 @if(session('error'))
 <div class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px] mt-6 sm:mt-8">
     <div
@@ -439,7 +425,7 @@
             <h3 class="mb-1 text-sm font-bold text-red-900 sm:text-base">⚠️ Terjadi Kesalahan</h3>
             <p class="text-xs text-red-700 sm:text-sm">{{ session('error') }}</p>
         </div>
-        <button onclick="this.parentElement.remove()"
+        <button onclick="this.closest('.alert-animate').remove()"
             class="flex-shrink-0 text-red-600 transition-colors hover:text-red-800">
             <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -456,7 +442,7 @@
         {{-- Left: Quick Topics & Info --}}
         <div class="space-y-4 lg:col-span-1 sm:space-y-6">
 
-            {{-- Quick Topics Card --}}
+            {{-- Quick Topics --}}
             <div class="bg-white rounded-xl sm:rounded-2xl border-2 border-[#EEF0F7] p-5 sm:p-6">
                 <div class="flex items-start gap-3 mb-4">
                     <div
@@ -472,7 +458,6 @@
                         <p class="text-xs sm:text-sm text-[#737373] mt-1">Pilih untuk auto-fill subjek</p>
                     </div>
                 </div>
-
                 <div class="flex flex-wrap gap-2">
                     <button type="button" data-subject="Kerja Sama"
                         class="topic-btn px-3 sm:px-4 py-2 text-xs sm:text-sm font-bold bg-white rounded-lg sm:rounded-xl border-2 border-[#EEF0F7] hover:border-[#FF6B18] transition-all">
@@ -532,88 +517,40 @@
                 class="bg-gradient-to-br from-[#FFF7F2] to-[#F8F9FC] rounded-xl sm:rounded-2xl border-2 border-[#EEF0F7] p-5 sm:p-6">
                 <h3 class="font-bold text-base sm:text-lg text-[#1A1A1A] mb-4">Ikuti Kami</h3>
                 <div class="grid grid-cols-4 gap-3">
-                    {{-- Facebook --}}
-                    <a href="https://facebook.com/bhayascientia" target="_blank" rel="noopener noreferrer"
-                        class="social-icon w-11 h-11 sm:w-12 sm:h-12 bg-white rounded-xl flex items-center justify-center hover:bg-[#1877F2] hover:text-white transition-all shadow-sm group"
+                    <a href="https://facebook.com/dabraka" target="_blank" rel="noopener noreferrer"
+                        class="social-icon w-11 h-11 sm:w-12 sm:h-12 bg-white rounded-xl flex items-center justify-center hover:bg-[#1877F2] hover:text-white transition-all shadow-sm"
                         title="Facebook">
                         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                             <path
                                 d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                         </svg>
                     </a>
-
-                    {{-- Twitter/X --}}
-                    <a href="https://twitter.com/bhayascientia" target="_blank" rel="noopener noreferrer"
-                        class="social-icon w-11 h-11 sm:w-12 sm:h-12 bg-white rounded-xl flex items-center justify-center hover:bg-[#1DA1F2] hover:text-white transition-all shadow-sm group"
+                    <a href="https://twitter.com/dabraka" target="_blank" rel="noopener noreferrer"
+                        class="social-icon w-11 h-11 sm:w-12 sm:h-12 bg-white rounded-xl flex items-center justify-center hover:bg-[#1DA1F2] hover:text-white transition-all shadow-sm"
                         title="Twitter/X">
                         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                             <path
                                 d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
                         </svg>
                     </a>
-
-                    {{-- Instagram --}}
-                    <a href="https://instagram.com/bhayascientia" target="_blank" rel="noopener noreferrer"
-                        class="social-icon w-11 h-11 sm:w-12 sm:h-12 bg-white rounded-xl flex items-center justify-center hover:bg-gradient-to-br hover:from-[#F58529] hover:via-[#DD2A7B] hover:to-[#8134AF] hover:text-white transition-all shadow-sm group"
+                    <a href="https://instagram.com/dabraka" target="_blank" rel="noopener noreferrer"
+                        class="social-icon w-11 h-11 sm:w-12 sm:h-12 bg-white rounded-xl flex items-center justify-center hover:bg-[#E1306C] hover:text-white transition-all shadow-sm"
                         title="Instagram">
                         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                             <path
                                 d="M12 0C8.74 0 8.333.015 7.053.072 5.775.132 4.905.333 4.14.63c-.789.306-1.459.717-2.126 1.384S.935 3.35.63 4.14C.333 4.905.131 5.775.072 7.053.012 8.333 0 8.74 0 12s.015 3.667.072 4.947c.06 1.277.261 2.148.558 2.913.306.788.717 1.459 1.384 2.126.667.666 1.336 1.079 2.126 1.384.766.296 1.636.499 2.913.558C8.333 23.988 8.74 24 12 24s3.667-.015 4.947-.072c1.277-.06 2.148-.262 2.913-.558.788-.306 1.459-.718 2.126-1.384.666-.667 1.079-1.335 1.384-2.126.296-.765.499-1.636.558-2.913.06-1.28.072-1.687.072-4.947s-.015-3.667-.072-4.947c-.06-1.277-.262-2.149-.558-2.913-.306-.789-.718-1.459-1.384-2.126C21.319 1.347 20.651.935 19.86.63c-.765-.297-1.636-.499-2.913-.558C15.667.012 15.26 0 12 0zm0 2.16c3.203 0 3.585.016 4.85.071 1.17.055 1.805.249 2.227.415.562.217.96.477 1.382.896.419.42.679.819.896 1.381.164.422.36 1.057.413 2.227.057 1.266.07 1.646.07 4.85s-.015 3.585-.074 4.85c-.061 1.17-.256 1.805-.421 2.227-.224.562-.479.96-.899 1.382-.419.419-.824.679-1.38.896-.42.164-1.065.36-2.235.413-1.274.057-1.649.07-4.859.07-3.211 0-3.586-.015-4.859-.074-1.171-.061-1.816-.256-2.236-.421-.569-.224-.96-.479-1.379-.899-.421-.419-.69-.824-.9-1.38-.165-.42-.359-1.065-.42-2.235-.045-1.26-.061-1.649-.061-4.844 0-3.196.016-3.586.061-4.861.061-1.17.255-1.814.42-2.234.21-.57.479-.96.9-1.381.419-.419.81-.689 1.379-.898.42-.166 1.051-.361 2.221-.421 1.275-.045 1.65-.06 4.859-.06l.045.03zm0 3.678c-3.405 0-6.162 2.76-6.162 6.162 0 3.405 2.76 6.162 6.162 6.162 3.405 0 6.162-2.76 6.162-6.162 0-3.405-2.76-6.162-6.162-6.162zM12 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm7.846-10.405c0 .795-.646 1.44-1.44 1.44-.795 0-1.44-.646-1.44-1.44 0-.794.646-1.439 1.44-1.439.793-.001 1.44.645 1.44 1.439z" />
                         </svg>
                     </a>
-
-                    {{-- LinkedIn --}}
-                    <a href="https://linkedin.com/company/bhayascientia" target="_blank" rel="noopener noreferrer"
-                        class="social-icon w-11 h-11 sm:w-12 sm:h-12 bg-white rounded-xl flex items-center justify-center hover:bg-[#0A66C2] hover:text-white transition-all shadow-sm group"
+                    <a href="https://linkedin.com/company/dabraka" target="_blank" rel="noopener noreferrer"
+                        class="social-icon w-11 h-11 sm:w-12 sm:h-12 bg-white rounded-xl flex items-center justify-center hover:bg-[#0A66C2] hover:text-white transition-all shadow-sm"
                         title="LinkedIn">
                         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                             <path
                                 d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
                         </svg>
                     </a>
-
-                    {{-- YouTube --}}
-                    <a href="https://youtube.com/@bhayascientia" target="_blank" rel="noopener noreferrer"
-                        class="social-icon w-11 h-11 sm:w-12 sm:h-12 bg-white rounded-xl flex items-center justify-center hover:bg-[#FF0000] hover:text-white transition-all shadow-sm group"
-                        title="YouTube">
-                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                            <path
-                                d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
-                        </svg>
-                    </a>
-
-                    {{-- Threads --}}
-                    <a href="https://threads.net/@bhayascientia" target="_blank" rel="noopener noreferrer"
-                        class="social-icon w-11 h-11 sm:w-12 sm:h-12 bg-white rounded-xl flex items-center justify-center hover:bg-[#000000] hover:text-white transition-all shadow-sm group"
-                        title="Threads">
-                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                            <path
-                                d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 14.927c-.448 2.128-2.166 3.555-4.394 3.555-2.748 0-4.748-2.086-4.748-4.949 0-2.863 2-4.949 4.748-4.949 1.509 0 2.809.627 3.665 1.767l-1.519 1.169c-.571-.761-1.381-1.188-2.146-1.188-1.724 0-2.992 1.404-2.992 3.201s1.268 3.201 2.992 3.201c1.379 0 2.317-.803 2.617-2.076H12v-1.724h5.894v1.993z" />
-                        </svg>
-                    </a>
-
-                    {{-- TikTok --}}
-                    <a href="https://tiktok.com/@bhayascientia" target="_blank" rel="noopener noreferrer"
-                        class="social-icon w-11 h-11 sm:w-12 sm:h-12 bg-white rounded-xl flex items-center justify-center hover:bg-[#000000] hover:text-white transition-all shadow-sm group"
-                        title="TikTok">
-                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                            <path
-                                d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z" />
-                        </svg>
-                    </a>
-
-                    {{-- WhatsApp Channel --}}
-                    <a href="https://whatsapp.com/channel/bhayascientia" target="_blank" rel="noopener noreferrer"
-                        class="social-icon w-11 h-11 sm:w-12 sm:h-12 bg-white rounded-xl flex items-center justify-center hover:bg-[#25D366] hover:text-white transition-all shadow-sm group"
-                        title="WhatsApp Channel">
-                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                            <path
-                                d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
-                        </svg>
-                    </a>
                 </div>
             </div>
-
         </div>
 
         {{-- Right: Contact Form --}}
@@ -629,8 +566,6 @@
                     </div>
                     <p class="text-xs sm:text-sm text-[#737373]">Isi formulir dengan lengkap untuk respons yang lebih
                         cepat dan akurat.</p>
-
-                    {{-- Form Progress --}}
                     <div class="form-progress">
                         <div id="formProgress" class="form-progress-bar" style="width: 0%"></div>
                     </div>
@@ -643,8 +578,33 @@
                     class="space-y-4 sm:space-y-6">
                     @csrf
 
+                    {{-- ✅ Honeypot anti-bot --}}
+                    <input type="text" name="website" value="" autocomplete="off" tabindex="-1" aria-hidden="true"
+                        style="display:none !important; position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden;">
+
+                    {{-- ✅ reCAPTCHA token (diisi otomatis sebelum submit) --}}
+                    <input type="hidden" name="recaptcha_token" id="recaptchaToken">
+
+                    {{-- Validation errors --}}
+                    @if ($errors->any())
+                    <div class="p-4 border border-red-200 rounded-xl bg-red-50 alert-animate">
+                        <div class="flex items-start gap-3">
+                            <svg class="mt-0.5 h-5 w-5 shrink-0 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd"
+                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            <ul class="flex-1 space-y-1">
+                                @foreach ($errors->all() as $error)
+                                <li class="text-sm text-red-700">{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    </div>
+                    @endif
+
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2 sm:gap-6">
-                        {{-- Name Input --}}
+                        {{-- Name --}}
                         <div class="form-input-wrapper">
                             <input type="text" id="name" name="name" value="{{ old('name') }}" placeholder=" " required
                                 data-required="true"
@@ -655,7 +615,7 @@
                             @enderror
                         </div>
 
-                        {{-- Email Input --}}
+                        {{-- Email --}}
                         <div class="form-input-wrapper">
                             <input type="email" id="email" name="email" value="{{ old('email') }}" placeholder=" "
                                 required data-required="true"
@@ -668,7 +628,7 @@
                     </div>
 
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2 sm:gap-6">
-                        {{-- Phone Input --}}
+                        {{-- Phone --}}
                         <div class="form-input-wrapper">
                             <input type="tel" id="phone" name="phone" value="{{ old('phone') }}" placeholder=" "
                                 class="w-full px-3 sm:px-4 py-3 sm:py-3.5 text-sm sm:text-base border-2 border-[#EEF0F7] rounded-xl focus:border-[#FF6B18] focus:ring-4 focus:ring-[#FF6B18]/10 outline-none transition-all @error('phone') border-red-500 @enderror">
@@ -678,7 +638,7 @@
                             @enderror
                         </div>
 
-                        {{-- Subject Input --}}
+                        {{-- Subject --}}
                         <div class="form-input-wrapper">
                             <input type="text" id="subject" name="subject" value="{{ old('subject') }}" placeholder=" "
                                 required data-required="true"
@@ -690,9 +650,8 @@
                         </div>
                     </div>
 
-                    {{-- Message Textarea with Security Notice --}}
+                    {{-- Message --}}
                     <div class="form-input-wrapper">
-                        {{-- Security Notice Popup --}}
                         <div id="securityNotice" class="security-notice">
                             <div class="flex items-start gap-3">
                                 <div
@@ -728,23 +687,41 @@
                         <p class="text-red-500 text-[10px] sm:text-xs mt-1">{{ $message }}</p>
                         @enderror
                         <div class="flex items-center justify-between mt-2">
-                            <p class="text-[10px] sm:text-xs text-[#737373]">Jelaskan dengan detail</p>
+                            <p class="text-[10px] sm:text-xs text-[#737373]">Jelaskan dengan detail (min. 10 karakter)
+                            </p>
                             <p id="charCount" class="char-counter">0 / 2000</p>
                         </div>
                     </div>
 
+                    {{-- ✅ reCAPTCHA Notice --}}
+                    <p class="text-[10px] text-[#A3A6AE] leading-relaxed">
+                        🤖 Form ini dilindungi oleh reCAPTCHA Google.
+                        <a href="https://policies.google.com/privacy" target="_blank"
+                            class="underline hover:text-[#FF6B18]">Privacy Policy</a> &amp;
+                        <a href="https://policies.google.com/terms" target="_blank"
+                            class="underline hover:text-[#FF6B18]">Terms of Service</a> berlaku.
+                    </p>
+
                     {{-- Submit Buttons --}}
                     <div class="flex flex-col gap-3 sm:flex-row">
                         <button type="submit" id="submitBtn"
-                            class="group flex-1 sm:flex-none px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-[#FF6B18] to-[#E64627] text-white text-sm sm:text-base font-bold rounded-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-2 sm:gap-3 relative overflow-hidden">
+                            class="group flex-1 sm:flex-none px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-[#FF6B18] to-[#E64627] text-white text-sm sm:text-base font-bold rounded-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-2 sm:gap-3 relative overflow-hidden disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none">
                             <span
                                 class="absolute inset-0 transition-transform duration-700 -translate-x-full bg-gradient-to-r from-white/0 via-white/20 to-white/0 group-hover:translate-x-full"></span>
-                            <svg class="relative z-10 w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor"
-                                viewBox="0 0 24 24">
+                            <svg id="submitIcon" class="relative z-10 w-4 h-4 sm:w-5 sm:h-5" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                             </svg>
-                            <span class="relative z-10">Kirim Pesan</span>
+                            <svg id="submitSpinner" class="relative z-10 hidden w-4 h-4 sm:w-5 sm:h-5 animate-spin"
+                                fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                    stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor"
+                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                </path>
+                            </svg>
+                            <span id="submitText" class="relative z-10">Kirim Pesan</span>
                         </button>
 
                         <button type="reset" id="resetBtn"
@@ -778,11 +755,8 @@
                 </svg>
             </button>
         </div>
-
         <iframe id="mapIframe" class="modal-iframe" src="" allowfullscreen="" loading="lazy"
-            referrerpolicy="no-referrer-when-downgrade">
-        </iframe>
-
+            referrerpolicy="no-referrer-when-downgrade"></iframe>
         <div class="flex gap-3 mt-4">
             <a href="https://www.google.com/maps/dir/?api=1&destination=-7.7753,110.3751" target="_blank"
                 rel="noopener noreferrer"
@@ -808,47 +782,47 @@
 @endsection
 
 @push('scripts')
+{{-- ✅ reCAPTCHA v3 Script --}}
+<script src="https://www.google.com/recaptcha/api.js?render={{ config('services.recaptcha.site_key') }}"></script>
+
 <script>
-    (function() {
+    (function () {
+    const RECAPTCHA_SITE_KEY = '{{ config('services.recaptcha.site_key') }}';
+
     let securityNoticeShown = false;
 
-    // Security Notice Functions
+    // ── Security Notice ───────────────────────────────────────────────────
     const messageTextarea = document.getElementById('message');
-    const securityNotice = document.getElementById('securityNotice');
+    const securityNotice  = document.getElementById('securityNotice');
 
-    messageTextarea?.addEventListener('focus', function() {
+    messageTextarea?.addEventListener('focus', function () {
         if (!securityNoticeShown) {
             securityNotice?.classList.add('show');
             securityNoticeShown = true;
-
-            // Auto-hide after 8 seconds
-            setTimeout(() => {
-                securityNotice?.classList.remove('show');
-            }, 8000);
+            setTimeout(() => securityNotice?.classList.remove('show'), 8000);
         }
     });
 
-    window.hideSecurityNotice = function() {
+    window.hideSecurityNotice = function () {
         securityNotice?.classList.remove('show');
     };
 
-    // Google Maps Modal Functions
-    window.openMapModal = function() {
-        const modal = document.getElementById('mapModal');
+    // ── Google Maps Modal ─────────────────────────────────────────────────
+    window.openMapModal = function () {
+        const modal   = document.getElementById('mapModal');
         const content = modal?.querySelector('.modal-content');
-        const iframe = document.getElementById('mapIframe');
+        const iframe  = document.getElementById('mapIframe');
 
         if (modal && content && iframe) {
-            iframe.src = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3953.0!2d110.3751!3d-7.7753!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zN8KwNDYnMzEuMSJTIDExMMKwMjInMzAuNCJF!5e0!3m2!1sen!2sid!4v1234567890123";
-
+            iframe.src = 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3953.0!2d110.3751!3d-7.7753!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zN8KwNDYnMzEuMSJTIDExMMKwMjInMzAuNCJF!5e0!3m2!1sen!2sid!4v1234567890123';
             modal.classList.add('active');
             setTimeout(() => content.classList.add('active'), 10);
             document.body.style.overflow = 'hidden';
         }
     };
 
-    window.closeMapModal = function() {
-        const modal = document.getElementById('mapModal');
+    window.closeMapModal = function () {
+        const modal   = document.getElementById('mapModal');
         const content = modal?.querySelector('.modal-content');
 
         if (modal && content) {
@@ -860,126 +834,110 @@
         }
     };
 
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            closeMapModal();
-            hideSecurityNotice();
-        }
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') { closeMapModal(); hideSecurityNotice(); }
     });
 
-    // Quick Topic Buttons
-    const topicBtns = document.querySelectorAll('.topic-btn');
+    // ── Quick Topic Buttons ───────────────────────────────────────────────
+    const topicBtns    = document.querySelectorAll('.topic-btn');
     const subjectInput = document.getElementById('subject');
 
     topicBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', function () {
             topicBtns.forEach(b => b.classList.remove('active'));
             this.classList.add('active');
-
-            const subjectText = this.dataset.subject;
-            if (subjectInput && subjectText) {
-                subjectInput.value = subjectText;
+            if (subjectInput && this.dataset.subject) {
+                subjectInput.value = this.dataset.subject;
                 subjectInput.focus();
                 subjectInput.dispatchEvent(new Event('input'));
             }
         });
     });
 
-    // Character Counter
+    // ── Character Counter ─────────────────────────────────────────────────
     const charCount = document.getElementById('charCount');
 
-    if (messageTextarea && charCount) {
-        messageTextarea.addEventListener('input', function() {
-            const length = this.value.length;
-            const maxLength = 2000;
-            charCount.textContent = `${length} / ${maxLength}`;
+    messageTextarea?.addEventListener('input', function () {
+        const length    = this.value.length;
+        const maxLength = 2000;
+        charCount.textContent = `${length} / ${maxLength}`;
+        charCount.classList.remove('warning', 'danger');
+        if (length > maxLength * 0.8 && length <= maxLength * 0.95) charCount.classList.add('warning');
+        else if (length > maxLength * 0.95) charCount.classList.add('danger');
+    });
 
-            charCount.classList.remove('warning', 'danger');
-            if (length > maxLength * 0.8 && length <= maxLength * 0.95) {
-                charCount.classList.add('warning');
-            } else if (length > maxLength * 0.95) {
-                charCount.classList.add('danger');
-            }
-        });
-    }
-
-    // Form Progress
-    const form = document.getElementById('contactForm');
-    const progressBar = document.getElementById('formProgress');
-    const progressText = document.getElementById('progressText');
+    // ── Form Progress ─────────────────────────────────────────────────────
+    const form          = document.getElementById('contactForm');
+    const progressBar   = document.getElementById('formProgress');
+    const progressText  = document.getElementById('progressText');
     const requiredInputs = form?.querySelectorAll('[data-required="true"]');
 
     function updateProgress() {
-        if (!requiredInputs || requiredInputs.length === 0) return;
-
+        if (!requiredInputs?.length) return;
         let filledCount = 0;
-        requiredInputs.forEach(input => {
-            if (input.value.trim() !== '') filledCount++;
-        });
-
+        requiredInputs.forEach(input => { if (input.value.trim() !== '') filledCount++; });
         const progress = (filledCount / requiredInputs.length) * 100;
-
         if (progressBar) progressBar.style.width = `${progress}%`;
-
         if (progressText) {
-            if (progress === 0) {
-                progressText.textContent = 'Mulai isi formulir';
-            } else if (progress < 50) {
-                progressText.textContent = `Pengisian: ${Math.round(progress)}%`;
-            } else if (progress < 100) {
-                progressText.textContent = `Hampir selesai: ${Math.round(progress)}%`;
-            } else {
-                progressText.textContent = '✓ Formulir lengkap, siap dikirim!';
-            }
+            if (progress === 0)        progressText.textContent = 'Mulai isi formulir';
+            else if (progress < 50)    progressText.textContent = `Pengisian: ${Math.round(progress)}%`;
+            else if (progress < 100)   progressText.textContent = `Hampir selesai: ${Math.round(progress)}%`;
+            else                       progressText.textContent = '✓ Formulir lengkap, siap dikirim!';
         }
     }
 
-    requiredInputs?.forEach(input => {
-        input.addEventListener('input', updateProgress);
-    });
-
+    requiredInputs?.forEach(input => input.addEventListener('input', updateProgress));
     updateProgress();
 
-    // Form Submission
-    const submitBtn = document.getElementById('submitBtn');
+    // ── Form Submit + reCAPTCHA v3 ────────────────────────────────────────
+    const submitBtn     = document.getElementById('submitBtn');
+    const submitIcon    = document.getElementById('submitIcon');
+    const submitSpinner = document.getElementById('submitSpinner');
+    const submitText    = document.getElementById('submitText');
+    const recaptchaInput = document.getElementById('recaptchaToken');
 
-    form?.addEventListener('submit', function() {
-        if (submitBtn) {
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = `
-                <svg class="w-4 h-4 sm:w-5 sm:h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                </svg>
-                <span>Mengirim...</span>
-            `;
-        }
+    form?.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        // Loading state
+        submitBtn.disabled = true;
+        submitIcon.classList.add('hidden');
+        submitSpinner.classList.remove('hidden');
+        submitText.textContent = 'Memverifikasi...';
+
+        // Ambil token reCAPTCHA v3 dulu, baru submit
+        grecaptcha.ready(function () {
+            grecaptcha.execute(RECAPTCHA_SITE_KEY, { action: 'contact_form' }).then(function (token) {
+                recaptchaInput.value = token;
+                submitText.textContent = 'Mengirim...';
+                form.submit();
+            }).catch(function () {
+                // Kalau reCAPTCHA gagal, tetap submit (fallback)
+                form.submit();
+            });
+        });
     });
 
-    // Reset Form
+    // ── Reset Form ────────────────────────────────────────────────────────
     const resetBtn = document.getElementById('resetBtn');
 
-    resetBtn?.addEventListener('click', function() {
+    resetBtn?.addEventListener('click', function () {
         topicBtns.forEach(b => b.classList.remove('active'));
-
-        if (charCount) {
-            charCount.textContent = '0 / 2000';
-            charCount.classList.remove('warning', 'danger');
-        }
-
+        if (charCount) { charCount.textContent = '0 / 2000'; charCount.classList.remove('warning', 'danger'); }
         securityNoticeShown = false;
-
         setTimeout(updateProgress, 100);
     });
 
-    // Auto-dismiss alerts
+    // ── Auto-dismiss alerts ───────────────────────────────────────────────
     setTimeout(() => {
         document.querySelectorAll('.alert-animate').forEach(alert => {
             alert.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-            alert.style.opacity = '0';
-            alert.style.transform = 'translateY(-20px)';
+            alert.style.opacity    = '0';
+            alert.style.transform  = 'translateY(-20px)';
             setTimeout(() => alert.remove(), 500);
         });
-    }, 5000);
+    }, 6000);
+
 })();
 </script>
 @endpush

@@ -141,7 +141,6 @@ Route::get('/dashboard', function () {
 /*
 |--------------------------------------------------------------------------
 | OTP Verification
-| Hanya middleware 'auth' — belum verified pun harus bisa akses halaman ini
 |--------------------------------------------------------------------------
 */
 Route::middleware('auth')->group(function () {
@@ -157,17 +156,16 @@ Route::middleware('auth')->group(function () {
 /*
 |--------------------------------------------------------------------------
 | Publikasi Routes (Public)
-| ⚠️ Urutan penting: specific routes SEBELUM wildcard {slug}
 |--------------------------------------------------------------------------
 */
 Route::prefix('publikasi')->name('publikasi.')->group(function () {
-    Route::get('/',         [PublicationIndexController::class,      'index'])->name('index');
-    Route::get('/jelajahi', [PublicationBrowseController::class,     'browse'])->name('browse');
-    Route::get('/search',   [PublicationSearchController::class,     'search'])->name('search');
-    Route::get('/trending', [PublicationTrendingController::class,   'trending'])->name('trending');
-    Route::get('/library',  [PublicationLibraryController::class,    'library'])->name('library');
+    Route::get('/',         [PublicationIndexController::class,    'index'])->name('index');
+    Route::get('/jelajahi', [PublicationBrowseController::class,   'browse'])->name('browse');
+    Route::get('/search',   [PublicationSearchController::class,   'search'])->name('search');
+    Route::get('/trending', [PublicationTrendingController::class, 'trending'])->name('trending');
+    Route::get('/library',  [PublicationLibraryController::class,  'library'])->name('library');
 
-    Route::get('/kategori',              [PublicationCategoriesController::class, 'categories'])->name('category');
+    Route::get('/kategori',                [PublicationCategoriesController::class, 'categories'])->name('category');
     Route::get('/kategori/{categorySlug}', [PublicationCategoriesController::class, 'categories'])->name('category.show');
 
     // ⚠️ Wildcard PALING BAWAH
@@ -194,9 +192,10 @@ Route::get('/author/{identifier}', [AuthorController::class, 'show'])->name('aut
 | Contact
 |--------------------------------------------------------------------------
 */
-Route::get('/kontak',  [ContactController::class, 'index'])->name('kontak');
+Route::get('/kontak', [ContactController::class, 'index'])->name('kontak');
+
 Route::post('/kontak', [ContactController::class, 'submit'])
-    ->middleware('throttle:10,1') // maks 10 pesan per menit per IP
+    ->middleware('throttle:kontak') // ← pakai named rate limiter dari AppServiceProvider
     ->name('kontak.submit');
 
 /*
@@ -207,8 +206,8 @@ Route::post('/kontak', [ContactController::class, 'submit'])
 Route::get('/tentang', [AboutController::class, 'index'])->name('tentang');
 
 Route::controller(LegalController::class)->group(function () {
-    Route::get('/privacy-policy',    'privacyPolicy')->name('privacy-policy');
-    Route::get('/terms-conditions',  'termsConditions')->name('terms-conditions');
+    Route::get('/privacy-policy',   'privacyPolicy')->name('privacy-policy');
+    Route::get('/terms-conditions', 'termsConditions')->name('terms-conditions');
 });
 
 Route::get('/submission-guidelines', [SubmissionGuidelineController::class, 'index'])
@@ -230,17 +229,16 @@ Route::middleware(['auth', 'verified.otp'])->group(function () {
     Route::get('/langganan/categories',  [SubscriptionController::class, 'getCategoriesAjax'])->name('subscription.categories');
 
     // ── Profile ─────────────────────────────────────────────────────────────
-    Route::get('/profil-saya',                    [ProfileController::class, 'index'])->name('profil.saya');
-    Route::post('/profil-saya/update',            [ProfileController::class, 'update'])->name('profil.update');
-    Route::post('/profil-saya/update-photo',      [ProfileController::class, 'updatePhoto'])->name('profil.updatePhoto');
-    Route::delete('/profil-saya/delete-photo',    [ProfileController::class, 'deletePhoto'])->name('profil.deletePhoto');
-    Route::post('/profil-saya/update-password',   [ProfileController::class, 'updatePassword'])->name('profil.updatePassword');
+    Route::get('/profil-saya',                  [ProfileController::class, 'index'])->name('profil.saya');
+    Route::post('/profil-saya/update',          [ProfileController::class, 'update'])->name('profil.update');
+    Route::post('/profil-saya/update-photo',    [ProfileController::class, 'updatePhoto'])->name('profil.updatePhoto');
+    Route::delete('/profil-saya/delete-photo',  [ProfileController::class, 'deletePhoto'])->name('profil.deletePhoto');
+    Route::post('/profil-saya/update-password', [ProfileController::class, 'updatePassword'])->name('profil.updatePassword');
 });
 
 /*
 |--------------------------------------------------------------------------
 | Utility / Dev Routes
-| ⚠️ Hapus /test-card sebelum production!
 |--------------------------------------------------------------------------
 */
 // Route::get('/test-card', fn() => view('test-card')); // ← uncomment jika perlu dev only
