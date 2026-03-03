@@ -79,8 +79,6 @@
             height: 38px;
             width: auto;
             filter: brightness(0) invert(1);
-            position: relative;
-            z-index: 1;
         }
 
         .header-badge {
@@ -308,8 +306,6 @@
             width: auto;
             filter: brightness(0) invert(1);
             opacity: 0.8;
-            position: relative;
-            z-index: 1;
         }
 
         .footer-tagline {
@@ -340,8 +336,9 @@
 
 <body>
 
+    {{-- Preheader text (preview di inbox) --}}
     <div class="preheader">
-        Kode OTP Anda: {{ $otpCode->code }} — Berlaku 10 menit. Jangan bagikan ke siapapun.
+        Kode OTP Anda: {{ $otpCode }} — Berlaku 10 menit. Jangan bagikan ke siapapun.
     </div>
 
     <div class="wrapper">
@@ -365,7 +362,7 @@
         {{-- BODY --}}
         <div class="body">
 
-            <p class="greeting">Halo, {{ $otpCode->user->name }}! 👋</p>
+            <p class="greeting">Halo, {{ $userName }}! 👋</p>
             <p class="intro">
                 Terima kasih telah mendaftar di <strong>DABRAKA</strong>.
                 Untuk mengaktifkan akun Anda, masukkan kode verifikasi berikut
@@ -375,9 +372,9 @@
             {{-- OTP CODE --}}
             <div class="otp-box">
                 <p class="otp-label">🔑 Kode Verifikasi OTP</p>
-                <span class="otp-code">{{ $otpCode->code }}</span>
+                <span class="otp-code">{{ $otpCode }}</span>
                 <div class="otp-expires">
-                    ⏱ Berlaku hingga {{ $otpCode->expires_at->setTimezone('Asia/Jakarta')->format('H:i') }} WIB
+                    ⏱ Berlaku hingga {{ now()->addMinutes(10)->setTimezone('Asia/Jakarta')->format('H:i') }} WIB
                     (10 menit)
                 </div>
             </div>
@@ -386,15 +383,21 @@
             <div class="info-box">
                 <div class="info-row">
                     <span class="info-icon">✅</span>
-                    <span class="info-text">Kode berlaku selama <strong>10 menit</strong> sejak email ini dikirim</span>
+                    <span class="info-text">
+                        Kode berlaku selama <strong>10 menit</strong> sejak email ini dikirim
+                    </span>
                 </div>
                 <div class="info-row">
                     <span class="info-icon">🔄</span>
-                    <span class="info-text">Anda dapat meminta <strong>kirim ulang</strong> maksimal 3 kali</span>
+                    <span class="info-text">
+                        Anda dapat meminta <strong>kirim ulang</strong> maksimal 3 kali
+                    </span>
                 </div>
                 <div class="info-row">
                     <span class="info-icon">📧</span>
-                    <span class="info-text">Kode dikirim ke <strong>{{ $otpCode->user->email }}</strong></span>
+                    <span class="info-text">
+                        Kode dikirim ke <strong>{{ $userEmail }}</strong>
+                    </span>
                 </div>
             </div>
 
@@ -410,7 +413,7 @@
 
             <hr class="section-divider">
 
-            <p style="font-size: 12.5px; color: #9CA3AF; text-align: center; line-height: 1.8;">
+            <p style="font-size:12.5px;color:#9CA3AF;text-align:center;line-height:1.8;">
                 Dikirim pada {{ now()->setTimezone('Asia/Jakarta')->format('d M Y, H:i') }} WIB<br>
                 dari sistem DABRAKA secara otomatis
             </p>
@@ -426,8 +429,8 @@
             <hr class="footer-divider">
             <p class="footer-legal">
                 Email ini dikirim otomatis — mohon tidak membalas email ini.<br>
-                Jika ada pertanyaan, hubungi <a href="mailto:dabraka@rbnset.me"
-                    style="color:#FF6B18;">dabraka@rbnset.me</a><br>
+                Jika ada pertanyaan, hubungi
+                <a href="mailto:dabraka@rbnset.me" style="color:#FF6B18;">dabraka@rbnset.me</a><br>
                 &copy; {{ date('Y') }} DABRAKA. Seluruh hak dilindungi undang-undang.
             </p>
         </div>

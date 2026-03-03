@@ -2,7 +2,6 @@
 
 namespace App\Mail;
 
-use App\Models\OtpCode;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -14,13 +13,15 @@ class OtpVerificationMail extends Mailable
     use Queueable, SerializesModels;
 
     public function __construct(
-        public OtpCode $otpCode
+        public string $otpCode,
+        public string $userName,
+        public string $userEmail,
     ) {}
 
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: '🔐 Kode Verifikasi DABRAKA – ' . $this->otpCode->code,
+            subject: '🔐 Kode Verifikasi Email – DABRAKA',
         );
     }
 
@@ -28,6 +29,11 @@ class OtpVerificationMail extends Mailable
     {
         return new Content(
             view: 'emails.otp-verification',
+            with: [
+                'otpCode'   => $this->otpCode,
+                'userName'  => $this->userName,
+                'userEmail' => $this->userEmail,
+            ],
         );
     }
 
