@@ -227,14 +227,30 @@ Route::get('/placeholder-cover', [PlaceholderCoverController::class, 'generate']
     ->name('placeholder.cover');
 
 
-Route::get('/preview-email', function () {
+// ==============================
+// TEMPORARY - Hapus setelah testing!
+// ==============================
+
+// Preview auto-reply (email ke user)
+Route::get('/preview-autoreply', function () {
     $data = [
         'name'    => 'Robin Setiyawan',
         'email'   => 'rbn.setiyawan@gmail.com',
         'phone'   => '085669877959',
-        'subject' => 'Saran Fitur',
+        'subject' => 'Saran Fitur Platform',
         'message' => "Halo tim DABRAKA,\n\nSaya ingin memberikan saran terkait fitur pencarian publikasi.\n\nTerima kasih.",
     ];
-
     return view('emails.contact-autoreply', compact('data'));
+});
+
+// Preview notifikasi admin
+Route::get('/preview-admin', function () {
+    $data = [
+        'name'    => 'Robin Setiyawan',
+        'email'   => 'rbn.setiyawan@gmail.com',
+        'phone'   => '085669877959',
+        'subject' => 'Saran Fitur Platform',
+        'message' => "Halo tim DABRAKA,\n\nSaya ingin memberikan saran terkait fitur pencarian publikasi.\n\nTerima kasih.",
+    ];
+    return view('emails.contact', compact('data'));
 });
