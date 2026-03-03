@@ -39,3 +39,6 @@ Schedule::command('subscription:send-digest monthly_popular')
     ->monthlyOn(1, '01:00')
     ->withoutOverlapping()
     ->runInBackground();
+
+// Cleanup OTP setiap 1 jam
+Schedule::command('otp:cleanup')->hourly();
