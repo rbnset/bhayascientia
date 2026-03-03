@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\ContactFormMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
@@ -39,7 +40,7 @@ class ContactController extends Controller
             ]);
 
             // TODO: Send email notification
-            // Mail::to(config('mail.admin_email'))->send(new ContactFormMail($validated));
+            Mail::to(config('mail.admin_email'))->send(new ContactFormMail($validated));
 
             return back()->with('success', 'Terima kasih! Pesan Anda telah berhasil dikirim. Kami akan segera menghubungi Anda.');
         } catch (\Exception $e) {
