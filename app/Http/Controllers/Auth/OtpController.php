@@ -6,107 +6,161 @@ use App\Http\Controllers\Controller;
 use App\Mail\OtpVerificationMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class OtpController extends Controller
 {
-    // Tampilkan halaman input OTP
-    public function show()
+    // =========================================================================
+    // SHOW — Halaman verifikasi OTP
+    // =========================================================================
+
+    public function show(Request $request)
     {
-        if (Auth::user()->isEmailVerified()) {
-            return redirect()->route('home');
+        // Kalau sudah verified, langsung ke library
+        if ($request->user()->isEmailVerified()) {
+            return redirect()->route('publikasi.library');
         }
 
         return view('auth.otp-verify');
     }
 
-    // Verifikasi kode OTP
+    // =========================================================================
+    // VERIFY — Proses verifikasi kode OTP
+    // =========================================================================
+
     public function verify(Request $request)
     {
+        $user        = $request->user();
+        $attemptKey  = 'otp_attempts_' . $user->id;
+        $attempts    = Cache::get($attemptKey, 0);
+
+        // --- Cek sudah verified ---
+        if ($user->isEmailVerified()) {
+            return redirect()->route('publikasi.library');
+        }
+
+        // --- Cek max attempt (5x) ---
+        if ($attempts >= 5) {
+            Cache::forget($attemptKey);
+
+            Log::warning('OTP max attempts reached', ['user_id' => $user->id, 'ip' => $request->ip()]);
+
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('login')
+                ->withErrors(['email' => 'Terlalu banyak percobaan OTP. Silakan login ulang.']);
+        }
+
+        // --- Validasi input ---
         $request->validate([
-            'code' => 'required|string|size:6',
+            'code' => ['required', 'string', 'digits:6'],
         ], [
-            'code.required' => 'Masukkan kode OTP.',
-            'code.size'     => 'Kode OTP harus 6 digit.',
+            'code.required' => 'Kode OTP wajib diisi.',
+            'code.digits'   => 'Kode OTP harus 6 digit angka.',
         ]);
 
-        $user = Auth::user();
+        // --- Verifikasi OTP ---
+        if (!$user->verifyOtp($request->code)) {
+            $newAttempts = $attempts + 1;
+            Cache::put($attemptKey, $newAttempts, now()->addMinutes(10));
 
-        $otp = $user->otpCodes()
-            ->where('code', $request->code)
-            ->where('is_used', false)
-            ->latest()
-            ->first();
+            $remaining = 5 - $newAttempts;
 
-        if (!$otp) {
-            return back()->withErrors(['code' => 'Kode OTP tidak valid.']);
+            if ($remaining <= 0) {
+                Cache::forget($attemptKey);
+
+                Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+
+                return redirect()->route('login')
+                    ->withErrors(['email' => 'Terlalu banyak percobaan OTP. Silakan login ulang.']);
+            }
+
+            return back()->withErrors([
+                'code' => "Kode OTP salah atau sudah kadaluarsa. Sisa percobaan: {$remaining}x.",
+            ]);
         }
 
-        if ($otp->isExpired()) {
-            return back()->withErrors(['code' => 'Kode OTP sudah kadaluarsa. Silakan minta kode baru.']);
-        }
+        // --- Berhasil: hapus attempt cache ---
+        Cache::forget($attemptKey);
+        Cache::forget('otp_resend_count_' . $user->id);
+        Cache::forget('otp_cooldown_' . $user->id);
 
-        // Tandai OTP sudah dipakai
-        $otp->update(['is_used' => true]);
-
-        // Verifikasi email user
+        // --- Set email verified ---
         $user->update(['email_verified_at' => now()]);
 
-        return redirect()->route('home')
-            ->with('success', '🎉 Akun Anda berhasil diverifikasi! Selamat datang di DABRAKA.');
+        Log::info('Email verified successfully', ['user_id' => $user->id]);
+
+        return redirect()->route('publikasi.library')
+            ->with('success', 'Email berhasil diverifikasi! Selamat datang, ' . $user->name . ' 🎉');
     }
 
-    // Kirim ulang OTP
-    public function resend()
+    // =========================================================================
+    // RESEND — Kirim ulang OTP
+    // =========================================================================
+
+    public function resend(Request $request)
     {
-        $user = Auth::user();
+        $user        = $request->user();
+        $cooldownKey = 'otp_cooldown_' . $user->id;
+        $resendKey   = 'otp_resend_count_' . $user->id;
 
+        // --- Cek sudah verified ---
         if ($user->isEmailVerified()) {
-            return redirect()->route('home');
+            return redirect()->route('publikasi.library');
         }
 
-        // Cek OTP terakhir
-        $lastOtp = $user->otpCodes()
-            ->where('is_used', false)
-            ->latest()
-            ->first();
+        // --- Cek cooldown server-side ---
+        if (Cache::has($cooldownKey)) {
+            $ttl       = Cache::getStore()->connection()->ttl('otp_cooldown_' . $user->id);
+            $remaining = max(1, $ttl);
 
-        // Cek interval resend (60 detik)
-        if ($lastOtp && $lastOtp->last_resend_at) {
-            $secondsAgo = now()->diffInSeconds($lastOtp->last_resend_at);
-            if ($secondsAgo < 60) {
-                $waitSeconds = 60 - $secondsAgo;
-                return back()->withErrors([
-                    'code' => "Tunggu {$waitSeconds} detik sebelum meminta kode baru."
-                ]);
-            }
-        }
-
-        // Cek batas resend
-        if ($lastOtp && $lastOtp->resend_count >= 3) {
             return back()->withErrors([
-                'code' => 'Batas pengiriman ulang tercapai (3x). Silakan hubungi support.'
+                'resend' => "Tunggu {$remaining} detik sebelum kirim ulang kode.",
             ]);
         }
 
-        // Generate OTP baru
+        // --- Cek max resend (3x per 10 menit) ---
+        $resendCount = Cache::get($resendKey, 0);
+
+        if ($resendCount >= 3) {
+            Log::warning('OTP resend limit reached', ['user_id' => $user->id, 'ip' => $request->ip()]);
+
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('login')
+                ->withErrors(['email' => 'Batas kirim ulang OTP habis. Silakan login ulang.']);
+        }
+
+        // --- Generate & kirim OTP baru ---
         $otp = $user->generateOtp();
 
-        // Update resend count dari OTP lama atau set ke OTP baru
-        $otp->update([
-            'resend_count'   => ($lastOtp?->resend_count ?? 0) + 1,
-            'last_resend_at' => now(),
-        ]);
-
-        // Kirim email
         try {
             Mail::to($user->email)->send(new OtpVerificationMail($otp));
+
+            // Set cooldown 60 detik & increment counter
+            Cache::put($cooldownKey, true, now()->addSeconds(60));
+            Cache::put($resendKey, $resendCount + 1, now()->addMinutes(10));
+
+            Log::info('OTP resent', ['user_id' => $user->id, 'attempt' => $resendCount + 1]);
+
+            return back()->with('success', 'Kode OTP baru telah dikirim ke ' . $user->email);
         } catch (\Exception $e) {
+            Log::error('Gagal kirim OTP resend', [
+                'user_id' => $user->id,
+                'error'   => $e->getMessage(),
+            ]);
+
             return back()->withErrors([
-                'code' => 'Gagal mengirim email. Coba lagi beberapa saat.'
+                'resend' => 'Gagal mengirim email. Coba beberapa saat lagi.',
             ]);
         }
-
-        return back()->with('success', '✅ Kode OTP baru telah dikirim ke ' . $user->email);
     }
 }

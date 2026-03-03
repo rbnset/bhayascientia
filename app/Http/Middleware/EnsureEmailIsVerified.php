@@ -8,22 +8,36 @@ use Symfony\Component\HttpFoundation\Response;
 
 class EnsureEmailIsVerified
 {
+    /**
+     * Route yang diizinkan meski belum verified
+     */
+    protected array $except = [
+        'otp.*',
+        'logout',
+        'home',
+    ];
+
     public function handle(Request $request, Closure $next): Response
     {
+        // Tidak login → ke halaman login
         if (!$request->user()) {
             return redirect()->route('login');
         }
 
-        if (!$request->user()->isEmailVerified()) {
-            // Kalau sudah di halaman OTP, biarkan lewat
-            if ($request->routeIs('otp.*')) {
-                return $next($request);
-            }
-
-            return redirect()->route('otp.show')
-                ->with('info', 'Verifikasi email Anda terlebih dahulu.');
+        // Sudah verified → lanjut normal
+        if ($request->user()->isEmailVerified()) {
+            return $next($request);
         }
 
-        return $next($request);
+        // Kalau route ada di daftar pengecualian → biarkan lewat
+        foreach ($this->except as $pattern) {
+            if ($request->routeIs($pattern)) {
+                return $next($request);
+            }
+        }
+
+        // Belum verified → redirect ke OTP
+        return redirect()->route('otp.show')
+            ->with('info', '📧 Verifikasi email Anda terlebih dahulu untuk mengakses halaman ini.');
     }
 }

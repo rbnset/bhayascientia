@@ -26,64 +26,65 @@ use Illuminate\Support\Facades\Storage;
 /*
 |--------------------------------------------------------------------------
 | Manuscript Routes
+| Hanya user yang login & verified bisa akses PDF
 |--------------------------------------------------------------------------
 */
 
-Route::get('/manuscripts/{version}', function (PublicationVersion $version) {
-    abort_unless(auth()->check(), 403);
+Route::middleware(['auth', 'verified.otp'])->group(function () {
 
-    $version->loadMissing('publication');
-    abort_unless(filled($version->pdf_file_path), 404);
+    Route::get('/manuscripts/{version}', function (PublicationVersion $version) {
+        $version->loadMissing('publication');
+        abort_unless(filled($version->pdf_file_path), 404);
 
-    $absolutePath = Storage::disk('public')->path($version->pdf_file_path);
-    abort_unless(is_file($absolutePath), 404);
+        $absolutePath = Storage::disk('public')->path($version->pdf_file_path);
+        abort_unless(is_file($absolutePath), 404);
 
-    $publication = $version->publication;
+        $publication = $version->publication;
 
-    $pdf       = new \App\Support\PdfWithRotation();
-    $pageCount = $pdf->setSourceFile($absolutePath);
+        $pdf       = new \App\Support\PdfWithRotation();
+        $pageCount = $pdf->setSourceFile($absolutePath);
 
-    for ($pageNo = 1; $pageNo <= $pageCount; $pageNo++) {
-        $tplId = $pdf->importPage($pageNo);
-        $size  = $pdf->getTemplateSize($tplId);
+        for ($pageNo = 1; $pageNo <= $pageCount; $pageNo++) {
+            $tplId = $pdf->importPage($pageNo);
+            $size  = $pdf->getTemplateSize($tplId);
 
-        $pdf->AddPage($size['orientation'], [$size['width'], $size['height']]);
-        $pdf->useTemplate($tplId);
+            $pdf->AddPage($size['orientation'], [$size['width'], $size['height']]);
+            $pdf->useTemplate($tplId);
 
-        if (in_array($publication->status, ['submitted', 'revision_required'])) {
-            $pdf->SetFont('Helvetica', 'B', 40);
-            $pdf->SetTextColor(210, 210, 210);
+            if (in_array($publication->status, ['submitted', 'revision_required'])) {
+                $pdf->SetFont('Helvetica', 'B', 40);
+                $pdf->SetTextColor(210, 210, 210);
 
-            $text = strtoupper(str_replace('_', ' ', $publication->status));
+                $text = strtoupper(str_replace('_', ' ', $publication->status));
 
-            $pdf->RotatedText(
-                $size['width'] / 2 - 80,
-                $size['height'] / 2,
-                $text,
-                45
-            );
+                $pdf->RotatedText(
+                    $size['width'] / 2 - 80,
+                    $size['height'] / 2,
+                    $text,
+                    45
+                );
+            }
         }
-    }
 
-    $content = $pdf->Output('S');
+        $content = $pdf->Output('S');
 
-    return response($content, 200, [
-        'Content-Type'        => 'application/pdf',
-        'Content-Disposition' => 'inline; filename="manuscript.pdf"',
-        'Content-Length'      => strlen($content),
-        'Cache-Control'       => 'no-store, no-cache, must-revalidate, max-age=0',
-    ]);
-})->name('manuscripts.view');
+        return response($content, 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="manuscript.pdf"',
+            'Content-Length'      => strlen($content),
+            'Cache-Control'       => 'no-store, no-cache, must-revalidate, max-age=0',
+        ]);
+    })->name('manuscripts.view');
 
-Route::get('/manuscripts/{version}/download', function (PublicationVersion $version) {
-    abort_unless(auth()->check(), 403);
-    abort_unless(filled($version->pdf_file_path), 404);
+    Route::get('/manuscripts/{version}/download', function (PublicationVersion $version) {
+        abort_unless(filled($version->pdf_file_path), 404);
 
-    return Storage::disk('public')->download(
-        $version->pdf_file_path,
-        'manuscript-v' . ($version->version_number ?? 'x') . '.pdf'
-    );
-})->name('manuscripts.download');
+        return Storage::disk('public')->download(
+            $version->pdf_file_path,
+            'manuscript-v' . ($version->version_number ?? 'x') . '.pdf'
+        );
+    })->name('manuscripts.download');
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -99,70 +100,87 @@ Route::view('/event', 'pages.event')->name('event');
 |--------------------------------------------------------------------------
 */
 Route::middleware('guest')->group(function () {
-    Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
-    Route::post('/login', [AuthController::class, 'login'])->name('login.post');
-
+    Route::get('/login',    [AuthController::class, 'showLoginForm'])->name('login');
     Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('register');
-    Route::post('/register', [AuthController::class, 'register'])->name('register.post');
 
-    Route::get('auth/google', [GoogleAuthController::class, 'redirectToGoogle'])->name('auth.google');
+    Route::post('/login',    [AuthController::class, 'login'])
+        ->middleware('throttle:login')
+        ->name('login.post');
+
+    Route::post('/register', [AuthController::class, 'register'])
+        ->middleware('throttle:register')
+        ->name('register.post');
+
+    // Google OAuth
+    Route::get('auth/google',          [GoogleAuthController::class, 'redirectToGoogle'])->name('auth.google');
     Route::get('auth/google/callback', [GoogleAuthController::class, 'handleGoogleCallback'])->name('auth.google.callback');
 
-    Route::get('auth/facebook', [GoogleAuthController::class, 'redirectToFacebook'])->name('auth.facebook');
+    // Facebook OAuth
+    Route::get('auth/facebook',          [GoogleAuthController::class, 'redirectToFacebook'])->name('auth.facebook');
     Route::get('auth/facebook/callback', [GoogleAuthController::class, 'handleFacebookCallback'])->name('auth.facebook.callback');
 });
 
 /*
 |--------------------------------------------------------------------------
-| Auth Routes (Authenticated Only)
+| Logout
 |--------------------------------------------------------------------------
 */
-Route::middleware('auth')->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+Route::post('/logout', [AuthController::class, 'logout'])
+    ->middleware('auth')
+    ->name('logout');
 
-    Route::get('/dashboard', function () {
-        return redirect()->route('publikasi.library');
-    })->name('dashboard');
-});
+/*
+|--------------------------------------------------------------------------
+| Dashboard Redirect
+|--------------------------------------------------------------------------
+*/
+Route::get('/dashboard', function () {
+    return redirect()->route('publikasi.library');
+})->middleware('auth')->name('dashboard');
 
 /*
 |--------------------------------------------------------------------------
 | OTP Verification
-| ⚠️ Pakai middleware 'auth' saja — BUKAN 'verified.otp'
-| Supaya user yang belum verified tetap bisa akses halaman ini
+| Hanya middleware 'auth' — belum verified pun harus bisa akses halaman ini
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth'])->group(function () {
-    Route::get('/verify-email', [OtpController::class, 'show'])->name('otp.show');
-    Route::post('/verify-email', [OtpController::class, 'verify'])->name('otp.verify');
-    Route::post('/verify-email/resend', [OtpController::class, 'resend'])->name('otp.resend');
+Route::middleware('auth')->group(function () {
+    Route::get('/verify-email',         [OtpController::class, 'show'])->name('otp.show');
+    Route::post('/verify-email',        [OtpController::class, 'verify'])
+        ->middleware('throttle:otp')
+        ->name('otp.verify');
+    Route::post('/verify-email/resend', [OtpController::class, 'resend'])
+        ->middleware('throttle:otp-resend')
+        ->name('otp.resend');
 });
 
 /*
 |--------------------------------------------------------------------------
-| Publikasi Routes
-| ⚠️ URUTAN PENTING: specific routes SEBELUM wildcard {slug}
+| Publikasi Routes (Public)
+| ⚠️ Urutan penting: specific routes SEBELUM wildcard {slug}
 |--------------------------------------------------------------------------
 */
 Route::prefix('publikasi')->name('publikasi.')->group(function () {
-    Route::get('/', [PublicationIndexController::class, 'index'])->name('index');
-    Route::get('/jelajahi', [PublicationBrowseController::class, 'browse'])->name('browse');
-    Route::get('/search', [PublicationSearchController::class, 'search'])->name('search');
-    Route::get('/trending', [PublicationTrendingController::class, 'trending'])->name('trending');
-    Route::get('/library', [PublicationLibraryController::class, 'library'])->name('library');
+    Route::get('/',         [PublicationIndexController::class,      'index'])->name('index');
+    Route::get('/jelajahi', [PublicationBrowseController::class,     'browse'])->name('browse');
+    Route::get('/search',   [PublicationSearchController::class,     'search'])->name('search');
+    Route::get('/trending', [PublicationTrendingController::class,   'trending'])->name('trending');
+    Route::get('/library',  [PublicationLibraryController::class,    'library'])->name('library');
 
-    Route::get('/kategori', [PublicationCategoriesController::class, 'categories'])->name('category');
+    Route::get('/kategori',              [PublicationCategoriesController::class, 'categories'])->name('category');
     Route::get('/kategori/{categorySlug}', [PublicationCategoriesController::class, 'categories'])->name('category.show');
 
     // ⚠️ Wildcard PALING BAWAH
-    Route::get('/{slug}', [PublicationController::class, 'show'])->name('show');
+    Route::get('/{slug}',          [PublicationController::class, 'show'])->name('show');
     Route::get('/{slug}/download', [PublicationController::class, 'download'])->name('download');
-    Route::get('/{slug}/read', [PublicationController::class, 'read'])->name('read');
+    Route::get('/{slug}/read',     [PublicationController::class, 'read'])->name('read');
 });
 
-// Favorite & Save
-Route::post('/publikasi/{slug}/favorite', [PublicationController::class, 'toggleFavorite'])->name('publikasi.favorite');
-Route::post('/publikasi/{slug}/save', [PublicationController::class, 'toggleSaved'])->name('publikasi.save');
+// Favorite & Save (auth + verified)
+Route::middleware(['auth', 'verified.otp'])->group(function () {
+    Route::post('/publikasi/{slug}/favorite', [PublicationController::class, 'toggleFavorite'])->name('publikasi.favorite');
+    Route::post('/publikasi/{slug}/save',     [PublicationController::class, 'toggleSaved'])->name('publikasi.save');
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -176,8 +194,10 @@ Route::get('/author/{identifier}', [AuthorController::class, 'show'])->name('aut
 | Contact
 |--------------------------------------------------------------------------
 */
-Route::get('/kontak', [ContactController::class, 'index'])->name('kontak');
-Route::post('/kontak', [ContactController::class, 'submit'])->name('kontak.submit');
+Route::get('/kontak',  [ContactController::class, 'index'])->name('kontak');
+Route::post('/kontak', [ContactController::class, 'submit'])
+    ->middleware('throttle:10,1') // maks 10 pesan per menit per IP
+    ->name('kontak.submit');
 
 /*
 |--------------------------------------------------------------------------
@@ -187,8 +207,8 @@ Route::post('/kontak', [ContactController::class, 'submit'])->name('kontak.submi
 Route::get('/tentang', [AboutController::class, 'index'])->name('tentang');
 
 Route::controller(LegalController::class)->group(function () {
-    Route::get('/privacy-policy', 'privacyPolicy')->name('privacy-policy');
-    Route::get('/terms-conditions', 'termsConditions')->name('terms-conditions');
+    Route::get('/privacy-policy',    'privacyPolicy')->name('privacy-policy');
+    Route::get('/terms-conditions',  'termsConditions')->name('terms-conditions');
 });
 
 Route::get('/submission-guidelines', [SubmissionGuidelineController::class, 'index'])
@@ -196,32 +216,34 @@ Route::get('/submission-guidelines', [SubmissionGuidelineController::class, 'ind
 
 /*
 |--------------------------------------------------------------------------
-| Authenticated + Verified User Routes
+| Authenticated + Verified Routes
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth', 'verified.otp'])->group(function () {
 
     // ── Subscription ────────────────────────────────────────────────────────
-    Route::get('/langganan', [SubscriptionController::class, 'index'])->name('subscription.index');
-    Route::post('/langganan', [SubscriptionController::class, 'store'])->name('subscription.store');
-    Route::put('/langganan', [SubscriptionController::class, 'update'])->name('subscription.update');
-    Route::delete('/langganan', [SubscriptionController::class, 'destroy'])->name('subscription.destroy');
+    Route::get('/langganan',             [SubscriptionController::class, 'index'])->name('subscription.index');
+    Route::post('/langganan',            [SubscriptionController::class, 'store'])->name('subscription.store');
+    Route::put('/langganan',             [SubscriptionController::class, 'update'])->name('subscription.update');
+    Route::delete('/langganan',          [SubscriptionController::class, 'destroy'])->name('subscription.destroy');
     Route::post('/langganan/reactivate', [SubscriptionController::class, 'reactivate'])->name('subscription.reactivate');
-    Route::get('/langganan/categories', [SubscriptionController::class, 'getCategoriesAjax'])->name('subscription.categories');
+    Route::get('/langganan/categories',  [SubscriptionController::class, 'getCategoriesAjax'])->name('subscription.categories');
 
     // ── Profile ─────────────────────────────────────────────────────────────
-    Route::get('/profil-saya', [ProfileController::class, 'index'])->name('profil.saya');
-    Route::post('/profil-saya/update', [ProfileController::class, 'update'])->name('profil.update');
-    Route::post('/profil-saya/update-photo', [ProfileController::class, 'updatePhoto'])->name('profil.updatePhoto');
-    Route::delete('/profil-saya/delete-photo', [ProfileController::class, 'deletePhoto'])->name('profil.deletePhoto');
-    Route::post('/profil-saya/update-password', [ProfileController::class, 'updatePassword'])->name('profil.updatePassword');
+    Route::get('/profil-saya',                    [ProfileController::class, 'index'])->name('profil.saya');
+    Route::post('/profil-saya/update',            [ProfileController::class, 'update'])->name('profil.update');
+    Route::post('/profil-saya/update-photo',      [ProfileController::class, 'updatePhoto'])->name('profil.updatePhoto');
+    Route::delete('/profil-saya/delete-photo',    [ProfileController::class, 'deletePhoto'])->name('profil.deletePhoto');
+    Route::post('/profil-saya/update-password',   [ProfileController::class, 'updatePassword'])->name('profil.updatePassword');
 });
 
 /*
 |--------------------------------------------------------------------------
 | Utility / Dev Routes
+| ⚠️ Hapus /test-card sebelum production!
 |--------------------------------------------------------------------------
 */
-Route::get('/test-card', fn() => view('test-card'));
+// Route::get('/test-card', fn() => view('test-card')); // ← uncomment jika perlu dev only
+
 Route::get('/placeholder-image', [PlaceholderImageController::class, 'generate'])->name('placeholder.image');
 Route::get('/placeholder-cover', [PlaceholderCoverController::class, 'generate'])->name('placeholder.cover');

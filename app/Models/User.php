@@ -10,6 +10,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Traits\HasRoles;
+use Illuminate\Support\Facades\Hash;
 
 class User extends Authenticatable implements FilamentUser, HasAvatar
 {
@@ -321,20 +322,64 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         return $this->hasMany(OtpCode::class);
     }
 
+    // =========================================================================
+    // OTP: Generate kode baru
+    // =========================================================================
+
+    public function generateOtp(): string
+    {
+        // Buat kode 6 digit acak
+        $code = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
+        $this->update([
+            'otp_code'       => Hash::make($code),  // simpan sebagai hash
+            'otp_expires_at' => now()->addMinutes(10),
+        ]);
+
+        return $code; // return plain code untuk dikirim via email
+    }
+
+    // =========================================================================
+    // OTP: Verifikasi kode
+    // =========================================================================
+
+    public function verifyOtp(string $code): bool
+    {
+        // Tidak ada OTP tersimpan
+        if (!$this->otp_code || !$this->otp_expires_at) {
+            return false;
+        }
+
+        // Kode sudah kadaluarsa
+        if (now()->isAfter($this->otp_expires_at)) {
+            // Hapus OTP kadaluarsa
+            $this->update([
+                'otp_code'       => null,
+                'otp_expires_at' => null,
+            ]);
+            return false;
+        }
+
+        // Timing-safe comparison (cegah timing attack)
+        if (!Hash::check($code, $this->otp_code)) {
+            return false;
+        }
+
+        // One-time use: hapus OTP setelah berhasil dipakai
+        $this->update([
+            'otp_code'       => null,
+            'otp_expires_at' => null,
+        ]);
+
+        return true;
+    }
+
+    // =========================================================================
+    // Cek apakah email sudah diverifikasi
+    // =========================================================================
+
     public function isEmailVerified(): bool
     {
         return !is_null($this->email_verified_at);
-    }
-
-    public function generateOtp(): OtpCode
-    {
-        // Hapus OTP lama yang belum dipakai
-        $this->otpCodes()->where('is_used', false)->delete();
-
-        return $this->otpCodes()->create([
-            'code'       => str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT),
-            'expires_at' => now()->addMinutes(10),
-            'is_used'    => false,
-        ]);
     }
 }
