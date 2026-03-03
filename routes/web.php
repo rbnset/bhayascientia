@@ -225,20 +225,3 @@ Route::middleware(['auth', 'verified.otp'])->group(function () {
 Route::get('/test-card', fn() => view('test-card'));
 Route::get('/placeholder-image', [PlaceholderImageController::class, 'generate'])->name('placeholder.image');
 Route::get('/placeholder-cover', [PlaceholderCoverController::class, 'generate'])->name('placeholder.cover');
-
-/*
-|--------------------------------------------------------------------------
-| TEMPORARY — Preview Email OTP (Hapus setelah testing!)
-|--------------------------------------------------------------------------
-*/
-Route::get('/preview-otp', function () {
-    $user = App\Models\User::first();
-    $otp  = $user->generateOtp();
-    return new App\Mail\OtpVerificationMail($otp);
-});
-
-
-// TEMPORARY — hapus setelah testing!
-Route::get('/preview-otp-page', function () {
-    return view('auth.otp-verify');
-});
