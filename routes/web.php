@@ -236,3 +236,9 @@ Route::get('/preview-otp', function () {
     $otp  = $user->generateOtp();
     return new App\Mail\OtpVerificationMail($otp);
 });
+
+
+// TEMPORARY — hapus setelah testing!
+Route::get('/preview-otp-page', function () {
+    return view('auth.otp-verify');
+});
