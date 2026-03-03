@@ -1,5 +1,4 @@
 <?php
-// app/Models/Subscription.php (Updated)
 
 namespace App\Models;
 
@@ -15,6 +14,9 @@ class Subscription extends Model
         'types',
         'categories',
         'notification_type',
+        'max_emails_per_day',
+        'emails_sent_today',
+        'last_email_date',
         'is_active',
         'last_sent_at',
         'subscribed_at',
@@ -22,41 +24,70 @@ class Subscription extends Model
     ];
 
     protected $casts = [
-        'types' => 'array',
-        'categories' => 'array',
-        'is_active' => 'boolean',
-        'last_sent_at' => 'datetime',
-        'subscribed_at' => 'datetime',
+        'types'           => 'array',
+        'categories'      => 'array',
+        'is_active'       => 'boolean',
+        'last_sent_at'    => 'datetime',
+        'subscribed_at'   => 'datetime',
         'unsubscribed_at' => 'datetime',
+        'last_email_date' => 'date',
     ];
+
+    // ─── Relationships ───────────────────────────────────────────────────────
 
     public function user()
     {
         return $this->belongsTo(User::class);
     }
 
-    public function categoryModels()
-    {
-        return $this->belongsToMany(Category::class, 'subscription_categories');
-    }
+    // ─── Scopes ──────────────────────────────────────────────────────────────
 
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
     }
 
-    public function scopeByNotificationType($query, $type)
+    public function scopeByNotificationType($query, string $type)
     {
         return $query->where('notification_type', $type);
     }
 
-    public function hasType($type)
+    // ─── Helpers ─────────────────────────────────────────────────────────────
+
+    public function hasType(string $type): bool
     {
         return in_array($type, $this->types ?? []);
     }
 
-    public function hasCategory($categoryId)
+    public function hasCategory(int $categoryId): bool
     {
         return in_array($categoryId, $this->categories ?? []);
+    }
+
+    public function canSendEmail(): bool
+    {
+        if ($this->notification_type !== 'instant') return true;
+
+        $today = now()->toDateString();
+
+        if ($this->last_email_date?->toDateString() !== $today) {
+            return true;
+        }
+
+        return $this->emails_sent_today < $this->max_emails_per_day;
+    }
+
+    public function incrementEmailCount(): void
+    {
+        $today = now()->toDateString();
+
+        if ($this->last_email_date?->toDateString() !== $today) {
+            $this->update([
+                'emails_sent_today' => 1,
+                'last_email_date'   => $today,
+            ]);
+        } else {
+            $this->increment('emails_sent_today');
+        }
     }
 }

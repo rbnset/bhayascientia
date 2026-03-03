@@ -91,8 +91,6 @@ Route::get('/manuscripts/{version}/download', function (PublicationVersion $vers
 */
 Route::view('/', 'pages.home')->name('home');
 Route::view('/event', 'pages.event')->name('event');
-Route::view('/tentang', 'pages.about')->name('tentang');
-Route::view('/kontak', 'pages.contact')->name('kontak');
 
 /*
 |--------------------------------------------------------------------------
@@ -133,33 +131,24 @@ Route::middleware('auth')->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::prefix('publikasi')->name('publikasi.')->group(function () {
-
-    // ✅ Index
     Route::get('/', [PublicationIndexController::class, 'index'])->name('index');
-
-    // ✅ Static/specific routes — HARUS di atas {slug}
     Route::get('/jelajahi', [PublicationBrowseController::class, 'browse'])->name('browse');
     Route::get('/search', [PublicationSearchController::class, 'search'])->name('search');
     Route::get('/trending', [PublicationTrendingController::class, 'trending'])->name('trending');
     Route::get('/library', [PublicationLibraryController::class, 'library'])->name('library');
 
-    // ✅ Category routes — pakai PublicationCategoriesController yang sudah ada
-    Route::get('/kategori', [PublicationCategoriesController::class, 'categories'])
-        ->name('category');
-    Route::get('/kategori/{categorySlug}', [PublicationCategoriesController::class, 'categories'])
-        ->name('category.show');
+    Route::get('/kategori', [PublicationCategoriesController::class, 'categories'])->name('category');
+    Route::get('/kategori/{categorySlug}', [PublicationCategoriesController::class, 'categories'])->name('category.show');
 
-    // ✅ Wildcard {slug} — HARUS paling bawah
+    // ⚠️ Wildcard PALING BAWAH
     Route::get('/{slug}', [PublicationController::class, 'show'])->name('show');
     Route::get('/{slug}/download', [PublicationController::class, 'download'])->name('download');
     Route::get('/{slug}/read', [PublicationController::class, 'read'])->name('read');
 });
 
-// ✅ Favorite & Save (POST — di luar prefix group)
-Route::post('/publikasi/{slug}/favorite', [PublicationController::class, 'toggleFavorite'])
-    ->name('publikasi.favorite');
-Route::post('/publikasi/{slug}/save', [PublicationController::class, 'toggleSaved'])
-    ->name('publikasi.save');
+// Favorite & Save
+Route::post('/publikasi/{slug}/favorite', [PublicationController::class, 'toggleFavorite'])->name('publikasi.favorite');
+Route::post('/publikasi/{slug}/save', [PublicationController::class, 'toggleSaved'])->name('publikasi.save');
 
 /*
 |--------------------------------------------------------------------------
@@ -178,19 +167,37 @@ Route::post('/kontak', [ContactController::class, 'submit'])->name('kontak.submi
 
 /*
 |--------------------------------------------------------------------------
+| About & Legal
+|--------------------------------------------------------------------------
+*/
+Route::get('/tentang', [AboutController::class, 'index'])->name('tentang');
+
+Route::controller(LegalController::class)->group(function () {
+    Route::get('/privacy-policy', 'privacyPolicy')->name('privacy-policy');
+    Route::get('/terms-conditions', 'termsConditions')->name('terms-conditions');
+});
+
+Route::get('/submission-guidelines', [SubmissionGuidelineController::class, 'index'])
+    ->name('submission-guidelines');
+
+/*
+|--------------------------------------------------------------------------
 | Authenticated User Routes
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth'])->group(function () {
-    // Subscription
-    Route::get('/subscription', [SubscriptionController::class, 'index'])->name('subscription.index');
-    Route::post('/subscription', [SubscriptionController::class, 'store'])->name('subscription.store');
-    Route::put('/subscription', [SubscriptionController::class, 'update'])->name('subscription.update');
-    Route::delete('/subscription', [SubscriptionController::class, 'destroy'])->name('subscription.destroy');
-    Route::post('/subscription/reactivate', [SubscriptionController::class, 'reactivate'])->name('subscription.reactivate');
-    Route::post('/subscription/get-categories', [SubscriptionController::class, 'getCategories'])->name('subscription.getCategories');
 
-    // Profile
+    // ── Subscription ────────────────────────────────────────────────────────
+    Route::get('/langganan', [SubscriptionController::class, 'index'])->name('subscription.index');
+    Route::post('/langganan', [SubscriptionController::class, 'store'])->name('subscription.store');
+    Route::put('/langganan', [SubscriptionController::class, 'update'])->name('subscription.update');
+    Route::delete('/langganan', [SubscriptionController::class, 'destroy'])->name('subscription.destroy');
+    Route::post('/langganan/reactivate', [SubscriptionController::class, 'reactivate'])->name('subscription.reactivate');
+
+    // AJAX — ⚠️ harus di atas /langganan/{wildcard} jika ada
+    Route::get('/langganan/categories', [SubscriptionController::class, 'getCategoriesAjax'])->name('subscription.categories');
+
+    // ── Profile ─────────────────────────────────────────────────────────────
     Route::get('/profil-saya', [ProfileController::class, 'index'])->name('profil.saya');
     Route::post('/profil-saya/update', [ProfileController::class, 'update'])->name('profil.update');
     Route::post('/profil-saya/update-photo', [ProfileController::class, 'updatePhoto'])->name('profil.updatePhoto');
@@ -200,38 +207,18 @@ Route::middleware(['auth'])->group(function () {
 
 /*
 |--------------------------------------------------------------------------
-| Other Pages
-|--------------------------------------------------------------------------
-*/
-Route::get('/submission-guidelines', [SubmissionGuidelineController::class, 'index'])
-    ->name('submission-guidelines');
-
-Route::controller(LegalController::class)->group(function () {
-    Route::get('/privacy-policy', 'privacyPolicy')->name('privacy-policy');
-    Route::get('/terms-conditions', 'termsConditions')->name('terms-conditions');
-});
-
-Route::get('/tentang', [AboutController::class, 'index'])->name('tentang');
-
-/*
-|--------------------------------------------------------------------------
 | Utility / Dev Routes
 |--------------------------------------------------------------------------
 */
 Route::get('/test-card', fn() => view('test-card'));
+Route::get('/placeholder-image', [PlaceholderImageController::class, 'generate'])->name('placeholder.image');
+Route::get('/placeholder-cover', [PlaceholderCoverController::class, 'generate'])->name('placeholder.cover');
 
-Route::get('/placeholder-image', [PlaceholderImageController::class, 'generate'])
-    ->name('placeholder.image');
-
-Route::get('/placeholder-cover', [PlaceholderCoverController::class, 'generate'])
-    ->name('placeholder.cover');
-
-
-// ==============================
-// TEMPORARY - Hapus setelah testing!
-// ==============================
-
-// Preview auto-reply (email ke user)
+/*
+|--------------------------------------------------------------------------
+| TEMPORARY — Preview Email (Hapus setelah testing!)
+|--------------------------------------------------------------------------
+*/
 Route::get('/preview-autoreply', function () {
     $data = [
         'name'    => 'Robin Setiyawan',
@@ -243,7 +230,6 @@ Route::get('/preview-autoreply', function () {
     return view('emails.contact-autoreply', compact('data'));
 });
 
-// Preview notifikasi admin
 Route::get('/preview-admin', function () {
     $data = [
         'name'    => 'Robin Setiyawan',
@@ -254,3 +240,9 @@ Route::get('/preview-admin', function () {
     ];
     return view('emails.contact', compact('data'));
 });
+
+
+// TEMPORARY di web.php
+Route::get('/preview-subscription', function () {
+    return app(App\Http\Controllers\SubscriptionController::class)->index();
+})->middleware('auth');
