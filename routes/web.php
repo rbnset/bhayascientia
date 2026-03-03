@@ -243,6 +243,11 @@ Route::get('/preview-admin', function () {
 
 
 // TEMPORARY — hapus setelah testing!
+Route::get('/preview-langganan', function () {
+    return app(App\Http\Controllers\SubscriptionController::class)->index();
+});
+
+// TEMPORARY — hapus setelah testing!
 Route::get('/preview-email-subscription', function () {
     $user = App\Models\User::first();
     $publications = App\Models\Publication::where('status', 'published')
