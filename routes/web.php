@@ -247,6 +247,3 @@ Route::middleware(['auth', 'verified.otp'])->group(function () {
 
 Route::get('/placeholder-image', [PlaceholderImageController::class, 'generate'])->name('placeholder.image');
 Route::get('/placeholder-cover', [PlaceholderCoverController::class, 'generate'])->name('placeholder.cover');
-
-// Cleanup OTP setiap 1 jam
-Schedule::command('otp:cleanup')->hourly();
