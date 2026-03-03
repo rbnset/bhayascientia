@@ -219,41 +219,41 @@ Route::get('/placeholder-cover', [PlaceholderCoverController::class, 'generate']
 | TEMPORARY — Preview Email (Hapus setelah testing!)
 |--------------------------------------------------------------------------
 */
-Route::get('/preview-autoreply', function () {
-    $data = [
-        'name'    => 'Robin Setiyawan',
-        'email'   => 'rbn.setiyawan@gmail.com',
-        'phone'   => '085669877959',
-        'subject' => 'Saran Fitur Platform',
-        'message' => "Halo tim DABRAKA,\n\nSaya ingin memberikan saran terkait fitur pencarian publikasi.\n\nTerima kasih.",
-    ];
-    return view('emails.contact-autoreply', compact('data'));
-});
+// Route::get('/preview-autoreply', function () {
+//     $data = [
+//         'name'    => 'Robin Setiyawan',
+//         'email'   => 'rbn.setiyawan@gmail.com',
+//         'phone'   => '085669877959',
+//         'subject' => 'Saran Fitur Platform',
+//         'message' => "Halo tim DABRAKA,\n\nSaya ingin memberikan saran terkait fitur pencarian publikasi.\n\nTerima kasih.",
+//     ];
+//     return view('emails.contact-autoreply', compact('data'));
+// });
 
-Route::get('/preview-admin', function () {
-    $data = [
-        'name'    => 'Robin Setiyawan',
-        'email'   => 'rbn.setiyawan@gmail.com',
-        'phone'   => '085669877959',
-        'subject' => 'Saran Fitur Platform',
-        'message' => "Halo tim DABRAKA,\n\nSaya ingin memberikan saran terkait fitur pencarian publikasi.\n\nTerima kasih.",
-    ];
-    return view('emails.contact', compact('data'));
-});
+// Route::get('/preview-admin', function () {
+//     $data = [
+//         'name'    => 'Robin Setiyawan',
+//         'email'   => 'rbn.setiyawan@gmail.com',
+//         'phone'   => '085669877959',
+//         'subject' => 'Saran Fitur Platform',
+//         'message' => "Halo tim DABRAKA,\n\nSaya ingin memberikan saran terkait fitur pencarian publikasi.\n\nTerima kasih.",
+//     ];
+//     return view('emails.contact', compact('data'));
+// });
 
 
-// TEMPORARY — hapus setelah testing!
-Route::get('/preview-langganan', function () {
-    return app(App\Http\Controllers\SubscriptionController::class)->index();
-});
+// // TEMPORARY — hapus setelah testing!
+// Route::get('/preview-langganan', function () {
+//     return app(App\Http\Controllers\SubscriptionController::class)->index();
+// });
 
-// TEMPORARY — hapus setelah testing!
-Route::get('/preview-email-subscription', function () {
-    $user = App\Models\User::first();
-    $publications = App\Models\Publication::where('status', 'published')
-        ->latest('published_at')
-        ->take(5)
-        ->get();
+// // TEMPORARY — hapus setelah testing!
+// Route::get('/preview-email-subscription', function () {
+//     $user = App\Models\User::first();
+//     $publications = App\Models\Publication::where('status', 'published')
+//         ->latest('published_at')
+//         ->take(5)
+//         ->get();
 
-    return view('emails.subscription-digest', compact('user', 'publications'));
-});
+//     return view('emails.subscription-digest', compact('user', 'publications'));
+// });
