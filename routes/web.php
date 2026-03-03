@@ -225,3 +225,16 @@ Route::get('/placeholder-image', [PlaceholderImageController::class, 'generate']
 
 Route::get('/placeholder-cover', [PlaceholderCoverController::class, 'generate'])
     ->name('placeholder.cover');
+
+
+Route::get('/preview-email', function () {
+    $data = [
+        'name'    => 'Robin Setiyawan',
+        'email'   => 'rbn.setiyawan@gmail.com',
+        'phone'   => '085669877959',
+        'subject' => 'Saran Fitur',
+        'message' => "Halo tim DABRAKA,\n\nSaya ingin memberikan saran terkait fitur pencarian publikasi.\n\nTerima kasih.",
+    ];
+
+    return view('emails.contact-autoreply', compact('data'));
+});
