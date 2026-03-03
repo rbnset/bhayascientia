@@ -18,7 +18,6 @@ class OtpController extends Controller
 
     public function show(Request $request)
     {
-        // Kalau sudah verified, langsung ke library
         if ($request->user()->isEmailVerified()) {
             return redirect()->route('publikasi.library');
         }
@@ -32,19 +31,18 @@ class OtpController extends Controller
 
     public function verify(Request $request)
     {
-        $user        = $request->user();
-        $attemptKey  = 'otp_attempts_' . $user->id;
-        $attempts    = Cache::get($attemptKey, 0);
+        $user       = $request->user();
+        $attemptKey = 'otp_attempts_' . $user->id;
+        $attempts   = Cache::get($attemptKey, 0);
 
-        // --- Cek sudah verified ---
+        // Cek sudah verified
         if ($user->isEmailVerified()) {
             return redirect()->route('publikasi.library');
         }
 
-        // --- Cek max attempt (5x) ---
+        // Cek max attempt (5x) sebelum validasi — cegah bypass via invalid input
         if ($attempts >= 5) {
             Cache::forget($attemptKey);
-
             Log::warning('OTP max attempts reached', ['user_id' => $user->id, 'ip' => $request->ip()]);
 
             Auth::logout();
@@ -55,7 +53,7 @@ class OtpController extends Controller
                 ->withErrors(['email' => 'Terlalu banyak percobaan OTP. Silakan login ulang.']);
         }
 
-        // --- Validasi input ---
+        // Validasi input
         $request->validate([
             'code' => ['required', 'string', 'digits:6'],
         ], [
@@ -63,7 +61,7 @@ class OtpController extends Controller
             'code.digits'   => 'Kode OTP harus 6 digit angka.',
         ]);
 
-        // --- Verifikasi OTP ---
+        // Verifikasi OTP
         if (!$user->verifyOtp($request->code)) {
             $newAttempts = $attempts + 1;
             Cache::put($attemptKey, $newAttempts, now()->addMinutes(10));
@@ -72,6 +70,7 @@ class OtpController extends Controller
 
             if ($remaining <= 0) {
                 Cache::forget($attemptKey);
+                Log::warning('OTP attempts exhausted', ['user_id' => $user->id, 'ip' => $request->ip()]);
 
                 Auth::logout();
                 $request->session()->invalidate();
@@ -86,12 +85,12 @@ class OtpController extends Controller
             ]);
         }
 
-        // --- Berhasil: hapus attempt cache ---
+        // Berhasil — bersihkan semua cache OTP
         Cache::forget($attemptKey);
         Cache::forget('otp_resend_count_' . $user->id);
         Cache::forget('otp_cooldown_' . $user->id);
 
-        // --- Set email verified ---
+        // Set email verified
         $user->update(['email_verified_at' => now()]);
 
         Log::info('Email verified successfully', ['user_id' => $user->id]);
@@ -110,22 +109,19 @@ class OtpController extends Controller
         $cooldownKey = 'otp_cooldown_' . $user->id;
         $resendKey   = 'otp_resend_count_' . $user->id;
 
-        // --- Cek sudah verified ---
+        // Cek sudah verified
         if ($user->isEmailVerified()) {
             return redirect()->route('publikasi.library');
         }
 
-        // --- Cek cooldown server-side ---
+        // Cek cooldown server-side (60 detik)
         if (Cache::has($cooldownKey)) {
-            $ttl       = Cache::getStore()->connection()->ttl('otp_cooldown_' . $user->id);
-            $remaining = max(1, $ttl);
-
             return back()->withErrors([
-                'resend' => "Tunggu {$remaining} detik sebelum kirim ulang kode.",
+                'resend' => 'Tunggu 60 detik sebelum kirim ulang kode.',
             ]);
         }
 
-        // --- Cek max resend (3x per 10 menit) ---
+        // Cek max resend (3x per 10 menit)
         $resendCount = Cache::get($resendKey, 0);
 
         if ($resendCount >= 3) {
@@ -139,13 +135,17 @@ class OtpController extends Controller
                 ->withErrors(['email' => 'Batas kirim ulang OTP habis. Silakan login ulang.']);
         }
 
-        // --- Generate & kirim OTP baru ---
+        // Generate & kirim OTP baru
         $otp = $user->generateOtp();
 
         try {
-            Mail::to($user->email)->send(new OtpVerificationMail($otp));
+            Mail::to($user->email)->send(new OtpVerificationMail(
+                otpCode: $otp,
+                userName: $user->name,
+                userEmail: $user->email,
+            ));
 
-            // Set cooldown 60 detik & increment counter
+            // Set cooldown & increment counter
             Cache::put($cooldownKey, true, now()->addSeconds(60));
             Cache::put($resendKey, $resendCount + 1, now()->addMinutes(10));
 

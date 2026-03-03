@@ -31,23 +31,23 @@ class AuthController extends Controller
             'password' => ['required', 'confirmed', Password::min(6)],
             'terms'    => ['accepted'],
         ], [
-            'name.required'     => 'Nama lengkap wajib diisi.',
-            'email.required'    => 'Email wajib diisi.',
-            'email.email'       => 'Format email tidak valid.',
-            'email.unique'      => 'Email sudah terdaftar.',
-            'password.required' => 'Password wajib diisi.',
+            'name.required'      => 'Nama lengkap wajib diisi.',
+            'email.required'     => 'Email wajib diisi.',
+            'email.email'        => 'Format email tidak valid.',
+            'email.unique'       => 'Email sudah terdaftar.',
+            'password.required'  => 'Password wajib diisi.',
             'password.confirmed' => 'Konfirmasi password tidak cocok.',
-            'password.min'      => 'Password minimal 6 karakter.',
-            'terms.accepted'    => 'Anda harus menyetujui Terms & Privacy Policy.',
+            'password.min'       => 'Password minimal 6 karakter.',
+            'terms.accepted'     => 'Anda harus menyetujui Terms & Privacy Policy.',
         ]);
 
-        // Buat user baru — email_verified_at null dulu (belum verified)
+        // Buat user baru — email_verified_at null (belum verified)
         $user = User::create([
-            'name'               => $validated['name'],
-            'email'              => $validated['email'],
-            'password'           => Hash::make($validated['password']),
-            'provider'           => 'manual',
-            'email_verified_at'  => null, // ← wajib null, nanti diisi setelah OTP
+            'name'              => $validated['name'],
+            'email'             => $validated['email'],
+            'password'          => Hash::make($validated['password']),
+            'provider'          => 'manual',
+            'email_verified_at' => null,
         ]);
 
         // Assign role "Author" otomatis
@@ -60,7 +60,11 @@ class AuthController extends Controller
         $otp = $user->generateOtp();
 
         try {
-            Mail::to($user->email)->send(new OtpVerificationMail($otp));
+            Mail::to($user->email)->send(new OtpVerificationMail(
+                otpCode: $otp,
+                userName: $user->name,
+                userEmail: $user->email,
+            ));
         } catch (\Exception $e) {
             Log::error('Gagal kirim OTP saat register', [
                 'user_id' => $user->id,
@@ -68,7 +72,6 @@ class AuthController extends Controller
             ]);
         }
 
-        // Redirect ke halaman verifikasi OTP
         return redirect()->route('otp.show')
             ->with('info', '📧 Kode verifikasi telah dikirim ke ' . $user->email . '. Silakan cek inbox Anda.');
     }
@@ -102,11 +105,14 @@ class AuthController extends Controller
 
             // Cek apakah email sudah diverifikasi
             if (!$user->isEmailVerified()) {
-                // Generate OTP baru & kirim ulang
                 $otp = $user->generateOtp();
 
                 try {
-                    Mail::to($user->email)->send(new OtpVerificationMail($otp));
+                    Mail::to($user->email)->send(new OtpVerificationMail(
+                        otpCode: $otp,
+                        userName: $user->name,
+                        userEmail: $user->email,
+                    ));
                 } catch (\Exception $e) {
                     Log::error('Gagal kirim OTP saat login', [
                         'user_id' => $user->id,
