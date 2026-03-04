@@ -9,6 +9,10 @@
         height: calc(100vh - 64px);
         background: #2D2D2D;
         transition: all 0.3s ease;
+        position: relative;
+        /* ✅ WAJIB untuk absolute children */
+        overflow: hidden;
+        /* ✅ Clip konten */
     }
 
     #pdf-viewer-container.fullscreen-mode {
@@ -20,6 +24,7 @@
         width: 100vw !important;
         height: 100vh !important;
         z-index: 9999 !important;
+        overflow: hidden !important;
     }
 
     #pdf-viewer-container.fullscreen-mode #pdf-toolbar {
@@ -47,19 +52,55 @@
         gap: 0.5rem;
     }
 
+    /* ✅ FIX UTAMA: Loading jadi overlay absolute */
+    #pdf-loading {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 1rem;
+        background: #2D2D2D;
+        z-index: 5;
+        /* Di atas canvas */
+    }
+
+    #pdf-loading.hidden {
+        display: none !important;
+    }
+
+    /* ✅ FIX UTAMA: Canvas wrapper juga absolute, full size */
     #pdf-canvas-wrapper {
-        width: 100%;
-        height: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
         display: flex;
         justify-content: center;
         align-items: flex-start;
         overflow: auto;
+        /* ✅ Scroll konten PDF */
         padding: 0.75rem;
     }
 
+    #pdf-canvas-wrapper.hidden {
+        display: none !important;
+    }
+
+    /* ✅ Fullscreen: beri ruang toolbar */
     #pdf-viewer-container.fullscreen-mode #pdf-canvas-wrapper {
-        height: calc(100vh - 60px);
-        margin-top: 60px;
+        top: 60px;
+        bottom: 0;
+        height: auto;
+    }
+
+    #pdf-viewer-container.fullscreen-mode #pdf-loading {
+        top: 60px;
     }
 
     #pdf-canvas {
@@ -100,15 +141,6 @@
         box-shadow: 0 0 0 3px rgba(255, 107, 24, 0.15);
     }
 
-    .pdf-loading {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        height: 100%;
-        flex-direction: column;
-        gap: 1rem;
-    }
-
     .spinner {
         border: 4px solid #3D3D3D;
         border-top: 4px solid #FF6B18;
@@ -128,11 +160,16 @@
         }
     }
 
+    /* ✅ Fallback iframe juga absolute */
     #pdf-iframe {
+        position: absolute;
+        top: 0;
+        left: 0;
         width: 100%;
         height: 100%;
         border: none;
         display: none;
+        z-index: 4;
     }
 
     @media (max-width: 640px) {
@@ -282,8 +319,8 @@
 {{-- PDF Viewer Container --}}
 <div id="pdf-viewer-container" class="relative">
 
-    {{-- Loading State --}}
-    <div id="pdf-loading" class="pdf-loading">
+    {{-- ✅ Loading sebagai overlay absolute --}}
+    <div id="pdf-loading">
         <div class="spinner"></div>
         <p class="text-sm font-semibold text-white">Loading PDF...</p>
         <p class="text-xs text-gray-500" id="pdf-loading-hint"></p>
@@ -303,10 +340,7 @@
 @push('scripts')
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
-    // ✅ Worker CDN (ganti ke lokal kalau offline/lambat)
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
-    // ✅ Suppress warning font TT: undefined function
     pdfjsLib.verbosity = 0;
 
     const pdfUrl = @json($pdfUrl);
@@ -327,6 +361,15 @@
     const viewerEl      = document.getElementById('pdf-viewer-container');
     const iframeEl      = document.getElementById('pdf-iframe');
 
+    // ✅ Helper hide/show pakai style langsung — lebih kuat dari classList
+    function hideLoading() {
+        loadingEl.style.display = 'none';
+    }
+    function showCanvas() {
+        canvasWrapper.style.display = 'flex';
+        canvasWrapper.classList.remove('hidden');
+    }
+
     function getCurrentScale() { return baseScale * zoomFactor; }
 
     function computeBaseScale(page) {
@@ -335,13 +378,12 @@
         baseScale = Math.max(0.5, Math.min((containerWidth - 24) / viewport.width, 2.5));
     }
 
-    // ✅ FIX UTAMA: Hide loading SEBELUM render, bukan sesudah
     function renderPage(num) {
         pageRendering = true;
 
-        // ✅ Langsung hide loading & show canvas saat mulai render
-        loadingEl.classList.add('hidden');
-        canvasWrapper.classList.remove('hidden');
+        // ✅ Hide loading overlay & tampilkan canvas SEGERA
+        hideLoading();
+        showCanvas();
 
         pdfDoc.getPage(num).then(page => {
             if (baseScale === 1.0) computeBaseScale(page);
@@ -361,7 +403,6 @@
                     renderPage(p);
                 }
             }).catch(err => {
-                // ✅ Warning font (non-fatal) → tetap tampilkan canvas
                 console.warn('Render warning (non-fatal):', err.message);
                 pageRendering = false;
             });
@@ -374,9 +415,8 @@
         }).catch(err => {
             console.error('getPage error:', err.message);
             pageRendering = false;
-            // Tetap tampilkan canvas meski error getPage
-            loadingEl.classList.add('hidden');
-            canvasWrapper.classList.remove('hidden');
+            hideLoading();
+            showCanvas();
         });
     }
 
@@ -435,15 +475,14 @@
     }
 
     function showIframeFallback() {
-        loadingEl.classList.add('hidden');
-        canvasWrapper.classList.add('hidden');
-        iframeEl.style.display = 'block';
-        iframeEl.style.height  = isFullscreen ? '100vh' : 'calc(100vh - 64px)';
-        iframeEl.src           = pdfUrl;
+        hideLoading();
+        canvasWrapper.style.display = 'none';
+        iframeEl.style.display      = 'block';
+        iframeEl.style.height       = isFullscreen ? '100vh' : 'calc(100vh - 64px)';
+        iframeEl.src                = pdfUrl;
         console.warn('PDF.js fallback → iframe');
     }
 
-    // ✅ Timeout 5 detik (lebih pendek)
     const fallbackTimer = setTimeout(() => {
         if (!pdfDoc) {
             console.warn('PDF.js timeout 5s → iframe fallback');
@@ -451,7 +490,6 @@
         }
     }, 5000);
 
-    // ✅ Load PDF dengan verbosity 0 (suppress font warnings)
     pdfjsLib.getDocument({
         url: pdfUrl,
         withCredentials: false,
@@ -465,10 +503,6 @@
         document.getElementById('fs-page-count').textContent = total;
         document.getElementById('page-num-input').max        = total;
 
-        // ✅ Hide loading, show canvas SEBELUM render
-        loadingEl.classList.add('hidden');
-        canvasWrapper.classList.remove('hidden');
-
         renderPage(pageNum);
 
     }).catch(err => {
@@ -477,7 +511,6 @@
         showIframeFallback();
     });
 
-    // ─── Resize ───────────────────────────────────────────────────────────
     let lastWidth   = viewerEl.clientWidth;
     let resizeTimer = null;
     window.addEventListener('resize', () => {
@@ -495,7 +528,6 @@
         }, 250);
     });
 
-    // ─── Event Listeners ─────────────────────────────────────────────────
     document.getElementById('prev-page').addEventListener('click', prevPage);
     document.getElementById('next-page').addEventListener('click', nextPage);
     document.getElementById('fs-prev-page').addEventListener('click', prevPage);
@@ -514,7 +546,6 @@
         else this.value = pageNum;
     });
 
-    // ─── Keyboard ────────────────────────────────────────────────────────
     document.addEventListener('keydown', e => {
         if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
         switch (e.key) {
@@ -529,7 +560,6 @@
         }
     });
 
-    // ─── Touch Swipe ─────────────────────────────────────────────────────
     let touchStartX = 0;
     viewerEl.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
     viewerEl.addEventListener('touchend', e => {
