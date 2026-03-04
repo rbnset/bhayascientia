@@ -8,6 +8,7 @@ use App\Http\Controllers\PublicationController;
 use App\Http\Controllers\AuthorController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\LegalController;
+use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PlaceholderCoverController;
 use App\Http\Controllers\PlaceholderImageController;
 use App\Http\Controllers\ProfileController;
@@ -88,11 +89,23 @@ Route::middleware(['auth', 'verified.otp'])->group(function () {
 
 /*
 |--------------------------------------------------------------------------
-| Static Pages
+| Onboarding — Guest only, session-based
 |--------------------------------------------------------------------------
 */
-Route::view('/', 'pages.home')->name('home');
-Route::view('/event', 'pages.event')->name('event');
+Route::get('/onboarding', [OnboardingController::class, 'show'])
+    ->name('onboarding.show');
+
+Route::post('/onboarding/complete', [OnboardingController::class, 'complete'])
+    ->name('onboarding.complete');
+
+/*
+|--------------------------------------------------------------------------
+| Static Pages
+| ✅ DIUBAH: Route::view → Route::get agar middleware web + session aktif
+|--------------------------------------------------------------------------
+*/
+Route::get('/', fn() => view('pages.home'))->name('home');
+Route::get('/event', fn() => view('pages.event'))->name('event');
 
 /*
 |--------------------------------------------------------------------------
@@ -195,7 +208,7 @@ Route::get('/author/{identifier}', [AuthorController::class, 'show'])->name('aut
 Route::get('/kontak', [ContactController::class, 'index'])->name('kontak');
 
 Route::post('/kontak', [ContactController::class, 'submit'])
-    ->middleware('throttle:kontak') // ← pakai named rate limiter dari AppServiceProvider
+    ->middleware('throttle:kontak')
     ->name('kontak.submit');
 
 /*
@@ -220,7 +233,7 @@ Route::get('/submission-guidelines', [SubmissionGuidelineController::class, 'ind
 */
 Route::middleware(['auth', 'verified.otp'])->group(function () {
 
-    // ── Subscription ────────────────────────────────────────────────────────
+    // ── Subscription ─────────────────────────────────────────────────────
     Route::get('/langganan',             [SubscriptionController::class, 'index'])->name('subscription.index');
     Route::post('/langganan',            [SubscriptionController::class, 'store'])->name('subscription.store');
     Route::put('/langganan',             [SubscriptionController::class, 'update'])->name('subscription.update');
@@ -228,7 +241,7 @@ Route::middleware(['auth', 'verified.otp'])->group(function () {
     Route::post('/langganan/reactivate', [SubscriptionController::class, 'reactivate'])->name('subscription.reactivate');
     Route::get('/langganan/categories',  [SubscriptionController::class, 'getCategoriesAjax'])->name('subscription.categories');
 
-    // ── Profile ─────────────────────────────────────────────────────────────
+    // ── Profile ───────────────────────────────────────────────────────────
     Route::get('/profil-saya',                  [ProfileController::class, 'index'])->name('profil.saya');
     Route::post('/profil-saya/update',          [ProfileController::class, 'update'])->name('profil.update');
     Route::post('/profil-saya/update-photo',    [ProfileController::class, 'updatePhoto'])->name('profil.updatePhoto');
@@ -241,7 +254,7 @@ Route::middleware(['auth', 'verified.otp'])->group(function () {
 | Utility / Dev Routes
 |--------------------------------------------------------------------------
 */
-// Route::get('/test-card', fn() => view('test-card')); // ← uncomment jika perlu dev only
+// Route::get('/test-card', fn() => view('test-card'));
 
 Route::get('/placeholder-image', [PlaceholderImageController::class, 'generate'])->name('placeholder.image');
 Route::get('/placeholder-cover', [PlaceholderCoverController::class, 'generate'])->name('placeholder.cover');

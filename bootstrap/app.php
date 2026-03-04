@@ -21,6 +21,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // $middleware->web(append: [
         //     \App\Http\Middleware\SecurityHeaders::class,
         // ]);
+
+        // ✅ Onboarding HARUS pakai appendToGroup 'web'
+        // karena butuh session yang sudah di-start oleh middleware web bawaan
+        $middleware->appendToGroup('web', \App\Http\Middleware\EnsureOnboardingComplete::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

@@ -4,6 +4,12 @@ import "./bootstrap";
 import Swiper from 'swiper/bundle';
 import 'swiper/css/bundle';
 
+// ✅ TAMBAHKAN INI — Alpine.js
+import Alpine from 'alpinejs';
+window.Alpine = Alpine;
+Alpine.start();
+
+
 // Make Swiper available globally for inline scripts
 window.Swiper = Swiper;
 
