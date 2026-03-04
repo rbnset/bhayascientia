@@ -5,16 +5,20 @@
 
 @push('styles')
 <style>
-    /* ─── Base Container ─────────────────────────────────────────── */
+    /* ═══════════════════════════════════════════════
+   BASE CONTAINER
+═══════════════════════════════════════════════ */
     #pdf-viewer-container {
-        height: calc(100vh - 64px);
+        height: calc(100vh - 56px);
         background: #2D2D2D;
         position: relative;
         overflow: hidden;
         transition: background 0.3s ease;
     }
 
-    /* ─── Reading Modes ──────────────────────────────────────────── */
+    /* ═══════════════════════════════════════════════
+   READING MODES
+═══════════════════════════════════════════════ */
     body.read-mode-sepia #pdf-viewer-container {
         background: #f4ecd8;
     }
@@ -39,19 +43,25 @@
         background: linear-gradient(135deg, #0a0a0a, #1a1a1a) !important;
     }
 
-    /* ─── Progress Bar ───────────────────────────────────────────── */
-    #reading-progress-bar {
-        position: absolute;
-        bottom: 0;
-        left: 0;
+    /* ═══════════════════════════════════════════════
+   PROGRESS BAR
+═══════════════════════════════════════════════ */
+    .reading-progress-track {
         height: 3px;
+        background: #3D3D3D;
+        flex-shrink: 0;
+    }
+
+    .reading-progress-fill {
+        height: 100%;
         background: #FF6B18;
         transition: width 0.4s ease;
-        z-index: 20;
         border-radius: 0 2px 2px 0;
     }
 
-    /* ─── Loading Overlay ────────────────────────────────────────── */
+    /* ═══════════════════════════════════════════════
+   LOADING OVERLAY
+═══════════════════════════════════════════════ */
     #pdf-loading {
         position: absolute;
         inset: 0;
@@ -60,7 +70,7 @@
         justify-content: center;
         flex-direction: column;
         gap: 1rem;
-        background: #2D2D2D;
+        background: inherit;
         z-index: 10;
     }
 
@@ -68,7 +78,9 @@
         display: none !important;
     }
 
-    /* ─── Canvas Wrapper ─────────────────────────────────────────── */
+    /* ═══════════════════════════════════════════════
+   CANVAS WRAPPER
+═══════════════════════════════════════════════ */
     #pdf-canvas-wrapper {
         position: absolute;
         inset: 0;
@@ -76,16 +88,15 @@
         justify-content: center;
         align-items: flex-start;
         overflow: auto;
-        padding: 0.75rem;
-        scroll-behavior: smooth;
+        padding: 0.5rem;
         -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
     }
 
     #pdf-canvas-wrapper.hidden {
         display: none !important;
     }
 
-    /* ─── Canvas ─────────────────────────────────────────────────── */
     #pdf-canvas {
         max-width: 100%;
         display: block;
@@ -94,7 +105,22 @@
         transition: filter 0.3s ease;
     }
 
-    /* ─── Fullscreen ─────────────────────────────────────────────── */
+    /* ═══════════════════════════════════════════════
+   IFRAME FALLBACK
+═══════════════════════════════════════════════ */
+    #pdf-iframe {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        border: none;
+        display: none;
+        z-index: 4;
+    }
+
+    /* ═══════════════════════════════════════════════
+   FULLSCREEN
+═══════════════════════════════════════════════ */
     #pdf-viewer-container.fullscreen-mode {
         position: fixed !important;
         inset: 0 !important;
@@ -103,7 +129,18 @@
         z-index: 9999 !important;
     }
 
-    /* ─── Fullscreen Toolbar ─────────────────────────────────────── */
+    #pdf-viewer-container.fullscreen-mode #pdf-canvas-wrapper {
+        top: 52px;
+        padding: 0.75rem 0.5rem;
+    }
+
+    #pdf-viewer-container.fullscreen-mode #pdf-loading {
+        top: 52px;
+    }
+
+    /* ═══════════════════════════════════════════════
+   FULLSCREEN TOOLBAR
+═══════════════════════════════════════════════ */
     #pdf-fullscreen-toolbar {
         display: none;
         position: absolute;
@@ -113,12 +150,12 @@
         z-index: 10001;
         background: linear-gradient(135deg, #1A1A1A, #2D2D2D);
         border-bottom: 2px solid #FF6B18;
-        padding: 0.5rem 1rem;
-        gap: 0.5rem;
+        padding: 0.4rem 0.75rem;
         align-items: center;
-        justify-content: space-between;
-        flex-wrap: wrap;
+        gap: 0.5rem;
         transition: opacity 0.3s ease, transform 0.3s ease;
+        flex-wrap: nowrap;
+        overflow: hidden;
     }
 
     #pdf-viewer-container.fullscreen-mode #pdf-fullscreen-toolbar {
@@ -131,26 +168,157 @@
         pointer-events: none;
     }
 
-    /* ─── Fullscreen canvas area ─────────────────────────────────── */
-    #pdf-viewer-container.fullscreen-mode #pdf-canvas-wrapper {
-        top: 56px;
-        padding: 1rem;
+    /* ═══════════════════════════════════════════════
+   MOBILE FLOATING ACTION BUTTON (FAB)
+═══════════════════════════════════════════════ */
+    #mobile-fab {
+        position: fixed;
+        bottom: 1.25rem;
+        right: 1.25rem;
+        z-index: 1000;
+        display: none;
+        /* shown via JS on mobile */
     }
 
-    #pdf-viewer-container.fullscreen-mode #pdf-loading {
-        top: 56px;
+    #mobile-fab-btn {
+        width: 52px;
+        height: 52px;
+        background: #FF6B18;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 20px rgba(255, 107, 24, 0.5);
+        cursor: pointer;
+        transition: transform 0.2s ease, background 0.2s ease;
+        border: none;
+        color: white;
     }
 
-    /* ─── Shortcut Hint (fullscreen) ─────────────────────────────── */
-    #shortcut-hint {
+    #mobile-fab-btn:active {
+        transform: scale(0.92);
+    }
+
+    #mobile-fab-menu {
         position: absolute;
-        bottom: 1.5rem;
+        bottom: 60px;
+        right: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        align-items: flex-end;
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(10px);
+        transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    #mobile-fab-menu.open {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateY(0);
+    }
+
+    .fab-item {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        background: #1A1A1A;
+        border: 1px solid #3D3D3D;
+        color: white;
+        padding: 0.5rem 0.75rem 0.5rem 0.6rem;
+        border-radius: 99px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+        transition: background 0.15s;
+    }
+
+    .fab-item:active {
+        background: #2D2D2D;
+    }
+
+    .fab-item .fab-icon {
+        width: 32px;
+        height: 32px;
+        background: #2D2D2D;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .fab-item.active-bkmk .fab-icon {
+        background: #FF6B18;
+    }
+
+    /* ═══════════════════════════════════════════════
+   MOBILE HINT OVERLAY (first time fullscreen)
+═══════════════════════════════════════════════ */
+    #mobile-fs-hint {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.75);
+        z-index: 10002;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1.5rem;
+        padding: 2rem;
+        text-align: center;
+    }
+
+    #mobile-fs-hint.show {
+        display: flex;
+    }
+
+    .hint-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.4rem;
+        color: white;
+    }
+
+    .hint-icon-wrap {
+        width: 56px;
+        height: 56px;
+        background: rgba(255, 107, 24, 0.2);
+        border: 2px solid #FF6B18;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+    }
+
+    .hint-item p {
+        font-size: 13px;
+        color: #ccc;
+        margin: 0;
+    }
+
+    .hint-item strong {
+        font-size: 14px;
+        color: white;
+    }
+
+    /* ═══════════════════════════════════════════════
+   DESKTOP SHORTCUT HINT
+═══════════════════════════════════════════════ */
+    #desktop-shortcut-hint {
+        position: absolute;
+        bottom: 1rem;
         left: 50%;
         transform: translateX(-50%);
-        background: rgba(0, 0, 0, 0.75);
+        background: rgba(0, 0, 0, 0.7);
         color: #ccc;
         font-size: 11px;
-        padding: 6px 14px;
+        padding: 5px 14px;
         border-radius: 99px;
         white-space: nowrap;
         z-index: 10002;
@@ -159,94 +327,43 @@
         transition: opacity 0.5s ease;
     }
 
-    #shortcut-hint.fade-out {
+    #desktop-shortcut-hint.fade-out {
         opacity: 0;
     }
 
-    /* ─── Resume Toast ───────────────────────────────────────────── */
+    /* ═══════════════════════════════════════════════
+   RESUME TOAST
+═══════════════════════════════════════════════ */
     #resume-toast {
         position: fixed;
-        bottom: 1.5rem;
-        right: 1.5rem;
+        bottom: 1.25rem;
+        left: 50%;
+        transform: translateX(-50%) translateY(80px);
         background: #1A1A1A;
         border: 1px solid #FF6B18;
         color: white;
-        padding: 0.75rem 1rem;
-        border-radius: 12px;
+        padding: 0.65rem 0.875rem;
+        border-radius: 14px;
         font-size: 13px;
         z-index: 99999;
         display: flex;
         align-items: center;
-        gap: 0.75rem;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-        transform: translateY(100px);
+        gap: 0.6rem;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
         opacity: 0;
         transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-        max-width: 280px;
+        white-space: nowrap;
+        max-width: calc(100vw - 2rem);
     }
 
     #resume-toast.show {
-        transform: translateY(0);
+        transform: translateX(-50%) translateY(0);
         opacity: 1;
     }
 
-    /* ─── Bookmark indicator ─────────────────────────────────────── */
-    #bookmark-indicator {
-        position: absolute;
-        top: 0.5rem;
-        right: 0.5rem;
-        background: #FF6B18;
-        color: white;
-        font-size: 10px;
-        font-weight: 700;
-        padding: 3px 8px;
-        border-radius: 99px;
-        z-index: 15;
-        display: none;
-        pointer-events: none;
-    }
-
-    /* ─── Reading Mode Dropdown ──────────────────────────────────── */
-    #mode-dropdown {
-        position: absolute;
-        top: calc(100% + 8px);
-        right: 0;
-        background: #1A1A1A;
-        border: 1px solid #3D3D3D;
-        border-radius: 10px;
-        overflow: hidden;
-        z-index: 200;
-        min-width: 140px;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-        display: none;
-    }
-
-    #mode-dropdown.open {
-        display: block;
-    }
-
-    .mode-option {
-        display: flex;
-        align-items: center;
-        gap: 0.6rem;
-        padding: 0.6rem 0.9rem;
-        cursor: pointer;
-        font-size: 13px;
-        color: #ccc;
-        transition: background 0.15s;
-    }
-
-    .mode-option:hover {
-        background: #2D2D2D;
-        color: white;
-    }
-
-    .mode-option.active {
-        color: #FF6B18;
-        font-weight: 600;
-    }
-
-    /* ─── Toolbar shared ─────────────────────────────────────────── */
+    /* ═══════════════════════════════════════════════
+   TOOLBAR SHARED
+═══════════════════════════════════════════════ */
     .pdf-controls {
         background: linear-gradient(135deg, #1A1A1A, #2D2D2D);
         border-bottom: 2px solid #FF6B18;
@@ -257,6 +374,10 @@
         transition: all 0.2s ease;
         cursor: pointer;
         border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
     }
 
     .pdf-control-btn:hover:not(:disabled) {
@@ -265,7 +386,7 @@
         box-shadow: 0 4px 12px rgba(255, 107, 24, 0.35);
     }
 
-    .pdf-control-btn:active {
+    .pdf-control-btn:active:not(:disabled) {
         transform: translateY(0);
     }
 
@@ -274,7 +395,7 @@
         cursor: not-allowed;
     }
 
-    .pdf-control-btn.active-mode {
+    .pdf-control-btn.is-bookmarked {
         background: #FF6B18 !important;
     }
 
@@ -291,7 +412,51 @@
         box-shadow: 0 0 0 3px rgba(255, 107, 24, 0.15);
     }
 
-    /* ─── Spinner ────────────────────────────────────────────────── */
+    /* ═══════════════════════════════════════════════
+   MODE DROPDOWN
+═══════════════════════════════════════════════ */
+    #mode-dropdown {
+        position: absolute;
+        top: calc(100% + 6px);
+        right: 0;
+        background: #1A1A1A;
+        border: 1px solid #3D3D3D;
+        border-radius: 10px;
+        overflow: hidden;
+        z-index: 200;
+        min-width: 130px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+        display: none;
+    }
+
+    #mode-dropdown.open {
+        display: block;
+    }
+
+    .mode-option {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.6rem 0.875rem;
+        cursor: pointer;
+        font-size: 13px;
+        color: #ccc;
+        transition: background 0.15s;
+    }
+
+    .mode-option:hover {
+        background: #2D2D2D;
+        color: white;
+    }
+
+    .mode-option.active {
+        color: #FF6B18;
+        font-weight: 700;
+    }
+
+    /* ═══════════════════════════════════════════════
+   SPINNER
+═══════════════════════════════════════════════ */
     .spinner {
         border: 4px solid #3D3D3D;
         border-top-color: #FF6B18;
@@ -307,27 +472,30 @@
         }
     }
 
-    /* ─── Iframe fallback ────────────────────────────────────────── */
-    #pdf-iframe {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        border: none;
-        display: none;
-        z-index: 4;
-    }
+    /* ═══════════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════════ */
+    @media (max-width: 767px) {
+        #mobile-fab {
+            display: block;
+        }
 
-    /* ─── Responsive ─────────────────────────────────────────────── */
-    @media (max-width: 640px) {
-        .hide-mobile {
+        .desktop-only {
             display: none !important;
         }
 
-        #resume-toast {
-            right: 0.75rem;
-            left: 0.75rem;
-            max-width: 100%;
+        #pdf-viewer-container {
+            height: calc(100vh - 52px);
+        }
+    }
+
+    @media (min-width: 768px) {
+        #mobile-fab {
+            display: none !important;
+        }
+
+        .mobile-only {
+            display: none !important;
         }
     }
 </style>
@@ -335,27 +503,21 @@
 
 @section('content')
 
-{{-- ════════════════ FULLSCREEN TOOLBAR ════════════════ --}}
+{{-- ════════════ FULLSCREEN TOOLBAR ════════════ --}}
 <div id="pdf-fullscreen-toolbar">
-    {{-- Title --}}
-    <div class="flex items-center flex-1 min-w-0 gap-2">
-        <span class="text-white font-bold text-xs sm:text-sm truncate max-w-[160px] sm:max-w-xs">
-            {{ $publication->title }}
-        </span>
-        <span id="fs-bookmark-badge"
-            class="hidden px-2 py-0.5 bg-orange-500 text-white text-[10px] font-bold rounded-full">
-            🔖 Ditandai
-        </span>
-    </div>
+    {{-- Title (truncate) --}}
+    <span class="flex-1 hidden min-w-0 text-xs font-bold text-white truncate sm:block">
+        {{ Str::limit($publication->title, 40) }}
+    </span>
 
-    {{-- Page Controls --}}
-    <div class="flex items-center gap-1.5 bg-[#3D3D3D] rounded-lg px-2 py-1">
+    {{-- Page Nav --}}
+    <div class="flex items-center gap-1 bg-[#3D3D3D] rounded-lg px-2 py-1 flex-shrink-0">
         <button id="fs-prev-page" class="pdf-control-btn p-1.5 bg-[#4D4D4D] text-white">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
             </svg>
         </button>
-        <span class="text-xs font-semibold text-white">
+        <span class="px-1 text-xs font-semibold text-white">
             <span id="fs-page-num">1</span>/<span id="fs-page-count">-</span>
         </span>
         <button id="fs-next-page" class="pdf-control-btn p-1.5 bg-[#4D4D4D] text-white">
@@ -366,14 +528,14 @@
     </div>
 
     {{-- Zoom --}}
-    <div class="flex items-center gap-1.5">
+    <div class="flex items-center flex-shrink-0 gap-1">
         <button id="fs-zoom-out" class="pdf-control-btn p-1.5 bg-[#3D3D3D] text-white">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" />
             </svg>
         </button>
-        <span id="fs-zoom-level" class="w-10 text-xs font-semibold text-center text-white">100%</span>
+        <span id="fs-zoom-level" class="text-xs font-semibold text-center text-white w-9">100%</span>
         <button id="fs-zoom-in" class="pdf-control-btn p-1.5 bg-[#3D3D3D] text-white">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -382,152 +544,147 @@
         </button>
     </div>
 
-    {{-- Bookmark + Exit --}}
-    <div class="flex items-center gap-1.5">
-        <button id="fs-bookmark-btn" class="pdf-control-btn p-1.5 bg-[#3D3D3D] text-white"
-            title="Tandai halaman ini (B)">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-            </svg>
-        </button>
-        <button id="exit-fullscreen-btn"
-            class="pdf-control-btn flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:!bg-red-700 text-white text-xs font-semibold">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-            <span class="hide-mobile">Keluar</span>
-        </button>
-    </div>
+    {{-- Bookmark (desktop only in FS) --}}
+    <button id="fs-bookmark-btn" class="pdf-control-btn p-1.5 bg-[#3D3D3D] text-white desktop-only flex-shrink-0"
+        title="Tandai (B)">
+        <svg id="fs-bookmark-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+        </svg>
+    </button>
 
-    {{-- Progress bar inside fullscreen toolbar --}}
-    <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-[#3D3D3D]">
-        <div id="fs-reading-progress-bar" class="h-full bg-[#FF6B18] transition-all duration-300" style="width:0%">
-        </div>
+    {{-- Exit --}}
+    <button id="exit-fullscreen-btn"
+        class="pdf-control-btn flex items-center gap-1.5 px-2.5 py-1.5 bg-red-600 hover:!bg-red-700 text-white text-xs font-bold flex-shrink-0">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+        <span class="hidden sm:inline">Keluar</span>
+    </button>
+
+    {{-- Progress inside FS toolbar --}}
+    <div class="absolute bottom-0 left-0 right-0 reading-progress-track">
+        <div id="fs-reading-progress-bar" class="reading-progress-fill" style="width:0%"></div>
     </div>
 </div>
 
-{{-- ════════════════ NORMAL TOOLBAR ════════════════ --}}
+{{-- ════════════ NORMAL TOOLBAR ════════════ --}}
 <div id="pdf-toolbar" class="sticky top-0 z-50 shadow-lg pdf-controls">
-    <div class="px-3 sm:px-4 lg:px-8 mx-auto max-w-[1400px] py-2.5">
-        <div class="flex flex-wrap items-center justify-between gap-2">
+    <div class="px-2 sm:px-4 lg:px-8 mx-auto max-w-[1400px] py-2">
+        <div class="flex items-center gap-2">
 
-            {{-- Kiri: Back + Title --}}
-            <div class="flex items-center flex-1 min-w-0 gap-2.5">
-                <a href="{{ route('publikasi.show', $publication->slug) }}"
-                    class="pdf-control-btn p-2.5 bg-[#3D3D3D] text-white flex items-center gap-2 flex-shrink-0">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                    </svg>
-                    <span class="hidden text-sm font-semibold sm:inline">Kembali</span>
-                </a>
-                <div class="min-w-0">
-                    <h1 class="text-xs font-bold text-white truncate sm:text-sm">{{ $publication->title }}</h1>
-                    <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                        <span class="px-2 py-0.5 bg-[#FF6B18] text-white text-[10px] font-semibold rounded-full">
-                            {{ $category }}
-                        </span>
-                        <span id="progress-text" class="text-gray-400 text-[10px] hidden sm:inline"></span>
-                    </div>
-                </div>
+            {{-- Back --}}
+            <a href="{{ route('publikasi.show', $publication->slug) }}"
+                class="pdf-control-btn p-2 bg-[#3D3D3D] text-white flex items-center gap-1.5 flex-shrink-0">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+                <span class="hidden text-xs font-semibold sm:inline">Kembali</span>
+            </a>
+
+            {{-- Title + progress text --}}
+            <div class="flex-1 hidden min-w-0 sm:block">
+                <p class="text-xs font-bold leading-tight text-white truncate">{{ $publication->title }}</p>
+                <p id="progress-text" class="text-gray-400 text-[10px] leading-tight mt-0.5"></p>
             </div>
 
-            {{-- Tengah: Page Nav --}}
-            <div class="flex items-center gap-2 bg-[#3D3D3D] rounded-lg px-2.5 py-1.5">
-                <button id="prev-page" class="pdf-control-btn p-1.5 bg-[#4D4D4D] text-white">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {{-- Page Nav --}}
+            <div class="flex items-center gap-1.5 bg-[#3D3D3D] rounded-lg px-2 py-1.5 flex-shrink-0">
+                <button id="prev-page" class="pdf-control-btn p-1 bg-[#4D4D4D] text-white">
+                    <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                     </svg>
                 </button>
-                <div class="flex items-center gap-1 text-xs text-white sm:text-sm">
+                <div class="flex items-center gap-1 text-white">
                     <input type="number" id="page-num-input"
-                        class="page-input w-10 sm:w-12 text-center px-1 py-0.5 font-semibold text-xs sm:text-sm"
-                        value="1" min="1">
-                    <span class="text-gray-400">/</span>
-                    <span id="page-count" class="font-semibold">-</span>
+                        class="page-input w-9 sm:w-11 text-center px-0.5 py-0.5 font-semibold text-xs" value="1"
+                        min="1">
+                    <span class="text-xs text-gray-400">/</span>
+                    <span id="page-count" class="text-xs font-semibold">-</span>
                 </div>
-                <button id="next-page" class="pdf-control-btn p-1.5 bg-[#4D4D4D] text-white">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button id="next-page" class="pdf-control-btn p-1 bg-[#4D4D4D] text-white">
+                    <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                     </svg>
                 </button>
             </div>
 
-            {{-- Kanan: Zoom + Bookmark + Mode + Fullscreen + Download --}}
-            <div class="flex items-center gap-1 sm:gap-1.5">
+            {{-- Zoom (desktop only) --}}
+            <div class="flex items-center flex-shrink-0 gap-1 desktop-only">
                 <button id="zoom-out" class="pdf-control-btn p-2 bg-[#3D3D3D] text-white">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" />
                     </svg>
                 </button>
-                <span id="zoom-level" class="w-10 text-xs font-semibold text-center text-white">100%</span>
+                <span id="zoom-level" class="text-xs font-semibold text-center text-white w-9">100%</span>
                 <button id="zoom-in" class="pdf-control-btn p-2 bg-[#3D3D3D] text-white">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
                     </svg>
                 </button>
-
-                {{-- Bookmark --}}
-                <button id="bookmark-btn" class="pdf-control-btn p-2 bg-[#3D3D3D] text-white"
-                    title="Tandai halaman (B)">
-                    <svg id="bookmark-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                    </svg>
-                </button>
-
-                {{-- Reading Mode --}}
-                <div class="relative">
-                    <button id="mode-btn" class="pdf-control-btn p-2 bg-[#3D3D3D] text-white" title="Mode Baca">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
-                        </svg>
-                    </button>
-                    <div id="mode-dropdown">
-                        <div class="mode-option active" data-mode="normal">☀️ Normal</div>
-                        <div class="mode-option" data-mode="sepia">📜 Sepia</div>
-                        <div class="mode-option" data-mode="night">🌙 Night</div>
-                    </div>
-                </div>
-
-                {{-- Fullscreen --}}
-                <button id="fullscreen-btn" class="pdf-control-btn p-2 bg-[#3D3D3D] text-white" title="Layar Penuh (F)">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                    </svg>
-                </button>
-
-                {{-- Download --}}
-                <a href="{{ route('publikasi.download', $publication->slug) }}"
-                    class="pdf-control-btn p-2 sm:px-3 bg-[#FF6B18] hover:!bg-[#E64627] text-white flex items-center gap-1.5">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    <span class="hidden text-sm font-semibold sm:inline">Download</span>
-                </a>
             </div>
+
+            {{-- Bookmark (desktop) --}}
+            <button id="bookmark-btn" class="pdf-control-btn p-2 bg-[#3D3D3D] text-white desktop-only flex-shrink-0"
+                title="Tandai halaman (B)">
+                <svg id="bookmark-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                </svg>
+            </button>
+
+            {{-- Reading Mode (desktop) --}}
+            <div class="relative flex-shrink-0 desktop-only">
+                <button id="mode-btn" class="pdf-control-btn p-2 bg-[#3D3D3D] text-white" title="Mode Baca">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+                    </svg>
+                </button>
+                <div id="mode-dropdown">
+                    <div class="mode-option active" data-mode="normal">☀️ Normal</div>
+                    <div class="mode-option" data-mode="sepia">📜 Sepia</div>
+                    <div class="mode-option" data-mode="night">🌙 Night</div>
+                </div>
+            </div>
+
+            {{-- Fullscreen --}}
+            <button id="fullscreen-btn" class="pdf-control-btn p-2 bg-[#3D3D3D] text-white flex-shrink-0 desktop-only"
+                title="Layar Penuh (F)">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                </svg>
+            </button>
+
+            {{-- Download --}}
+            <a href="{{ route('publikasi.download', $publication->slug) }}"
+                class="pdf-control-btn p-2 sm:px-3 bg-[#FF6B18] hover:!bg-[#E64627] text-white flex items-center gap-1.5 flex-shrink-0">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                <span class="hidden text-xs font-semibold sm:inline">Download</span>
+            </a>
         </div>
     </div>
 
-    {{-- Progress bar bawah toolbar --}}
-    <div class="h-0.5 bg-[#3D3D3D]">
-        <div id="reading-progress-bar" class="h-full bg-[#FF6B18] transition-all duration-300" style="width:0%"></div>
+    {{-- Progress bar --}}
+    <div class="reading-progress-track">
+        <div id="reading-progress-bar" class="reading-progress-fill" style="width:0%"></div>
     </div>
 </div>
 
-{{-- ════════════════ PDF VIEWER ════════════════ --}}
+{{-- ════════════ PDF VIEWER ════════════ --}}
 <div id="pdf-viewer-container">
 
     {{-- Loading --}}
     <div id="pdf-loading">
         <div class="spinner"></div>
         <p class="text-sm font-semibold text-white">Memuat dokumen...</p>
-        <p class="text-xs text-gray-500" id="pdf-loading-hint">Harap tunggu sebentar</p>
+        <p class="text-xs text-gray-400">Harap tunggu sebentar</p>
     </div>
 
     {{-- Canvas --}}
@@ -535,33 +692,121 @@
         <canvas id="pdf-canvas"></canvas>
     </div>
 
-    {{-- Fallback iframe --}}
+    {{-- Fallback --}}
     <iframe id="pdf-iframe" title="PDF Viewer"></iframe>
 
-    {{-- Bookmark indicator --}}
-    <div id="bookmark-indicator">🔖 Ditandai</div>
+    {{-- Desktop hint (fullscreen) --}}
+    <div id="desktop-shortcut-hint">
+        ← → halaman &nbsp;·&nbsp; +/− zoom &nbsp;·&nbsp; B tandai &nbsp;·&nbsp; Esc keluar
+    </div>
 
-    {{-- Fullscreen shortcut hint --}}
-    <div id="shortcut-hint" class="hidden">
-        ← → ganti halaman &nbsp;|&nbsp; +/− zoom &nbsp;|&nbsp; F fullscreen &nbsp;|&nbsp; B bookmark &nbsp;|&nbsp; Esc
-        keluar
+    {{-- Mobile fullscreen hint overlay --}}
+    <div id="mobile-fs-hint">
+        <p class="mb-1 text-base font-bold text-white">Cara Navigasi</p>
+        <div class="grid w-full max-w-xs grid-cols-3 gap-3">
+            <div class="hint-item">
+                <div class="hint-icon-wrap">👆</div>
+                <strong>Tap</strong>
+                <p>Tampilkan toolbar</p>
+            </div>
+            <div class="hint-item">
+                <div class="hint-icon-wrap">👉</div>
+                <strong>Swipe</strong>
+                <p>Ganti halaman</p>
+            </div>
+            <div class="hint-item">
+                <div class="hint-icon-wrap">🤏</div>
+                <strong>Pinch</strong>
+                <p>Zoom in/out</p>
+            </div>
+        </div>
+        <p class="mt-2 text-xs text-gray-400">Gunakan tombol <span class="text-[#FF6B18] font-bold">⊕</span> untuk fitur
+            lainnya</p>
+        <button id="close-fs-hint" class="mt-4 px-6 py-2 bg-[#FF6B18] text-white text-sm font-bold rounded-lg">
+            Mengerti!
+        </button>
     </div>
 </div>
 
-{{-- ════════════════ RESUME TOAST ════════════════ --}}
+{{-- ════════════ MOBILE FAB ════════════ --}}
+<div id="mobile-fab">
+    <div id="mobile-fab-menu">
+        {{-- Bookmark --}}
+        <button class="fab-item" id="fab-bookmark">
+            <div class="fab-icon">
+                <svg id="fab-bookmark-icon" class="w-4 h-4 text-white" fill="none" stroke="currentColor"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                </svg>
+            </div>
+            <span id="fab-bookmark-label">Tandai Halaman</span>
+        </button>
+        {{-- Mode --}}
+        <button class="fab-item" id="fab-mode">
+            <div class="fab-icon">
+                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+                </svg>
+            </div>
+            <span id="fab-mode-label">Mode: Normal</span>
+        </button>
+        {{-- Fullscreen --}}
+        <button class="fab-item" id="fab-fullscreen">
+            <div class="fab-icon">
+                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                </svg>
+            </div>
+            <span>Layar Penuh</span>
+        </button>
+        {{-- Zoom In --}}
+        <button class="fab-item" id="fab-zoom-in">
+            <div class="fab-icon">
+                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                </svg>
+            </div>
+            <span id="fab-zoom-label">Zoom: 100%</span>
+        </button>
+        {{-- Zoom Out --}}
+        <button class="fab-item" id="fab-zoom-out">
+            <div class="fab-icon">
+                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" />
+                </svg>
+            </div>
+            <span>Zoom Out</span>
+        </button>
+    </div>
+
+    {{-- FAB trigger --}}
+    <button id="mobile-fab-btn" aria-label="Menu">
+        <svg id="fab-icon-open" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+        </svg>
+        <svg id="fab-icon-close" class="hidden w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+    </button>
+</div>
+
+{{-- ════════════ RESUME TOAST ════════════ --}}
 <div id="resume-toast">
-    <span class="text-2xl">🔖</span>
-    <div>
-        <p class="text-sm font-semibold">Lanjut membaca?</p>
-        <p class="text-xs text-gray-400" id="resume-toast-text">Terakhir di halaman —</p>
+    <span class="flex-shrink-0 text-xl">🔖</span>
+    <div class="min-w-0">
+        <p class="text-xs font-bold">Lanjut membaca?</p>
+        <p class="text-gray-400 text-[11px]" id="resume-toast-text">Terakhir di halaman —</p>
     </div>
     <button id="resume-yes"
-        class="ml-auto px-3 py-1.5 bg-[#FF6B18] text-white text-xs font-bold rounded-lg flex-shrink-0">
-        Lanjut
-    </button>
-    <button id="resume-no" class="px-2 py-1.5 bg-[#3D3D3D] text-gray-300 text-xs rounded-lg flex-shrink-0">
-        Dari Awal
-    </button>
+        class="px-3 py-1.5 bg-[#FF6B18] text-white text-xs font-bold rounded-lg flex-shrink-0">Lanjut</button>
+    <button id="resume-no"
+        class="px-2.5 py-1.5 bg-[#3D3D3D] text-gray-300 text-xs rounded-lg flex-shrink-0">Awal</button>
 </div>
 
 @endsection
@@ -572,139 +817,132 @@
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 pdfjsLib.verbosity = 0;
 
-// ─── Config ────────────────────────────────────────────────────────
-const pdfUrl    = @json($pdfUrl);
-const pubSlug   = @json($publication->slug);
-const STORAGE_KEY_PAGE = `bhaya_read_page_${pubSlug}`;
-const STORAGE_KEY_ZOOM = `bhaya_read_zoom_${pubSlug}`;
-const STORAGE_KEY_MODE = `bhaya_read_mode_${pubSlug}`;
-const STORAGE_KEY_BKMK = `bhaya_bookmark_${pubSlug}`;
-console.log('PDF URL:', pdfUrl);
+// ── Config ──────────────────────────────────────────────────────────
+const pdfUrl  = @json($pdfUrl);
+const pubSlug = @json($publication->slug);
+const SK = {
+    page : `bhaya_page_${pubSlug}`,
+    zoom : `bhaya_zoom_${pubSlug}`,
+    mode : `bhaya_mode_${pubSlug}`,
+    bkmk : `bhaya_bkmk_${pubSlug}`,
+    hint : `bhaya_fs_hint_shown`,
+};
 
-// ─── State ─────────────────────────────────────────────────────────
+// ── State ───────────────────────────────────────────────────────────
 let pdfDoc         = null;
 let pageNum        = 1;
 let pageRendering  = false;
 let pageNumPending = null;
 let baseScale      = 1.0;
-let zoomFactor     = parseFloat(localStorage.getItem(STORAGE_KEY_ZOOM)) || 1.0;
+let zoomFactor     = parseFloat(localStorage.getItem(SK.zoom)) || 1.0;
 let isFullscreen   = false;
-let currentMode    = localStorage.getItem(STORAGE_KEY_MODE) || 'normal';
-let bookmarkedPage = parseInt(localStorage.getItem(STORAGE_KEY_BKMK)) || null;
-let savedPage      = parseInt(localStorage.getItem(STORAGE_KEY_PAGE)) || 1;
-let toolbarAutoHideTimer = null;
+let currentMode    = localStorage.getItem(SK.mode) || 'normal';
+let bookmarkedPage = parseInt(localStorage.getItem(SK.bkmk)) || null;
+let savedPage      = parseInt(localStorage.getItem(SK.page)) || 1;
+let fabOpen        = false;
+let toolbarTimer   = null;
+const isMobile     = () => window.innerWidth < 768;
 
-// ─── DOM refs ──────────────────────────────────────────────────────
-const canvas         = document.getElementById('pdf-canvas');
-const ctx            = canvas.getContext('2d');
-const loadingEl      = document.getElementById('pdf-loading');
-const canvasWrapper  = document.getElementById('pdf-canvas-wrapper');
-const viewerEl       = document.getElementById('pdf-viewer-container');
-const iframeEl       = document.getElementById('pdf-iframe');
-const progressBar    = document.getElementById('reading-progress-bar');
-const fsProgressBar  = document.getElementById('fs-reading-progress-bar');
-const progressText   = document.getElementById('progress-text');
-const bookmarkIcon   = document.getElementById('bookmark-icon');
-const bookmarkInd    = document.getElementById('bookmark-indicator');
-const shortcutHint   = document.getElementById('shortcut-hint');
-const fsBkmkBadge    = document.getElementById('fs-bookmark-badge');
+// ── DOM ─────────────────────────────────────────────────────────────
+const canvas       = document.getElementById('pdf-canvas');
+const ctx          = canvas.getContext('2d');
+const loadingEl    = document.getElementById('pdf-loading');
+const canvasWrap   = document.getElementById('pdf-canvas-wrapper');
+const viewerEl     = document.getElementById('pdf-viewer-container');
+const iframeEl     = document.getElementById('pdf-iframe');
+const progressBar  = document.getElementById('reading-progress-bar');
+const fsProgressBar= document.getElementById('fs-reading-progress-bar');
+const progressText = document.getElementById('progress-text');
 
-// ─── Helpers ───────────────────────────────────────────────────────
-function hideLoading() { loadingEl.style.display = 'none'; }
-function showCanvas()  {
-    canvasWrapper.style.display = 'flex';
-    canvasWrapper.classList.remove('hidden');
+// ── Helpers ─────────────────────────────────────────────────────────
+const hideLoading = () => { loadingEl.style.display = 'none'; };
+const showCanvas  = () => { canvasWrap.style.display = 'flex'; canvasWrap.classList.remove('hidden'); };
+
+function showSnack(msg) {
+    const el = document.createElement('div');
+    el.textContent = msg;
+    el.style.cssText = 'position:fixed;top:1rem;left:50%;transform:translateX(-50%);background:#1A1A1A;border:1px solid #FF6B18;color:#fff;padding:0.45rem 1rem;border-radius:99px;font-size:13px;font-weight:600;z-index:99999;transition:opacity 0.4s;pointer-events:none;white-space:nowrap;';
+    document.body.appendChild(el);
+    setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 400); }, 2200);
 }
 
+// ── Progress ─────────────────────────────────────────────────────────
 function updateProgress() {
     if (!pdfDoc) return;
     const pct = (pageNum / pdfDoc.numPages) * 100;
-    progressBar.style.width    = pct + '%';
-    fsProgressBar.style.width  = pct + '%';
-    progressText.textContent   = `Hal. ${pageNum} dari ${pdfDoc.numPages} (${Math.round(pct)}%)`;
-    const estMin = Math.ceil(((pdfDoc.numPages - pageNum) * 1.5));
-    if (estMin > 0) progressText.textContent += ` · ~${estMin} mnt tersisa`;
+    [progressBar, fsProgressBar].forEach(b => b.style.width = pct + '%');
+    const est = Math.ceil((pdfDoc.numPages - pageNum) * 1.5);
+    progressText.textContent = `Hal. ${pageNum}/${pdfDoc.numPages} · ${Math.round(pct)}%` + (est > 0 ? ` · ~${est} mnt` : '');
 }
 
+// ── Bookmark ─────────────────────────────────────────────────────────
 function updateBookmarkUI() {
-    const isBookmarked = bookmarkedPage === pageNum;
-    if (isBookmarked) {
-        bookmarkIcon.setAttribute('fill', '#FF6B18');
-        bookmarkIcon.setAttribute('stroke', '#FF6B18');
-        bookmarkInd.style.display  = 'block';
-        fsBkmkBadge.classList.remove('hidden');
-    } else {
-        bookmarkIcon.setAttribute('fill', 'none');
-        bookmarkIcon.setAttribute('stroke', 'currentColor');
-        bookmarkInd.style.display  = 'none';
-        fsBkmkBadge.classList.add('hidden');
-    }
+    const on = bookmarkedPage === pageNum;
+    // Desktop icons
+    ['bookmark-icon','fs-bookmark-icon'].forEach(id => {
+        const ic = document.getElementById(id);
+        if (!ic) return;
+        ic.setAttribute('fill', on ? '#FF6B18' : 'none');
+        ic.setAttribute('stroke', on ? '#FF6B18' : 'currentColor');
+    });
+    ['bookmark-btn','fs-bookmark-btn'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) btn.classList.toggle('is-bookmarked', on);
+    });
+    // FAB
+    const fabBkmk = document.getElementById('fab-bookmark');
+    const fabIcon = document.getElementById('fab-bookmark-icon');
+    const fabLbl  = document.getElementById('fab-bookmark-label');
+    if (fabBkmk) fabBkmk.classList.toggle('active-bkmk', on);
+    if (fabIcon) { fabIcon.setAttribute('fill', on ? '#fff' : 'none'); }
+    if (fabLbl)  fabLbl.textContent = on ? '✓ Ditandai' : 'Tandai Halaman';
 }
 
 function toggleBookmark() {
     if (bookmarkedPage === pageNum) {
         bookmarkedPage = null;
-        localStorage.removeItem(STORAGE_KEY_BKMK);
-        showToastMessage('Bookmark dihapus');
+        localStorage.removeItem(SK.bkmk);
+        showSnack('Bookmark dihapus');
     } else {
         bookmarkedPage = pageNum;
-        localStorage.setItem(STORAGE_KEY_BKMK, pageNum);
-        showToastMessage('🔖 Halaman ' + pageNum + ' ditandai!');
+        localStorage.setItem(SK.bkmk, pageNum);
+        showSnack('🔖 Halaman ' + pageNum + ' ditandai!');
     }
     updateBookmarkUI();
 }
 
-function showToastMessage(msg) {
-    const t = document.createElement('div');
-    t.textContent = msg;
-    t.style.cssText = 'position:fixed;top:1.5rem;left:50%;transform:translateX(-50%);background:#1A1A1A;border:1px solid #FF6B18;color:white;padding:0.5rem 1rem;border-radius:99px;font-size:13px;font-weight:600;z-index:99999;transition:opacity 0.4s;';
-    document.body.appendChild(t);
-    setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }, 2000);
-}
+// ── Reading Mode ──────────────────────────────────────────────────────
+const modeLabels = { normal:'☀️ Normal', sepia:'📜 Sepia', night:'🌙 Night' };
 
-// ─── Reading Mode ──────────────────────────────────────────────────
 function applyMode(mode) {
     document.body.classList.remove('read-mode-sepia','read-mode-night');
-    if (mode === 'sepia') document.body.classList.add('read-mode-sepia');
-    if (mode === 'night') document.body.classList.add('read-mode-night');
+    if (mode !== 'normal') document.body.classList.add('read-mode-' + mode);
     currentMode = mode;
-    localStorage.setItem(STORAGE_KEY_MODE, mode);
-    document.querySelectorAll('.mode-option').forEach(el => {
-        el.classList.toggle('active', el.dataset.mode === mode);
-    });
+    localStorage.setItem(SK.mode, mode);
+    document.querySelectorAll('.mode-option').forEach(el =>
+        el.classList.toggle('active', el.dataset.mode === mode));
+    const fabModeLbl = document.getElementById('fab-mode-label');
+    if (fabModeLbl) fabModeLbl.textContent = 'Mode: ' + (mode === 'normal' ? 'Normal' : mode === 'sepia' ? 'Sepia' : 'Night');
 }
 applyMode(currentMode);
 
-document.getElementById('mode-btn').addEventListener('click', e => {
-    e.stopPropagation();
-    document.getElementById('mode-dropdown').classList.toggle('open');
-});
-document.querySelectorAll('.mode-option').forEach(el => {
-    el.addEventListener('click', () => {
-        applyMode(el.dataset.mode);
-        document.getElementById('mode-dropdown').classList.remove('open');
-    });
-});
-document.addEventListener('click', () => document.getElementById('mode-dropdown').classList.remove('open'));
+// ── Scale ────────────────────────────────────────────────────────────
+const getScale = () => baseScale * zoomFactor;
 
-// ─── Scale ─────────────────────────────────────────────────────────
-function getCurrentScale() { return baseScale * zoomFactor; }
-
-function computeBaseScale(page) {
-    const w = viewerEl.clientWidth || window.innerWidth;
+function computeBase(page) {
+    const w  = viewerEl.clientWidth || window.innerWidth;
     const vp = page.getViewport({ scale: 1 });
-    baseScale = Math.max(0.5, Math.min((w - 24) / vp.width, 2.5));
+    baseScale = Math.max(0.5, Math.min((w - 16) / vp.width, 2.5));
 }
 
-// ─── Render ────────────────────────────────────────────────────────
+// ── Render ────────────────────────────────────────────────────────────
 function renderPage(num) {
     pageRendering = true;
-    hideLoading();
-    showCanvas();
+    hideLoading(); showCanvas();
 
     pdfDoc.getPage(num).then(page => {
-        if (baseScale === 1.0) computeBaseScale(page);
-        const vp = page.getViewport({ scale: getCurrentScale() });
+        if (baseScale === 1.0) computeBase(page);
+        const vp = page.getViewport({ scale: getScale() });
         canvas.height = vp.height;
         canvas.width  = vp.width;
 
@@ -712,178 +950,168 @@ function renderPage(num) {
             .then(() => {
                 pageRendering = false;
                 if (pageNumPending !== null) {
-                    const p = pageNumPending; pageNumPending = null;
-                    renderPage(p);
+                    const p = pageNumPending; pageNumPending = null; renderPage(p);
                 }
             })
-            .catch(err => { console.warn('Render warning:', err.message); pageRendering = false; });
+            .catch(e => { console.warn('Render warn:', e.message); pageRendering = false; });
 
-        // Auto-save progress
-        localStorage.setItem(STORAGE_KEY_PAGE, num);
-        localStorage.setItem(STORAGE_KEY_ZOOM, zoomFactor);
+        localStorage.setItem(SK.page, num);
+        localStorage.setItem(SK.zoom, zoomFactor);
 
         document.getElementById('page-num-input').value    = num;
         document.getElementById('fs-page-num').textContent = num;
-        updateNavButtons();
-        updateZoomDisplay();
-        updateProgress();
-        updateBookmarkUI();
-        canvasWrapper.scrollTo({ top: 0, behavior: 'smooth' });
+        updateNavButtons(); updateZoomDisplay(); updateProgress(); updateBookmarkUI();
+        canvasWrap.scrollTo({ top: 0, behavior: 'smooth' });
 
-    }).catch(err => {
-        console.error('getPage error:', err.message);
-        pageRendering = false;
-        hideLoading(); showCanvas();
-    });
+    }).catch(e => { console.error('getPage:', e.message); pageRendering = false; hideLoading(); showCanvas(); });
 }
 
 function queueRender(num) {
-    if (pageRendering) pageNumPending = num;
-    else renderPage(num);
+    if (pageRendering) pageNumPending = num; else renderPage(num);
 }
 
-// ─── Navigation ────────────────────────────────────────────────────
+// ── Navigation ────────────────────────────────────────────────────────
 function prevPage() { if (pageNum > 1)               { pageNum--; queueRender(pageNum); } }
 function nextPage() { if (pageNum < pdfDoc.numPages) { pageNum++; queueRender(pageNum); } }
-function goToPage(num) {
-    if (!pdfDoc || num < 1 || num > pdfDoc.numPages) return;
-    pageNum = num;
-    queueRender(pageNum);
-}
+function goToPage(n) { if (pdfDoc && n >= 1 && n <= pdfDoc.numPages) { pageNum = n; queueRender(n); } }
 
 function updateNavButtons() {
-    ['prev-page','fs-prev-page'].forEach(id => {
-        const el = document.getElementById(id); if(el) el.disabled = pageNum <= 1;
-    });
-    ['next-page','fs-next-page'].forEach(id => {
-        const el = document.getElementById(id); if(el) el.disabled = pageNum >= pdfDoc.numPages;
-    });
+    ['prev-page','fs-prev-page'].forEach(id => { const e=document.getElementById(id); if(e) e.disabled=pageNum<=1; });
+    ['next-page','fs-next-page'].forEach(id => { const e=document.getElementById(id); if(e) e.disabled=pageNum>=pdfDoc.numPages; });
 }
 
-// ─── Zoom ───────────────────────────────────────────────────────────
+// ── Zoom ──────────────────────────────────────────────────────────────
 function zoomIn()  { zoomFactor = Math.min(zoomFactor + 0.25, 4.0);  queueRender(pageNum); }
 function zoomOut() { zoomFactor = Math.max(zoomFactor - 0.25, 0.25); queueRender(pageNum); }
 
 function updateZoomDisplay() {
-    const pct = Math.round(getCurrentScale() * 100) + '%';
-    document.getElementById('zoom-level').textContent    = pct;
-    document.getElementById('fs-zoom-level').textContent = pct;
+    const pct = Math.round(getScale() * 100) + '%';
+    ['zoom-level','fs-zoom-level'].forEach(id => { const e=document.getElementById(id); if(e) e.textContent=pct; });
+    const fabZoom = document.getElementById('fab-zoom-label');
+    if (fabZoom) fabZoom.textContent = 'Zoom: ' + pct;
 }
 
-// ─── Fullscreen ─────────────────────────────────────────────────────
+// ── FAB (Mobile) ──────────────────────────────────────────────────────
+function toggleFab(force) {
+    fabOpen = force !== undefined ? force : !fabOpen;
+    document.getElementById('mobile-fab-menu').classList.toggle('open', fabOpen);
+    document.getElementById('fab-icon-open').classList.toggle('hidden', fabOpen);
+    document.getElementById('fab-icon-close').classList.toggle('hidden', !fabOpen);
+}
+
+document.getElementById('mobile-fab-btn').addEventListener('click', e => { e.stopPropagation(); toggleFab(); });
+document.getElementById('fab-bookmark').addEventListener('click', () => { toggleBookmark(); toggleFab(false); });
+document.getElementById('fab-fullscreen').addEventListener('click', () => { enterFullscreen(); toggleFab(false); });
+document.getElementById('fab-zoom-in').addEventListener('click', () => { zoomIn(); toggleFab(false); });
+document.getElementById('fab-zoom-out').addEventListener('click', () => { zoomOut(); toggleFab(false); });
+document.getElementById('fab-mode').addEventListener('click', () => {
+    const modes = ['normal','sepia','night'];
+    const next = modes[(modes.indexOf(currentMode) + 1) % modes.length];
+    applyMode(next);
+    showSnack(modeLabels[next]);
+    toggleFab(false);
+});
+document.addEventListener('click', () => { if (fabOpen) toggleFab(false); });
+
+// ── Fullscreen ────────────────────────────────────────────────────────
+const fsHintShown = localStorage.getItem(SK.hint);
+const fsTbEl      = document.getElementById('pdf-fullscreen-toolbar');
+const deskHint    = document.getElementById('desktop-shortcut-hint');
+const mobHint     = document.getElementById('mobile-fs-hint');
+
 function enterFullscreen() {
     isFullscreen = true;
     viewerEl.classList.add('fullscreen-mode');
     document.body.style.overflow = 'hidden';
 
-    // Show shortcut hint, fade after 4s
-    shortcutHint.classList.remove('hidden');
-    shortcutHint.classList.remove('fade-out');
-    clearTimeout(toolbarAutoHideTimer);
-    toolbarAutoHideTimer = setTimeout(() => {
-        shortcutHint.classList.add('fade-out');
-    }, 4000);
-
-    if (pdfDoc) {
-        pdfDoc.getPage(pageNum).then(page => {
-            baseScale = 1.0; computeBaseScale(page); queueRender(pageNum);
-        });
+    if (isMobile() && !fsHintShown) {
+        mobHint.classList.add('show');
+        localStorage.setItem(SK.hint, '1');
+    } else if (!isMobile()) {
+        deskHint.classList.remove('hidden','fade-out');
+        clearTimeout(toolbarTimer);
+        toolbarTimer = setTimeout(() => deskHint.classList.add('fade-out'), 4000);
     }
+
+    if (pdfDoc) pdfDoc.getPage(pageNum).then(p => { baseScale=1.0; computeBase(p); queueRender(pageNum); });
 }
 
 function exitFullscreen() {
     isFullscreen = false;
     viewerEl.classList.remove('fullscreen-mode');
     document.body.style.overflow = '';
-    shortcutHint.classList.add('hidden');
-    shortcutHint.classList.remove('fade-out');
-
-    if (pdfDoc) {
-        pdfDoc.getPage(pageNum).then(page => {
-            baseScale = 1.0; computeBaseScale(page); queueRender(pageNum);
-        });
-    }
+    mobHint.classList.remove('show');
+    deskHint.classList.add('hidden');
+    if (pdfDoc) pdfDoc.getPage(pageNum).then(p => { baseScale=1.0; computeBase(p); queueRender(pageNum); });
 }
 
-// Auto-hide fullscreen toolbar on mouse idle
+// Auto-hide FS toolbar on idle (desktop)
 viewerEl.addEventListener('mousemove', () => {
-    if (!isFullscreen) return;
-    const tb = document.getElementById('pdf-fullscreen-toolbar');
-    tb.classList.remove('toolbar-hidden');
-    clearTimeout(toolbarAutoHideTimer);
-    toolbarAutoHideTimer = setTimeout(() => tb.classList.add('toolbar-hidden'), 3000);
+    if (!isFullscreen || isMobile()) return;
+    fsTbEl.classList.remove('toolbar-hidden');
+    clearTimeout(toolbarTimer);
+    toolbarTimer = setTimeout(() => fsTbEl.classList.add('toolbar-hidden'), 3000);
 });
 
-// ─── Iframe Fallback ────────────────────────────────────────────────
-function showIframeFallback() {
+// Tap to show/hide FS toolbar (mobile)
+viewerEl.addEventListener('click', e => {
+    if (!isFullscreen || !isMobile()) return;
+    if (fabOpen) return;
+    fsTbEl.classList.toggle('toolbar-hidden');
+});
+
+document.getElementById('close-fs-hint').addEventListener('click', () => mobHint.classList.remove('show'));
+
+// ── Iframe fallback ──────────────────────────────────────────────────
+function showFallback() {
     hideLoading();
-    canvasWrapper.style.display = 'none';
-    iframeEl.style.display      = 'block';
-    iframeEl.style.height       = isFullscreen ? '100vh' : 'calc(100vh - 64px)';
-    iframeEl.src                = pdfUrl;
-    console.warn('Fallback → iframe');
+    canvasWrap.style.display = 'none';
+    iframeEl.style.display   = 'block';
+    iframeEl.src             = pdfUrl;
 }
 
-// ─── Resume Toast ───────────────────────────────────────────────────
+// ── Resume toast ─────────────────────────────────────────────────────
 function showResumeToast(page) {
     const toast = document.getElementById('resume-toast');
     document.getElementById('resume-toast-text').textContent = `Terakhir di halaman ${page}`;
     toast.classList.add('show');
-
-    document.getElementById('resume-yes').onclick = () => {
-        goToPage(page); toast.classList.remove('show');
-    };
-    document.getElementById('resume-no').onclick = () => {
-        goToPage(1); toast.classList.remove('show');
-    };
-
-    setTimeout(() => toast.classList.remove('show'), 8000);
+    document.getElementById('resume-yes').onclick = () => { goToPage(page); toast.classList.remove('show'); };
+    document.getElementById('resume-no').onclick  = () => { goToPage(1);    toast.classList.remove('show'); };
+    setTimeout(() => toast.classList.remove('show'), 7000);
 }
 
-// ─── Load PDF ───────────────────────────────────────────────────────
-const fallbackTimer = setTimeout(() => {
-    if (!pdfDoc) { console.warn('Timeout → iframe'); showIframeFallback(); }
-}, 8000);
+// ── Load PDF ──────────────────────────────────────────────────────────
+const fbTimer = setTimeout(() => { if (!pdfDoc) showFallback(); }, 8000);
 
 pdfjsLib.getDocument({ url: pdfUrl, withCredentials: false, verbosity: 0 })
     .promise.then(doc => {
-        clearTimeout(fallbackTimer);
+        clearTimeout(fbTimer);
         pdfDoc = doc;
-
         const total = doc.numPages;
         document.getElementById('page-count').textContent    = total;
         document.getElementById('fs-page-count').textContent = total;
         document.getElementById('page-num-input').max        = total;
 
-        // Start from page 1, then show resume toast if savedPage > 1
         renderPage(1);
-
-        if (savedPage > 1 && savedPage <= total) {
-            setTimeout(() => showResumeToast(savedPage), 800);
-        }
+        if (savedPage > 1 && savedPage <= total)
+            setTimeout(() => showResumeToast(savedPage), 900);
     })
-    .catch(err => {
-        clearTimeout(fallbackTimer);
-        console.error('PDF load error:', err.message);
-        showIframeFallback();
-    });
+    .catch(err => { clearTimeout(fbTimer); console.error(err.message); showFallback(); });
 
-// ─── Resize ─────────────────────────────────────────────────────────
-let lastWidth = viewerEl.clientWidth, resizeTimer = null;
+// ── Resize ────────────────────────────────────────────────────────────
+let lastW = viewerEl.clientWidth, rTimer = null;
 window.addEventListener('resize', () => {
     const w = viewerEl.clientWidth;
-    if (Math.abs(w - lastWidth) < 30) return;
-    lastWidth = w;
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => {
+    if (Math.abs(w - lastW) < 20) return;
+    lastW = w;
+    clearTimeout(rTimer);
+    rTimer = setTimeout(() => {
         if (!pdfDoc) return;
-        pdfDoc.getPage(pageNum).then(page => {
-            baseScale = 1.0; computeBaseScale(page); queueRender(pageNum);
-        });
+        pdfDoc.getPage(pageNum).then(p => { baseScale=1.0; computeBase(p); queueRender(pageNum); });
     }, 250);
 });
 
-// ─── Events ─────────────────────────────────────────────────────────
+// ── Events ───────────────────────────────────────────────────────────
 document.getElementById('prev-page').addEventListener('click', prevPage);
 document.getElementById('next-page').addEventListener('click', nextPage);
 document.getElementById('fs-prev-page').addEventListener('click', prevPage);
@@ -897,65 +1125,53 @@ document.getElementById('exit-fullscreen-btn').addEventListener('click', exitFul
 document.getElementById('bookmark-btn').addEventListener('click', toggleBookmark);
 document.getElementById('fs-bookmark-btn').addEventListener('click', toggleBookmark);
 
+document.getElementById('mode-btn').addEventListener('click', e => {
+    e.stopPropagation();
+    document.getElementById('mode-dropdown').classList.toggle('open');
+});
+document.querySelectorAll('.mode-option').forEach(el => {
+    el.addEventListener('click', () => { applyMode(el.dataset.mode); document.getElementById('mode-dropdown').classList.remove('open'); });
+});
+document.addEventListener('click', () => document.getElementById('mode-dropdown').classList.remove('open'));
+
 document.getElementById('page-num-input').addEventListener('change', function() {
-    const num = parseInt(this.value);
-    if (pdfDoc && num >= 1 && num <= pdfDoc.numPages) goToPage(num);
-    else this.value = pageNum;
+    const n = parseInt(this.value);
+    if (pdfDoc && n >= 1 && n <= pdfDoc.numPages) goToPage(n); else this.value = pageNum;
 });
 
-// ─── Keyboard ───────────────────────────────────────────────────────
+// ── Keyboard ─────────────────────────────────────────────────────────
 document.addEventListener('keydown', e => {
     if (['INPUT','TEXTAREA'].includes(e.target.tagName)) return;
-    switch (e.key) {
+    switch(e.key) {
         case 'ArrowLeft': case 'ArrowUp':    prevPage(); break;
         case 'ArrowRight': case 'ArrowDown': nextPage(); break;
         case '+': case '=':                  zoomIn();   break;
         case '-':                            zoomOut();  break;
         case 'b': case 'B':                  toggleBookmark(); break;
-        case 'f': case 'F':
-            isFullscreen ? exitFullscreen() : enterFullscreen(); break;
-        case 'Escape':
-            if (isFullscreen) exitFullscreen(); break;
+        case 'f': case 'F':                  isFullscreen ? exitFullscreen() : enterFullscreen(); break;
+        case 'Escape':                       if (isFullscreen) exitFullscreen(); break;
     }
 });
 
-// ─── Touch Swipe ────────────────────────────────────────────────────
-let touchStartX = 0, touchStartY = 0;
+// ── Touch: Swipe + Pinch ──────────────────────────────────────────────
+let tx = 0, ty = 0, pinchDist = 0;
 viewerEl.addEventListener('touchstart', e => {
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
-}, { passive: true });
-
-viewerEl.addEventListener('touchend', e => {
-    const dx = touchStartX - e.changedTouches[0].clientX;
-    const dy = touchStartY - e.changedTouches[0].clientY;
-    // Swipe horizontal lebih dominan dari vertikal → ganti halaman
-    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 60) {
-        dx > 0 ? nextPage() : prevPage();
-    }
-}, { passive: true });
-
-// ─── Pinch Zoom (mobile) ────────────────────────────────────────────
-let lastPinchDist = 0;
-viewerEl.addEventListener('touchstart', e => {
+    if (e.touches.length === 1) { tx = e.touches[0].clientX; ty = e.touches[0].clientY; }
     if (e.touches.length === 2) {
-        lastPinchDist = Math.hypot(
-            e.touches[0].clientX - e.touches[1].clientX,
-            e.touches[0].clientY - e.touches[1].clientY
-        );
+        pinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
     }
 }, { passive: true });
 
 viewerEl.addEventListener('touchmove', e => {
     if (e.touches.length !== 2) return;
-    const dist = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
-    );
-    if (Math.abs(dist - lastPinchDist) > 10) {
-        dist > lastPinchDist ? zoomIn() : zoomOut();
-        lastPinchDist = dist;
-    }
+    const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+    if (Math.abs(d - pinchDist) > 12) { d > pinchDist ? zoomIn() : zoomOut(); pinchDist = d; }
+}, { passive: true });
+
+viewerEl.addEventListener('touchend', e => {
+    const dx = tx - e.changedTouches[0].clientX;
+    const dy = ty - e.changedTouches[0].clientY;
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 55) { dx > 0 ? nextPage() : prevPage(); }
 }, { passive: true });
 </script>
 @endpush
