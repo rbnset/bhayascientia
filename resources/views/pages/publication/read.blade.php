@@ -5,9 +5,9 @@
 
 @push('styles')
 <style>
-    /* Container full height minus navbar (sesuaikan tinggi navbar jika beda) */
     #pdf-viewer-container {
         height: calc(100vh - 64px);
+        /* sesuaikan dengan navbar height */
         background: #2D2D2D;
     }
 
@@ -28,7 +28,6 @@
         box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
     }
 
-    /* Control Bar Styling */
     .pdf-controls {
         background: linear-gradient(135deg, #1A1A1A 0%, #2D2D2D 100%);
         border-bottom: 2px solid #FF6B18;
@@ -48,7 +47,6 @@
         transform: translateY(0);
     }
 
-    /* Page Number Input */
     .page-input {
         background: #3D3D3D;
         border: 2px solid #4D4D4D;
@@ -61,7 +59,6 @@
         box-shadow: 0 0 0 3px rgba(255, 107, 24, 0.1);
     }
 
-    /* Loading Animation */
     .pdf-loading {
         display: flex;
         align-items: center;
@@ -90,27 +87,18 @@
         }
     }
 
-    /* Mobile-first tweaks */
     @media (max-width: 640px) {
         .pdf-header-title {
             font-size: 0.85rem;
-        }
-
-        .pdf-header-meta {
-            flex-wrap: wrap;
         }
     }
 </style>
 @endpush
 
 @section('content')
-
-{{-- Header/Control Bar --}}
 <div class="sticky top-0 z-50 shadow-lg pdf-controls">
     <div class="px-3 sm:px-4 lg:px-8 mx-auto max-w-[1400px] py-3 sm:py-4">
         <div class="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
-
-            {{-- Left: Back Button + Title --}}
             <div class="flex items-center flex-1 min-w-0 gap-3 sm:gap-4">
                 <a href="{{ route('publikasi.show', $publication->slug) }}"
                     class="pdf-control-btn p-2.5 sm:p-3 bg-[#3D3D3D] text-white rounded-lg hover:bg-[#FF6B18] transition-all flex items-center gap-2 flex-shrink-0">
@@ -124,18 +112,17 @@
                     <h1 class="text-xs font-bold text-white truncate pdf-header-title sm:text-sm md:text-lg">
                         {{ $publication->title }}
                     </h1>
-                    <div class="pdf-header-meta flex items-center gap-1.5 sm:gap-2 mt-1">
+                    <div class="flex items-center gap-1.5 sm:gap-2 mt-1">
                         <span class="px-2 py-0.5 bg-[#FF6B18] text-white text-[10px] sm:text-xs font-semibold rounded">
                             {{ $category }}
                         </span>
-                        <span class="text-gray-400 text-[10px] sm:text-xs hidden xs:inline">
+                        <span class="text-gray-400 text-[10px] sm:text-xs hidden sm:inline">
                             {{ $authors->pluck('name')->implode(', ') }}
                         </span>
                     </div>
                 </div>
             </div>
 
-            {{-- Center: Page Controls --}}
             <div class="flex items-center gap-2 bg-[#3D3D3D] rounded-lg px-2.5 py-1.5 text-xs sm:text-sm">
                 <button id="prev-page"
                     class="pdf-control-btn p-1.5 sm:p-2 bg-[#4D4D4D] text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
@@ -160,7 +147,6 @@
                 </button>
             </div>
 
-            {{-- Right: Zoom + Download --}}
             <div class="flex items-center gap-2">
                 <button id="zoom-out" class="pdf-control-btn p-2 sm:p-3 bg-[#3D3D3D] text-white rounded-lg">
                     <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -168,17 +154,14 @@
                             d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" />
                     </svg>
                 </button>
-
                 <span id="zoom-level"
                     class="text-white text-xs sm:text-sm font-semibold min-w-[2.5rem] text-center">100%</span>
-
                 <button id="zoom-in" class="pdf-control-btn p-2 sm:p-3 bg-[#3D3D3D] text-white rounded-lg">
                     <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
                     </svg>
                 </button>
-
                 <a href="{{ route('publikasi.download', $publication->slug) }}"
                     class="pdf-control-btn p-2.5 sm:p-3 bg-[#FF6B18] text-white rounded-lg hover:bg-[#E64627] flex items-center gap-1.5 sm:gap-2 ml-1.5 sm:ml-2 text-xs sm:text-sm">
                     <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -192,35 +175,31 @@
     </div>
 </div>
 
-{{-- PDF Viewer Container --}}
 <div id="pdf-viewer-container" class="relative">
-    {{-- Loading State --}}
     <div id="pdf-loading" class="pdf-loading">
         <div class="spinner"></div>
         <p class="text-sm font-semibold text-white">Loading PDF...</p>
     </div>
-
-    {{-- Wrapper agar canvas gampang di-center dan scrollable --}}
     <div id="pdf-canvas-wrapper" class="hidden">
         <canvas id="pdf-canvas"></canvas>
     </div>
 </div>
-
 @endsection
 
 @push('scripts')
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
-    pdfjsLib.GlobalWorkerOptions.workerSrc =
-        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
     const pdfUrl = @json($pdfUrl);
+    console.log('PDF URL:', pdfUrl); // ✅ Debug URL
+
     let pdfDoc = null;
     let pageNum = 1;
     let pageRendering = false;
     let pageNumPending = null;
-    let baseScale = 1.0; // scale dasar berdasar lebar container
-    let zoomFactor = 1.0; // zoom user (1x, 1.25x, dst)
+    let baseScale = 1.0;
+    let zoomFactor = 1.0;
 
     const canvas = document.getElementById('pdf-canvas');
     const ctx = canvas.getContext('2d');
@@ -228,49 +207,25 @@
     const canvasWrapper = document.getElementById('pdf-canvas-wrapper');
     const viewerContainer = document.getElementById('pdf-viewer-container');
 
-    function getCurrentScale() {
-        return baseScale * zoomFactor;
-    }
+    function getCurrentScale() { return baseScale * zoomFactor; }
 
-    /**
-     * Hitung baseScale agar PDF fit-width dan responsif
-     */
     function computeBaseScale(page) {
-        const containerWidth = viewerContainer.clientWidth;
+        const containerWidth = viewerContainer.clientWidth || window.innerWidth;
         const viewport = page.getViewport({ scale: 1 });
-        // padding kiri-kanan wrapper ~16px (0.5rem x 2), kita kurangi sedikit
         const availableWidth = containerWidth - 16;
-        const scale = availableWidth / viewport.width;
-        // batas minimal / maksimal supaya tetap nyaman
-        baseScale = Math.max(0.5, Math.min(scale, 2.0));
+        baseScale = Math.max(0.5, Math.min(availableWidth / viewport.width, 2.0));
     }
 
-    /**
-     * Render halaman
-     */
     function renderPage(num) {
         pageRendering = true;
-
         pdfDoc.getPage(num).then(function(page) {
-            // untuk pertama kali atau saat resize: hitung baseScale dari lebar container
-            if (!baseScale || baseScale === 1.0) {
-                computeBaseScale(page); // responsif, fit width[web:1][web:5]
-            }
-
+            if (baseScale === 1.0) computeBaseScale(page);
             const scale = getCurrentScale();
             const viewport = page.getViewport({ scale });
-
             canvas.height = viewport.height;
             canvas.width = viewport.width;
-
-            const renderContext = {
-                canvasContext: ctx,
-                viewport: viewport
-            };
-
-            const renderTask = page.render(renderContext);
-
-            renderTask.promise.then(function() {
+            const renderContext = { canvasContext: ctx, viewport };
+            page.render(renderContext).promise.then(() => {
                 pageRendering = false;
                 if (pageNumPending !== null) {
                     const pending = pageNumPending;
@@ -278,8 +233,6 @@
                     renderPage(pending);
                 }
             });
-
-            // Setelah render dipanggil, update UI
             document.getElementById('page-num-input').value = num;
             updateNavigationButtons();
             updateZoomDisplay();
@@ -287,39 +240,18 @@
     }
 
     function queueRenderPage(num) {
-        if (pageRendering) {
-            pageNumPending = num;
-        } else {
-            renderPage(num);
-        }
+        if (pageRendering) pageNumPending = num;
+        else renderPage(num);
     }
 
-    function onPrevPage() {
-        if (pageNum <= 1) return;
-        pageNum--;
-        queueRenderPage(pageNum);
-    }
+    function onPrevPage() { if (pageNum > 1) { pageNum--; queueRenderPage(pageNum); } }
+    function onNextPage() { if (pageNum < pdfDoc.numPages) { pageNum++; queueRenderPage(pageNum); } }
 
-    function onNextPage() {
-        if (pageNum >= pdfDoc.numPages) return;
-        pageNum++;
-        queueRenderPage(pageNum);
-    }
-
-    function onZoomIn() {
-        zoomFactor = Math.min(zoomFactor + 0.25, 3.0);
-        queueRenderPage(pageNum);
-    }
-
-    function onZoomOut() {
-        zoomFactor = Math.max(zoomFactor - 0.25, 0.5);
-        queueRenderPage(pageNum);
-    }
+    function onZoomIn() { zoomFactor = Math.min(zoomFactor + 0.25, 3.0); queueRenderPage(pageNum); }
+    function onZoomOut() { zoomFactor = Math.max(zoomFactor - 0.25, 0.5); queueRenderPage(pageNum); }
 
     function updateZoomDisplay() {
-        const zoomLevelEl = document.getElementById('zoom-level');
-        const percentage = Math.round(getCurrentScale() * 100);
-        zoomLevelEl.textContent = percentage + '%';
+        document.getElementById('zoom-level').textContent = Math.round(getCurrentScale() * 100) + '%';
     }
 
     function updateNavigationButtons() {
@@ -327,59 +259,55 @@
         document.getElementById('next-page').disabled = pageNum >= pdfDoc.numPages;
     }
 
-    /**
-     * Handle resize: hitung ulang baseScale hanya jika lebar container berubah cukup signifikan
-     * supaya tidak terasa "loading terus" pada perubahan kecil.
-     */
-    let lastContainerWidth = viewerContainer.clientWidth;
+    let lastContainerWidth = 0;
     let resizeTimeout = null;
-
     function handleResize() {
         const newWidth = viewerContainer.clientWidth;
-        if (Math.abs(newWidth - lastContainerWidth) < 40) {
-            return; // abaikan perubahan kecil
-        }
+        if (Math.abs(newWidth - lastContainerWidth) < 40) return;
         lastContainerWidth = newWidth;
-
         if (!pdfDoc) return;
-
         clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(function () {
-            pdfDoc.getPage(pageNum).then(function(page) {
+        resizeTimeout = setTimeout(() => {
+            pdfDoc.getPage(pageNum).then(page => {
                 computeBaseScale(page);
                 queueRenderPage(pageNum);
             });
         }, 200);
     }
-
     window.addEventListener('resize', handleResize);
 
-    /**
-     * Load PDF
-     */
+    // ✅ LOAD PDF + ANTI-LOADING-STUCK
     pdfjsLib.getDocument(pdfUrl).promise.then(function(pdfDoc_) {
         pdfDoc = pdfDoc_;
         document.getElementById('page-count').textContent = pdfDoc.numPages;
 
-        // Hide loading, show canvas wrapper
+        // ✅ HIDE LOADING IMMEDIATELY
         loadingEl.classList.add('hidden');
         canvasWrapper.classList.remove('hidden');
 
-        // Render first page
         renderPage(pageNum);
     }).catch(function(error) {
+        // ✅ HIDE LOADING + SHOW ERROR
+        loadingEl.classList.remove('hidden');
         loadingEl.innerHTML = `
             <svg class="w-16 h-16 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <p class="font-semibold text-red-500">Failed to load PDF</p>
+            <p class="font-semibold text-red-500">PDF tidak tersedia</p>
             <p class="text-sm text-gray-400">${error.message}</p>
         `;
         console.error('Error loading PDF:', error);
     });
 
-    // Event Listeners
+    // ✅ FALLBACK: hide loading max 5 detik
+    setTimeout(() => {
+        if (loadingEl.classList.contains('flex')) {
+            loadingEl.classList.add('hidden');
+            canvasWrapper.classList.remove('hidden');
+        }
+    }, 5000);
+
+    // Event listeners
     document.getElementById('prev-page').addEventListener('click', onPrevPage);
     document.getElementById('next-page').addEventListener('click', onNextPage);
     document.getElementById('zoom-in').addEventListener('click', onZoomIn);
@@ -396,17 +324,11 @@
         }
     });
 
-    // Keyboard shortcuts (desktop)
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'ArrowLeft') {
-            onPrevPage();
-        } else if (e.key === 'ArrowRight') {
-            onNextPage();
-        } else if (e.key === '+' || e.key === '=') {
-            onZoomIn();
-        } else if (e.key === '-') {
-            onZoomOut();
-        }
+        if (e.key === 'ArrowLeft') onPrevPage();
+        else if (e.key === 'ArrowRight') onNextPage();
+        else if (e.key === '+' || e.key === '=') onZoomIn();
+        else if (e.key === '-') onZoomOut();
     });
 </script>
 @endpush
