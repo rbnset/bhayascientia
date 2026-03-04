@@ -11,7 +11,6 @@
         transition: all 0.3s ease;
     }
 
-    /* ✅ Fullscreen mode */
     #pdf-viewer-container.fullscreen-mode {
         position: fixed !important;
         top: 0 !important;
@@ -129,17 +128,11 @@
         }
     }
 
-    /* Fallback iframe */
     #pdf-iframe {
         width: 100%;
         height: 100%;
         border: none;
         display: none;
-    }
-
-    /* Sembunyikan loading saat canvas sudah ada */
-    #pdf-canvas-wrapper:not(.hidden)~#pdf-loading {
-        display: none !important;
     }
 
     @media (max-width: 640px) {
@@ -152,7 +145,7 @@
 
 @section('content')
 
-{{-- ✅ Fullscreen Toolbar (hanya muncul di fullscreen mode) --}}
+{{-- Fullscreen Toolbar --}}
 <div id="pdf-fullscreen-toolbar">
     <div class="flex items-center flex-1 min-w-0 gap-2">
         <span class="text-white font-bold text-xs sm:text-sm truncate max-w-[200px] sm:max-w-md">
@@ -198,7 +191,7 @@
     </div>
 </div>
 
-{{-- ✅ Normal Toolbar --}}
+{{-- Normal Toolbar --}}
 <div id="pdf-toolbar" class="sticky top-0 z-50 shadow-lg pdf-controls">
     <div class="px-3 sm:px-4 lg:px-8 mx-auto max-w-[1400px] py-3">
         <div class="flex flex-wrap items-center justify-between gap-3">
@@ -266,8 +259,6 @@
                             d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
                     </svg>
                 </button>
-
-                {{-- ✅ Fullscreen Button --}}
                 <button id="fullscreen-btn" class="pdf-control-btn p-2 bg-[#3D3D3D] text-white rounded-lg"
                     title="Mode Baca Penuh (F)">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -275,7 +266,6 @@
                             d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
                     </svg>
                 </button>
-
                 <a href="{{ route('publikasi.download', $publication->slug) }}"
                     class="pdf-control-btn p-2 sm:px-3 bg-[#FF6B18] text-white rounded-lg hover:bg-[#E64627] flex items-center gap-1.5 ml-1">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -289,7 +279,7 @@
     </div>
 </div>
 
-{{-- ✅ PDF Viewer Container --}}
+{{-- PDF Viewer Container --}}
 <div id="pdf-viewer-container" class="relative">
 
     {{-- Loading State --}}
@@ -304,7 +294,7 @@
         <canvas id="pdf-canvas"></canvas>
     </div>
 
-    {{-- ✅ Fallback iframe (jika PDF.js gagal total) --}}
+    {{-- Fallback iframe --}}
     <iframe id="pdf-iframe" title="PDF Viewer"></iframe>
 </div>
 
@@ -313,18 +303,22 @@
 @push('scripts')
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
+    // ✅ Worker CDN (ganti ke lokal kalau offline/lambat)
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    // ✅ Suppress warning font TT: undefined function
+    pdfjsLib.verbosity = 0;
 
     const pdfUrl = @json($pdfUrl);
     console.log('PDF URL:', pdfUrl);
 
-    let pdfDoc       = null;
-    let pageNum      = 1;
-    let pageRendering = false;
+    let pdfDoc         = null;
+    let pageNum        = 1;
+    let pageRendering  = false;
     let pageNumPending = null;
-    let baseScale    = 1.0;
-    let zoomFactor   = 1.0;
-    let isFullscreen = false;
+    let baseScale      = 1.0;
+    let zoomFactor     = 1.0;
+    let isFullscreen   = false;
 
     const canvas        = document.getElementById('pdf-canvas');
     const ctx           = canvas.getContext('2d');
@@ -333,38 +327,56 @@
     const viewerEl      = document.getElementById('pdf-viewer-container');
     const iframeEl      = document.getElementById('pdf-iframe');
 
-    // ─── Scale ───────────────────────────────────────────────────────────
     function getCurrentScale() { return baseScale * zoomFactor; }
 
     function computeBaseScale(page) {
         const containerWidth = viewerEl.clientWidth || window.innerWidth;
-        const viewport = page.getViewport({ scale: 1 });
+        const viewport       = page.getViewport({ scale: 1 });
         baseScale = Math.max(0.5, Math.min((containerWidth - 24) / viewport.width, 2.5));
     }
 
-    // ─── Render ───────────────────────────────────────────────────────────
+    // ✅ FIX UTAMA: Hide loading SEBELUM render, bukan sesudah
     function renderPage(num) {
         pageRendering = true;
+
+        // ✅ Langsung hide loading & show canvas saat mulai render
+        loadingEl.classList.add('hidden');
+        canvasWrapper.classList.remove('hidden');
+
         pdfDoc.getPage(num).then(page => {
             if (baseScale === 1.0) computeBaseScale(page);
+
             const scale    = getCurrentScale();
             const viewport = page.getViewport({ scale });
             canvas.height  = viewport.height;
             canvas.width   = viewport.width;
 
-            page.render({ canvasContext: ctx, viewport }).promise.then(() => {
+            const renderTask = page.render({ canvasContext: ctx, viewport });
+
+            renderTask.promise.then(() => {
                 pageRendering = false;
                 if (pageNumPending !== null) {
                     const p = pageNumPending;
                     pageNumPending = null;
                     renderPage(p);
                 }
+            }).catch(err => {
+                // ✅ Warning font (non-fatal) → tetap tampilkan canvas
+                console.warn('Render warning (non-fatal):', err.message);
+                pageRendering = false;
             });
 
-            document.getElementById('page-num-input').value = num;
+            document.getElementById('page-num-input').value    = num;
             document.getElementById('fs-page-num').textContent = num;
             updateNavButtons();
             updateZoomDisplay();
+
+        }).catch(err => {
+            console.error('getPage error:', err.message);
+            pageRendering = false;
+            // Tetap tampilkan canvas meski error getPage
+            loadingEl.classList.add('hidden');
+            canvasWrapper.classList.remove('hidden');
         });
     }
 
@@ -373,17 +385,21 @@
         else renderPage(num);
     }
 
-    // ─── Navigation ───────────────────────────────────────────────────────
     function prevPage() { if (pageNum > 1)               { pageNum--; queueRender(pageNum); } }
     function nextPage() { if (pageNum < pdfDoc.numPages) { pageNum++; queueRender(pageNum); } }
 
     function updateNavButtons() {
-        ['prev-page', 'fs-prev-page'].forEach(id => document.getElementById(id).disabled = pageNum <= 1);
-        ['next-page', 'fs-next-page'].forEach(id => document.getElementById(id).disabled = pageNum >= pdfDoc.numPages);
+        ['prev-page', 'fs-prev-page'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.disabled = pageNum <= 1;
+        });
+        ['next-page', 'fs-next-page'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.disabled = pageNum >= pdfDoc.numPages;
+        });
     }
 
-    // ─── Zoom ─────────────────────────────────────────────────────────────
-    function zoomIn()  { zoomFactor = Math.min(zoomFactor + 0.25, 4.0); queueRender(pageNum); }
+    function zoomIn()  { zoomFactor = Math.min(zoomFactor + 0.25, 4.0);  queueRender(pageNum); }
     function zoomOut() { zoomFactor = Math.max(zoomFactor - 0.25, 0.25); queueRender(pageNum); }
 
     function updateZoomDisplay() {
@@ -392,16 +408,13 @@
         document.getElementById('fs-zoom-level').textContent = pct;
     }
 
-    // ─── Fullscreen ───────────────────────────────────────────────────────
     function enterFullscreen() {
         isFullscreen = true;
         viewerEl.classList.add('fullscreen-mode');
         document.body.style.overflow = 'hidden';
-
-        // Re-hitung scale sesuai layar penuh
         if (pdfDoc) {
             pdfDoc.getPage(pageNum).then(page => {
-                baseScale = 1.0; // reset agar recompute
+                baseScale = 1.0;
                 computeBaseScale(page);
                 queueRender(pageNum);
             });
@@ -412,7 +425,6 @@
         isFullscreen = false;
         viewerEl.classList.remove('fullscreen-mode');
         document.body.style.overflow = '';
-
         if (pdfDoc) {
             pdfDoc.getPage(pageNum).then(page => {
                 baseScale = 1.0;
@@ -422,28 +434,28 @@
         }
     }
 
-    // ─── Fallback iframe ──────────────────────────────────────────────────
     function showIframeFallback() {
         loadingEl.classList.add('hidden');
         canvasWrapper.classList.add('hidden');
         iframeEl.style.display = 'block';
         iframeEl.style.height  = isFullscreen ? '100vh' : 'calc(100vh - 64px)';
         iframeEl.src           = pdfUrl;
-        console.warn('PDF.js fallback → menggunakan iframe');
+        console.warn('PDF.js fallback → iframe');
     }
 
-    // ─── Load PDF ─────────────────────────────────────────────────────────
-    // Timeout fallback 8 detik
+    // ✅ Timeout 5 detik (lebih pendek)
     const fallbackTimer = setTimeout(() => {
         if (!pdfDoc) {
-            console.warn('PDF.js timeout, switch ke iframe fallback');
+            console.warn('PDF.js timeout 5s → iframe fallback');
             showIframeFallback();
         }
-    }, 8000);
+    }, 5000);
 
+    // ✅ Load PDF dengan verbosity 0 (suppress font warnings)
     pdfjsLib.getDocument({
         url: pdfUrl,
         withCredentials: false,
+        verbosity: 0,
     }).promise.then(doc => {
         clearTimeout(fallbackTimer);
         pdfDoc = doc;
@@ -453,18 +465,20 @@
         document.getElementById('fs-page-count').textContent = total;
         document.getElementById('page-num-input').max        = total;
 
+        // ✅ Hide loading, show canvas SEBELUM render
         loadingEl.classList.add('hidden');
         canvasWrapper.classList.remove('hidden');
 
         renderPage(pageNum);
+
     }).catch(err => {
         clearTimeout(fallbackTimer);
-        console.error('PDF.js error:', err);
+        console.error('PDF load error:', err.message);
         showIframeFallback();
     });
 
-    // ─── Resize Debounce ──────────────────────────────────────────────────
-    let lastWidth  = viewerEl.clientWidth;
+    // ─── Resize ───────────────────────────────────────────────────────────
+    let lastWidth   = viewerEl.clientWidth;
     let resizeTimer = null;
     window.addEventListener('resize', () => {
         const w = viewerEl.clientWidth;
@@ -481,7 +495,7 @@
         }, 250);
     });
 
-    // ─── Event Listeners ──────────────────────────────────────────────────
+    // ─── Event Listeners ─────────────────────────────────────────────────
     document.getElementById('prev-page').addEventListener('click', prevPage);
     document.getElementById('next-page').addEventListener('click', nextPage);
     document.getElementById('fs-prev-page').addEventListener('click', prevPage);
@@ -493,39 +507,34 @@
     document.getElementById('fullscreen-btn').addEventListener('click', enterFullscreen);
     document.getElementById('exit-fullscreen-btn').addEventListener('click', exitFullscreen);
 
-    document.getElementById('page-num-input').addEventListener('change', function() {
+    document.getElementById('page-num-input').addEventListener('change', function () {
         if (!pdfDoc) return;
         const num = parseInt(this.value);
         if (num >= 1 && num <= pdfDoc.numPages) { pageNum = num; queueRender(pageNum); }
         else this.value = pageNum;
     });
 
-    // ─── Keyboard Shortcuts ───────────────────────────────────────────────
+    // ─── Keyboard ────────────────────────────────────────────────────────
     document.addEventListener('keydown', e => {
         if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
-
         switch (e.key) {
             case 'ArrowLeft':  case 'ArrowUp':    prevPage();  break;
             case 'ArrowRight': case 'ArrowDown':  nextPage();  break;
             case '+': case '=':                   zoomIn();    break;
             case '-':                              zoomOut();   break;
             case 'f': case 'F':
-                isFullscreen ? exitFullscreen() : enterFullscreen();
-                break;
+                isFullscreen ? exitFullscreen() : enterFullscreen(); break;
             case 'Escape':
-                if (isFullscreen) exitFullscreen();
-                break;
+                if (isFullscreen) exitFullscreen(); break;
         }
     });
 
-    // ─── Touch swipe (mobile) ─────────────────────────────────────────────
+    // ─── Touch Swipe ─────────────────────────────────────────────────────
     let touchStartX = 0;
     viewerEl.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
     viewerEl.addEventListener('touchend', e => {
         const diff = touchStartX - e.changedTouches[0].clientX;
-        if (Math.abs(diff) > 50) {
-            if (diff > 0) nextPage(); else prevPage();
-        }
+        if (Math.abs(diff) > 50) { diff > 0 ? nextPage() : prevPage(); }
     }, { passive: true });
 </script>
 @endpush

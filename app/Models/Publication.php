@@ -198,7 +198,7 @@ class Publication extends Model
     /**
      * ✅ Accessor untuk URL cover image - Return NULL untuk support custom placeholder
      */
-    public function getCoverUrlAttribute(): string  // ← string, bukan nullable
+    public function getCoverUrlAttribute(): string
     {
         if ($this->coverUrlCache !== null) {
             return $this->coverUrlCache;
@@ -210,12 +210,14 @@ class Publication extends Model
                 : $this->cover_image_path;
 
             if (Storage::disk('public')->exists($cleanPath)) {
-                return $this->coverUrlCache = Storage::disk('public')->url($cleanPath);
+                // ✅ asset() → ikut APP_URL, benar di lokal & production
+                return $this->coverUrlCache = asset('storage/' . $cleanPath);
             }
         }
 
         return $this->coverUrlCache = $this->generatePlaceholderUrl();
     }
+
 
     private function generatePlaceholderUrl(): string
     {
