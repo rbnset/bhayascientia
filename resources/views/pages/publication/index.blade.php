@@ -15,6 +15,9 @@
 
 @section('content')
 
+{{-- ✨ Anchor scroll ke atas --}}
+<div id="top-anchor"></div>
+
 {{-- Publication Navigation (SUB MENU) --}}
 <x-publication.navigation :items="config('publication.navigation')" />
 
@@ -122,6 +125,11 @@
         :selectedType="$selectedType" :exploreAllUrl="route('publikasi.browse', ['type' => $selectedType])" />
 </div>
 
+{{-- ✨ Scroll to Top --}}
+<x-scroll-to-top />
+
+{{-- ✨ Scroll to Top Script --}}
+<x-scroll-to-top-script />
 
 {{-- ================================================================ --}}
 {{-- PRODUCT TOUR --}}

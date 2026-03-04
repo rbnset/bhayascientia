@@ -458,6 +458,9 @@
 
 @section('content')
 
+{{-- ✨ Anchor scroll ke atas --}}
+<div id="top-anchor"></div>
+
 {{-- ═══════════════════════════════════
 FILTER CONTENT (Blade Component)
 Dipakai oleh drawer & sidebar
@@ -1017,9 +1020,17 @@ $years, $stats) {
     </div>
 </section>
 
+
+{{-- ✨ Scroll to Top --}}
+<x-scroll-to-top />
+
 @endsection
 
 @push('scripts')
+
+{{-- ✨ Scroll to Top Script --}}
+<x-scroll-to-top-script />
+
 <script>
     (function () {
     const STORAGE_KEY = 'pub_browse_view';

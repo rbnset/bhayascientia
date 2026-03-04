@@ -26,6 +26,9 @@ return asset('storage/' . ltrim($rawIcon, '/'));
 
 @section('content')
 
+{{-- ✨ Anchor scroll ke atas --}}
+<div id="top-anchor"></div>
+
 <x-publication.navigation :items="config('publication.navigation')" />
 
 @if(isset($currentCategory) && $currentCategory)
@@ -404,9 +407,16 @@ MODE 1: Belum pilih kategori → grid kategori
 
 @endif
 
+{{-- ✨ Scroll to Top --}}
+<x-scroll-to-top />
+
 @endsection
 
 @push('scripts')
+
+{{-- ✨ Scroll to Top Script --}}
+<x-scroll-to-top-script />
+
 <script>
     document.addEventListener('keydown', function (e) {
         if ((e.metaKey || e.ctrlKey) && e.key === 'k') {

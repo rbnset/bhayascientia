@@ -293,6 +293,9 @@
 
 @section('content')
 
+{{-- ✨ Anchor scroll ke atas --}}
+<div id="top-anchor"></div>
+
 {{-- Hero Section --}}
 <section
     class="bg-gradient-to-br from-[#FF6B18] via-[#E64627] to-[#D63A25] relative overflow-hidden rounded-2xl sm:rounded-[28px]">
@@ -1343,9 +1346,15 @@
     </div>
 </section>
 
+{{-- ✨ Scroll to Top --}}
+<x-scroll-to-top />
+
 @endsection
 
 @push('scripts')
+{{-- ✨ Scroll to Top Script --}}
+<x-scroll-to-top-script />
+
 <script>
     (function () {
 

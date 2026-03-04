@@ -290,6 +290,9 @@
 
 @section('content')
 
+{{-- ✨ Anchor scroll ke atas --}}
+<div id="top-anchor"></div>
+
 {{-- Hero Section --}}
 <section
     class="bg-gradient-to-br from-[#FF6B18] via-[#E64627] to-[#D63A25] relative overflow-hidden rounded-2xl sm:rounded-[28px]">
@@ -779,9 +782,13 @@
     </div>
 </div>
 
+<x-scroll-to-top />
+
 @endsection
 
 @push('scripts')
+<x-scroll-to-top-script />
+
 {{-- ✅ reCAPTCHA v3 Script --}}
 <script src="https://www.google.com/recaptcha/api.js?render={{ config('services.recaptcha.site_key') }}"></script>
 

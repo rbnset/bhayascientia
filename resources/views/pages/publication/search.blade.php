@@ -372,6 +372,9 @@
 
 @section('content')
 
+{{-- ✨ Anchor scroll ke atas --}}
+<div id="top-anchor"></div>
+
 @php
 $activeKeywords = collect(
 is_array($filterKeyword)
@@ -851,7 +854,15 @@ $toItem = $publications->lastItem() ?? 0;
 
 </section>
 
+{{-- ✨ Scroll to Top --}}
+<x-scroll-to-top />
+
 @push('scripts')
+
+
+{{-- ✨ Scroll to Top Script --}}
+<x-scroll-to-top-script />
+
 <script>
     (function () {
     const STORAGE_KEY = 'pub_search_view';

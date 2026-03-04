@@ -130,6 +130,9 @@
 
 @section('content')
 
+{{-- ✨ Anchor scroll ke atas --}}
+<div id="top-anchor"></div>
+
 {{-- Navigation --}}
 <x-publication.navigation :items="config('publication.navigation')" />
 
@@ -513,7 +516,7 @@
                 <article
                     class="group flex gap-3 sm:gap-4 p-3 sm:p-4 bg-[#F8F9FC] rounded-xl hover:bg-white hover:shadow-md transition-all duration-300">
                     <a href="{{ $publication['detail_url'] }}"
-                        class="library-cover w-16 h-20 sm:w-20 sm:h-24 md:w-24 md:h-28 shrink-0 rounded-lg"
+                        class="w-16 h-20 rounded-lg library-cover sm:w-20 sm:h-24 md:w-24 md:h-28 shrink-0"
                         style="display: block; background-color: #F8F9FC;">
                         <img src="{{ $finalCoverUrl }}" alt="Cover {{ $publication['title'] }}" loading="lazy"
                             decoding="async" class="transition-transform duration-300 group-hover:scale-105"
@@ -617,7 +620,7 @@
 
                 <a href="{{ $publication['detail_url'] }}"
                     class="group flex items-center gap-3 sm:gap-4 p-3 rounded-xl hover:bg-[#F8F9FC] transition-colors">
-                    <div class="library-cover w-12 h-16 sm:w-14 sm:h-18 md:w-16 md:h-20 shrink-0 rounded-lg"
+                    <div class="w-12 h-16 rounded-lg library-cover sm:w-14 sm:h-18 md:w-16 md:h-20 shrink-0"
                         style="display: block; background-color: #F8F9FC;">
                         <img src="{{ $finalCoverUrl }}" alt="Cover {{ $publication['title'] }}" loading="lazy"
                             style="width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; opacity: 1 !important; visibility: visible !important;"
@@ -776,9 +779,18 @@
 
 </section>
 
+
+{{-- ✨ Scroll to Top --}}
+<x-scroll-to-top />
+
 @endsection
 
 @push('scripts')
+
+
+{{-- ✨ Scroll to Top Script --}}
+<x-scroll-to-top-script />
+
 <script>
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 

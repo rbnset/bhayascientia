@@ -65,6 +65,9 @@
 
 @section('content')
 
+{{-- ✨ Anchor scroll ke atas --}}
+<div id="top-anchor"></div>
+
 {{-- Navigation --}}
 <x-publication.navigation :items="config('publication.navigation')" />
 
@@ -199,7 +202,7 @@
     </div>
 
     {{-- ✅ Cover with Placeholder (FIXED WITH INLINE STYLES) --}}
-    <div class="relative z-10 flex-shrink-0 w-16 h-20 sm:w-20 sm:h-28 md:w-24 md:h-32 rounded-lg shadow-md group-hover:shadow-xl transition-shadow overflow-hidden"
+    <div class="relative z-10 flex-shrink-0 w-16 h-20 overflow-hidden transition-shadow rounded-lg shadow-md sm:w-20 sm:h-28 md:w-24 md:h-32 group-hover:shadow-xl"
         style="display: block; background-color: #F8F9FC;">
         <img src="{{ $finalCoverUrl }}" alt="Cover {{ $publication['title'] }}" loading="lazy" decoding="async"
             style="width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; opacity: 1 !important; visibility: visible !important;"
@@ -357,4 +360,13 @@
 
 </section>
 
+{{-- ✨ Scroll to Top --}}
+<x-scroll-to-top />
+
 @endsection
+
+@push('scripts')
+
+{{-- ✨ Scroll to Top Script --}}
+<x-scroll-to-top-script />
+@endpush
