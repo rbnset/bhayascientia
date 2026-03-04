@@ -20,7 +20,7 @@ class PublicationController extends Controller
     ) {}
 
     /**
-     * ✅ Helper — normalize keyword input jadi array bersih
+     * Helper — normalize keyword input jadi array bersih
      */
     private function normalizeKeywords(mixed $input): array
     {
@@ -30,10 +30,13 @@ class PublicationController extends Controller
     }
 
     /**
-     * ✅ Display publication index/homepage
+     * Display publication index/homepage
      */
     public function index(Request $request)
     {
+        // ✅ Cek tour — letakkan paling atas agar tersedia di semua return path
+        $showTour = ! session()->has('has_seen_index_tour');
+
         $publicationTypes = PublicationType::with('content')
             ->where('is_active', true)
             ->orderBy('name')
@@ -54,6 +57,7 @@ class PublicationController extends Controller
                 'filterSort'          => 'latest',
                 'filterKeyword'       => [],
                 'searchQuery'         => null,
+                'showTour'            => $showTour, // ✅ tambahkan di empty state juga
             ]);
         }
 
@@ -226,12 +230,13 @@ class PublicationController extends Controller
             'years',
             'topKeywords',
             'filterSort',
-            'searchQuery'
+            'searchQuery',
+            'showTour', // ✅
         ));
     }
 
     /**
-     * ✅ Display publications by category
+     * Display publications by category
      */
     public function category(Request $request, ?string $categorySlug = null)
     {
@@ -241,15 +246,12 @@ class PublicationController extends Controller
         $filterCategory = $categorySlug ?? $request->query('category');
         $filterYear     = $request->query('year');
 
-        // ✅ FIX: normalize keyword jadi array
         $filterKeyword = $this->normalizeKeywords($request->input('keyword'));
 
-        // PublicationTypes
         $publicationTypes = PublicationType::where('is_active', true)
             ->orderBy('name')
             ->get(['id', 'slug', 'name']);
 
-        // Categories
         $categories = \App\Models\Category::withCount([
             'publications' => fn($q) => $q->where('status', 'published')
                 ->whereNotNull('published_at')
@@ -259,7 +261,6 @@ class PublicationController extends Controller
             ->orderBy('name')
             ->get();
 
-        // Years
         $yearsQuery = Publication::selectRaw('YEAR(published_at) as year')
             ->where('status', 'published')
             ->whereNotNull('published_at')
@@ -274,7 +275,6 @@ class PublicationController extends Controller
 
         $years = $yearsQuery->groupBy('year')->orderByDesc('year')->pluck('year');
 
-        // TopKeywords
         $topKeywords = \App\Models\Keyword::withCount([
             'publications' => fn($q) => $q->where('status', 'published')
                 ->whereNotNull('published_at')
@@ -285,13 +285,11 @@ class PublicationController extends Controller
             ->limit(20)
             ->get();
 
-        // Current Category
         $currentCategory = null;
         if ($filterCategory) {
             $currentCategory = \App\Models\Category::where('slug', $filterCategory)->first();
         }
 
-        // Publications query
         $publicationsQuery = Publication::with(['authors.user', 'publicationType', 'categories'])
             ->where('status', 'published')
             ->whereNotNull('published_at')
@@ -315,7 +313,6 @@ class PublicationController extends Controller
             $publicationsQuery->whereYear('published_at', $filterYear);
         }
 
-        // ✅ FIX: filter keyword support array (multi-keyword)
         if (!empty($filterKeyword)) {
             $publicationsQuery->whereHas('keywords', function ($q) use ($filterKeyword) {
                 $q->whereIn('slug', $filterKeyword);
@@ -329,7 +326,6 @@ class PublicationController extends Controller
             });
         }
 
-        // Sort
         switch ($filterSort) {
             case 'popular':
                 $publicationsQuery->withCount('downloadLogs')->orderByDesc('download_logs_count');
@@ -359,12 +355,12 @@ class PublicationController extends Controller
             'searchQuery'      => $searchQuery,
             'filterCategory'   => $filterCategory,
             'filterYear'       => $filterYear,
-            'filterKeyword'    => $filterKeyword, // ✅ selalu array
+            'filterKeyword'    => $filterKeyword,
         ]);
     }
 
     /**
-     * ✅ Search publications
+     * Search publications
      */
     public function search(Request $request)
     {
@@ -374,15 +370,12 @@ class PublicationController extends Controller
         $filterCategory = $request->query('category');
         $filterYear     = $request->query('year');
 
-        // ✅ FIX: normalize keyword jadi array
         $filterKeyword = $this->normalizeKeywords($request->input('keyword'));
 
-        // PublicationTypes
         $publicationTypes = PublicationType::where('is_active', true)
             ->orderBy('name')
             ->get(['id', 'slug', 'name']);
 
-        // Categories
         $categories = \App\Models\Category::withCount([
             'publications' => fn($q) => $q->where('status', 'published')
                 ->whereNotNull('published_at')
@@ -392,7 +385,6 @@ class PublicationController extends Controller
             ->orderBy('name')
             ->get();
 
-        // Years
         $yearsQuery = Publication::selectRaw('YEAR(published_at) as year')
             ->where('status', 'published')
             ->whereNotNull('published_at')
@@ -407,7 +399,6 @@ class PublicationController extends Controller
 
         $years = $yearsQuery->groupBy('year')->orderByDesc('year')->pluck('year');
 
-        // TopKeywords
         $topKeywords = \App\Models\Keyword::withCount([
             'publications' => fn($q) => $q->where('status', 'published')
                 ->whereNotNull('published_at')
@@ -418,7 +409,6 @@ class PublicationController extends Controller
             ->limit(20)
             ->get();
 
-        // Publications query
         $publicationsQuery = Publication::with(['authors.user', 'publicationType', 'categories'])
             ->where('status', 'published')
             ->whereNotNull('published_at')
@@ -442,7 +432,6 @@ class PublicationController extends Controller
             $publicationsQuery->whereYear('published_at', $filterYear);
         }
 
-        // ✅ FIX: filter keyword support array (multi-keyword)
         if (!empty($filterKeyword)) {
             $publicationsQuery->whereHas('keywords', function ($q) use ($filterKeyword) {
                 $q->whereIn('slug', $filterKeyword);
@@ -457,7 +446,6 @@ class PublicationController extends Controller
             });
         }
 
-        // Sort
         switch ($filterSort) {
             case 'popular':
                 $publicationsQuery->withCount('downloadLogs')->orderByDesc('download_logs_count');
@@ -486,12 +474,12 @@ class PublicationController extends Controller
             'searchQuery'      => $searchQuery,
             'filterCategory'   => $filterCategory,
             'filterYear'       => $filterYear,
-            'filterKeyword'    => $filterKeyword, // ✅ selalu array
+            'filterKeyword'    => $filterKeyword,
         ]);
     }
 
     /**
-     * ✅ Show publication detail
+     * Show publication detail
      */
     public function show($slug)
     {
@@ -510,16 +498,16 @@ class PublicationController extends Controller
             ->where('published_at', '<=', now())
             ->firstOrFail();
 
-        $latestVersion       = $publication->versions->first();
-        $fileSize            = null;
-        $fileSizeFormatted   = null;
+        $latestVersion     = $publication->versions->first();
+        $fileSize          = null;
+        $fileSizeFormatted = null;
 
         if ($latestVersion && $latestVersion->pdf_file_path) {
             $filePath = $this->cleanPath($latestVersion->pdf_file_path);
             if (Storage::disk('public')->exists($filePath)) {
-                $fileSizeBytes       = Storage::disk('public')->size($filePath);
-                $fileSize            = $fileSizeBytes;
-                $fileSizeFormatted   = $this->formatFileSize($fileSizeBytes);
+                $fileSizeBytes     = Storage::disk('public')->size($filePath);
+                $fileSize          = $fileSizeBytes;
+                $fileSizeFormatted = $this->formatFileSize($fileSizeBytes);
             }
         }
 
@@ -569,7 +557,7 @@ class PublicationController extends Controller
     }
 
     /**
-     * ✅ Toggle favorite publication
+     * Toggle favorite publication
      */
     public function toggleFavorite($slug)
     {
@@ -596,7 +584,7 @@ class PublicationController extends Controller
     }
 
     /**
-     * ✅ Toggle saved publication
+     * Toggle saved publication
      */
     public function toggleSaved($slug)
     {
@@ -623,7 +611,7 @@ class PublicationController extends Controller
     }
 
     /**
-     * ✅ Download publikasi
+     * Download publikasi
      */
     public function download($slug)
     {
@@ -664,7 +652,7 @@ class PublicationController extends Controller
     }
 
     /**
-     * ✅ READ/VIEW publikasi PDF di browser
+     * READ/VIEW publikasi PDF di browser
      */
     public function read($slug)
     {

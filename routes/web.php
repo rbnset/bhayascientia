@@ -101,7 +101,6 @@ Route::post('/onboarding/complete', [OnboardingController::class, 'complete'])
 /*
 |--------------------------------------------------------------------------
 | Static Pages
-| ✅ DIUBAH: Route::view → Route::get agar middleware web + session aktif
 |--------------------------------------------------------------------------
 */
 Route::get('/', fn() => view('pages.home'))->name('home');
@@ -233,7 +232,7 @@ Route::get('/submission-guidelines', [SubmissionGuidelineController::class, 'ind
 */
 Route::middleware(['auth', 'verified.otp'])->group(function () {
 
-    // ── Subscription ─────────────────────────────────────────────────────
+    // ── Subscription ──────────────────────────────────────────────────────
     Route::get('/langganan',             [SubscriptionController::class, 'index'])->name('subscription.index');
     Route::post('/langganan',            [SubscriptionController::class, 'store'])->name('subscription.store');
     Route::put('/langganan',             [SubscriptionController::class, 'update'])->name('subscription.update');
@@ -248,6 +247,22 @@ Route::middleware(['auth', 'verified.otp'])->group(function () {
     Route::delete('/profil-saya/delete-photo',  [ProfileController::class, 'deletePhoto'])->name('profil.deletePhoto');
     Route::post('/profil-saya/update-password', [ProfileController::class, 'updatePassword'])->name('profil.updatePassword');
 });
+
+/*
+|--------------------------------------------------------------------------
+| ✅ Product Tour — Session-based, simpan per halaman
+|--------------------------------------------------------------------------
+*/
+Route::post('/tour/{page}/complete', function (string $page) {
+    // Whitelist halaman yang diizinkan
+    $allowed = ['index', 'browse', 'search', 'library', 'trending', 'kategori'];
+
+    if (in_array($page, $allowed)) {
+        session(["has_seen_{$page}_tour" => true]);
+    }
+
+    return response()->json(['ok' => true]);
+})->name('tour.complete');
 
 /*
 |--------------------------------------------------------------------------

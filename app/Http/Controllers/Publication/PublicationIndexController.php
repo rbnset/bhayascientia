@@ -20,7 +20,9 @@ class PublicationIndexController extends Controller
 
     public function index(Request $request)
     {
-        // Load publication types WITH content (hasOne relationship)
+        // ✅ Cek tour — letakkan paling atas agar tersedia di semua return path
+        $showTour = ! session()->has('has_seen_index_tour');
+
         $publicationTypes = PublicationType::with('content')
             ->where('is_active', true)
             ->orderBy('name')
@@ -28,51 +30,48 @@ class PublicationIndexController extends Controller
 
         if ($publicationTypes->isEmpty()) {
             return view('pages.publication.index', [
-                'latestPublications' => collect(),
-                'publicationTypes' => $publicationTypes,
-                'selectedType' => null,
-                'bestAuthors' => collect(),
+                'latestPublications'  => collect(),
+                'publicationTypes'    => $publicationTypes,
+                'selectedType'        => null,
+                'bestAuthors'         => collect(),
                 'popularPublications' => collect(),
                 'featuredPublication' => null,
                 'featuredTypeContent' => null,
-                'categories' => collect(),
-                'years' => collect(),
-                'topKeywords' => collect(),
-                'filterSort' => 'latest',
-                'searchQuery' => null,
+                'categories'          => collect(),
+                'years'               => collect(),
+                'topKeywords'         => collect(),
+                'filterSort'          => 'latest',
+                'searchQuery'         => null,
+                'showTour'            => $showTour, // ✅ tambahkan di empty state juga
             ]);
         }
 
-        // Simple parameters: type & sort only
         $selectedType = $request->query('type', $publicationTypes->first()->slug);
-        $filterSort = $request->query('sort', 'latest');
-        $searchQuery = null;
+        $filterSort   = $request->query('sort', 'latest');
+        $searchQuery  = null;
 
         $typeExists = $publicationTypes->contains('slug', $selectedType);
         if (!$typeExists) {
             $selectedType = $publicationTypes->first()->slug;
         }
 
-        // Get current PublicationType object untuk ambil content
         $currentType = $publicationTypes->firstWhere('slug', $selectedType);
 
-        // Format Featured Type Content dari PublicationTypeContent
         $featuredTypeContent = null;
         if ($currentType && $currentType->content) {
             $featuredTypeContent = [
-                'title' => $currentType->content->title ?? $currentType->name,
-                'cover_url' => $this->getTypeContentCover($currentType->content),
-                'category' => $currentType->name,
-                'publication_type' => $currentType->name, // ✅ TAMBAHKAN
-                'type' => $currentType->name,
-                'abstract' => $currentType->content->description,
-                'download_count' => 0,
-                'detail_url' => '',
-                'slug' => $currentType->slug, // ✅ TAMBAHKAN untuk pattern ID
+                'title'            => $currentType->content->title ?? $currentType->name,
+                'cover_url'        => $this->getTypeContentCover($currentType->content),
+                'category'         => $currentType->name,
+                'publication_type' => $currentType->name,
+                'type'             => $currentType->name,
+                'abstract'         => $currentType->content->description,
+                'download_count'   => 0,
+                'detail_url'       => '',
+                'slug'             => $currentType->slug,
             ];
         }
 
-        // GET FILTER OPTIONS DATA for search modal
         $categories = Category::whereHas('publications', function ($query) use ($selectedType) {
             $query->where('status', 'published')
                 ->whereNotNull('published_at')
@@ -92,7 +91,6 @@ class PublicationIndexController extends Controller
             ->orderBy('name')
             ->get();
 
-        // Publication years untuk current type
         $years = Publication::selectRaw('YEAR(published_at) as year')
             ->where('status', 'published')
             ->whereNotNull('published_at')
@@ -104,7 +102,6 @@ class PublicationIndexController extends Controller
             ->orderByDesc('year')
             ->pluck('year');
 
-        // Top keywords untuk current type
         $topKeywords = Keyword::whereHas('publications', function ($query) use ($selectedType) {
             $query->where('status', 'published')
                 ->whereNotNull('published_at')
@@ -125,7 +122,6 @@ class PublicationIndexController extends Controller
             ->limit(20)
             ->get();
 
-        // SIMPLIFIED QUERY - Only type & sort filter
         $publicationsQuery = Publication::with('authors.user', 'publicationType', 'categories')
             ->where('status', 'published')
             ->whereNotNull('published_at')
@@ -134,7 +130,6 @@ class PublicationIndexController extends Controller
                 $query->where('slug', $selectedType)->where('is_active', true);
             });
 
-        // Apply sorting only
         switch ($filterSort) {
             case 'popular':
                 $publicationsQuery->withCount('downloadLogs')->orderByDesc('download_logs_count');
@@ -151,42 +146,33 @@ class PublicationIndexController extends Controller
                 break;
         }
 
-        // Get Latest Publications
-        $publications = $publicationsQuery->take(6)->get();
+        $publications       = $publicationsQuery->take(6)->get();
         $latestPublications = $publications->map(function ($pub) {
-            // ✅ Get publication type
-            $pubType = 'Publikasi';
-            if ($pub->publicationType) {
-                $pubType = $pub->publicationType->name;
-            }
+            $pubType = $pub->publicationType?->name ?? 'Publikasi';
 
             return [
-                'id' => $pub->id,
-                'title' => $pub->title,
-                'slug' => $pub->slug,
-                'cover_url' => $this->getCoverUrl($pub),
-                'category' => $pub->category_name,
-                'publication_type' => $pubType, // ✅ TAMBAHKAN
-                'formatted_date' => $pub->formatted_date,
-                'status' => $pub->publicationType->requires_review ? 'Peer-reviewed' : 'Terverifikasi',
-                'type' => $pubType, // Backward compatibility
-                'detail_url' => route('publikasi.show', $pub->slug),
-                'authors' => $pub->authors->take(6)->map(function ($author) {
-                    return [
-                        'id' => $author->id,
-                        'name' => $author->name,
-                        'photo' => $author->photo_url,
-                        'initials' => $author->initials,
-                    ];
-                })->toArray(),
-                'total_authors' => $pub->authors->count(),
+                'id'               => $pub->id,
+                'title'            => $pub->title,
+                'slug'             => $pub->slug,
+                'cover_url'        => $this->getCoverUrl($pub),
+                'category'         => $pub->category_name,
+                'publication_type' => $pubType,
+                'formatted_date'   => $pub->formatted_date,
+                'status'           => $pub->publicationType?->requires_review ? 'Peer-reviewed' : 'Terverifikasi',
+                'type'             => $pubType,
+                'detail_url'       => route('publikasi.show', $pub->slug),
+                'authors'          => $pub->authors->take(6)->map(fn($author) => [
+                    'id'       => $author->id,
+                    'name'     => $author->name,
+                    'photo'    => $author->photo_url,
+                    'initials' => $author->initials,
+                ])->toArray(),
+                'total_authors'    => $pub->authors->count(),
             ];
         })->toArray();
 
-        // GET BEST AUTHORS - LIMIT 6 BUKAN 12
         $bestAuthors = $this->getBestAuthorsAction->execute($selectedType, 6);
 
-        // Get Popular Publications
         $popularPubs = Publication::with('authors.user', 'publicationType', 'categories')
             ->withCount('downloadLogs')
             ->where('status', 'published')
@@ -199,60 +185,47 @@ class PublicationIndexController extends Controller
             ->take(7)
             ->get();
 
-        // ✅ Featured Publication
         $featuredPublication = null;
         if (!$featuredTypeContent && $popularPubs->first()) {
-            $featuredPub = $popularPubs->first();
-
-            // Get publication type
-            $featuredPubType = 'Publikasi';
-            if ($featuredPub->publicationType) {
-                $featuredPubType = $featuredPub->publicationType->name;
-            }
+            $featuredPub     = $popularPubs->first();
+            $featuredPubType = $featuredPub->publicationType?->name ?? 'Publikasi';
 
             $featuredPublication = [
-                'id' => $featuredPub->id,
-                'title' => $featuredPub->title,
-                'slug' => $featuredPub->slug,
-                'cover_url' => $this->getCoverUrl($featuredPub),
-                'category' => $featuredPub->category_name,
-                'publication_type' => $featuredPubType, // ✅ ADDED
-                'type' => $featuredPubType, // Backward compatibility
-                'abstract' => \Illuminate\Support\Str::limit($featuredPub->abstract, 120),
-                'download_count' => $featuredPub->download_logs_count,
-                'detail_url' => route('publikasi.show', $featuredPub->slug),
+                'id'               => $featuredPub->id,
+                'title'            => $featuredPub->title,
+                'slug'             => $featuredPub->slug,
+                'cover_url'        => $this->getCoverUrl($featuredPub),
+                'category'         => $featuredPub->category_name,
+                'publication_type' => $featuredPubType,
+                'type'             => $featuredPubType,
+                'abstract'         => \Illuminate\Support\Str::limit($featuredPub->abstract, 120),
+                'download_count'   => $featuredPub->download_logs_count,
+                'detail_url'       => route('publikasi.show', $featuredPub->slug),
             ];
         }
 
-        // ✅ Popular Publications List
-        $skipCount = $featuredTypeContent ? 0 : 1;
+        $skipCount          = $featuredTypeContent ? 0 : 1;
         $popularPublications = $popularPubs->skip($skipCount)->take(6)->map(function ($pub) {
-            // Get publication type
-            $pubType = 'Publikasi';
-            if ($pub->publicationType) {
-                $pubType = $pub->publicationType->name;
-            }
+            $pubType = $pub->publicationType?->name ?? 'Publikasi';
 
             return [
-                'id' => $pub->id,
-                'title' => $pub->title,
-                'slug' => $pub->slug,
-                'cover_url' => $this->getCoverUrl($pub),
-                'category' => $pub->category_name,
-                'publication_type' => $pubType, // ✅ ADDED
-                'formatted_date' => $pub->formatted_date,
-                'download_count' => $pub->download_logs_count,
-                'views_count' => $pub->views_count,
-                'detail_url' => route('publikasi.show', $pub->slug),
-                'authors' => $pub->authors->take(6)->map(function ($author) {
-                    return [
-                        'id' => $author->id,
-                        'name' => $author->name,
-                        'photo' => $author->photo_url,
-                        'initials' => $author->initials,
-                    ];
-                })->toArray(),
-                'total_authors' => $pub->authors->count(),
+                'id'               => $pub->id,
+                'title'            => $pub->title,
+                'slug'             => $pub->slug,
+                'cover_url'        => $this->getCoverUrl($pub),
+                'category'         => $pub->category_name,
+                'publication_type' => $pubType,
+                'formatted_date'   => $pub->formatted_date,
+                'download_count'   => $pub->download_logs_count,
+                'views_count'      => $pub->views_count ?? 0,
+                'detail_url'       => route('publikasi.show', $pub->slug),
+                'authors'          => $pub->authors->take(6)->map(fn($author) => [
+                    'id'       => $author->id,
+                    'name'     => $author->name,
+                    'photo'    => $author->photo_url,
+                    'initials' => $author->initials,
+                ])->toArray(),
+                'total_authors'    => $pub->authors->count(),
             ];
         });
 
@@ -268,7 +241,8 @@ class PublicationIndexController extends Controller
             'years',
             'topKeywords',
             'filterSort',
-            'searchQuery'
+            'searchQuery',
+            'showTour', // ✅ ini yang sebelumnya hilang!
         ));
     }
 }
