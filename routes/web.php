@@ -115,13 +115,14 @@ Route::middleware('guest')->group(function () {
     Route::get('/login',    [AuthController::class, 'showLoginForm'])->name('login');
     Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('register');
 
-    // Route::post('/login',    [AuthController::class, 'login'])
-    //     ->middleware('throttle:login')
-    //     ->name('login.post');
+    // ✅ Uncomment: login & register POST
+    Route::post('/login',    [AuthController::class, 'login'])
+        ->middleware('throttle:login')
+        ->name('login.post');
 
-    // Route::post('/register', [AuthController::class, 'register'])
-    //     ->middleware('throttle:register')
-    //     ->name('register.post');
+    Route::post('/register', [AuthController::class, 'register'])
+        ->middleware('throttle:register')
+        ->name('register.post');
 
     // Google OAuth
     Route::get('auth/google',          [GoogleAuthController::class, 'redirectToGoogle'])->name('auth.google');
@@ -184,6 +185,7 @@ Route::prefix('publikasi')->name('publikasi.')->group(function () {
     Route::get('/{slug}',          [PublicationController::class, 'show'])->name('show');
     Route::get('/{slug}/download', [PublicationController::class, 'download'])->name('download');
     Route::get('/{slug}/read',     [PublicationController::class, 'read'])->name('read');
+    Route::get('/{slug}/pdf',      [PublicationController::class, 'servePdf'])->name('pdf'); // ✅ BARU: serve PDF dengan header benar
 });
 
 // Favorite & Save (auth + verified)
@@ -254,7 +256,6 @@ Route::middleware(['auth', 'verified.otp'])->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::post('/tour/{page}/complete', function (string $page) {
-    // Whitelist halaman yang diizinkan
     $allowed = ['index', 'browse', 'search', 'library', 'trending', 'kategori'];
 
     if (in_array($page, $allowed)) {
