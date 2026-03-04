@@ -11,11 +11,6 @@ export default defineConfig({
         tailwindcss(),
     ],
     server: {
-        server: {
-            host: 'bhayascientia.test',
-            https: false,  // lokal HTTP
-            hmr: { host: 'bhayascientia.test' }
-        },
         watch: {
             ignored: ['**/storage/framework/views/**'],
         },
