@@ -661,9 +661,7 @@ class PublicationController extends Controller
             'publicationType',
             'categories',
             'keywords',
-            'versions' => function ($query) {
-                $query->orderBy('version_number', 'desc');
-            },
+            'versions' => fn($q) => $q->orderBy('version_number', 'desc'),
         ])
             ->where('slug', $slug)
             ->where('status', 'published')
@@ -699,7 +697,7 @@ class PublicationController extends Controller
             ]);
         }
 
-        // ✅ GANTI: Pakai route servePdf agar header PDF benar (fix 204 error)
+        // ✅ Pakai route servePdf → header application/pdf benar, no 204
         $pdfUrl = route('publikasi.pdf', $publication->slug);
 
         return view('pages.publication.read', [
@@ -707,20 +705,17 @@ class PublicationController extends Controller
             'pdfUrl'           => $pdfUrl,
             'category'         => $publication->categories->first()?->name ?? 'Umum',
             'publication_type' => $publication->publicationType->name ?? 'Publikasi',
-            'authors'          => $publication->authors->take(6)->map(function ($author) {
-                return [
-                    'id'       => $author->id,
-                    'name'     => $author->name,
-                    'initials' => $author->initials,
-                    'photo'    => $author->photo_url,
-                ];
-            }),
+            'authors'          => $publication->authors->take(6)->map(fn($author) => [
+                'id'       => $author->id,
+                'name'     => $author->name,
+                'initials' => $author->initials,
+                'photo'    => $author->photo_url,
+            ]),
         ]);
     }
 
     /**
-     * ✅ BARU: Serve PDF dengan header yang benar untuk PDF.js
-     * Menghindari response 204 dari Herd/Nginx lokal
+     * ✅ Serve PDF dengan header benar untuk PDF.js
      */
     public function servePdf($slug)
     {
@@ -734,18 +729,17 @@ class PublicationController extends Controller
             ->first();
 
         if (!$latestVersion || !$latestVersion->pdf_file_path) {
-            abort(404, 'File tidak ditemukan');
+            abort(404);
         }
 
         $filePath = $this->cleanPath($latestVersion->pdf_file_path);
 
         if (!Storage::disk('public')->exists($filePath)) {
-            abort(404, 'File tidak ditemukan di storage');
+            abort(404);
         }
 
         $fullPath = Storage::disk('public')->path($filePath);
 
-        // ✅ Serve dengan Content-Type PDF yang benar → fix 204 / ERR_CERT error
         return response()->file($fullPath, [
             'Content-Type'                => 'application/pdf',
             'Content-Disposition'         => 'inline; filename="' . basename($filePath) . '"',
