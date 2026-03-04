@@ -8,6 +8,10 @@
     /* ═══════════════════════════════════════
    BASE
 ═══════════════════════════════════════ */
+    * {
+        box-sizing: border-box;
+    }
+
     #pdf-viewer-container {
         height: calc(100vh - 56px);
         background: #2D2D2D;
@@ -49,6 +53,7 @@
     .progress-track {
         height: 3px;
         background: #3D3D3D;
+        flex-shrink: 0;
     }
 
     .progress-fill {
@@ -100,6 +105,7 @@
         display: block;
         box-shadow: 0 4px 32px rgba(0, 0, 0, 0.6);
         transition: filter 0.3s ease;
+        border-radius: 2px;
     }
 
     /* ═══════════════════════════════════════
@@ -116,7 +122,7 @@
     }
 
     /* ═══════════════════════════════════════
-   FULLSCREEN CONTAINER
+   FULLSCREEN
 ═══════════════════════════════════════ */
     #pdf-viewer-container.fullscreen-mode {
         position: fixed !important;
@@ -150,6 +156,7 @@
         align-items: center;
         gap: 0.5rem;
         transition: opacity 0.3s, transform 0.3s;
+        min-height: 52px;
     }
 
     #pdf-viewer-container.fullscreen-mode #pdf-fullscreen-toolbar {
@@ -163,92 +170,424 @@
     }
 
     /* ═══════════════════════════════════════
-   HINT OVERLAY (fullscreen)
-   Selalu tampil setiap masuk fullscreen
+   MOBILE TAP OVERLAY (fullscreen)
+   Muncul saat tap di fullscreen mobile
 ═══════════════════════════════════════ */
-    #fs-hint-overlay {
+    #mobile-tap-overlay {
         position: absolute;
         inset: 0;
-        background: rgba(0, 0, 0, 0.82);
-        z-index: 10002;
+        z-index: 10000;
         display: none;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 1.25rem;
+        gap: 0.75rem;
+        background: rgba(0, 0, 0, 0.72);
         padding: 1.5rem;
-        text-align: center;
     }
 
-    #fs-hint-overlay.show {
+    #mobile-tap-overlay.show {
         display: flex;
     }
 
-    .hint-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 0.75rem;
+    .tap-nav-row {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
         width: 100%;
-        max-width: 360px;
+        max-width: 320px;
     }
 
-    .hint-card {
-        background: rgba(255, 255, 255, 0.06);
-        border: 1px solid rgba(255, 107, 24, 0.3);
+    .tap-nav-btn {
+        width: 56px;
+        height: 56px;
+        flex-shrink: 0;
+        background: #2D2D2D;
+        border: 2px solid #FF6B18;
+        border-radius: 16px;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+
+    .tap-nav-btn:active {
+        background: #FF6B18;
+    }
+
+    .tap-nav-center {
+        flex: 1;
+        text-align: center;
+        background: #2D2D2D;
         border-radius: 12px;
-        padding: 0.75rem 0.5rem;
+        padding: 0.5rem;
+    }
+
+    .tap-nav-center strong {
+        font-size: 18px;
+        font-weight: 700;
+        color: white;
+        display: block;
+    }
+
+    .tap-nav-center small {
+        font-size: 11px;
+        color: #aaa;
+    }
+
+    .tap-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+        width: 100%;
+        max-width: 320px;
+    }
+
+    .tap-action-btn {
+        background: #2D2D2D;
+        border: 1px solid #3D3D3D;
+        border-radius: 12px;
+        padding: 0.65rem 0.5rem;
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 0.4rem;
-    }
-
-    .hint-card .hi {
-        font-size: 1.75rem;
-        line-height: 1;
-    }
-
-    .hint-card strong {
+        gap: 0.3rem;
+        color: white;
+        cursor: pointer;
         font-size: 12px;
+        font-weight: 600;
+        transition: background 0.15s;
+    }
+
+    .tap-action-btn:active {
+        background: #3D3D3D;
+    }
+
+    .tap-action-btn.danger {
+        border-color: rgba(239, 68, 68, 0.5);
+    }
+
+    .tap-action-btn.danger span {
+        color: #f87171;
+    }
+
+    .tap-action-btn.bookmarked {
+        background: rgba(255, 107, 24, 0.15);
+        border-color: #FF6B18;
+    }
+
+    .tap-action-btn.bookmarked span {
+        color: #FF6B18;
+    }
+
+    .tap-action-btn svg {
+        width: 22px;
+        height: 22px;
+    }
+
+    .tap-hint-tips {
+        display: flex;
+        gap: 1rem;
+        width: 100%;
+        max-width: 320px;
+    }
+
+    .tip-badge {
+        flex: 1;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 107, 24, 0.25);
+        border-radius: 10px;
+        padding: 0.5rem;
+        text-align: center;
+        font-size: 11px;
+        color: #aaa;
+    }
+
+    .tip-badge .tip-ic {
+        font-size: 1.3rem;
+        display: block;
+        margin-bottom: 2px;
+    }
+
+    .tap-close-row {
+        width: 100%;
+        max-width: 320px;
+    }
+
+    .tap-close-btn {
+        width: 100%;
+        padding: 0.6rem;
+        background: #3D3D3D;
+        border: none;
+        color: #aaa;
+        font-size: 13px;
+        font-weight: 600;
+        border-radius: 10px;
+        cursor: pointer;
+    }
+
+    .tap-close-btn:active {
+        background: #4D4D4D;
+    }
+
+    /* Mode selector inside tap overlay */
+    .tap-mode-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+        width: 100%;
+        max-width: 320px;
+    }
+
+    .tap-mode-card {
+        background: #2D2D2D;
+        border: 2px solid transparent;
+        border-radius: 10px;
+        padding: 0.55rem 0.4rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.25rem;
+        cursor: pointer;
+        transition: all 0.15s;
+        font-size: 12px;
+        font-weight: 600;
+        color: #ccc;
+    }
+
+    .tap-mode-card:active {
+        transform: scale(0.95);
+    }
+
+    .tap-mode-card.active {
+        border-color: #FF6B18;
+        background: rgba(255, 107, 24, 0.12);
+        color: #FF6B18;
+    }
+
+    .tap-mode-card .tmc-ic {
+        font-size: 1.25rem;
+    }
+
+    /* Zoom row inside tap overlay */
+    .tap-zoom-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        width: 100%;
+        max-width: 320px;
+    }
+
+    .tap-zoom-btn {
+        width: 44px;
+        height: 44px;
+        flex-shrink: 0;
+        background: #2D2D2D;
+        border-radius: 10px;
+        border: 1px solid #3D3D3D;
+        color: white;
+        font-size: 20px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .tap-zoom-btn:active {
+        background: #FF6B18;
+    }
+
+    .tap-zoom-track {
+        flex: 1;
+        height: 6px;
+        background: #3D3D3D;
+        border-radius: 99px;
+        overflow: hidden;
+    }
+
+    .tap-zoom-fill {
+        height: 100%;
+        background: #FF6B18;
+        transition: width 0.3s;
+        border-radius: 99px;
+    }
+
+    .tap-zoom-val {
+        min-width: 40px;
+        text-align: center;
+        font-size: 12px;
+        font-weight: 700;
         color: white;
     }
 
-    .hint-card p {
-        font-size: 11px;
-        color: #aaa;
-        margin: 0;
-        line-height: 1.3;
+    /* ═══════════════════════════════════════
+   SEARCH OVERLAY
+═══════════════════════════════════════ */
+    #search-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 20000;
+        display: none;
+        align-items: flex-start;
+        justify-content: center;
+        padding-top: 4rem;
     }
 
-    /* Second row — wider cards */
-    .hint-grid-2 {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 0.75rem;
+    #search-overlay.show {
+        display: flex;
+    }
+
+    #search-box {
+        background: #1A1A1A;
+        border: 2px solid #FF6B18;
+        border-radius: 16px;
+        padding: 1rem;
         width: 100%;
-        max-width: 360px;
+        max-width: 480px;
+        margin: 0 1rem;
+        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+    }
+
+    .search-input-row {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+
+    .search-input-row input {
+        flex: 1;
+        background: #2D2D2D;
+        border: 2px solid #3D3D3D;
+        color: white;
+        border-radius: 10px;
+        padding: 0.6rem 0.75rem;
+        font-size: 14px;
+        outline: none;
+    }
+
+    .search-input-row input:focus {
+        border-color: #FF6B18;
+    }
+
+    .search-input-row input::placeholder {
+        color: #666;
+    }
+
+    .search-nav-btn {
+        width: 36px;
+        height: 36px;
+        background: #2D2D2D;
+        border: 1px solid #3D3D3D;
+        border-radius: 8px;
+        color: white;
+        cursor: pointer;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        transition: background 0.15s;
+    }
+
+    .search-nav-btn:hover {
+        background: #FF6B18;
+        border-color: #FF6B18;
+    }
+
+    .search-close-btn {
+        width: 36px;
+        height: 36px;
+        background: #3D3D3D;
+        border: none;
+        border-radius: 8px;
+        color: #aaa;
+        cursor: pointer;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    #search-status {
+        font-size: 12px;
+        color: #aaa;
+        margin-top: 0.5rem;
+        min-height: 18px;
+    }
+
+    #search-results-list {
+        margin-top: 0.6rem;
+        max-height: 180px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+    }
+
+    .search-result-item {
+        background: #2D2D2D;
+        border-radius: 8px;
+        padding: 0.45rem 0.65rem;
+        cursor: pointer;
+        font-size: 12px;
+        color: #ccc;
+        transition: background 0.15s;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .search-result-item:hover {
+        background: rgba(255, 107, 24, 0.15);
+        color: white;
+    }
+
+    .search-result-item .pg {
+        font-size: 10px;
+        font-weight: 700;
+        color: #FF6B18;
+        flex-shrink: 0;
+        background: rgba(255, 107, 24, 0.15);
+        padding: 1px 6px;
+        border-radius: 4px;
+    }
+
+    .search-result-item .excerpt {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    mark {
+        background: rgba(255, 107, 24, 0.35);
+        color: white;
+        border-radius: 2px;
+        padding: 0 2px;
     }
 
     /* ═══════════════════════════════════════
-   MOBILE BOTTOM SHEET
-   Muncul saat tap canvas di fullscreen
+   BOTTOM SHEET (non-fullscreen)
 ═══════════════════════════════════════ */
-    #mobile-sheet-backdrop {
+    #sheet-backdrop {
         position: fixed;
         inset: 0;
         background: rgba(0, 0, 0, 0.5);
-        z-index: 10003;
+        z-index: 1001;
         display: none;
         opacity: 0;
         transition: opacity 0.25s;
     }
 
-    #mobile-sheet-backdrop.show {
+    #sheet-backdrop.show {
         display: block;
         opacity: 1;
     }
 
-    #mobile-bottom-sheet {
+    #bottom-sheet {
         position: fixed;
         bottom: 0;
         left: 0;
@@ -256,15 +595,17 @@
         background: #1A1A1A;
         border-top: 2px solid #FF6B18;
         border-radius: 20px 20px 0 0;
-        z-index: 10004;
-        padding: 0 1rem 1.5rem;
+        z-index: 1002;
+        padding: 0 1rem 2rem;
         transform: translateY(100%);
-        transition: transform 0.35s cubic-bezier(0.34, 1.2, 0.64, 1);
-        max-height: 90vh;
+        transition: transform 0.32s cubic-bezier(0.34, 1.1, 0.64, 1);
+        max-height: 85vh;
         overflow-y: auto;
+        /* ✅ Fix: tidak ada footer content bocor */
+        overscroll-behavior: contain;
     }
 
-    #mobile-bottom-sheet.show {
+    #bottom-sheet.show {
         transform: translateY(0);
     }
 
@@ -276,29 +617,24 @@
         margin: 0.75rem auto 1rem;
     }
 
-    .sheet-title {
-        font-size: 13px;
+    .sheet-label {
+        font-size: 11px;
         font-weight: 700;
-        color: #aaa;
+        color: #666;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-bottom: 0.6rem;
+        letter-spacing: 0.06em;
+        margin-bottom: 0.5rem;
+        display: block;
     }
 
-    /* Sheet sections */
-    .sheet-section {
-        margin-bottom: 1.25rem;
-    }
-
-    /* Page control inside sheet */
+    /* Page nav in sheet */
     .sheet-page-row {
         display: flex;
         align-items: center;
         gap: 0.75rem;
-        justify-content: center;
     }
 
-    .sheet-big-btn {
+    .sheet-page-btn {
         width: 48px;
         height: 48px;
         background: #2D2D2D;
@@ -308,13 +644,17 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 20px;
         cursor: pointer;
+        flex-shrink: 0;
         transition: background 0.15s;
     }
 
-    .sheet-big-btn:active {
+    .sheet-page-btn:active {
         background: #FF6B18;
+    }
+
+    .sheet-page-btn:disabled {
+        opacity: 0.35;
     }
 
     .sheet-page-display {
@@ -322,144 +662,84 @@
         text-align: center;
         background: #2D2D2D;
         border-radius: 10px;
-        padding: 0.6rem 0.5rem;
+        padding: 0.55rem;
     }
 
-    .sheet-page-display span {
-        font-size: 18px;
+    .sheet-page-display strong {
+        font-size: 20px;
         font-weight: 700;
         color: white;
+        display: block;
+        line-height: 1.2;
     }
 
     .sheet-page-display small {
-        display: block;
         font-size: 11px;
         color: #aaa;
     }
 
-    /* Mode selector inside sheet */
-    .mode-row {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 0.5rem;
-    }
-
-    .mode-card {
-        background: #2D2D2D;
-        border: 2px solid transparent;
-        border-radius: 12px;
-        padding: 0.65rem 0.5rem;
+    .sheet-jump-row {
         display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 0.35rem;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-
-    .mode-card:active {
-        transform: scale(0.96);
-    }
-
-    .mode-card.active {
-        border-color: #FF6B18;
-        background: rgba(255, 107, 24, 0.12);
-    }
-
-    .mode-card .mc-icon {
-        font-size: 1.4rem;
-    }
-
-    .mode-card span {
-        font-size: 12px;
-        font-weight: 600;
-        color: #ccc;
-    }
-
-    .mode-card.active span {
-        color: #FF6B18;
-    }
-
-    /* Action rows */
-    .sheet-action-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
         gap: 0.5rem;
+        margin-top: 0.5rem;
     }
 
-    .sheet-action-btn {
+    .sheet-jump-input {
+        flex: 1;
         background: #2D2D2D;
-        border: none;
-        border-radius: 12px;
-        padding: 0.75rem 0.5rem;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 0.35rem;
+        border: 2px solid #3D3D3D;
         color: white;
-        cursor: pointer;
-        transition: background 0.15s;
-    }
-
-    .sheet-action-btn:active {
-        background: #3D3D3D;
-    }
-
-    .sheet-action-btn svg {
-        width: 22px;
-        height: 22px;
-    }
-
-    .sheet-action-btn span {
-        font-size: 12px;
+        border-radius: 10px;
+        padding: 0.5rem 0.75rem;
+        font-size: 14px;
         font-weight: 600;
+        outline: none;
+        text-align: center;
     }
 
-    .sheet-action-btn.danger {
-        border: 1px solid rgba(239, 68, 68, 0.4);
+    .sheet-jump-input:focus {
+        border-color: #FF6B18;
     }
 
-    .sheet-action-btn.danger:active {
-        background: rgba(239, 68, 68, 0.15);
+    .sheet-jump-go {
+        padding: 0.5rem 1rem;
+        background: #FF6B18;
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
     }
 
-    .sheet-action-btn.bookmarked {
-        background: rgba(255, 107, 24, 0.2);
-        border: 1px solid #FF6B18;
-    }
-
-    .sheet-action-btn.bookmarked span {
-        color: #FF6B18;
-    }
-
-    /* Zoom row */
-    .zoom-row {
+    /* Zoom in sheet */
+    .sheet-zoom-row {
         display: flex;
         align-items: center;
         gap: 0.5rem;
     }
 
-    .zoom-row-btn {
+    .sheet-zoom-btn {
         width: 44px;
         height: 44px;
-        flex-shrink: 0;
         background: #2D2D2D;
         border-radius: 10px;
-        border: none;
+        border: 1px solid #3D3D3D;
         color: white;
-        font-size: 20px;
+        font-size: 22px;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
+        flex-shrink: 0;
         transition: background 0.15s;
     }
 
-    .zoom-row-btn:active {
+    .sheet-zoom-btn:active {
         background: #FF6B18;
     }
 
-    .zoom-bar-wrap {
+    .sheet-zoom-track {
         flex: 1;
         height: 6px;
         background: #3D3D3D;
@@ -467,29 +747,126 @@
         overflow: hidden;
     }
 
-    .zoom-bar-fill {
+    .sheet-zoom-fill {
         height: 100%;
         background: #FF6B18;
         transition: width 0.3s;
         border-radius: 99px;
     }
 
-    .zoom-val {
-        min-width: 44px;
+    .sheet-zoom-val {
+        min-width: 42px;
         text-align: center;
         font-size: 13px;
         font-weight: 700;
         color: white;
     }
 
+    /* Mode in sheet */
+    .sheet-mode-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+    }
+
+    .sheet-mode-card {
+        background: #2D2D2D;
+        border: 2px solid transparent;
+        border-radius: 12px;
+        padding: 0.65rem 0.4rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.3rem;
+        cursor: pointer;
+        transition: all 0.15s;
+        font-size: 12px;
+        font-weight: 600;
+        color: #ccc;
+        text-align: center;
+    }
+
+    .sheet-mode-card:active {
+        transform: scale(0.95);
+    }
+
+    .sheet-mode-card .smc-ic {
+        font-size: 1.5rem;
+    }
+
+    .sheet-mode-card.active {
+        border-color: #FF6B18;
+        background: rgba(255, 107, 24, 0.12);
+        color: #FF6B18;
+    }
+
+    /* Actions in sheet */
+    .sheet-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+    }
+
+    .sheet-act-btn {
+        background: #2D2D2D;
+        border: 1px solid #3D3D3D;
+        border-radius: 12px;
+        padding: 0.65rem 0.5rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.3rem;
+        color: white;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 600;
+        transition: background 0.15s;
+    }
+
+    .sheet-act-btn svg {
+        width: 22px;
+        height: 22px;
+    }
+
+    .sheet-act-btn:active {
+        background: #3D3D3D;
+    }
+
+    .sheet-act-btn.bookmarked {
+        background: rgba(255, 107, 24, 0.15);
+        border-color: #FF6B18;
+    }
+
+    .sheet-act-btn.bookmarked span {
+        color: #FF6B18;
+    }
+
+    .sheet-close {
+        width: 100%;
+        padding: 0.65rem;
+        background: #2D2D2D;
+        border: none;
+        color: #aaa;
+        font-size: 13px;
+        font-weight: 600;
+        border-radius: 12px;
+        cursor: pointer;
+        margin-top: 0.25rem;
+    }
+
+    /* Section spacing */
+    .sheet-sec {
+        margin-bottom: 1.25rem;
+    }
+
     /* ═══════════════════════════════════════
-   MOBILE FAB (non-fullscreen)
+   MOBILE FAB
 ═══════════════════════════════════════ */
     #mobile-fab {
         position: fixed;
         bottom: 1.25rem;
         right: 1.25rem;
-        z-index: 1000;
+        z-index: 900;
         display: none;
     }
 
@@ -498,69 +875,18 @@
         height: 52px;
         background: #FF6B18;
         border-radius: 50%;
+        border: none;
+        color: white;
         display: flex;
         align-items: center;
         justify-content: center;
         box-shadow: 0 4px 20px rgba(255, 107, 24, 0.5);
         cursor: pointer;
-        border: none;
-        color: white;
         transition: transform 0.2s;
     }
 
     #mobile-fab-btn:active {
         transform: scale(0.9);
-    }
-
-    #mobile-fab-menu {
-        position: absolute;
-        bottom: 60px;
-        right: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-        align-items: flex-end;
-        opacity: 0;
-        pointer-events: none;
-        transform: translateY(10px);
-        transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
-
-    #mobile-fab-menu.open {
-        opacity: 1;
-        pointer-events: auto;
-        transform: translateY(0);
-    }
-
-    .fab-item {
-        display: flex;
-        align-items: center;
-        gap: 0.6rem;
-        background: #1A1A1A;
-        border: 1px solid #3D3D3D;
-        color: white;
-        padding: 0.5rem 0.75rem 0.5rem 0.6rem;
-        border-radius: 99px;
-        font-size: 13px;
-        font-weight: 600;
-        cursor: pointer;
-        white-space: nowrap;
-        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
-        transition: background 0.15s;
-    }
-
-    .fab-item .fab-icon {
-        width: 32px;
-        height: 32px;
-        background: #2D2D2D;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .fab-item.bkmk-on .fab-icon {
-        background: #FF6B18;
     }
 
     /* ═══════════════════════════════════════
@@ -583,7 +909,6 @@
         gap: 0.6rem;
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
         opacity: 0;
-        white-space: nowrap;
         max-width: calc(100vw - 2rem);
         transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
@@ -602,7 +927,7 @@
         transition: background 0.3s;
     }
 
-    .pdf-control-btn {
+    .pcb {
         transition: all 0.2s;
         cursor: pointer;
         border-radius: 8px;
@@ -610,24 +935,20 @@
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
+        border: none;
     }
 
-    .pdf-control-btn:hover:not(:disabled) {
+    .pcb:hover:not(:disabled) {
         background: #FF6B18 !important;
-        transform: translateY(-1px);
         box-shadow: 0 4px 12px rgba(255, 107, 24, 0.35);
     }
 
-    .pdf-control-btn:active:not(:disabled) {
-        transform: translateY(0);
-    }
-
-    .pdf-control-btn:disabled {
+    .pcb:disabled {
         opacity: 0.35;
         cursor: not-allowed;
     }
 
-    .pdf-control-btn.is-bookmarked {
+    .pcb.is-bkmk {
         background: #FF6B18 !important;
     }
 
@@ -644,7 +965,7 @@
         box-shadow: 0 0 0 3px rgba(255, 107, 24, 0.15);
     }
 
-    /* Mode dropdown (desktop) */
+    /* Mode dropdown */
     #mode-dropdown {
         position: absolute;
         top: calc(100% + 6px);
@@ -711,11 +1032,15 @@
         font-size: 11px;
         padding: 5px 14px;
         border-radius: 99px;
-        white-space: nowrap;
         z-index: 10002;
         pointer-events: none;
         opacity: 1;
         transition: opacity 0.5s;
+        white-space: nowrap;
+    }
+
+    #desktop-hint.hidden {
+        display: none;
     }
 
     #desktop-hint.fade-out {
@@ -760,7 +1085,7 @@
     </span>
 
     <div class="flex items-center gap-1 bg-[#3D3D3D] rounded-lg px-2 py-1 flex-shrink-0">
-        <button id="fs-prev-page" class="pdf-control-btn p-1.5 bg-[#4D4D4D] text-white">
+        <button id="fs-prev" class="pcb p-1.5 bg-[#4D4D4D] text-white">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
             </svg>
@@ -768,7 +1093,7 @@
         <span class="px-1 text-xs font-semibold text-white whitespace-nowrap">
             <span id="fs-page-num">1</span>/<span id="fs-page-count">-</span>
         </span>
-        <button id="fs-next-page" class="pdf-control-btn p-1.5 bg-[#4D4D4D] text-white">
+        <button id="fs-next" class="pcb p-1.5 bg-[#4D4D4D] text-white">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
             </svg>
@@ -776,38 +1101,32 @@
     </div>
 
     <div class="flex items-center flex-shrink-0 gap-1 desktop-only">
-        <button id="fs-zoom-out" class="pdf-control-btn p-1.5 bg-[#3D3D3D] text-white">
+        <button id="fs-zoom-out" class="pcb p-1.5 bg-[#3D3D3D] text-white">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" />
             </svg>
         </button>
         <span id="fs-zoom-level" class="text-xs font-semibold text-center text-white w-9">100%</span>
-        <button id="fs-zoom-in" class="pdf-control-btn p-1.5 bg-[#3D3D3D] text-white">
+        <button id="fs-zoom-in" class="pcb p-1.5 bg-[#3D3D3D] text-white">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
             </svg>
         </button>
+        <button id="fs-bookmark-btn" class="pcb p-1.5 bg-[#3D3D3D] text-white">
+            <svg id="fs-bkmk-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+            </svg>
+        </button>
     </div>
 
-    <button id="fs-bookmark-btn" class="pdf-control-btn p-1.5 bg-[#3D3D3D] text-white desktop-only flex-shrink-0">
-        <svg id="fs-bkmk-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-        </svg>
-    </button>
+    {{-- Mobile: tap hint --}}
+    <span class="mobile-only text-[11px] text-gray-400 flex-1 text-center">Tap layar untuk menu</span>
 
-    {{-- Mobile: tap hint button --}}
-    <button id="fs-mobile-menu-btn" class="mobile-only pdf-control-btn p-1.5 bg-[#3D3D3D] text-white flex-shrink-0"
-        title="Menu">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-    </button>
-
-    <button id="exit-fullscreen-btn"
-        class="pdf-control-btn flex items-center gap-1.5 px-2.5 py-1.5 bg-red-600 hover:!bg-red-700 text-white text-xs font-bold flex-shrink-0">
+    <button id="exit-fs-btn"
+        class="pcb flex items-center gap-1 px-2.5 py-1.5 bg-red-600 hover:!bg-red-700 text-white text-xs font-bold flex-shrink-0">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
         </svg>
@@ -825,7 +1144,7 @@
         <div class="flex items-center gap-1.5 sm:gap-2">
 
             <a href="{{ route('publikasi.show', $publication->slug) }}"
-                class="pdf-control-btn p-2 bg-[#3D3D3D] text-white flex items-center gap-1.5 flex-shrink-0">
+                class="pcb p-2 bg-[#3D3D3D] text-white flex items-center gap-1.5 flex-shrink-0">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                 </svg>
@@ -838,50 +1157,57 @@
             </div>
 
             <div class="flex items-center gap-1 bg-[#3D3D3D] rounded-lg px-2 py-1.5 flex-shrink-0">
-                <button id="prev-page" class="pdf-control-btn p-1 bg-[#4D4D4D] text-white">
+                <button id="prev-page" class="pcb p-1 bg-[#4D4D4D] text-white">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                     </svg>
                 </button>
-                <div class="flex items-center gap-1 text-white">
+                <div class="flex items-center gap-1">
                     <input type="number" id="page-num-input"
                         class="page-input w-9 sm:w-11 text-center px-0.5 py-0.5 font-semibold text-xs" value="1"
                         min="1">
                     <span class="text-xs text-gray-400">/</span>
-                    <span id="page-count" class="text-xs font-semibold">-</span>
+                    <span id="page-count" class="text-xs font-semibold text-white">-</span>
                 </div>
-                <button id="next-page" class="pdf-control-btn p-1 bg-[#4D4D4D] text-white">
+                <button id="next-page" class="pcb p-1 bg-[#4D4D4D] text-white">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                     </svg>
                 </button>
             </div>
 
-            {{-- Desktop controls --}}
+            {{-- Desktop Controls --}}
             <div class="desktop-only flex items-center gap-1.5">
-                <button id="zoom-out" class="pdf-control-btn p-2 bg-[#3D3D3D] text-white">
+                <button id="zoom-out" class="pcb p-2 bg-[#3D3D3D] text-white">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" />
                     </svg>
                 </button>
                 <span id="zoom-level" class="text-xs font-semibold text-center text-white w-9">100%</span>
-                <button id="zoom-in" class="pdf-control-btn p-2 bg-[#3D3D3D] text-white">
+                <button id="zoom-in" class="pcb p-2 bg-[#3D3D3D] text-white">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
                     </svg>
                 </button>
 
-                <button id="bookmark-btn" class="pdf-control-btn p-2 bg-[#3D3D3D] text-white" title="Tandai (B)">
+                <button id="bookmark-btn" class="pcb p-2 bg-[#3D3D3D] text-white" title="Tandai (B)">
                     <svg id="bkmk-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                     </svg>
                 </button>
 
+                <button id="search-btn" class="pcb p-2 bg-[#3D3D3D] text-white" title="Cari (Ctrl+F)">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </button>
+
                 <div class="relative">
-                    <button id="mode-btn" class="pdf-control-btn p-2 bg-[#3D3D3D] text-white" title="Mode Baca">
+                    <button id="mode-btn" class="pcb p-2 bg-[#3D3D3D] text-white" title="Mode Baca">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
@@ -894,7 +1220,7 @@
                     </div>
                 </div>
 
-                <button id="fullscreen-btn" class="pdf-control-btn p-2 bg-[#3D3D3D] text-white" title="Layar Penuh (F)">
+                <button id="fullscreen-btn" class="pcb p-2 bg-[#3D3D3D] text-white" title="Layar Penuh (F)">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
@@ -903,7 +1229,7 @@
             </div>
 
             <a href="{{ route('publikasi.download', $publication->slug) }}"
-                class="pdf-control-btn p-2 sm:px-3 bg-[#FF6B18] hover:!bg-[#E64627] text-white flex items-center gap-1.5 flex-shrink-0">
+                class="pcb p-2 sm:px-3 bg-[#FF6B18] hover:!bg-[#E64627] text-white flex items-center gap-1.5 flex-shrink-0">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -924,198 +1250,211 @@
         <p class="text-sm font-semibold text-white">Memuat dokumen...</p>
         <p class="text-xs text-gray-400">Harap tunggu sebentar</p>
     </div>
-
     <div id="pdf-canvas-wrapper" class="hidden">
         <canvas id="pdf-canvas"></canvas>
     </div>
-
     <iframe id="pdf-iframe" title="PDF Viewer"></iframe>
+    <div id="desktop-hint" class="hidden">← → halaman &nbsp;·&nbsp; +/− zoom &nbsp;·&nbsp; B tandai &nbsp;·&nbsp; Ctrl+F
+        cari &nbsp;·&nbsp; Esc keluar</div>
 
-    {{-- Desktop hint --}}
-    <div id="desktop-hint" class="hidden">
-        ← → halaman &nbsp;·&nbsp; +/− zoom &nbsp;·&nbsp; B tandai &nbsp;·&nbsp; Esc keluar
-    </div>
+    {{-- ✅ MOBILE TAP OVERLAY — muncul setiap tap canvas di fullscreen --}}
+    <div id="mobile-tap-overlay">
+        {{-- Judul --}}
+        <p class="text-white font-bold text-sm text-center truncate w-full max-w-xs mb-0.5">
+            {{ Str::limit($publication->title, 36) }}
+        </p>
 
-    {{-- ══ FULLSCREEN HINT OVERLAY (setiap masuk fullscreen) ══ --}}
-    <div id="fs-hint-overlay">
-        <p class="text-base font-bold text-white">Cara Navigasi Fullscreen</p>
-
-        {{-- Mobile gestures --}}
-        <div class="hint-grid mobile-only">
-            <div class="hint-card">
-                <div class="hi">👉</div><strong>Swipe</strong>
-                <p>Ganti halaman</p>
-            </div>
-            <div class="hint-card">
-                <div class="hi">🤏</div><strong>Pinch</strong>
-                <p>Zoom in/out</p>
-            </div>
-            <div class="hint-card">
-                <div class="hi">👆</div><strong>Tap</strong>
-                <p>Tampilkan toolbar</p>
-            </div>
-        </div>
-        <div class="hint-grid-2 mobile-only">
-            <div class="hint-card">
-                <div class="hi">☰</div><strong>Menu</strong>
-                <p>Semua fitur: tandai, mode, zoom, keluar</p>
-            </div>
-            <div class="hint-card">
-                <div class="hi">✕</div><strong>Keluar</strong>
-                <p>Tombol merah di toolbar atas</p>
-            </div>
-        </div>
-
-        {{-- Desktop shortcuts --}}
-        <div class="hint-grid desktop-only">
-            <div class="hint-card">
-                <div class="hi">←→</div><strong>Halaman</strong>
-                <p>Arrow keys</p>
-            </div>
-            <div class="hint-card">
-                <div class="hi">+−</div><strong>Zoom</strong>
-                <p>Tombol +/−</p>
-            </div>
-            <div class="hint-card">
-                <div class="hi">B</div><strong>Tandai</strong>
-                <p>Keyboard B</p>
-            </div>
-        </div>
-        <div class="hint-grid-2 desktop-only">
-            <div class="hint-card">
-                <div class="hi">F</div><strong>Fullscreen</strong>
-                <p>Toggle fullscreen</p>
-            </div>
-            <div class="hint-card">
-                <div class="hi">Esc</div><strong>Keluar</strong>
-                <p>Keluar fullscreen</p>
-            </div>
-        </div>
-
-        <button id="close-hint-btn" class="mt-1 px-8 py-2.5 bg-[#FF6B18] text-white text-sm font-bold rounded-xl">
-            Mengerti, Mulai Baca!
-        </button>
-    </div>
-</div>
-
-{{-- ══════════ MOBILE BOTTOM SHEET ══════════ --}}
-<div id="mobile-sheet-backdrop"></div>
-<div id="mobile-bottom-sheet">
-    <div class="sheet-handle"></div>
-
-    {{-- Title info --}}
-    <p class="mb-3 text-sm font-bold text-white truncate">{{ Str::limit($publication->title, 45) }}</p>
-
-    {{-- Halaman --}}
-    <div class="sheet-section">
-        <p class="sheet-title">Navigasi Halaman</p>
-        <div class="sheet-page-row">
-            <button class="sheet-big-btn" id="sheet-prev">
-                <svg class="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        {{-- Navigasi halaman --}}
+        <div class="tap-nav-row">
+            <button class="tap-nav-btn" id="tap-prev">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
                 </svg>
             </button>
-            <div class="sheet-page-display">
-                <span id="sheet-page-num">1</span>
-                <small>dari <span id="sheet-page-total">-</span> halaman</small>
+            <div class="tap-nav-center">
+                <strong id="tap-page-num">1</strong>
+                <small>dari <span id="tap-page-total">-</span> halaman</small>
             </div>
-            <button class="sheet-big-btn" id="sheet-next">
-                <svg class="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button class="tap-nav-btn" id="tap-next">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
                 </svg>
             </button>
         </div>
-        <div class="flex items-center gap-2 mt-2">
-            <span class="flex-shrink-0 text-xs text-gray-400">Lompat ke hal:</span>
-            <input type="number" id="sheet-jump-input" class="flex-1 py-1 text-sm font-bold text-center page-input"
-                placeholder="No. halaman" min="1">
-            <button id="sheet-jump-go"
-                class="px-3 py-1.5 bg-[#FF6B18] text-white text-xs font-bold rounded-lg flex-shrink-0">Go</button>
+
+        {{-- Zoom --}}
+        <div class="tap-zoom-row">
+            <button class="tap-zoom-btn" id="tap-zoom-out">−</button>
+            <div class="tap-zoom-track">
+                <div id="tap-zoom-fill" class="tap-zoom-fill" style="width:25%"></div>
+            </div>
+            <span id="tap-zoom-val" class="tap-zoom-val">100%</span>
+            <button class="tap-zoom-btn" id="tap-zoom-in">+</button>
+        </div>
+
+        {{-- Mode baca —— 3 kartu lengkap --}}
+        <div class="tap-mode-row">
+            <div class="tap-mode-card active" data-tap-mode="normal">
+                <div class="tmc-ic">☀️</div>Normal
+            </div>
+            <div class="tap-mode-card" data-tap-mode="sepia">
+                <div class="tmc-ic">📜</div>Sepia
+            </div>
+            <div class="tap-mode-card" data-tap-mode="night">
+                <div class="tmc-ic">🌙</div>Night
+            </div>
+        </div>
+
+        {{-- Aksi --}}
+        <div class="tap-actions">
+            <button id="tap-bookmark-btn" class="tap-action-btn">
+                <svg id="tap-bkmk-icon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                </svg>
+                <span id="tap-bkmk-label">Tandai Halaman</span>
+            </button>
+            <button id="tap-exit-btn" class="tap-action-btn danger">
+                <svg class="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                <span>Keluar Fullscreen</span>
+            </button>
+        </div>
+
+        {{-- Tips gestures --}}
+        <div class="tap-hint-tips">
+            <div class="tip-badge"><span class="tip-ic">👉</span>Swipe ganti halaman</div>
+            <div class="tip-badge"><span class="tip-ic">🤏</span>Pinch untuk zoom</div>
+            <div class="tip-badge"><span class="tip-ic">👆</span>Tap untuk menu</div>
+        </div>
+
+        <div class="tap-close-row">
+            <button class="tap-close-btn" id="tap-close-overlay">Tutup & Lanjut Baca</button>
+        </div>
+    </div>
+</div>
+
+{{-- ══════════ BOTTOM SHEET (non-fullscreen mobile) ══════════ --}}
+<div id="sheet-backdrop"></div>
+<div id="bottom-sheet">
+    <div class="sheet-handle"></div>
+    <p class="mb-3 text-sm font-bold text-white truncate">{{ Str::limit($publication->title, 42) }}</p>
+
+    <div class="sheet-sec">
+        <span class="sheet-label">Navigasi Halaman</span>
+        <div class="sheet-page-row">
+            <button class="sheet-page-btn" id="sheet-prev">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
+                </svg>
+            </button>
+            <div class="sheet-page-display">
+                <strong id="sheet-page-num">1</strong>
+                <small>dari <span id="sheet-total">-</span> halaman</small>
+            </div>
+            <button class="sheet-page-btn" id="sheet-next">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
+                </svg>
+            </button>
+        </div>
+        <div class="sheet-jump-row">
+            <input type="number" id="sheet-jump" class="sheet-jump-input" placeholder="Lompat ke halaman..." min="1">
+            <button id="sheet-jump-go" class="sheet-jump-go">Go</button>
         </div>
     </div>
 
-    {{-- Zoom --}}
-    <div class="sheet-section">
-        <p class="sheet-title">Zoom</p>
-        <div class="zoom-row">
-            <button class="zoom-row-btn" id="sheet-zoom-out">−</button>
-            <div class="zoom-bar-wrap">
-                <div id="sheet-zoom-bar" class="zoom-bar-fill" style="width:25%"></div>
+    <div class="sheet-sec">
+        <span class="sheet-label">Zoom</span>
+        <div class="sheet-zoom-row">
+            <button class="sheet-zoom-btn" id="sheet-zoom-out">−</button>
+            <div class="sheet-zoom-track">
+                <div id="sheet-zoom-fill" class="sheet-zoom-fill" style="width:25%"></div>
             </div>
-            <span id="sheet-zoom-val" class="zoom-val">100%</span>
-            <button class="zoom-row-btn" id="sheet-zoom-in">+</button>
+            <span id="sheet-zoom-val" class="sheet-zoom-val">100%</span>
+            <button class="sheet-zoom-btn" id="sheet-zoom-in">+</button>
         </div>
     </div>
 
-    {{-- Mode baca --}}
-    <div class="sheet-section">
-        <p class="sheet-title">Mode Baca</p>
-        <div class="mode-row">
-            <div class="mode-card active" data-sheet-mode="normal">
-                <div class="mc-icon">☀️</div><span>Normal</span>
+    <div class="sheet-sec">
+        <span class="sheet-label">Mode Baca</span>
+        <div class="sheet-mode-row">
+            <div class="sheet-mode-card active" data-sheet-mode="normal">
+                <div class="smc-ic">☀️</div><span>Normal</span>
             </div>
-            <div class="mode-card" data-sheet-mode="sepia">
-                <div class="mc-icon">📜</div><span>Sepia</span>
+            <div class="sheet-mode-card" data-sheet-mode="sepia">
+                <div class="smc-ic">📜</div><span>Sepia</span>
             </div>
-            <div class="mode-card" data-sheet-mode="night">
-                <div class="mc-icon">🌙</div><span>Night</span>
+            <div class="sheet-mode-card" data-sheet-mode="night">
+                <div class="smc-ic">🌙</div><span>Night</span>
             </div>
         </div>
     </div>
 
-    {{-- Aksi --}}
-    <div class="sheet-section">
-        <p class="sheet-title">Aksi</p>
-        <div class="sheet-action-row">
-            <button id="sheet-bookmark-btn" class="sheet-action-btn">
-                <svg id="sheet-bkmk-icon" class="text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="sheet-sec">
+        <span class="sheet-label">Aksi</span>
+        <div class="sheet-actions">
+            <button id="sheet-bookmark-btn" class="sheet-act-btn">
+                <svg id="sheet-bkmk-icon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                 </svg>
                 <span id="sheet-bkmk-label">Tandai Halaman</span>
             </button>
-            <button id="sheet-fullscreen-btn" class="sheet-action-btn">
-                <svg class="text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button id="sheet-fs-btn" class="sheet-act-btn">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
                 </svg>
                 <span>Layar Penuh</span>
             </button>
-            <button id="sheet-exit-btn" class="sheet-action-btn danger" style="display:none">
-                <svg class="text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            <button id="sheet-search-btn" class="sheet-act-btn">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
-                <span class="text-red-400">Keluar Fullscreen</span>
+                <span>Cari Kata</span>
             </button>
+            <a href="{{ route('publikasi.download', $publication->slug) }}" class="sheet-act-btn"
+                style="text-decoration:none">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                <span>Download</span>
+            </a>
         </div>
     </div>
 
-    <button id="sheet-close-btn" class="w-full py-2.5 bg-[#2D2D2D] text-gray-400 text-sm font-semibold rounded-xl">
-        Tutup
+    <button id="sheet-close" class="sheet-close">Tutup</button>
+</div>
+
+{{-- ══════════ MOBILE FAB ══════════ --}}
+<div id="mobile-fab">
+    <button id="mobile-fab-btn" aria-label="Menu">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" />
+        </svg>
     </button>
 </div>
 
-{{-- ══════════ MOBILE FAB (non-fullscreen) ══════════ --}}
-<div id="mobile-fab">
-    <div id="mobile-fab-menu">
-        <button class="fab-item" id="fab-sheet-open">
-            <div class="fab-icon">
-                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" />
+{{-- ══════════ SEARCH OVERLAY ══════════ --}}
+<div id="search-overlay">
+    <div id="search-box">
+        <div class="search-input-row">
+            <input type="text" id="search-input" placeholder="Cari kata atau kalimat..." autocomplete="off">
+            <button class="search-nav-btn" id="search-prev-btn" title="Sebelumnya">↑</button>
+            <button class="search-nav-btn" id="search-next-btn" title="Berikutnya">↓</button>
+            <button class="search-close-btn" id="search-close-btn">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
-            </div>
-            <span>Fitur & Pengaturan</span>
-        </button>
+            </button>
+        </div>
+        <div id="search-status">Ketik untuk mencari...</div>
+        <div id="search-results-list"></div>
     </div>
-    <button id="mobile-fab-btn" aria-label="Menu">
-        <svg id="fab-open-ic" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-        </svg>
-        <svg id="fab-close-ic" class="hidden w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-    </button>
 </div>
 
 {{-- ══════════ RESUME TOAST ══════════ --}}
@@ -1139,17 +1478,11 @@
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 pdfjsLib.verbosity = 0;
 
-// ── Config ──────────────────────────────────────────────────────────
 const pdfUrl  = @json($pdfUrl);
 const slug    = @json($publication->slug);
-const SK = {
-    page: `bp_${slug}`,
-    zoom: `bz_${slug}`,
-    mode: `bm_${slug}`,
-    bkmk: `bb_${slug}`,
-};
+const SK = { page:`bp_${slug}`, zoom:`bz_${slug}`, mode:`bm_${slug}`, bkmk:`bb_${slug}` };
 
-// ── State ───────────────────────────────────────────────────────────
+// ── State ────────────────────────────────────────────────────────────
 let pdfDoc         = null;
 let pageNum        = 1;
 let pageRendering  = false;
@@ -1160,28 +1493,25 @@ let isFullscreen   = false;
 let currentMode    = localStorage.getItem(SK.mode) || 'normal';
 let bookmarkedPage = parseInt(localStorage.getItem(SK.bkmk)) || null;
 let savedPage      = parseInt(localStorage.getItem(SK.page)) || 1;
-let sheetOpen      = false;
-let fabMenuOpen    = false;
 let toolbarTimer   = null;
+let tapOverlayOpen = false;
+let sheetIsOpen    = false;
+let searchResults  = [];
+let searchIndex    = 0;
 const isMobile     = () => window.innerWidth < 768;
 
-// ── DOM ─────────────────────────────────────────────────────────────
-const canvas      = document.getElementById('pdf-canvas');
-const ctx         = canvas.getContext('2d');
-const loadingEl   = document.getElementById('pdf-loading');
-const canvasWrap  = document.getElementById('pdf-canvas-wrapper');
-const viewerEl    = document.getElementById('pdf-viewer-container');
-const iframeEl    = document.getElementById('pdf-iframe');
-const progBar     = document.getElementById('reading-progress-bar');
-const fsProgBar   = document.getElementById('fs-progress-bar');
-const progText    = document.getElementById('progress-text');
-const fsTbEl      = document.getElementById('pdf-fullscreen-toolbar');
-const hintOverlay = document.getElementById('fs-hint-overlay');
-const deskHint    = document.getElementById('desktop-hint');
-const backdrop    = document.getElementById('mobile-sheet-backdrop');
-const sheet       = document.getElementById('mobile-bottom-sheet');
+// ── DOM ──────────────────────────────────────────────────────────────
+const canvas       = document.getElementById('pdf-canvas');
+const ctx          = canvas.getContext('2d');
+const loadingEl    = document.getElementById('pdf-loading');
+const canvasWrap   = document.getElementById('pdf-canvas-wrapper');
+const viewerEl     = document.getElementById('pdf-viewer-container');
+const iframeEl     = document.getElementById('pdf-iframe');
+const tapOverlay   = document.getElementById('mobile-tap-overlay');
+const fsTb         = document.getElementById('pdf-fullscreen-toolbar');
+const deskHint     = document.getElementById('desktop-hint');
 
-// ── Helpers ─────────────────────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────────────
 const hideLoading = () => loadingEl.style.display = 'none';
 const showCanvas  = () => { canvasWrap.style.display = 'flex'; canvasWrap.classList.remove('hidden'); };
 
@@ -1189,55 +1519,55 @@ function snack(msg) {
     const el = Object.assign(document.createElement('div'), { textContent: msg });
     el.style.cssText = 'position:fixed;top:1rem;left:50%;transform:translateX(-50%);background:#1A1A1A;border:1px solid #FF6B18;color:#fff;padding:.45rem 1rem;border-radius:99px;font-size:13px;font-weight:600;z-index:99999;transition:opacity .4s;pointer-events:none;white-space:nowrap;';
     document.body.appendChild(el);
-    setTimeout(() => { el.style.opacity = 0; setTimeout(() => el.remove(), 400); }, 2200);
+    setTimeout(() => { el.style.opacity=0; setTimeout(()=>el.remove(),400); }, 2200);
 }
 
 // ── Progress ─────────────────────────────────────────────────────────
 function updateProgress() {
     if (!pdfDoc) return;
     const pct = (pageNum / pdfDoc.numPages) * 100;
-    [progBar, fsProgBar].forEach(b => b.style.width = pct + '%');
+    ['reading-progress-bar','fs-progress-bar'].forEach(id => {
+        const e = document.getElementById(id); if(e) e.style.width = pct+'%';
+    });
     const est = Math.ceil((pdfDoc.numPages - pageNum) * 1.5);
-    progText.textContent = `Hal. ${pageNum}/${pdfDoc.numPages} · ${Math.round(pct)}%` + (est > 0 ? ` · ~${est} mnt` : '');
-    // Update sheet
-    document.getElementById('sheet-page-num').textContent = pageNum;
+    const pt = document.getElementById('progress-text');
+    if(pt) pt.textContent = `Hal. ${pageNum}/${pdfDoc.numPages} · ${Math.round(pct)}%`+(est>0?` · ~${est} mnt`:'');
+    ['sheet-page-num','tap-page-num'].forEach(id=>{ const e=document.getElementById(id); if(e) e.textContent=pageNum; });
 }
 
-// ── Zoom bar ─────────────────────────────────────────────────────────
+// ── Zoom display ─────────────────────────────────────────────────────
 function updateZoomDisplay() {
-    const pct = Math.round((zoomFactor / 4.0) * 100);
     const label = Math.round(zoomFactor * 100) + '%';
-    ['zoom-level','fs-zoom-level'].forEach(id => { const e = document.getElementById(id); if(e) e.textContent = label; });
-    document.getElementById('sheet-zoom-val').textContent = label;
-    document.getElementById('sheet-zoom-bar').style.width = Math.max(5, pct) + '%';
+    const barPct = Math.max(5, Math.round((zoomFactor / 4.0) * 100));
+    ['zoom-level','fs-zoom-level'].forEach(id=>{ const e=document.getElementById(id); if(e) e.textContent=label; });
+    ['sheet-zoom-val','tap-zoom-val'].forEach(id=>{ const e=document.getElementById(id); if(e) e.textContent=label; });
+    ['sheet-zoom-fill','tap-zoom-fill'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.width=barPct+'%'; });
 }
 
 // ── Bookmark ─────────────────────────────────────────────────────────
 function updateBookmarkUI() {
     const on = bookmarkedPage === pageNum;
-    // All bookmark icons
-    [
-        { icon: 'bkmk-icon',    btn: 'bookmark-btn' },
-        { icon: 'fs-bkmk-icon', btn: 'fs-bookmark-btn' },
-    ].forEach(({ icon, btn }) => {
-        const ic = document.getElementById(icon);
-        const bt = document.getElementById(btn);
-        if (ic) { ic.setAttribute('fill', on ? '#FF6B18' : 'none'); ic.setAttribute('stroke', on ? '#FF6B18' : 'currentColor'); }
-        if (bt) bt.classList.toggle('is-bookmarked', on);
+    const icons = ['bkmk-icon','fs-bkmk-icon','sheet-bkmk-icon','tap-bkmk-icon'];
+    icons.forEach(id => {
+        const ic = document.getElementById(id);
+        if(ic) { ic.setAttribute('fill', on?'#FF6B18':'none'); ic.setAttribute('stroke', on?'#FF6B18':'currentColor'); }
     });
-    // Sheet bookmark
-    const sBtn  = document.getElementById('sheet-bookmark-btn');
-    const sIcon = document.getElementById('sheet-bkmk-icon');
-    const sLbl  = document.getElementById('sheet-bkmk-label');
-    if (sBtn)  sBtn.classList.toggle('bookmarked', on);
-    if (sIcon) { sIcon.setAttribute('fill', on ? '#FF6B18' : 'none'); sIcon.setAttribute('stroke', on ? '#FF6B18' : 'currentColor'); }
-    if (sLbl)  sLbl.textContent = on ? '✓ Ditandai' : 'Tandai Halaman';
+    [['bookmark-btn',null],['fs-bookmark-btn',null]].forEach(([id])=>{
+        const b = document.getElementById(id); if(b) b.classList.toggle('is-bkmk',on);
+    });
+    const sbtn = document.getElementById('sheet-bookmark-btn');
+    const slbl = document.getElementById('sheet-bkmk-label');
+    if(sbtn) sbtn.classList.toggle('bookmarked',on);
+    if(slbl) slbl.textContent = on ? '✓ Ditandai' : 'Tandai Halaman';
+    const tbtn = document.getElementById('tap-bookmark-btn');
+    const tlbl = document.getElementById('tap-bkmk-label');
+    if(tbtn) tbtn.classList.toggle('bookmarked',on);
+    if(tlbl) tlbl.textContent = on ? '✓ Ditandai' : 'Tandai Halaman';
 }
 
 function toggleBookmark() {
     if (bookmarkedPage === pageNum) {
-        bookmarkedPage = null; localStorage.removeItem(SK.bkmk);
-        snack('Bookmark dihapus');
+        bookmarkedPage = null; localStorage.removeItem(SK.bkmk); snack('Bookmark dihapus');
     } else {
         bookmarkedPage = pageNum; localStorage.setItem(SK.bkmk, pageNum);
         snack('🔖 Halaman ' + pageNum + ' ditandai!');
@@ -1249,12 +1579,10 @@ function toggleBookmark() {
 function applyMode(mode) {
     document.body.classList.remove('read-mode-sepia','read-mode-night');
     if (mode !== 'normal') document.body.classList.add('read-mode-' + mode);
-    currentMode = mode;
-    localStorage.setItem(SK.mode, mode);
-    // Desktop dropdown
-    document.querySelectorAll('.mode-opt').forEach(e => e.classList.toggle('active', e.dataset.mode === mode));
-    // Sheet mode cards
-    document.querySelectorAll('[data-sheet-mode]').forEach(e => e.classList.toggle('active', e.dataset.sheetMode === mode));
+    currentMode = mode; localStorage.setItem(SK.mode, mode);
+    document.querySelectorAll('.mode-opt').forEach(e => e.classList.toggle('active', e.dataset.mode===mode));
+    document.querySelectorAll('[data-sheet-mode]').forEach(e => e.classList.toggle('active', e.dataset.sheetMode===mode));
+    document.querySelectorAll('[data-tap-mode]').forEach(e => e.classList.toggle('active', e.dataset.tapMode===mode));
 }
 applyMode(currentMode);
 
@@ -1262,231 +1590,296 @@ applyMode(currentMode);
 const getScale = () => baseScale * zoomFactor;
 function computeBase(page) {
     const w = viewerEl.clientWidth || window.innerWidth;
-    baseScale = Math.max(0.5, Math.min((w - 16) / page.getViewport({ scale: 1 }).width, 2.5));
+    baseScale = Math.max(0.5, Math.min((w-16)/page.getViewport({scale:1}).width, 2.5));
 }
 
 // ── Render ────────────────────────────────────────────────────────────
 function renderPage(num) {
     pageRendering = true;
     hideLoading(); showCanvas();
-
     pdfDoc.getPage(num).then(page => {
         if (baseScale === 1.0) computeBase(page);
         const vp = page.getViewport({ scale: getScale() });
         canvas.height = vp.height; canvas.width = vp.width;
-
         page.render({ canvasContext: ctx, viewport: vp }).promise
             .then(() => {
                 pageRendering = false;
-                if (pageNumPending !== null) { const p = pageNumPending; pageNumPending = null; renderPage(p); }
+                if (pageNumPending !== null) { const p=pageNumPending; pageNumPending=null; renderPage(p); }
             })
-            .catch(e => { console.warn(e.message); pageRendering = false; });
-
+            .catch(e => { console.warn(e.message); pageRendering=false; });
         localStorage.setItem(SK.page, num);
         localStorage.setItem(SK.zoom, zoomFactor);
         document.getElementById('page-num-input').value    = num;
         document.getElementById('fs-page-num').textContent = num;
         updateNavButtons(); updateZoomDisplay(); updateProgress(); updateBookmarkUI();
         canvasWrap.scrollTo({ top: 0, behavior: 'smooth' });
-    }).catch(e => { console.error(e.message); pageRendering = false; hideLoading(); showCanvas(); });
+    }).catch(e => { console.error(e.message); pageRendering=false; hideLoading(); showCanvas(); });
 }
 
-function queueRender(num) { if (pageRendering) pageNumPending = num; else renderPage(num); }
+function queueRender(n) { if (pageRendering) pageNumPending=n; else renderPage(n); }
 
 // ── Navigation ────────────────────────────────────────────────────────
-function prevPage() { if (pageNum > 1)               { pageNum--; queueRender(pageNum); } }
-function nextPage() { if (pageNum < pdfDoc.numPages) { pageNum++; queueRender(pageNum); } }
-function goTo(n)    { if (pdfDoc && n >= 1 && n <= pdfDoc.numPages) { pageNum = n; queueRender(n); } }
+function prevPage() { if (pageNum>1)               { pageNum--; queueRender(pageNum); } }
+function nextPage() { if (pageNum<pdfDoc.numPages) { pageNum++; queueRender(pageNum); } }
+function goTo(n)    { if(pdfDoc&&n>=1&&n<=pdfDoc.numPages) { pageNum=n; queueRender(n); } }
 
 function updateNavButtons() {
-    ['prev-page','fs-prev-page'].forEach(id => { const e = document.getElementById(id); if(e) e.disabled = pageNum <= 1; });
-    ['next-page','fs-next-page'].forEach(id => { const e = document.getElementById(id); if(e) e.disabled = pageNum >= pdfDoc.numPages; });
-    ['sheet-prev'].forEach(id => { const e = document.getElementById(id); if(e) e.disabled = pageNum <= 1; });
-    ['sheet-next'].forEach(id => { const e = document.getElementById(id); if(e) e.disabled = pageNum >= pdfDoc.numPages; });
+    ['prev-page','fs-prev','sheet-prev','tap-prev'].forEach(id => {
+        const e=document.getElementById(id); if(e) e.disabled=pageNum<=1;
+    });
+    ['next-page','fs-next','sheet-next','tap-next'].forEach(id => {
+        const e=document.getElementById(id); if(e) e.disabled=pageNum>=pdfDoc.numPages;
+    });
 }
 
 // ── Zoom ──────────────────────────────────────────────────────────────
-function zoomIn()  { zoomFactor = Math.min(zoomFactor + 0.25, 4.0);  queueRender(pageNum); }
-function zoomOut() { zoomFactor = Math.max(zoomFactor - 0.25, 0.25); queueRender(pageNum); }
+function zoomIn()  { zoomFactor=Math.min(zoomFactor+0.25,4.0);  queueRender(pageNum); }
+function zoomOut() { zoomFactor=Math.max(zoomFactor-0.25,0.25); queueRender(pageNum); }
+
+// ── Mobile Tap Overlay ────────────────────────────────────────────────
+function openTapOverlay() {
+    tapOverlayOpen = true;
+    tapOverlay.classList.add('show');
+}
+function closeTapOverlay() {
+    tapOverlayOpen = false;
+    tapOverlay.classList.remove('show');
+}
+
+document.getElementById('tap-close-overlay').addEventListener('click', closeTapOverlay);
+document.getElementById('tap-prev').addEventListener('click', () => { prevPage(); });
+document.getElementById('tap-next').addEventListener('click', () => { nextPage(); });
+document.getElementById('tap-zoom-in').addEventListener('click', zoomIn);
+document.getElementById('tap-zoom-out').addEventListener('click', zoomOut);
+document.getElementById('tap-bookmark-btn').addEventListener('click', toggleBookmark);
+document.getElementById('tap-exit-btn').addEventListener('click', () => { closeTapOverlay(); exitFullscreen(); });
+
+document.querySelectorAll('[data-tap-mode]').forEach(el => {
+    el.addEventListener('click', () => {
+        applyMode(el.dataset.tapMode);
+        snack({normal:'☀️ Normal',sepia:'📜 Sepia',night:'🌙 Night'}[el.dataset.tapMode]);
+    });
+});
 
 // ── Bottom Sheet ──────────────────────────────────────────────────────
 function openSheet() {
-    sheetOpen = true;
-    // Show/hide exit button based on fullscreen
-    document.getElementById('sheet-exit-btn').style.display    = isFullscreen ? 'flex' : 'none';
-    document.getElementById('sheet-fullscreen-btn').style.display = isFullscreen ? 'none' : 'flex';
-    backdrop.classList.add('show');
-    sheet.classList.add('show');
-    document.body.style.overflow = 'hidden';
+    sheetIsOpen = true;
+    document.getElementById('sheet-backdrop').classList.add('show');
+    document.getElementById('bottom-sheet').classList.add('show');
 }
 function closeSheet() {
-    sheetOpen = false;
-    backdrop.classList.remove('show');
-    sheet.classList.remove('show');
-    if (!isFullscreen) document.body.style.overflow = '';
+    sheetIsOpen = false;
+    document.getElementById('sheet-backdrop').classList.remove('show');
+    document.getElementById('bottom-sheet').classList.remove('show');
 }
 
-backdrop.addEventListener('click', closeSheet);
-document.getElementById('sheet-close-btn').addEventListener('click', closeSheet);
-
-document.getElementById('sheet-prev').addEventListener('click', () => { prevPage(); });
-document.getElementById('sheet-next').addEventListener('click', () => { nextPage(); });
-
-document.getElementById('sheet-jump-go').addEventListener('click', () => {
-    const n = parseInt(document.getElementById('sheet-jump-input').value);
-    if (n) { goTo(n); closeSheet(); }
-});
-document.getElementById('sheet-jump-input').addEventListener('keydown', e => {
-    if (e.key === 'Enter') { const n = parseInt(e.target.value); if(n) { goTo(n); closeSheet(); } }
-});
-
+document.getElementById('sheet-backdrop').addEventListener('click', closeSheet);
+document.getElementById('sheet-close').addEventListener('click', closeSheet);
+document.getElementById('sheet-prev').addEventListener('click', prevPage);
+document.getElementById('sheet-next').addEventListener('click', nextPage);
 document.getElementById('sheet-zoom-in').addEventListener('click', zoomIn);
 document.getElementById('sheet-zoom-out').addEventListener('click', zoomOut);
+document.getElementById('sheet-bookmark-btn').addEventListener('click', toggleBookmark);
+document.getElementById('sheet-fs-btn').addEventListener('click', () => { closeSheet(); setTimeout(enterFullscreen, 200); });
+document.getElementById('sheet-search-btn').addEventListener('click', () => { closeSheet(); setTimeout(openSearch, 200); });
 
-document.querySelectorAll('[data-sheet-mode]').forEach(el => {
-    el.addEventListener('click', () => { applyMode(el.dataset.sheetMode); snack({ normal:'☀️ Normal', sepia:'📜 Sepia', night:'🌙 Night' }[el.dataset.sheetMode]); });
+document.getElementById('sheet-jump-go').addEventListener('click', () => {
+    const n = parseInt(document.getElementById('sheet-jump').value);
+    if(n) { goTo(n); closeSheet(); }
+});
+document.getElementById('sheet-jump').addEventListener('keydown', e => {
+    if(e.key==='Enter') { const n=parseInt(e.target.value); if(n) { goTo(n); closeSheet(); } }
 });
 
-document.getElementById('sheet-bookmark-btn').addEventListener('click', () => { toggleBookmark(); });
-document.getElementById('sheet-fullscreen-btn').addEventListener('click', () => { closeSheet(); setTimeout(enterFullscreen, 200); });
-document.getElementById('sheet-exit-btn').addEventListener('click', () => { closeSheet(); exitFullscreen(); });
+document.querySelectorAll('[data-sheet-mode]').forEach(el => {
+    el.addEventListener('click', () => {
+        applyMode(el.dataset.sheetMode);
+        snack({normal:'☀️ Normal',sepia:'📜 Sepia',night:'🌙 Night'}[el.dataset.sheetMode]);
+    });
+});
 
 // ── Mobile FAB ────────────────────────────────────────────────────────
 document.getElementById('mobile-fab-btn').addEventListener('click', e => {
-    e.stopPropagation();
-    fabMenuOpen = !fabMenuOpen;
-    document.getElementById('mobile-fab-menu').classList.toggle('open', fabMenuOpen);
-    document.getElementById('fab-open-ic').classList.toggle('hidden', fabMenuOpen);
-    document.getElementById('fab-close-ic').classList.toggle('hidden', !fabMenuOpen);
-});
-document.getElementById('fab-sheet-open').addEventListener('click', () => {
-    fabMenuOpen = false;
-    document.getElementById('mobile-fab-menu').classList.remove('open');
-    document.getElementById('fab-open-ic').classList.remove('hidden');
-    document.getElementById('fab-close-ic').classList.add('hidden');
-    openSheet();
-});
-document.addEventListener('click', () => {
-    if (fabMenuOpen) {
-        fabMenuOpen = false;
-        document.getElementById('mobile-fab-menu').classList.remove('open');
-        document.getElementById('fab-open-ic').classList.remove('hidden');
-        document.getElementById('fab-close-ic').classList.add('hidden');
-    }
+    e.stopPropagation(); openSheet();
 });
 
 // ── Fullscreen ────────────────────────────────────────────────────────
-function showFsHint() {
-    hintOverlay.classList.add('show');
-}
-
 function enterFullscreen() {
     isFullscreen = true;
     viewerEl.classList.add('fullscreen-mode');
     document.body.style.overflow = 'hidden';
-    showFsHint(); // ✅ SELALU tampilkan hint
-    if (pdfDoc) pdfDoc.getPage(pageNum).then(p => { baseScale = 1.0; computeBase(p); queueRender(pageNum); });
+    if (!isMobile()) {
+        deskHint.classList.remove('hidden','fade-out');
+        clearTimeout(toolbarTimer);
+        toolbarTimer = setTimeout(() => deskHint.classList.add('fade-out'), 4500);
+    }
+    if (pdfDoc) pdfDoc.getPage(pageNum).then(p => { baseScale=1.0; computeBase(p); queueRender(pageNum); });
 }
 
 function exitFullscreen() {
     isFullscreen = false;
     viewerEl.classList.remove('fullscreen-mode');
     document.body.style.overflow = '';
-    hintOverlay.classList.remove('show');
     deskHint.classList.add('hidden');
-    if (pdfDoc) pdfDoc.getPage(pageNum).then(p => { baseScale = 1.0; computeBase(p); queueRender(pageNum); });
+    closeTapOverlay();
+    if (pdfDoc) pdfDoc.getPage(pageNum).then(p => { baseScale=1.0; computeBase(p); queueRender(pageNum); });
 }
 
-// Close hint → tampilkan desktop shortcut hint sebentar
-document.getElementById('close-hint-btn').addEventListener('click', () => {
-    hintOverlay.classList.remove('show');
-    if (!isMobile()) {
-        deskHint.classList.remove('hidden','fade-out');
-        clearTimeout(toolbarTimer);
-        toolbarTimer = setTimeout(() => deskHint.classList.add('fade-out'), 4000);
-    }
-});
-
-// Fullscreen menu button (mobile)
-document.getElementById('fs-mobile-menu-btn').addEventListener('click', () => openSheet());
-
-// Auto-hide toolbar on desktop idle
+// Desktop: auto-hide toolbar on idle
 viewerEl.addEventListener('mousemove', () => {
     if (!isFullscreen || isMobile()) return;
-    fsTbEl.classList.remove('toolbar-hidden');
+    fsTb.classList.remove('toolbar-hidden');
     clearTimeout(toolbarTimer);
-    toolbarTimer = setTimeout(() => fsTbEl.classList.add('toolbar-hidden'), 3000);
+    toolbarTimer = setTimeout(() => fsTb.classList.add('toolbar-hidden'), 3000);
 });
 
-// Tap canvas on mobile fullscreen → toggle toolbar
+// ✅ Mobile tap canvas → toggle tap overlay (bukan ganti halaman)
 viewerEl.addEventListener('click', e => {
     if (!isFullscreen || !isMobile()) return;
-    if (sheetOpen) return;
-    if (e.target.closest('#pdf-fullscreen-toolbar, #mobile-bottom-sheet, #fs-hint-overlay')) return;
-    fsTbEl.classList.toggle('toolbar-hidden');
+    if (e.target.closest('#pdf-fullscreen-toolbar, #mobile-tap-overlay, #bottom-sheet, #mobile-bottom-sheet')) return;
+    if (tapOverlayOpen) closeTapOverlay();
+    else openTapOverlay();
+});
+
+// ── Search ────────────────────────────────────────────────────────────
+let searchDebounce = null;
+
+function openSearch() {
+    document.getElementById('search-overlay').classList.add('show');
+    document.getElementById('search-input').focus();
+}
+function closeSearch() {
+    document.getElementById('search-overlay').classList.remove('show');
+    document.getElementById('search-results-list').innerHTML = '';
+    document.getElementById('search-status').textContent = 'Ketik untuk mencari...';
+    document.getElementById('search-input').value = '';
+    searchResults = []; searchIndex = 0;
+}
+
+async function doSearch(query) {
+    if (!pdfDoc || !query.trim()) {
+        document.getElementById('search-status').textContent = 'Ketik untuk mencari...';
+        document.getElementById('search-results-list').innerHTML = '';
+        return;
+    }
+    document.getElementById('search-status').textContent = 'Mencari...';
+    searchResults = [];
+    const q = query.toLowerCase();
+
+    for (let p = 1; p <= pdfDoc.numPages; p++) {
+        const page    = await pdfDoc.getPage(p);
+        const content = await page.getTextContent();
+        const text    = content.items.map(i => i.str).join(' ');
+        const lText   = text.toLowerCase();
+        let idx = lText.indexOf(q);
+        while (idx !== -1) {
+            const start   = Math.max(0, idx - 30);
+            const excerpt = text.substring(start, idx + q.length + 40).trim();
+            searchResults.push({ page: p, excerpt, idx });
+            idx = lText.indexOf(q, idx + 1);
+        }
+    }
+
+    const list   = document.getElementById('search-results-list');
+    const status = document.getElementById('search-status');
+    list.innerHTML = '';
+
+    if (searchResults.length === 0) {
+        status.textContent = `Tidak ditemukan: "${query}"`;
+        return;
+    }
+    status.textContent = `${searchResults.length} hasil ditemukan`;
+    searchIndex = 0;
+
+    searchResults.slice(0, 30).forEach((r, i) => {
+        const item = document.createElement('div');
+        item.className = 'search-result-item';
+        const hl = r.excerpt.replace(new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi'), m => `<mark>${m}</mark>`);
+        item.innerHTML = `<span class="pg">Hal.${r.page}</span><span class="excerpt">${hl}</span>`;
+        item.addEventListener('click', () => { goTo(r.page); closeSearch(); });
+        list.appendChild(item);
+    });
+}
+
+document.getElementById('search-input').addEventListener('input', function() {
+    clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(() => doSearch(this.value), 500);
+});
+document.getElementById('search-close-btn').addEventListener('click', closeSearch);
+document.getElementById('search-overlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('search-overlay')) closeSearch();
+});
+document.getElementById('search-prev-btn').addEventListener('click', () => {
+    if (!searchResults.length) return;
+    searchIndex = (searchIndex - 1 + searchResults.length) % searchResults.length;
+    goTo(searchResults[searchIndex].page);
+});
+document.getElementById('search-next-btn').addEventListener('click', () => {
+    if (!searchResults.length) return;
+    searchIndex = (searchIndex + 1) % searchResults.length;
+    goTo(searchResults[searchIndex].page);
 });
 
 // ── Iframe Fallback ───────────────────────────────────────────────────
 function showFallback() {
-    hideLoading();
-    canvasWrap.style.display = 'none';
-    iframeEl.style.display   = 'block';
-    iframeEl.src             = pdfUrl;
+    hideLoading(); canvasWrap.style.display='none';
+    iframeEl.style.display = 'block'; iframeEl.src = pdfUrl;
 }
 
 // ── Resume Toast ──────────────────────────────────────────────────────
 function showResumeToast(page) {
-    const toast = document.getElementById('resume-toast');
+    const t = document.getElementById('resume-toast');
     document.getElementById('resume-text').textContent = `Terakhir di halaman ${page}`;
-    toast.classList.add('show');
-    document.getElementById('resume-yes').onclick = () => { goTo(page); toast.classList.remove('show'); };
-    document.getElementById('resume-no').onclick  = () => { goTo(1);    toast.classList.remove('show'); };
-    setTimeout(() => toast.classList.remove('show'), 7000);
+    t.classList.add('show');
+    document.getElementById('resume-yes').onclick = () => { goTo(page); t.classList.remove('show'); };
+    document.getElementById('resume-no').onclick  = () => { goTo(1);    t.classList.remove('show'); };
+    setTimeout(() => t.classList.remove('show'), 7000);
 }
 
 // ── Load PDF ──────────────────────────────────────────────────────────
-const fbTimer = setTimeout(() => { if (!pdfDoc) showFallback(); }, 8000);
+const fbTimer = setTimeout(() => { if(!pdfDoc) showFallback(); }, 8000);
 
 pdfjsLib.getDocument({ url: pdfUrl, withCredentials: false, verbosity: 0 })
     .promise.then(doc => {
-        clearTimeout(fbTimer);
-        pdfDoc = doc;
+        clearTimeout(fbTimer); pdfDoc = doc;
         const total = doc.numPages;
-        ['page-count','fs-page-count','sheet-page-total'].forEach(id => {
-            const e = document.getElementById(id); if (e) e.textContent = total;
+        ['page-count','fs-page-count','sheet-total','tap-page-total'].forEach(id => {
+            const e=document.getElementById(id); if(e) e.textContent=total;
         });
         document.getElementById('page-num-input').max = total;
-        document.getElementById('sheet-jump-input').max = total;
-
+        document.getElementById('sheet-jump').max     = total;
         renderPage(1);
         if (savedPage > 1 && savedPage <= total) setTimeout(() => showResumeToast(savedPage), 900);
     })
-    .catch(err => { clearTimeout(fbTimer); console.error(err.message); showFallback(); });
+    .catch(err => { clearTimeout(fbTimer); showFallback(); });
 
 // ── Resize ────────────────────────────────────────────────────────────
-let lastW = viewerEl.clientWidth, rTimer = null;
+let lastW=viewerEl.clientWidth, rTimer=null;
 window.addEventListener('resize', () => {
-    const w = viewerEl.clientWidth;
-    if (Math.abs(w - lastW) < 20) return;
-    lastW = w;
+    const w=viewerEl.clientWidth; if(Math.abs(w-lastW)<20) return; lastW=w;
     clearTimeout(rTimer);
     rTimer = setTimeout(() => {
-        if (!pdfDoc) return;
-        pdfDoc.getPage(pageNum).then(p => { baseScale = 1.0; computeBase(p); queueRender(pageNum); });
+        if(!pdfDoc) return;
+        pdfDoc.getPage(pageNum).then(p => { baseScale=1.0; computeBase(p); queueRender(pageNum); });
     }, 250);
 });
 
-// ── Desktop Events ────────────────────────────────────────────────────
-['prev-page','fs-prev-page'].forEach(id => document.getElementById(id)?.addEventListener('click', prevPage));
-['next-page','fs-next-page'].forEach(id => document.getElementById(id)?.addEventListener('click', nextPage));
-['zoom-in','fs-zoom-in'].forEach(id => document.getElementById(id)?.addEventListener('click', zoomIn));
-['zoom-out','fs-zoom-out'].forEach(id => document.getElementById(id)?.addEventListener('click', zoomOut));
-document.getElementById('bookmark-btn')?.addEventListener('click', toggleBookmark);
-document.getElementById('fs-bookmark-btn')?.addEventListener('click', toggleBookmark);
-document.getElementById('fullscreen-btn')?.addEventListener('click', enterFullscreen);
-document.getElementById('exit-fullscreen-btn')?.addEventListener('click', exitFullscreen);
+// ── Desktop Event Listeners ───────────────────────────────────────────
+document.getElementById('prev-page').addEventListener('click', prevPage);
+document.getElementById('next-page').addEventListener('click', nextPage);
+document.getElementById('fs-prev').addEventListener('click', prevPage);
+document.getElementById('fs-next').addEventListener('click', nextPage);
+document.getElementById('zoom-in').addEventListener('click', zoomIn);
+document.getElementById('zoom-out').addEventListener('click', zoomOut);
+document.getElementById('fs-zoom-in').addEventListener('click', zoomIn);
+document.getElementById('fs-zoom-out').addEventListener('click', zoomOut);
+document.getElementById('bookmark-btn').addEventListener('click', toggleBookmark);
+document.getElementById('fs-bookmark-btn').addEventListener('click', toggleBookmark);
+document.getElementById('fullscreen-btn').addEventListener('click', enterFullscreen);
+document.getElementById('exit-fs-btn').addEventListener('click', exitFullscreen);
+document.getElementById('search-btn').addEventListener('click', openSearch);
 
-document.getElementById('mode-btn')?.addEventListener('click', e => {
+document.getElementById('mode-btn').addEventListener('click', e => {
     e.stopPropagation();
     document.getElementById('mode-dropdown').classList.toggle('open');
 });
@@ -1496,42 +1889,62 @@ document.querySelectorAll('.mode-opt').forEach(el => {
 document.addEventListener('click', () => document.getElementById('mode-dropdown')?.classList.remove('open'));
 
 document.getElementById('page-num-input').addEventListener('change', function() {
-    const n = parseInt(this.value);
-    if (pdfDoc && n >= 1 && n <= pdfDoc.numPages) goTo(n); else this.value = pageNum;
+    const n=parseInt(this.value);
+    if(pdfDoc&&n>=1&&n<=pdfDoc.numPages) goTo(n); else this.value=pageNum;
 });
 
 // ── Keyboard ─────────────────────────────────────────────────────────
 document.addEventListener('keydown', e => {
+    // Ctrl+F → search
+    if ((e.ctrlKey||e.metaKey) && e.key==='f') { e.preventDefault(); openSearch(); return; }
     if (['INPUT','TEXTAREA'].includes(e.target.tagName)) return;
     switch(e.key) {
-        case 'ArrowLeft': case 'ArrowUp':    prevPage(); break;
-        case 'ArrowRight': case 'ArrowDown': nextPage(); break;
+        // ✅ Arrow kiri/kanan ganti halaman, atas/bawah SCROLL (tidak ganti halaman)
+        case 'ArrowLeft':  prevPage(); break;
+        case 'ArrowRight': nextPage(); break;
+        case 'ArrowUp':
+            canvasWrap.scrollBy({ top: -120, behavior: 'smooth' }); break;
+        case 'ArrowDown':
+            canvasWrap.scrollBy({ top: 120,  behavior: 'smooth' }); break;
         case '+': case '=': zoomIn();  break;
         case '-':           zoomOut(); break;
         case 'b': case 'B': toggleBookmark(); break;
         case 'f': case 'F': isFullscreen ? exitFullscreen() : enterFullscreen(); break;
-        case 'Escape': if (isFullscreen) exitFullscreen(); break;
+        case 'Escape':
+            if (document.getElementById('search-overlay').classList.contains('show')) closeSearch();
+            else if (isFullscreen) exitFullscreen();
+            break;
     }
 });
 
-// ── Touch: Swipe + Pinch ──────────────────────────────────────────────
-let tx = 0, ty = 0, pd = 0;
+// ── Touch: Swipe horizontal ganti halaman, vertikal = scroll normal ──
+let tx=0, ty=0, pd=0, touchMoved=false;
 viewerEl.addEventListener('touchstart', e => {
-    if (e.touches.length === 1) { tx = e.touches[0].clientX; ty = e.touches[0].clientY; }
-    if (e.touches.length === 2) {
-        pd = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+    touchMoved = false;
+    if (e.touches.length===1) { tx=e.touches[0].clientX; ty=e.touches[0].clientY; }
+    if (e.touches.length===2) {
+        pd=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
     }
 }, { passive: true });
+
 viewerEl.addEventListener('touchmove', e => {
-    if (e.touches.length !== 2) return;
-    const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-    if (Math.abs(d - pd) > 12) { d > pd ? zoomIn() : zoomOut(); pd = d; }
+    touchMoved = true;
+    if (e.touches.length!==2) return;
+    const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+    if (Math.abs(d-pd)>12) { d>pd ? zoomIn() : zoomOut(); pd=d; }
 }, { passive: true });
+
 viewerEl.addEventListener('touchend', e => {
-    if (sheetOpen || hintOverlay.classList.contains('show')) return;
-    const dx = tx - e.changedTouches[0].clientX;
-    const dy = ty - e.changedTouches[0].clientY;
-    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 55) { dx > 0 ? nextPage() : prevPage(); }
+    if (touchMoved) {
+        const dx = tx - e.changedTouches[0].clientX;
+        const dy = ty - e.changedTouches[0].clientY;
+        // ✅ Hanya swipe HORIZONTAL yang ganti halaman
+        if (Math.abs(dx) > Math.abs(dy) * 1.5 && Math.abs(dx) > 60) {
+            if (tapOverlayOpen) { closeTapOverlay(); return; }
+            dx > 0 ? nextPage() : prevPage();
+        }
+        // Swipe vertikal → scroll natural, tidak ada aksi
+    }
 }, { passive: true });
 </script>
 @endpush
