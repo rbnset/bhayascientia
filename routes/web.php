@@ -115,13 +115,13 @@ Route::middleware('guest')->group(function () {
     Route::get('/login',    [AuthController::class, 'showLoginForm'])->name('login');
     Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('register');
 
-    Route::post('/login',    [AuthController::class, 'login'])
-        ->middleware('throttle:login')
-        ->name('login.post');
+    // Route::post('/login',    [AuthController::class, 'login'])
+    //     ->middleware('throttle:login')
+    //     ->name('login.post');
 
-    Route::post('/register', [AuthController::class, 'register'])
-        ->middleware('throttle:register')
-        ->name('register.post');
+    // Route::post('/register', [AuthController::class, 'register'])
+    //     ->middleware('throttle:register')
+    //     ->name('register.post');
 
     // Google OAuth
     Route::get('auth/google',          [GoogleAuthController::class, 'redirectToGoogle'])->name('auth.google');

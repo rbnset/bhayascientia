@@ -148,23 +148,23 @@ class PublicationController extends Controller
             $firstAuthor = $pub->authors->first();
 
             return [
-                'id'              => $pub->id,
-                'title'           => $pub->title,
-                'slug'            => $pub->slug,
-                'cover_url'       => $this->getCoverUrl($pub),
-                'category'        => $pub->category_name,
-                'publication_type' => $publicationType,
-                'formatted_date'  => $pub->formatted_date,
-                'status'          => $pub->publicationType?->requires_review ? 'Peer-reviewed' : 'Terverifikasi',
-                'type'            => $publicationType,
-                'detail_url'      => route('publikasi.show', $pub->slug),
-                'authors'         => $pub->authors->take(6)->map(fn($a) => [
-                    'id'        => $a->id,
-                    'name'      => $a->name,
-                    'photo'     => $a->photo_url,
-                    'initials'  => $a->initials,
+                'id'                => $pub->id,
+                'title'             => $pub->title,
+                'slug'              => $pub->slug,
+                'cover_url'         => $this->getCoverUrl($pub),
+                'category'          => $pub->category_name,
+                'publication_type'  => $publicationType,
+                'formatted_date'    => $pub->formatted_date,
+                'status'            => $pub->publicationType?->requires_review ? 'Peer-reviewed' : 'Terverifikasi',
+                'type'              => $publicationType,
+                'detail_url'        => route('publikasi.show', $pub->slug),
+                'authors'           => $pub->authors->take(6)->map(fn($a) => [
+                    'id'       => $a->id,
+                    'name'     => $a->name,
+                    'photo'    => $a->photo_url,
+                    'initials' => $a->initials,
                 ])->toArray(),
-                'total_authors'   => $pub->authors->count(),
+                'total_authors'     => $pub->authors->count(),
                 'first_author_name' => $firstAuthor?->name ?? 'Anonymous',
             ];
         })->toArray();
@@ -197,24 +197,24 @@ class PublicationController extends Controller
             $pubType = $pub->publicationType?->name ?? 'Publikasi';
 
             return [
-                'id'              => $pub->id,
-                'title'           => $pub->title,
-                'slug'            => $pub->slug,
-                'cover_url'       => $this->getCoverUrl($pub),
-                'category'        => $pub->category_name ?? ($pub->categories->first()?->name ?? 'Umum'),
+                'id'               => $pub->id,
+                'title'            => $pub->title,
+                'slug'             => $pub->slug,
+                'cover_url'        => $this->getCoverUrl($pub),
+                'category'         => $pub->category_name ?? ($pub->categories->first()?->name ?? 'Umum'),
                 'publication_type' => $pubType,
-                'formatted_date'  => $pub->formatted_date ?? ($pub->published_at?->locale('id')->isoFormat('D MMMM YYYY') ?? ''),
-                'download_count'  => (int) $pub->total_downloads,
-                'views_count'     => (int) $pub->total_views,
-                'trending_score'  => (int) $pub->trending_score,
-                'detail_url'      => route('publikasi.show', $pub->slug),
-                'authors'         => $pub->authors->take(6)->map(fn($a) => [
-                    'id'        => $a->id,
-                    'name'      => $a->name,
-                    'photo'     => $a->photo_url,
-                    'initials'  => $a->initials,
+                'formatted_date'   => $pub->formatted_date ?? ($pub->published_at?->locale('id')->isoFormat('D MMMM YYYY') ?? ''),
+                'download_count'   => (int) $pub->total_downloads,
+                'views_count'      => (int) $pub->total_views,
+                'trending_score'   => (int) $pub->trending_score,
+                'detail_url'       => route('publikasi.show', $pub->slug),
+                'authors'          => $pub->authors->take(6)->map(fn($a) => [
+                    'id'       => $a->id,
+                    'name'     => $a->name,
+                    'photo'    => $a->photo_url,
+                    'initials' => $a->initials,
                 ])->toArray(),
-                'total_authors'   => $pub->authors->count(),
+                'total_authors'    => $pub->authors->count(),
             ];
         });
 
@@ -344,7 +344,7 @@ class PublicationController extends Controller
         $publications = $publicationsQuery->paginate(12)->withQueryString();
 
         return view('pages.publication.categories', [
-            'publications'      => $publications,
+            'publications'     => $publications,
             'publicationTypes' => $publicationTypes,
             'categories'       => $categories,
             'years'            => $years,
@@ -464,7 +464,7 @@ class PublicationController extends Controller
         $publications = $publicationsQuery->paginate(12)->withQueryString();
 
         return view('pages.publication.search', [
-            'publications'      => $publications,
+            'publications'     => $publications,
             'publicationTypes' => $publicationTypes,
             'categories'       => $categories,
             'years'            => $years,
@@ -541,18 +541,18 @@ class PublicationController extends Controller
         });
 
         return view('pages.publication.show', [
-            'publication'        => $publication,
-            'formatted_date'     => $publication->published_at->locale('id_ID')->isoFormat('D MMMM YYYY'),
-            'category'           => $publication->categories->first()?->name ?? 'Umum',
-            'publication_type'   => $publication->publicationType->name ?? 'Publikasi',
-            'keywords'           => $publication->keywords->pluck('name')->toArray(),
-            'cover_url'          => $this->getCoverUrl($publication),
-            'authors'            => $authors,
-            'latestVersion'      => $latestVersion,
-            'fileSize'           => $fileSize,
-            'fileSizeFormatted'  => $fileSizeFormatted,
-            'downloadCount'      => $downloadCount,
-            'viewsCount'         => $viewsCount,
+            'publication'       => $publication,
+            'formatted_date'    => $publication->published_at->locale('id_ID')->isoFormat('D MMMM YYYY'),
+            'category'          => $publication->categories->first()?->name ?? 'Umum',
+            'publication_type'  => $publication->publicationType->name ?? 'Publikasi',
+            'keywords'          => $publication->keywords->pluck('name')->toArray(),
+            'cover_url'         => $this->getCoverUrl($publication),
+            'authors'           => $authors,
+            'latestVersion'     => $latestVersion,
+            'fileSize'          => $fileSize,
+            'fileSizeFormatted' => $fileSizeFormatted,
+            'downloadCount'     => $downloadCount,
+            'viewsCount'        => $viewsCount,
         ]);
     }
 
@@ -652,7 +652,7 @@ class PublicationController extends Controller
     }
 
     /**
-     * READ/VIEW publikasi PDF di browser - ✅ FIXED
+     * READ/VIEW publikasi PDF di browser
      */
     public function read($slug)
     {
@@ -691,21 +691,6 @@ class PublicationController extends Controller
             abort(404, 'File tidak ditemukan di storage');
         }
 
-        // ✅ FIXED: Generate PDF URL yang VALID
-        $pdfUrl = Storage::disk('public')->url($filePath);
-
-        // ✅ Logika tambahan: paksa public URL kalau storage link belum ada
-        if (!str_contains($pdfUrl, 'http')) {
-            $pdfUrl = asset('storage/' . $filePath);
-        }
-
-        Log::info('PDF Read URL generated', [
-            'slug' => $slug,
-            'pdf_url' => $pdfUrl,
-            'file_path' => $filePath,
-            'exists' => Storage::disk('public')->exists($filePath)
-        ]);
-
         $this->logPublicationView($publication);
 
         if (auth()->check()) {
@@ -714,21 +699,59 @@ class PublicationController extends Controller
             ]);
         }
 
-        // ✅ Format authors untuk PDF reader (hanya 6 pertama)
-        $authors = $publication->authors->take(6)->map(function ($author) {
-            return [
-                'id'       => $author->id,
-                'name'     => $author->name,
-                'initials' => $author->initials,
-                'photo'    => $author->photo_url,
-            ];
-        });
+        // ✅ GANTI: Pakai route servePdf agar header PDF benar (fix 204 error)
+        $pdfUrl = route('publikasi.pdf', $publication->slug);
 
         return view('pages.publication.read', [
-            'publication'       => $publication,
-            'pdfUrl'            => $pdfUrl, // ✅ SEKARANG VALID!
-            'category'          => $publication->categories->first()?->name ?? 'Umum',
-            'authors'           => $authors,
+            'publication'      => $publication,
+            'pdfUrl'           => $pdfUrl,
+            'category'         => $publication->categories->first()?->name ?? 'Umum',
+            'publication_type' => $publication->publicationType->name ?? 'Publikasi',
+            'authors'          => $publication->authors->take(6)->map(function ($author) {
+                return [
+                    'id'       => $author->id,
+                    'name'     => $author->name,
+                    'initials' => $author->initials,
+                    'photo'    => $author->photo_url,
+                ];
+            }),
+        ]);
+    }
+
+    /**
+     * ✅ BARU: Serve PDF dengan header yang benar untuk PDF.js
+     * Menghindari response 204 dari Herd/Nginx lokal
+     */
+    public function servePdf($slug)
+    {
+        $publication = Publication::where('slug', $slug)
+            ->where('status', 'published')
+            ->firstOrFail();
+
+        $latestVersion = $publication->versions()
+            ->whereNotNull('pdf_file_path')
+            ->orderBy('version_number', 'desc')
+            ->first();
+
+        if (!$latestVersion || !$latestVersion->pdf_file_path) {
+            abort(404, 'File tidak ditemukan');
+        }
+
+        $filePath = $this->cleanPath($latestVersion->pdf_file_path);
+
+        if (!Storage::disk('public')->exists($filePath)) {
+            abort(404, 'File tidak ditemukan di storage');
+        }
+
+        $fullPath = Storage::disk('public')->path($filePath);
+
+        // ✅ Serve dengan Content-Type PDF yang benar → fix 204 / ERR_CERT error
+        return response()->file($fullPath, [
+            'Content-Type'                => 'application/pdf',
+            'Content-Disposition'         => 'inline; filename="' . basename($filePath) . '"',
+            'Access-Control-Allow-Origin' => '*',
+            'Cache-Control'               => 'public, max-age=3600',
+            'X-Content-Type-Options'      => 'nosniff',
         ]);
     }
 }
