@@ -43,7 +43,6 @@ class PublicationForm
 
     /**
      * ✅ Helper: ambil atau buat Author profile untuk user yang sedang login
-     * Selalu load relasi user agar accessor name bisa resolve
      */
     private static function resolveCurrentAuthor(): ?Author
     {
@@ -61,10 +60,30 @@ class PublicationForm
             ]
         );
 
-        // ✅ Paksa load relasi user agar accessor name bisa resolve
         $author->setRelation('user', $currentUser);
 
         return $author;
+    }
+
+    // ─────────────────────────────────────────
+    // ✅ Helper: shared createOptionForm untuk keywords
+    // ─────────────────────────────────────────
+    private static function keywordCreateOptionForm(string $labelField = 'Keyword'): array
+    {
+        return [
+            TextInput::make('name')
+                ->label($labelField)
+                ->required()
+                ->maxLength(100)
+                ->live(onBlur: true)
+                ->unique(table: 'keywords', column: 'name', ignoreRecord: true)
+                ->afterStateUpdated(fn($state, callable $set) => $set('slug', Str::slug($state))),
+            TextInput::make('slug')
+                ->label('Slug')
+                ->required()
+                ->disabled()
+                ->dehydrated(),
+        ];
     }
 
     public static function configure(Schema $schema): Schema
@@ -165,56 +184,60 @@ class PublicationForm
                                         ->helperText('Wajib. Tulis isi opini secara lengkap.')
                                         ->disabled(fn() => self::isReviewer()),
 
-                                    // Keywords — Jurnal
+                                    // ─────────────────────────────────────────
+                                    // ✅ Keywords — Jurnal (min 3, maks 7)
+                                    // ─────────────────────────────────────────
                                     Select::make('keywords')
                                         ->label('Keywords')
                                         ->relationship('keywords', 'name', fn($query) => $query->orderBy('name'))
-                                        ->multiple()->searchable()->preload()
+                                        ->multiple()
+                                        ->searchable()
+                                        ->preload()
+                                        ->minItems(3)   // ✅ Minimal 3 keyword
+                                        ->maxItems(7)   // ✅ Maksimal 7 keyword
                                         ->visible(fn($get) => self::publicationTypeSlug($get) === 'jurnal')
                                         ->required(fn($get) => self::publicationTypeSlug($get) === 'jurnal')
-                                        ->createOptionForm([
-                                            TextInput::make('name')->label('Keyword')->required()->maxLength(100)
-                                                ->live(onBlur: true)->unique(table: 'keywords', column: 'name', ignoreRecord: true)
-                                                ->afterStateUpdated(fn($state, callable $set) => $set('slug', Str::slug($state))),
-                                            TextInput::make('slug')->label('Slug')->required()->disabled()->dehydrated(),
-                                        ])
+                                        ->createOptionForm(self::keywordCreateOptionForm('Keyword'))
                                         ->createOptionUsing(fn(array $data) => Keyword::create($data)->getKey())
-                                        ->helperText('Wajib. Pilih 3–7 keyword.')
-                                        ->disabled(fn() => self::isReviewer())->columnSpanFull(),
+                                        ->helperText('Wajib. Pilih minimal 3 dan maksimal 7 keyword.')
+                                        ->disabled(fn() => self::isReviewer())
+                                        ->columnSpanFull(),
 
-                                    // Tags — Buku
+                                    // ─────────────────────────────────────────
+                                    // ✅ Tags — Buku (maks 3)
+                                    // ─────────────────────────────────────────
                                     Select::make('keywords')
                                         ->label('Tags')
                                         ->relationship('keywords', 'name', fn($query) => $query->orderBy('name'))
-                                        ->multiple()->searchable()->preload()
+                                        ->multiple()
+                                        ->searchable()
+                                        ->preload()
+                                        ->maxItems(3)   // ✅ Maksimal 3 tag
                                         ->visible(fn($get) => self::publicationTypeSlug($get) === 'buku')
                                         ->required(false)
-                                        ->createOptionForm([
-                                            TextInput::make('name')->label('Tag')->required()->maxLength(100)
-                                                ->live(onBlur: true)->unique(table: 'keywords', column: 'name', ignoreRecord: true)
-                                                ->afterStateUpdated(fn($state, callable $set) => $set('slug', Str::slug($state))),
-                                            TextInput::make('slug')->label('Slug')->required()->disabled()->dehydrated(),
-                                        ])
+                                        ->createOptionForm(self::keywordCreateOptionForm('Tag'))
                                         ->createOptionUsing(fn(array $data) => Keyword::create($data)->getKey())
-                                        ->helperText('Opsional.')
-                                        ->disabled(fn() => self::isReviewer())->columnSpanFull(),
+                                        ->helperText('Opsional. Maksimal 3 tag.')
+                                        ->disabled(fn() => self::isReviewer())
+                                        ->columnSpanFull(),
 
-                                    // Topik — Opini
+                                    // ─────────────────────────────────────────
+                                    // ✅ Topik — Opini (maks 3)
+                                    // ─────────────────────────────────────────
                                     Select::make('keywords')
                                         ->label('Topik')
                                         ->relationship('keywords', 'name', fn($query) => $query->orderBy('name'))
-                                        ->multiple()->searchable()->preload()->maxItems(3)
+                                        ->multiple()
+                                        ->searchable()
+                                        ->preload()
+                                        ->maxItems(3)   // ✅ Maksimal 3 topik
                                         ->visible(fn($get) => self::publicationTypeSlug($get) === 'opini')
                                         ->required(false)
-                                        ->createOptionForm([
-                                            TextInput::make('name')->label('Topik')->required()->maxLength(100)
-                                                ->live(onBlur: true)->unique(table: 'keywords', column: 'name', ignoreRecord: true)
-                                                ->afterStateUpdated(fn($state, callable $set) => $set('slug', Str::slug($state))),
-                                            TextInput::make('slug')->label('Slug')->required()->disabled()->dehydrated(),
-                                        ])
+                                        ->createOptionForm(self::keywordCreateOptionForm('Topik'))
                                         ->createOptionUsing(fn(array $data) => Keyword::create($data)->getKey())
-                                        ->helperText('Opsional. Maks. 3 topik.')
-                                        ->disabled(fn() => self::isReviewer())->columnSpanFull(),
+                                        ->helperText('Opsional. Maksimal 3 topik.')
+                                        ->disabled(fn() => self::isReviewer())
+                                        ->columnSpanFull(),
                                 ]),
                         ]),
 
@@ -297,7 +320,7 @@ class PublicationForm
                                         ->relationship('authorPublications')
                                         ->orderColumn('order')
                                         ->reorderable()
-                                        ->defaultItems(0)   // ✅ Jangan pakai default, kita set manual
+                                        ->defaultItems(0)
                                         ->minItems(1)
                                         ->addActionLabel('Tambah penulis lain')
                                         ->collapsed()
@@ -305,7 +328,6 @@ class PublicationForm
                                             $state ??= [];
                                             $state = array_values($state);
 
-                                            // ✅ Jika sudah ada data (mode edit), skip init
                                             if (count($state) > 0) {
                                                 foreach ($state as $i => $row) {
                                                     $state[$i]['order'] = $i + 1;
@@ -314,11 +336,9 @@ class PublicationForm
                                                 return;
                                             }
 
-                                            // ✅ Init: ambil/buat Author profile untuk user yang login
                                             $author = self::resolveCurrentAuthor();
                                             if (!$author) return;
 
-                                            // ✅ Set HANYA 1 item dengan author dari user login
                                             $set('authorPublications', [[
                                                 'author_id'        => $author->id,
                                                 'is_corresponding' => true,
@@ -331,11 +351,9 @@ class PublicationForm
                                                 ->required()
                                                 ->live()
                                                 ->disableOptionsWhenSelectedInSiblingRepeaterItems()
-                                                // ✅ Corresponding author tidak bisa diganti
                                                 ->disabled(fn(Get $get): bool => (bool) $get('is_corresponding'))
                                                 ->relationship('author', 'name')
                                                 ->searchable()
-                                                // ✅ FIXED: Search gabungan authors + users dengan load('user')
                                                 ->getSearchResultsUsing(function (string $search) {
                                                     return Author::query()
                                                         ->with('user')
@@ -352,43 +370,35 @@ class PublicationForm
                                                         ->limit(20)
                                                         ->get()
                                                         ->mapWithKeys(function (Author $author) {
-                                                            // ✅ Accessor name sudah resolved karena with('user')
                                                             $label = $author->name;
                                                             if ($author->email) $label .= " — {$author->email}";
                                                             if ($author->affiliation) $label .= " ({$author->affiliation})";
                                                             return [$author->id => $label];
                                                         });
                                                 })
-                                                // ✅ FIXED: getOptionLabelUsing dengan with('user')
                                                 ->getOptionLabelUsing(function ($value): string {
                                                     $author = Author::with('user')->find($value);
                                                     if (!$author) return '—';
-
-                                                    // ✅ Jika linked ke user, set relasi manual agar accessor resolve
-                                                    $label = $author->name; // accessor sudah resolve karena with('user')
+                                                    $label = $author->name;
                                                     if ($author->email) $label .= " — {$author->email}";
                                                     return $label;
                                                 })
                                                 ->dehydrated()
-                                                // ✅ Create form — untuk tambah external author
                                                 ->createOptionForm([
                                                     TextInput::make('name')
                                                         ->label('Nama Lengkap')
                                                         ->required()
                                                         ->maxLength(255)
                                                         ->helperText('Untuk external author yang tidak punya akun.'),
-
                                                     TextInput::make('email')
                                                         ->label('Email')
                                                         ->email()
                                                         ->maxLength(255)
                                                         ->unique(table: 'authors', column: 'email', ignoreRecord: true)
                                                         ->helperText('Opsional.'),
-
                                                     TextInput::make('affiliation')
                                                         ->label('Affiliasi / Institusi')
                                                         ->maxLength(255),
-
                                                     Textarea::make('bio')
                                                         ->label('Bio Singkat')
                                                         ->rows(3)
