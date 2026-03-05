@@ -16,10 +16,26 @@ class CreatePublication extends CreateRecord
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        // Simpan siapa pembuat publication (bukan siapa yang mengedit)
         $data['created_by'] = auth()->id();
 
-        // Pastikan slug di-generate / diset, sisanya akan diamankan di model
+        // ✅ Pre-check: cek apakah judul sudah ada
+        $title = trim($data['title'] ?? '');
+        if (filled($title)) {
+            $exists = Publication::where('title', $title)->exists();
+
+            if ($exists) {
+                Notification::make()
+                    ->title('Judul sudah digunakan')
+                    ->body('Judul karya ilmiah ini sudah pernah dibuat sebelumnya. Silakan gunakan judul yang berbeda atau tambahkan penjelasan spesifik (metode, lokasi, atau konteks).')
+                    ->danger()
+                    ->persistent()
+                    ->send();
+
+                $this->halt();
+            }
+        }
+
+        // Generate slug unik
         if (blank($data['slug'] ?? null) && filled($data['title'] ?? null)) {
             $data['slug'] = Publication::generateUniqueSlug($data['title']);
         }
@@ -27,9 +43,6 @@ class CreatePublication extends CreateRecord
         return $data;
     }
 
-    /**
-     * Tangani error DB (termasuk unique constraint) dengan pesan yang ramah.
-     */
     protected function handleRecordCreation(array $data): \Illuminate\Database\Eloquent\Model
     {
         try {
@@ -37,7 +50,7 @@ class CreatePublication extends CreateRecord
         } catch (UniqueConstraintViolationException $e) {
             Notification::make()
                 ->title('Gagal menyimpan publikasi')
-                ->body('Data publikasi bertabrakan dengan data yang sudah ada (misalnya slug atau field unik lain). Silakan cek kembali judul atau data yang diisi.')
+                ->body('Data publikasi bertabrakan dengan data yang sudah ada. Silakan cek kembali judul atau data yang diisi.')
                 ->danger()
                 ->persistent()
                 ->send();
@@ -53,7 +66,6 @@ class CreatePublication extends CreateRecord
             return;
         }
 
-        // Buat/ambil author profile milik creator
         $author = Author::query()->firstOrCreate(
             ['user_id' => $creator->id],
             [
@@ -63,15 +75,13 @@ class CreatePublication extends CreateRecord
             ]
         );
 
-        // Jadikan creator sebagai corresponding author
         $this->record->authors()->syncWithoutDetaching([
             $author->id => [
-                'order'           => 1,
+                'order'            => 1,
                 'is_corresponding' => true,
             ],
         ]);
 
-        // Matikan corresponding lain (kalau ada)
         \App\Models\Pivots\AuthorPublication::query()
             ->where('publication_id', $this->record->id)
             ->where('author_id', '!=', $author->id)

@@ -6,6 +6,7 @@ use App\Filament\Resources\Publications\PublicationResource;
 use App\Filament\Resources\Publications\Widgets\PublicationStatusBanner;
 use App\Filament\Resources\PublicationVersionResource;
 use App\Models\Author;
+use App\Models\Publication;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\FileUpload;
@@ -30,29 +31,42 @@ class EditPublication extends EditRecord
         ];
     }
 
-    /**
-     * Reviewer hanya boleh update field status (dan published_at jika diperlukan).
-     */
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        if (! $this->isReviewer()) {
-            return $data;
+        if ($this->isReviewer()) {
+            $filtered = [
+                'status' => $data['status'] ?? $this->record->status,
+            ];
+
+            if (($filtered['status'] ?? null) === 'published') {
+                $filtered['published_at'] = $data['published_at'] ?? $this->record->published_at;
+            }
+
+            return $filtered;
         }
 
-        $filtered = [
-            'status' => $data['status'] ?? $this->record->status,
-        ];
+        // ✅ Non-reviewer: cek apakah judul berubah dan sudah digunakan publikasi lain
+        $title = trim($data['title'] ?? '');
+        if (filled($title) && $title !== $this->record->title) {
+            $exists = Publication::where('title', $title)
+                ->where('id', '!=', $this->record->id)
+                ->exists();
 
-        if (($filtered['status'] ?? null) === 'published') {
-            $filtered['published_at'] = $data['published_at'] ?? $this->record->published_at;
+            if ($exists) {
+                Notification::make()
+                    ->title('Judul sudah digunakan')
+                    ->body('Judul karya ilmiah ini sudah pernah digunakan oleh publikasi lain. Silakan gunakan judul yang berbeda atau tambahkan penjelasan spesifik (metode, lokasi, atau konteks).')
+                    ->danger()
+                    ->persistent()
+                    ->send();
+
+                $this->halt();
+            }
         }
 
-        return $filtered;
+        return $data;
     }
 
-    /**
-     * Tangani UniqueConstraintViolation saat update dengan pesan yang baik.
-     */
     protected function handleRecordUpdate(\Illuminate\Database\Eloquent\Model $record, array $data): \Illuminate\Database\Eloquent\Model
     {
         try {
@@ -60,7 +74,7 @@ class EditPublication extends EditRecord
         } catch (UniqueConstraintViolationException $e) {
             Notification::make()
                 ->title('Gagal memperbarui publikasi')
-                ->body('Perubahan yang Anda lakukan bertabrakan dengan data yang sudah ada (misalnya slug atau field unik lain). Silakan cek kembali judul atau data yang diubah.')
+                ->body('Perubahan yang Anda lakukan bertabrakan dengan data yang sudah ada. Silakan cek kembali judul atau data yang diubah.')
                 ->danger()
                 ->persistent()
                 ->send();
@@ -71,7 +85,6 @@ class EditPublication extends EditRecord
 
     protected function afterSave(): void
     {
-        // 1) Reviewer flow: kirim notif published ke author terkait
         if ($this->isReviewer()) {
             if (
                 $this->record->status === 'published'
@@ -95,11 +108,9 @@ class EditPublication extends EditRecord
                 }
             }
 
-            // Reviewer tidak perlu sync authors
             return;
         }
 
-        // 2) Non-reviewer flow: sync authors
         $creator = $this->record->creator ?? null;
         if (! $creator) {
             return;
@@ -116,7 +127,7 @@ class EditPublication extends EditRecord
 
         $this->record->authors()->syncWithoutDetaching([
             $author->id => [
-                'order'           => 1,
+                'order'            => 1,
                 'is_corresponding' => true,
             ],
         ]);

@@ -353,14 +353,16 @@ class Publication extends Model
         \Cache::forget("publication.{$this->id}.unique_views");
     }
 
+
+    // duplicated error message
     protected static function booted(): void
     {
         static::saving(function (Publication $publication) {
-            // ✅ Generate/regenerate slug setiap kali title berubah atau slug kosong
+            // Generate/regenerate slug otomatis
             if (empty($publication->slug) || $publication->isDirty('title')) {
                 $publication->slug = static::generateUniqueSlug(
                     $publication->title,
-                    $publication->id  // ignore record saat update
+                    $publication->id
                 );
             }
         });

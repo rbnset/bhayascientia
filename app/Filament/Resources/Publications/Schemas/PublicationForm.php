@@ -41,9 +41,6 @@ class PublicationForm
         return PublicationType::query()->whereKey($id)->value('slug');
     }
 
-    /**
-     * ✅ Helper: ambil atau buat Author profile untuk user yang sedang login
-     */
     private static function resolveCurrentAuthor(): ?Author
     {
         $currentUser = auth()->user();
@@ -65,9 +62,6 @@ class PublicationForm
         return $author;
     }
 
-    // ─────────────────────────────────────────
-    // ✅ Helper: shared createOptionForm untuk keywords
-    // ─────────────────────────────────────────
     private static function keywordCreateOptionForm(string $labelField = 'Keyword'): array
     {
         return [
@@ -124,6 +118,7 @@ class PublicationForm
                                         ->disabled(fn() => self::isReviewer())
                                         ->columnSpan(1),
 
+                                    // ✅ VALIDASI JUDUL UNIQUE
                                     TextInput::make('title')
                                         ->label(fn($get) => match (self::publicationTypeSlug($get)) {
                                             'jurnal' => 'Judul Artikel',
@@ -139,6 +134,15 @@ class PublicationForm
                                             'opini'  => 'Contoh: Mengapa Digitalisasi Desa Masih Lambat?',
                                             default  => 'Tulis judul yang jelas dan ringkas.',
                                         })
+                                        // ✅ Validasi unique: judul tidak boleh sama dengan publikasi lain
+                                        ->unique(
+                                            table: 'publications',
+                                            column: 'title',
+                                            ignoreRecord: true
+                                        )
+                                        ->validationMessages([
+                                            'unique' => 'Judul karya ilmiah ini sudah pernah digunakan. Silakan gunakan judul yang berbeda atau tambahkan penjelasan spesifik (metode, lokasi, atau konteks).',
+                                        ])
                                         ->disabled(fn() => self::isReviewer())
                                         ->columnSpanFull(),
 
@@ -184,17 +188,15 @@ class PublicationForm
                                         ->helperText('Wajib. Tulis isi opini secara lengkap.')
                                         ->disabled(fn() => self::isReviewer()),
 
-                                    // ─────────────────────────────────────────
-                                    // ✅ Keywords — Jurnal (min 3, maks 7)
-                                    // ─────────────────────────────────────────
+                                    // Keywords — Jurnal (min 3, maks 7)
                                     Select::make('keywords')
                                         ->label('Keywords')
                                         ->relationship('keywords', 'name', fn($query) => $query->orderBy('name'))
                                         ->multiple()
                                         ->searchable()
                                         ->preload()
-                                        ->minItems(3)   // ✅ Minimal 3 keyword
-                                        ->maxItems(7)   // ✅ Maksimal 7 keyword
+                                        ->minItems(3)
+                                        ->maxItems(7)
                                         ->visible(fn($get) => self::publicationTypeSlug($get) === 'jurnal')
                                         ->required(fn($get) => self::publicationTypeSlug($get) === 'jurnal')
                                         ->createOptionForm(self::keywordCreateOptionForm('Keyword'))
@@ -203,16 +205,14 @@ class PublicationForm
                                         ->disabled(fn() => self::isReviewer())
                                         ->columnSpanFull(),
 
-                                    // ─────────────────────────────────────────
-                                    // ✅ Tags — Buku (maks 3)
-                                    // ─────────────────────────────────────────
+                                    // Tags — Buku (maks 3)
                                     Select::make('keywords')
                                         ->label('Tags')
                                         ->relationship('keywords', 'name', fn($query) => $query->orderBy('name'))
                                         ->multiple()
                                         ->searchable()
                                         ->preload()
-                                        ->maxItems(3)   // ✅ Maksimal 3 tag
+                                        ->maxItems(3)
                                         ->visible(fn($get) => self::publicationTypeSlug($get) === 'buku')
                                         ->required(false)
                                         ->createOptionForm(self::keywordCreateOptionForm('Tag'))
@@ -221,16 +221,14 @@ class PublicationForm
                                         ->disabled(fn() => self::isReviewer())
                                         ->columnSpanFull(),
 
-                                    // ─────────────────────────────────────────
-                                    // ✅ Topik — Opini (maks 3)
-                                    // ─────────────────────────────────────────
+                                    // Topik — Opini (maks 3)
                                     Select::make('keywords')
                                         ->label('Topik')
                                         ->relationship('keywords', 'name', fn($query) => $query->orderBy('name'))
                                         ->multiple()
                                         ->searchable()
                                         ->preload()
-                                        ->maxItems(3)   // ✅ Maksimal 3 topik
+                                        ->maxItems(3)
                                         ->visible(fn($get) => self::publicationTypeSlug($get) === 'opini')
                                         ->required(false)
                                         ->createOptionForm(self::keywordCreateOptionForm('Topik'))
