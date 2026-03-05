@@ -12,8 +12,9 @@
 'ctaIcon' => 'book',
 'ctaSubtext' => null,
 'ctaVariant' => 'primary',
-'showAvatarWhenAuth' => false, // Props untuk kontrol avatar
-'showCtaAlways' => false, // 🆕 Props untuk kontrol CTA tetap tampil
+'showAvatarWhenAuth' => false,
+'showCtaAlways' => false,
+'showSearch' => true, // 🆕 Default true = tampil di halaman publikasi seperti biasa
 ])
 
 {{-- Detect if we're on home page --}}
@@ -128,7 +129,6 @@ $ctaClasses = [
                                 <span>Dashboard</span>
                             </a>
 
-
                             <a href="{{ route('profil.saya') }}"
                                 class="flex items-center gap-3 px-4 py-2.5 text-sm text-[#1A1A1A] hover:bg-[#FFF7F2] transition-colors">
                                 <svg class="w-5 h-5 text-[#737373]" fill="none" stroke="currentColor"
@@ -217,7 +217,7 @@ $ctaClasses = [
                 </svg>
                 </button>
 
-                {{-- Dropdown Menu (tetap sama seperti sebelumnya) --}}
+                {{-- Dropdown Menu --}}
                 <div x-show="open" x-transition:enter="transition ease-out duration-200"
                     x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
                     x-transition:leave="transition ease-in duration-150"
@@ -255,7 +255,6 @@ $ctaClasses = [
                             </svg>
                             <span>Dashboard</span>
                         </a>
-
 
                         <a href="{{ route('profil.saya') }}"
                             class="flex items-center gap-3 px-4 py-2.5 text-sm text-[#1A1A1A] hover:bg-[#FFF7F2] transition-colors">
@@ -309,8 +308,6 @@ $ctaClasses = [
         </a>
         @endif
 
-
-
         <div class="flex items-center gap-3">
             {{-- Desktop Navigation --}}
             <nav class="items-center hidden xl:flex" aria-label="Menu utama" role="navigation">
@@ -344,8 +341,8 @@ $ctaClasses = [
                 </div>
             </nav>
 
-            {{-- Search Button (Only on Publikasi Pages) --}}
-            @if(request()->routeIs('publikasi.*'))
+            {{-- 🔍 Desktop Search Button (hanya jika showSearch=true DAN di halaman publikasi) --}}
+            @if($showSearch && request()->routeIs('publikasi.*'))
             <button onclick="openPublicationSearch()"
                 class="hidden xl:flex items-center justify-center w-12 h-12 bg-white rounded-full border-2 border-[#EEF0F7] hover:border-[#FF6B18] hover:bg-[#FFF7F2] transition-all duration-300 group shadow-sm hover:shadow-md">
                 <svg class="w-5 h-5 text-[#737373] group-hover:text-[#FF6B18] group-hover:scale-110 transition-all"
@@ -356,7 +353,7 @@ $ctaClasses = [
             </button>
             @endif
 
-            {{-- 🆕 Desktop CTA - Tampil Berdasarkan showCtaAlways atau Login Status --}}
+            {{-- Desktop CTA - Tampil Berdasarkan showCtaAlways atau Login Status --}}
             @if($showCtaAlways || !auth()->check())
             <a href="{{ route($ctaRoute) }}"
                 class="group text-sm font-bold text-white xl:flex hidden h-[48px] shrink-0 items-center justify-center rounded-full {{ $ctaClasses[$ctaVariant] }} transition-all duration-200 hover:-translate-y-[1px] hover:shadow-[0_10px_20px_0_#FF6B1880] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 focus-visible:ring-offset-white relative overflow-hidden {{ $ctaSubtext ? 'px-6 gap-2.5' : 'px-5 gap-2' }}">
@@ -386,8 +383,8 @@ $ctaClasses = [
             </a>
             @endif
 
-            {{-- Mobile Search Button (Only on Publikasi Pages) --}}
-            @if(request()->routeIs('publikasi.*'))
+            {{-- 🔍 Mobile Search Button (hanya jika showSearch=true DAN di halaman publikasi) --}}
+            @if($showSearch && request()->routeIs('publikasi.*'))
             <button onclick="openPublicationSearch()"
                 class="xl:hidden flex items-center justify-center w-11 h-11 bg-white rounded-full border border-[#EEF0F7] hover:border-[#FF6B18] hover:bg-[#FFF7F2] transition-all duration-200 shadow-sm">
                 <svg class="w-5 h-5 text-[#737373]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -517,7 +514,7 @@ $ctaClasses = [
 
                 {{-- CTA Section --}}
                 <div class="space-y-2.5">
-                    {{-- 🆕 Tombol CTA Mobile --}}
+                    {{-- Tombol CTA Mobile --}}
                     @if($showCtaAlways || !auth()->check())
                     <a href="{{ route($ctaRoute) }}"
                         class="js-mobile-item nav-mobile-item-enter group flex items-center justify-between rounded-xl px-4 py-3.5 text-sm font-bold text-white {{ $ctaClasses[$ctaVariant] }} transition-all duration-200 hover:shadow-[0_10px_20px_0_#FF6B1880] active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 focus-visible:ring-offset-white relative overflow-hidden"

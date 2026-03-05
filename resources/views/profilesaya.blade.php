@@ -4,8 +4,9 @@
 
 @section('custom_navbar')
 <x-navbar ctaLabel="Mulai Berlangganan" ctaRoute="subscription.index" ctaIcon="sparkles" ctaSubtext="Gratis"
-    ctaVariant="premium" :showAvatarWhenAuth="true" :showCtaAlways="true" />
+    ctaVariant="premium" :showAvatarWhenAuth="true" :showCtaAlways="true" :showSearch="false" />
 @endsection
+
 
 @section('content')
 
