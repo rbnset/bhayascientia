@@ -139,7 +139,7 @@ $ctaClasses = [
                                 <span>Profil Saya</span>
                             </a>
 
-                            <a href="#"
+                            {{-- <a href="#"
                                 class="flex items-center gap-3 px-4 py-2.5 text-sm text-[#1A1A1A] hover:bg-[#FFF7F2] transition-colors">
                                 <svg class="w-5 h-5 text-[#737373]" fill="none" stroke="currentColor"
                                     viewBox="0 0 24 24">
@@ -149,7 +149,7 @@ $ctaClasses = [
                                         d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                 </svg>
                                 <span>Pengaturan</span>
-                            </a>
+                            </a> --}}
                         </div>
 
                         {{-- Logout --}}
@@ -266,7 +266,7 @@ $ctaClasses = [
                             <span>Profil Saya</span>
                         </a>
 
-                        <a href="#"
+                        {{-- <a href="#"
                             class="flex items-center gap-3 px-4 py-2.5 text-sm text-[#1A1A1A] hover:bg-[#FFF7F2] transition-colors">
                             <svg class="w-5 h-5 text-[#737373] flex-shrink-0" fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">
@@ -276,7 +276,7 @@ $ctaClasses = [
                                     d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                             </svg>
                             <span>Pengaturan</span>
-                        </a>
+                        </a> --}}
                     </div>
 
                     {{-- Logout --}}
