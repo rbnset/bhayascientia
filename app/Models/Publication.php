@@ -352,4 +352,39 @@ class Publication extends Model
         \Cache::forget("publication.{$this->id}.downloads_count");
         \Cache::forget("publication.{$this->id}.unique_views");
     }
+
+    protected static function booted(): void
+    {
+        static::saving(function (Publication $publication) {
+            // ✅ Generate/regenerate slug setiap kali title berubah atau slug kosong
+            if (empty($publication->slug) || $publication->isDirty('title')) {
+                $publication->slug = static::generateUniqueSlug(
+                    $publication->title,
+                    $publication->id  // ignore record saat update
+                );
+            }
+        });
+    }
+
+    /**
+     * ✅ Generate slug unik dengan suffix angka otomatis jika sudah ada.
+     * Contoh: "my-title" → "my-title-2" → "my-title-3" dst.
+     */
+    public static function generateUniqueSlug(string $title, ?int $ignoreId = null): string
+    {
+        $baseSlug = Str::slug($title);
+        $slug     = $baseSlug;
+        $counter  = 2;
+
+        while (
+            static::where('slug', $slug)
+            ->when($ignoreId, fn($q) => $q->where('id', '!=', $ignoreId))
+            ->exists()
+        ) {
+            $slug = "{$baseSlug}-{$counter}";
+            $counter++;
+        }
+
+        return $slug;
+    }
 }

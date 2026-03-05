@@ -5,11 +5,13 @@ namespace App\Filament\Resources\Publications\Pages;
 use App\Filament\Resources\Publications\PublicationResource;
 use App\Filament\Resources\Publications\Widgets\PublicationStatusBanner;
 use App\Filament\Resources\PublicationVersionResource;
+use App\Models\Author;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\FileUpload;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Str;
 
 class EditPublication extends EditRecord
@@ -48,18 +50,32 @@ class EditPublication extends EditRecord
         return $filtered;
     }
 
+    /**
+     * Tangani UniqueConstraintViolation saat update dengan pesan yang baik.
+     */
+    protected function handleRecordUpdate(\Illuminate\Database\Eloquent\Model $record, array $data): \Illuminate\Database\Eloquent\Model
+    {
+        try {
+            return parent::handleRecordUpdate($record, $data);
+        } catch (UniqueConstraintViolationException $e) {
+            Notification::make()
+                ->title('Gagal memperbarui publikasi')
+                ->body('Perubahan yang Anda lakukan bertabrakan dengan data yang sudah ada (misalnya slug atau field unik lain). Silakan cek kembali judul atau data yang diubah.')
+                ->danger()
+                ->persistent()
+                ->send();
+
+            $this->halt();
+        }
+    }
+
     protected function afterSave(): void
     {
-        /**
-         * =========================
-         * 1) Reviewer flow: kirim notif published ke author terkait
-         * =========================
-         */
+        // 1) Reviewer flow: kirim notif published ke author terkait
         if ($this->isReviewer()) {
-            // Kirim notifikasi hanya jika status published dan ada perubahan status/published_at
             if (
                 $this->record->status === 'published'
-                && ($this->record->wasChanged('status') || $this->record->wasChanged('published_at')) // after-save change check [web:157]
+                && ($this->record->wasChanged('status') || $this->record->wasChanged('published_at'))
             ) {
                 $authorUserIds = $this->record->authors()
                     ->pluck('authors.user_id')
@@ -79,37 +95,28 @@ class EditPublication extends EditRecord
                 }
             }
 
-            // Reviewer tidak perlu menjalankan logika relasi authors setelah save
+            // Reviewer tidak perlu sync authors
             return;
         }
 
-        /**
-         * =========================
-         * 2) Non-reviewer flow: sync authors (kode Anda)
-         * =========================
-         *
-         * NOTE:
-         * Di model Publication yang Anda kirim, TIDAK ADA relasi creator / created_by.
-         * Jika di project Anda memang ada $this->record->creator, berarti aman.
-         */
+        // 2) Non-reviewer flow: sync authors
         $creator = $this->record->creator ?? null;
-
         if (! $creator) {
             return;
         }
 
-        $author = \App\Models\Author::query()->firstOrCreate(
+        $author = Author::query()->firstOrCreate(
             ['user_id' => $creator->id],
             [
-                'name' => $creator->name,
-                'email' => $creator->email,
+                'name'        => $creator->name,
+                'email'       => $creator->email,
                 'affiliation' => null,
             ]
         );
 
         $this->record->authors()->syncWithoutDetaching([
             $author->id => [
-                'order' => 1,
+                'order'           => 1,
                 'is_corresponding' => true,
             ],
         ]);
@@ -166,16 +173,15 @@ class EditPublication extends EditRecord
                 ])
                 ->action(function (array $data) {
                     $this->record->versions()->create([
-                        'pdf_file_path' => $data['pdf_file_path'],
+                        'pdf_file_path'  => $data['pdf_file_path'],
                         'version_number' => 1,
-                        'submitted_at' => now(),
+                        'submitted_at'   => now(),
                     ]);
 
                     $this->record->update([
                         'status' => 'submitted',
                     ]);
 
-                    // Notify all reviewers (submit pertama kali)
                     $reviewers = \App\Models\User::role('reviewer')->get();
 
                     \Illuminate\Support\Facades\Notification::send(
@@ -219,16 +225,15 @@ class EditPublication extends EditRecord
                     $nextVersion = ($this->record->versions()->max('version_number') ?? 0) + 1;
 
                     $this->record->versions()->create([
-                        'pdf_file_path' => $data['pdf_file_path'],
+                        'pdf_file_path'  => $data['pdf_file_path'],
                         'version_number' => $nextVersion,
-                        'submitted_at' => now(),
+                        'submitted_at'   => now(),
                     ]);
 
                     $this->record->update([
                         'status' => 'submitted',
                     ]);
 
-                    // Notify reviewers (author submit revisi)
                     $publication = $this->record;
 
                     $reviewerIds = $publication->reviews()
