@@ -1089,7 +1089,7 @@ PUBLICATIONS
             <h2 class="section-title">Karya Publikasi</h2>
             <p class="mt-2.5 text-xs sm:text-sm text-[#737373]">
                 Karya ilmiah yang dipublikasikan oleh
-                <span class="font-semibold text-[#1A1A1A]">{{ explode(' ', $name)[0] }}</span>
+                <span class="font-semibold text-[#1A1A1A]">{{ $name }}</span>
             </p>
         </div>
 
@@ -1335,7 +1335,7 @@ COLLABORATORS
             <h2 class="section-title">Kolaborator</h2>
             <p class="mt-2.5 text-xs sm:text-sm text-[#737373]">
                 Penulis lain yang pernah berkolaborasi dengan
-                <span class="font-semibold text-[#1A1A1A]">{{ explode(' ', $name)[0] }}</span>
+                <span class="font-semibold text-[#1A1A1A]">{{ $name }}</span>
             </p>
         </div>
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 sm:gap-4 lg:gap-5">
