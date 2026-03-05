@@ -61,8 +61,12 @@ $ctaClasses = [
                         {{-- Avatar --}}
                         <div class="relative">
                             @if(auth()->user()->profile_photo)
-                            <img src="{{ Storage::disk('public')->url(auth()->user()->profile_photo) }}"
+                            <img src="{{ asset('storage/' . auth()->user()->profile_photo) }}"
                                 alt="{{ auth()->user()->name }}"
+                                class="h-10 w-10 object-cover rounded-full border-2 border-[#FF6B18] shadow-sm group-hover:shadow-md transition-all">
+                            @elseif(auth()->user()->avatar && filter_var(auth()->user()->avatar, FILTER_VALIDATE_URL))
+                            <img src="{{ auth()->user()->avatar }}" alt="{{ auth()->user()->name }}"
+                                referrerpolicy="no-referrer"
                                 class="h-10 w-10 object-cover rounded-full border-2 border-[#FF6B18] shadow-sm group-hover:shadow-md transition-all">
                             @else
                             <div
@@ -75,6 +79,7 @@ $ctaClasses = [
                             <span
                                 class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></span>
                         </div>
+
 
                         {{-- User Info --}}
                         <div class="hidden text-left lg:block">
@@ -178,8 +183,12 @@ $ctaClasses = [
                         {{-- Avatar --}}
                         <div class="relative flex-shrink-0">
                             @if(auth()->user()->profile_photo)
-                            <img src="{{ Storage::disk('public')->url(auth()->user()->profile_photo) }}"
+                            <img src="{{ asset('storage/' . auth()->user()->profile_photo) }}"
                                 alt="{{ auth()->user()->name }}"
+                                class="h-10 w-10 sm:h-11 sm:w-11 object-cover rounded-full border-2 border-[#FF6B18] shadow-md group-hover:shadow-lg transition-all">
+                            @elseif(auth()->user()->avatar && filter_var(auth()->user()->avatar, FILTER_VALIDATE_URL))
+                            <img src="{{ auth()->user()->avatar }}" alt="{{ auth()->user()->name }}"
+                                referrerpolicy="no-referrer"
                                 class="h-10 w-10 sm:h-11 sm:w-11 object-cover rounded-full border-2 border-[#FF6B18] shadow-md group-hover:shadow-lg transition-all">
                             @else
                             <div
@@ -192,6 +201,7 @@ $ctaClasses = [
                             <span
                                 class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></span>
                         </div>
+
 
                         {{-- User Info Mobile - dengan custom class CSS --}}
                         <div class="flex-1 min-w-0 text-left user-info-container">
@@ -445,8 +455,12 @@ $ctaClasses = [
                 <div class="mb-4 p-4 bg-gradient-to-br from-[#FFF7F2] to-[#F8F9FC] rounded-xl border border-[#EEF0F7]">
                     <div class="flex items-center gap-3">
                         @if(auth()->user()->profile_photo)
-                        <img src="{{ Storage::disk('public')->url(auth()->user()->profile_photo) }}"
+                        <img src="{{ asset('storage/' . auth()->user()->profile_photo) }}"
                             alt="{{ auth()->user()->name }}"
+                            class="h-12 w-12 object-cover rounded-full border-2 border-[#FF6B18]">
+                        @elseif(auth()->user()->avatar && filter_var(auth()->user()->avatar, FILTER_VALIDATE_URL))
+                        <img src="{{ auth()->user()->avatar }}" alt="{{ auth()->user()->name }}"
+                            referrerpolicy="no-referrer"
                             class="h-12 w-12 object-cover rounded-full border-2 border-[#FF6B18]">
                         @else
                         <div
@@ -463,6 +477,7 @@ $ctaClasses = [
                     </div>
                 </div>
                 @endif
+
 
                 <div class="pb-3 mb-3">
                     <div class="grid grid-cols-1 gap-2.5">

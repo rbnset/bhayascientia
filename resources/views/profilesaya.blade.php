@@ -107,7 +107,8 @@
 
                     {{-- Avatar --}}
                     <div class="relative flex-shrink-0">
-                        <img src="{{ $user->photo_url }}" alt="{{ $user->name }}" id="headerAvatar"
+                        <img src="{{ $user->profile_photo ? asset('storage/' . $user->profile_photo) : ($user->avatar ?: 'https://ui-avatars.com/api/?name=' . urlencode($user->name) . '&background=FF6B18&color=fff&size=128&bold=true') }}"
+                            alt="{{ $user->name }}" id="headerAvatar" referrerpolicy="no-referrer"
                             class="object-cover w-24 h-24 bg-white border-4 border-white shadow-xl sm:w-32 sm:h-32 rounded-2xl">
                         @if($user->isEmailVerified())
                         <div class="absolute flex items-center justify-center w-6 h-6 bg-green-500 border-2 border-white rounded-full shadow sm:w-7 sm:h-7 bottom-1 right-1"
@@ -454,8 +455,15 @@
                             <div class="relative flex-shrink-0">
                                 <div
                                     class="relative w-36 h-36 rounded-2xl overflow-hidden border-4 border-[#EEF0F7] shadow-lg">
-                                    <img :src="preview || '{{ $user->photo_url }}'" id="previewPhoto"
-                                        alt="{{ $user->name }}" class="object-cover w-full h-full">
+                                    @php
+                                    $currentPhotoUrl = $user->profile_photo
+                                    ? asset('storage/' . $user->profile_photo)
+                                    : ($user->avatar ?: 'https://ui-avatars.com/api/?name=' . urlencode($user->name) .
+                                    '&background=FF6B18&color=fff&size=128&bold=true');
+                                    @endphp
+                                    <img :src="preview || '{{ $currentPhotoUrl }}'" id="previewPhoto"
+                                        alt="{{ $user->name }}" referrerpolicy="no-referrer"
+                                        class="object-cover w-full h-full">
                                     {{-- Overlay saat hover --}}
                                     <label for="photoInput"
                                         class="absolute inset-0 flex flex-col items-center justify-center transition-all duration-200 cursor-pointer bg-black/0 hover:bg-black/40 group">
