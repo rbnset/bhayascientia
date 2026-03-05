@@ -2,6 +2,7 @@
 
 @section('title', $publication->title . ' - Read')
 @section('main_class', 'mt-0 pb-0 bg-[#1A1A1A]')
+@section('hide_footer', 'true')
 
 @push('styles')
 <style>
