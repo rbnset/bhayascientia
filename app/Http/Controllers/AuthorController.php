@@ -21,120 +21,114 @@ class AuthorController extends Controller
     public function show($identifier)
     {
         $author = null;
-        $user = null;
-        $isUserProfile = false;
+        $user   = null;
 
-        // Try to find in Author table first (by ID)
+        // ✅ Selalu cari di tabel authors dulu
         if (is_numeric($identifier)) {
             $author = Author::with('user')->find($identifier);
         }
 
-        // If not found, try to find in User table
+        // ✅ Fallback: cari di tabel users (untuk kasus lama / direct link)
         if (!$author) {
             $user = User::find($identifier);
             if ($user) {
-                $isUserProfile = true;
-                // Check if user has author profile
+                // Cek apakah user ini punya author profile
                 $author = $user->authorProfile ?? null;
             }
         }
 
-        // If still not found, return 404
         if (!$author && !$user) {
             abort(404, 'Author not found');
         }
 
-        // Prepare data based on author type
-        if ($isUserProfile && $user) {
-            $name = $user->name;
-            $email = $user->email;
-            $bio = $user->bio ?? null;
-            $affiliation = $user->affiliation ?? $user->job_title ?? null;
-            $photoUrl = $user->photo_url;
-
-            // Get publications through author profile
-            if ($author) {
-                $publicationsQuery = $author->publications();
-            } else {
-                // If user doesn't have author profile, return empty data
-                return view('author.profile', [
-                    'user' => $user,
-                    'author' => null,
-                    'name' => $name,
-                    'email' => $email,
-                    'bio' => $bio,
-                    'affiliation' => $affiliation,
-                    'photoUrl' => $photoUrl,
-                    'publications' => collect()->paginate(9),
-                    'formattedPublications' => collect(), // ✅ ADDED
-                    'totalPublications' => 0,
-                    'totalViews' => 0,
-                    'totalDownloads' => 0,
-                    'coAuthors' => collect(),
-                    'isUserProfile' => $isUserProfile,
-                ]);
+        // ✅ Jika author ditemukan (kasus utama sekarang)
+        if ($author) {
+            // Load user jika belum ter-load
+            if (!$author->relationLoaded('user')) {
+                $author->load('user');
             }
-        } else {
-            $name = $author->name;
-            $email = $author->email;
-            $bio = $author->bio;
-            $affiliation = $author->affiliation;
-            $photoUrl = $author->photo_url;
-            $user = $author->user; // Get related user if exists
+
+            $user        = $author->user; // bisa null jika external author
+            $name        = $author->name; // accessor resolved dari user jika ada
+            $email       = $author->email;
+            $bio         = $author->bio ?? ($user?->bio ?? null);
+            $affiliation = $author->affiliation ?? ($user?->job_title ?? null);
+            $photoUrl    = $author->photo_url;
+
             $publicationsQuery = $author->publications();
+        } else {
+            // Fallback: user tanpa author profile
+            $name        = $user->name;
+            $email       = $user->email;
+            $bio         = $user->bio ?? null;
+            $affiliation = $user->affiliation ?? $user->job_title ?? null;
+            $photoUrl    = $user->photo_url;
+
+            return view('author.profile', [
+                'user'                  => $user,
+                'author'                => null,
+                'name'                  => $name,
+                'email'                 => $email,
+                'bio'                   => $bio,
+                'affiliation'           => $affiliation,
+                'photoUrl'              => $photoUrl,
+                'publications'          => collect()->paginate(9),
+                'formattedPublications' => collect(),
+                'totalPublications'     => 0,
+                'totalViews'            => 0,
+                'totalDownloads'        => 0,
+                'coAuthors'             => collect(),
+                'isUserProfile'         => true,
+            ]);
         }
 
-        // ✅ Get publications with pagination (9 per page)
+        // ✅ Get publications dengan pagination
         $publications = $publicationsQuery
-            ->with(['publicationType', 'categories', 'authors.user', 'downloadLogs', 'viewLogs']) // ✅ Added logs
+            ->with(['publicationType', 'categories', 'authors.user', 'downloadLogs', 'viewLogs'])
             ->where('status', 'published')
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now())
             ->orderBy('published_at', 'desc')
             ->paginate(9)
-            ->withQueryString(); // ✅ Preserve query string
+            ->withQueryString();
 
-        // ✅ Format publications untuk view (gunakan getCollection()->transform untuk preserve pagination)
+        // ✅ Format publications
         $formattedPublications = $publications->getCollection()->transform(function ($publication) {
             $category = $publication->categories->first();
 
-            // ✅ Get publication type with fallback
-            $pubType = 'Publikasi';
-            if ($publication->publicationType) {
-                $pubType = $publication->publicationType->name;
-            }
-
-            // ✅ Get cover URL using trait method
+            $pubType  = $publication->publicationType?->name ?? 'Publikasi';
             $coverUrl = $this->getCoverUrl($publication);
 
             return [
-                'id' => $publication->id,
-                'title' => $publication->title,
-                'slug' => $publication->slug,
-                'abstract' => $publication->abstract ? Str::limit($publication->abstract, 150) : 'No abstract available',
-                'cover_url' => $coverUrl, // Bisa null
-                'category' => $category ? $category->name : 'Uncategorized',
-                'category_slug' => $category ? $category->slug : null,
-                'publication_type' => $pubType, // ✅ ADDED: Correct key
-                'type' => $pubType, // ✅ Backward compatibility
-                'type_slug' => $publication->publicationType->slug ?? 'publikasi',
-                'formatted_date' => $publication->published_at?->locale('id_ID')->isoFormat('D MMM Y'),
-                'year' => $publication->published_at?->year,
-                'detail_url' => route('publikasi.show', $publication->slug),
-                'authors' => $publication->authors->map(function ($author) {
-                    return [
-                        'name' => $author->name,
-                        'photo' => $author->photo_url, // ✅ Use accessor
-                        'initials' => $author->initials, // ✅ ADDED
-                    ];
-                })->toArray(),
-                'total_authors' => $publication->authors->count(),
-                'views_count' => $publication->viewLogs->count(),
-                'download_count' => $publication->downloadLogs->count(),
+                'id'               => $publication->id,
+                'title'            => $publication->title,
+                'slug'             => $publication->slug,
+                'abstract'         => $publication->abstract
+                    ? Str::limit(strip_tags($publication->abstract), 150)
+                    : 'No abstract available',
+                'cover_url'        => $coverUrl,
+                'category'         => $category?->name ?? 'Uncategorized',
+                'category_slug'    => $category?->slug ?? null,
+                'publication_type' => $pubType,
+                'type'             => $pubType,
+                'type_slug'        => $publication->publicationType?->slug ?? 'publikasi',
+                'formatted_date'   => $publication->published_at
+                    ?->locale('id_ID')
+                    ->isoFormat('D MMM Y'),
+                'year'             => $publication->published_at?->year,
+                'detail_url'       => route('publikasi.show', $publication->slug),
+                'authors'          => $publication->authors->map(fn($a) => [
+                    'name'     => $a->name,
+                    'photo'    => $a->photo_url,
+                    'initials' => $a->initials,
+                ])->toArray(),
+                'total_authors'    => $publication->authors->count(),
+                'views_count'      => $publication->viewLogs->count(),
+                'download_count'   => $publication->downloadLogs->count(),
             ];
         });
 
-        // ✅ Get publication IDs for stats
+        // ✅ Stats
         $publicationIds = $author->publications()
             ->where('status', 'published')
             ->whereNotNull('published_at')
@@ -142,73 +136,63 @@ class AuthorController extends Controller
             ->pluck('publications.id')
             ->toArray();
 
-        // ✅ Count statistics
         $totalPublications = count($publicationIds);
 
-        // ✅ Total Views
-        $totalViews = 0;
-        if (!empty($publicationIds)) {
-            $totalViews = DB::table('publication_view_logs')
-                ->whereIn('publication_id', $publicationIds)
-                ->count();
-        }
+        $totalViews = empty($publicationIds) ? 0
+            : DB::table('publication_view_logs')
+            ->whereIn('publication_id', $publicationIds)
+            ->count();
 
-        // ✅ Total Downloads
-        $totalDownloads = 0;
-        if (!empty($publicationIds)) {
-            $totalDownloads = DB::table('download_logs')
-                ->whereIn('publication_id', $publicationIds)
-                ->count();
-        }
+        $totalDownloads = empty($publicationIds) ? 0
+            : DB::table('download_logs')
+            ->whereIn('publication_id', $publicationIds)
+            ->count();
 
-        // ✅ Get co-authors
-        $coAuthors = collect();
-        if ($author) {
-            $coAuthors = Author::whereHas('publications', function ($query) use ($author) {
-                $query->whereIn('publications.id', function ($subQuery) use ($author) {
-                    $subQuery->select('publication_id')
-                        ->from('author_publication')
-                        ->where('author_id', $author->id);
-                })
-                    ->where('publications.status', 'published')
-                    ->whereNotNull('publications.published_at')
-                    ->where('publications.published_at', '<=', now());
+        // ✅ Co-authors
+        $coAuthors = Author::whereHas('publications', function ($query) use ($author) {
+            $query->whereIn('publications.id', function ($sub) use ($author) {
+                $sub->select('publication_id')
+                    ->from('author_publication')
+                    ->where('author_id', $author->id);
             })
-                ->where('id', '!=', $author->id)
-                ->withCount(['publications' => function ($query) {
-                    $query->where('status', 'published')
-                        ->whereNotNull('published_at')
-                        ->where('published_at', '<=', now());
-                }])
-                ->limit(6)
-                ->get()
-                ->map(function ($coAuthor) {
-                    return [
-                        'id' => $coAuthor->id,
-                        'name' => $coAuthor->name,
-                        'photo_url' => $coAuthor->photo_url,
-                        'initials' => $coAuthor->initials,
-                        'publications_count' => $coAuthor->publications_count,
-                        'profile_url' => route('author.profile', $coAuthor->id),
-                    ];
-                });
-        }
+                ->where('publications.status', 'published')
+                ->whereNotNull('publications.published_at')
+                ->where('publications.published_at', '<=', now());
+        })
+            ->where('id', '!=', $author->id)
+            ->withCount([
+                'publications' => fn($q) =>
+                $q->where('status', 'published')
+                    ->whereNotNull('published_at')
+                    ->where('published_at', '<=', now())
+            ])
+            ->limit(6)
+            ->get()
+            ->map(fn($coAuthor) => [
+                'id'                 => $coAuthor->id,
+                'name'               => $coAuthor->name,
+                'photo_url'          => $coAuthor->photo_url,
+                'initials'           => $coAuthor->initials,
+                'publications_count' => $coAuthor->publications_count,
+                // ✅ FIXED: selalu gunakan author->id
+                'profile_url'        => route('author.profile', $coAuthor->id),
+            ]);
 
         return view('author.profile', [
-            'author' => $author,
-            'user' => $user,
-            'name' => $name,
-            'email' => $email,
-            'bio' => $bio,
-            'affiliation' => $affiliation,
-            'photoUrl' => $photoUrl,
-            'publications' => $publications, // ✅ Paginator object
-            'formattedPublications' => $formattedPublications, // ✅ Formatted data
-            'totalPublications' => $totalPublications,
-            'totalViews' => $totalViews,
-            'totalDownloads' => $totalDownloads,
-            'coAuthors' => $coAuthors,
-            'isUserProfile' => $isUserProfile,
+            'author'                => $author,
+            'user'                  => $user,
+            'name'                  => $name,
+            'email'                 => $email,
+            'bio'                   => $bio,
+            'affiliation'           => $affiliation,
+            'photoUrl'              => $photoUrl,
+            'publications'          => $publications,
+            'formattedPublications' => $formattedPublications,
+            'totalPublications'     => $totalPublications,
+            'totalViews'            => $totalViews,
+            'totalDownloads'        => $totalDownloads,
+            'coAuthors'             => $coAuthors,
+            'isUserProfile'         => (bool) $author->user_id,
         ]);
     }
 }

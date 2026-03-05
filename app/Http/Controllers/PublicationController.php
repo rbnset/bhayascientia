@@ -535,10 +535,14 @@ class PublicationController extends Controller
                 'short_bio'        => $author->short_bio,
                 'email'            => $author->email,
                 'is_corresponding' => $author->pivot->is_corresponding ?? false,
+
+                // ✅ FIXED: selalu pakai author->id agar route menuju AuthorController
+                // AuthorController::show() sudah bisa handle author yang linked ke user
                 'profile_type'     => $author->user_id ? 'user' : 'author',
-                'profile_id'       => $author->user_id ?? $author->id,
+                'profile_id'       => $author->id, // ✅ Selalu author->id
             ];
         });
+
 
         return view('pages.publication.show', [
             'publication'       => $publication,
