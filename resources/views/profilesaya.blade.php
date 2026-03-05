@@ -75,21 +75,9 @@
         @endif
 
         {{-- ===================== PAGE HEADER ===================== --}}
-        <div class="mb-8">
-            <div class="flex items-center gap-3 mb-1">
-                <a href="{{ route('home') }}"
-                    class="flex items-center justify-center w-9 h-9 rounded-xl bg-white border border-[#EEF0F7]
-                        text-[#737373] hover:text-[#FF6B18] hover:border-[#FF6B18] transition-all duration-200 shadow-sm">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                    </svg>
-                </a>
-                <div>
-                    <h1 class="text-2xl sm:text-3xl font-black text-[#1A1A1A]">Profil Saya</h1>
-                    <p class="text-sm text-[#737373]">Kelola informasi profil dan keamanan akun Anda</p>
-                </div>
-            </div>
+        <div class="mb-6">
+            <h1 class="text-2xl sm:text-3xl font-black text-[#1A1A1A]">Profil Saya</h1>
+            <p class="text-sm text-[#737373]">Kelola informasi profil dan keamanan akun Anda</p>
         </div>
 
         {{-- ===================== PROFILE OVERVIEW CARD ===================== --}}
@@ -693,14 +681,13 @@
                                         Password Saat Ini <span class="text-red-500">*</span>
                                     </label>
                                     <div class="relative">
-                                        :type="showCurrent ? 'text' : 'password'"
                                         <input :type="showCurrent ? 'text' : 'password'" name="current_password"
                                             required placeholder="Masukkan password saat ini" class="w-full pl-4 pr-12 py-3 text-sm bg-[#F8F9FC] border border-[#EEF0F7] rounded-xl
-                                                focus:ring-2 focus:ring-[#FF6B18]/30 focus:border-[#FF6B18] focus:bg-white
-                                                transition-all duration-200 outline-none
-                                                @error('current_password') border-red-400 bg-red-50 @enderror">
+            focus:ring-2 focus:ring-[#FF6B18]/30 focus:border-[#FF6B18] focus:bg-white
+            transition-all duration-200 outline-none
+            @error('current_password') border-red-400 bg-red-50 @enderror">
                                         <button type="button" @click="showCurrent = !showCurrent"
-                                            class="absolute right-4 top-1/2 -translate-y-1/2 text-[#A3A6AE] hover:text-[#FF6B18] transition-colors">
+                                            class="absolute inset-y-0 right-0 flex items-center px-4 text-[#A3A6AE] hover:text-[#FF6B18] transition-colors">
                                             <svg x-show="!showCurrent" class="w-4 h-4" fill="none" stroke="currentColor"
                                                 viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -795,9 +782,9 @@
                                                 focus:ring-2 focus:ring-[#FF6B18]/30 focus:border-[#FF6B18] focus:bg-white
                                                 transition-all duration-200 outline-none">
                                         <button type="button" @click="showConfirm = !showConfirm"
-                                            class="absolute right-4 top-1/2 -translate-y-1/2 text-[#A3A6AE] hover:text-[#FF6B18] transition-colors">
-                                            <svg x-show="!showConfirm" class="w-4 h-4" fill="none" stroke="currentColor"
-                                                viewBox="0 0 24 24">
+                                            class="absolute inset-y-0 right-0 flex items-center px-4 text-[#A3A6AE] hover:text-[#FF6B18] transition-colors">
+                                            <svg x-show=" !showConfirm" class="w-4 h-4" fill="none"
+                                                stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                     d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
