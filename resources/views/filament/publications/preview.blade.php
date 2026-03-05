@@ -16,14 +16,12 @@ $authorIds = $authorPubs->pluck('author_id')->filter()->unique()->values();
 $categoryIds = collect($get('categories') ?? [])->filter()->values();
 $keywordIds = collect($get('keywords') ?? [])->filter()->values();
 
-// ✅ FIX: eager load relasi user agar accessor name bisa resolve
 $authorMap = $authorIds->isEmpty()
 ? collect()
 : \App\Models\Author::with('user')
 ->whereIn('id', $authorIds)
 ->get()
 ->mapWithKeys(function ($author) {
-// Accessor name: prioritaskan authors.name, fallback ke users.name
 $name = filled($author->getRawOriginal('name'))
 ? $author->getRawOriginal('name')
 : ($author->user?->name ?? null);
@@ -65,17 +63,14 @@ $abstractHtml = filled($abstract) ? str($abstract)->sanitizeHtml() : null;
 
 <div class="bookx">
     <div class="bookx-wrap">
-
-        {{-- ══════════════════════════════════════
-        COVER COLUMN
-        ══════════════════════════════════════ --}}
+        {{-- COVER COLUMN --}}
         <div class="bookx-cover">
             @if($coverUrl)
-            <img src="{{ $coverUrl }}" alt="Cover image preview" loading="lazy" />
+            <img src="{{ $coverUrl }}" alt="Cover image preview" loading="lazy" class="bookx-cover-img" />
             @else
             <div class="bookx-cover-fallback">
                 <div class="bookx-fallback-icon">
-                    <x-heroicon-o-photo class="w-10 h-10 text-orange-600" />
+                    <x-heroicon-o-photo class="bookx-fallback-icon-svg" />
                 </div>
                 <p class="bookx-fallback-text">
                     Upload cover untuk melihat preview seperti buku.
@@ -104,9 +99,7 @@ $abstractHtml = filled($abstract) ? str($abstract)->sanitizeHtml() : null;
             </div>
         </div>
 
-        {{-- ══════════════════════════════════════
-        BODY COLUMN
-        ══════════════════════════════════════ --}}
+        {{-- BODY COLUMN --}}
         <div class="bookx-body">
             <div class="bookx-kicker">Publication Preview</div>
 
@@ -192,99 +185,174 @@ $abstractHtml = filled($abstract) ? str($abstract)->sanitizeHtml() : null;
                 </div>
             </div>
         </div>
-
     </div>
 </div>
 
 <style>
-    /* ══════════════════════════════════════════
-       MOBILE-FIRST BASE
-    ══════════════════════════════════════════ */
+    /* ════════════════════════════════════════════════
+       MOBILE-FIRST RESPONSIVE + LIGHT/DARK MODE
+       Uses CSS custom properties & prefers-color-scheme
+    ════════════════════════════════════════════════ */
+
+    :root {
+        /* Light Mode (default) */
+        --bg-primary: #ffffff;
+        --bg-secondary: #fff7ed;
+        --bg-abstract: #fff7ed;
+        --border-primary: #fed7aa;
+        --border-secondary: #f3f4f6;
+        --text-primary: #111827;
+        --text-secondary: #374151;
+        --text-muted: #6b7280;
+        --text-muted-light: #9ca3af;
+        --text-orange: #9a3412;
+        --accent-primary: #f97316;
+        --accent-gradient: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+        --shadow-light: 0 8px 24px rgba(17, 24, 39, 0.05);
+        --shadow-heavy: 0 12px 28px rgba(17, 24, 39, 0.10);
+        --shadow-accent: 0 8px 18px rgba(249, 115, 22, 0.22);
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root {
+            /* Dark Mode */
+            --bg-primary: #1f2937;
+            --bg-secondary: #374151;
+            --bg-abstract: #374151;
+            --border-primary: #6b7280;
+            --border-secondary: #4b5563;
+            --text-primary: #f9fafb;
+            --text-secondary: #d1d5db;
+            --text-muted: #9ca3af;
+            --text-muted-light: #6b7280;
+            --text-orange: #f59e0b;
+            --accent-primary: #fb923c;
+            --accent-gradient: linear-gradient(135deg, #f59e0b 0%, #fb923c 100%);
+            --shadow-light: 0 8px 24px rgba(0, 0, 0, 0.3);
+            --shadow-heavy: 0 12px 28px rgba(0, 0, 0, 0.4);
+            --shadow-accent: 0 8px 18px rgba(245, 158, 11, 0.3);
+        }
+    }
+
+    /* Override for forced dark mode (if using class="dark") */
+    .dark {
+        --bg-primary: #1f2937;
+        --bg-secondary: #374151;
+        --bg-abstract: #374151;
+        --border-primary: #6b7280;
+        --border-secondary: #4b5563;
+        --text-primary: #f9fafb;
+        --text-secondary: #d1d5db;
+        --text-muted: #9ca3af;
+        --text-muted-light: #6b7280;
+        --text-orange: #f59e0b;
+        --accent-primary: #fb923c;
+        --accent-gradient: linear-gradient(135deg, #f59e0b 0%, #fb923c 100%);
+        --shadow-light: 0 8px 24px rgba(0, 0, 0, 0.3);
+        --shadow-heavy: 0 12px 28px rgba(0, 0, 0, 0.4);
+        --shadow-accent: 0 8px 18px rgba(245, 158, 11, 0.3);
+    }
+
+    /* ════════════════════════════════════════════════
+       MOBILE-FIRST BASE STYLES
+    ════════════════════════════════════════════════ */
     .bookx {
         display: flex;
         justify-content: center;
-        padding: 0.5rem;
+        padding: clamp(0.5rem, 2vw, 1rem);
+        width: 100%;
+        min-height: 100vh;
     }
 
     .bookx-wrap {
         width: 100%;
-        max-width: 980px;
+        max-width: 1200px;
         display: flex;
         flex-direction: column;
-        /* mobile: stack vertikal */
-        gap: 1.25rem;
+        gap: clamp(1rem, 3vw, 1.5rem);
     }
 
-    /* ══════════════════════════════════════════
+    /* ════════════════════════════════════════════════
        COVER
-    ══════════════════════════════════════════ */
+    ════════════════════════════════════════════════ */
     .bookx-cover {
         position: relative;
-        border-radius: 16px;
+        border-radius: 20px;
         overflow: hidden;
-        background: #fff7ed;
-        border: 1px solid #fed7aa;
-        box-shadow: 0 12px 28px rgba(17, 24, 39, 0.10);
+        background: var(--bg-secondary);
+        border: 2px solid var(--border-primary);
+        box-shadow: var(--shadow-heavy);
         width: 100%;
+        aspect-ratio: 3/4;
+        max-height: 400px;
     }
 
-    .bookx-cover img {
+    .bookx-cover-img {
         width: 100%;
-        height: 260px;
-        /* mobile default */
+        height: 100%;
         object-fit: cover;
         display: block;
     }
 
     .bookx-cover-badge {
         position: absolute;
-        top: 0.75rem;
-        left: 0.75rem;
+        top: clamp(0.75rem, 2vw, 1rem);
+        left: clamp(0.75rem, 2vw, 1rem);
         background: rgba(249, 115, 22, 0.95);
-        color: #fff;
-        padding: 0.3rem 0.65rem;
-        border-radius: 999px;
-        font-size: 0.7rem;
+        color: white;
+        padding: 0.4rem 0.75rem;
+        border-radius: 9999px;
+        font-size: clamp(0.7rem, 2vw, 0.8rem);
         font-weight: 800;
         letter-spacing: 0.05em;
         text-transform: uppercase;
+        backdrop-filter: blur(10px);
     }
 
     .bookx-cover-fallback {
-        height: 260px;
-        /* sama dengan img mobile */
+        height: 100%;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        padding: 1.25rem;
-        gap: 0.65rem;
+        padding: clamp(1rem, 4vw, 1.5rem);
+        gap: 0.75rem;
         text-align: center;
     }
 
     .bookx-fallback-icon {
-        width: 60px;
-        height: 60px;
+        width: clamp(50px, 12vw, 70px);
+        height: clamp(50px, 12vw, 70px);
         border-radius: 16px;
-        background: #ffedd5;
+        background: color-mix(in srgb, var(--bg-primary) 70%, transparent);
         display: flex;
         align-items: center;
         justify-content: center;
-        border: 1px solid #fed7aa;
-        flex-shrink: 0;
+        border: 2px solid var(--border-primary);
+    }
+
+    .bookx-fallback-icon-svg {
+        width: 2rem;
+        height: 2rem;
+        color: var(--accent-primary);
     }
 
     .bookx-fallback-text {
-        color: #9a3412;
-        font-size: 0.88rem;
+        color: var(--text-orange);
+        font-size: clamp(0.85rem, 2.5vw, 0.95rem);
         line-height: 1.5;
         margin: 0;
+        max-width: 85%;
     }
 
     .bookx-cover-actions {
-        padding: 0.8rem;
-        background: #ffffff;
-        border-top: 1px solid #fed7aa;
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: clamp(0.75rem, 3vw, 1rem);
+        background: var(--bg-primary);
+        border-top: 2px solid var(--border-primary);
     }
 
     .bookx-download {
@@ -292,24 +360,25 @@ $abstractHtml = filled($abstract) ? str($abstract)->sanitizeHtml() : null;
         width: 100%;
         justify-content: center;
         align-items: center;
-        gap: 0.45rem;
+        gap: 0.5rem;
         text-decoration: none;
-        background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
-        color: #ffffff;
+        background: var(--accent-gradient);
+        color: white;
         font-weight: 800;
-        font-size: 0.9rem;
-        border-radius: 12px;
-        padding: 0.7rem 1rem;
-        box-shadow: 0 8px 18px rgba(249, 115, 22, 0.22);
-        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        font-size: clamp(0.85rem, 2.5vw, 0.95rem);
+        border-radius: 16px;
+        padding: clamp(0.75rem, 2.5vw, 1rem) clamp(1rem, 4vw, 1.25rem);
+        box-shadow: var(--shadow-accent);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         touch-action: manipulation;
+        border: none;
     }
 
     .bookx-download:hover,
     .bookx-download:focus-visible {
-        transform: translateY(-1px);
-        box-shadow: 0 12px 24px rgba(249, 115, 22, 0.30);
-        color: #ffffff;
+        transform: translateY(-2px);
+        box-shadow: 0 16px 32px rgba(249, 115, 22, 0.35);
+        color: white;
     }
 
     .bookx-download:active {
@@ -317,259 +386,257 @@ $abstractHtml = filled($abstract) ? str($abstract)->sanitizeHtml() : null;
     }
 
     .bookx-download-icon {
-        width: 1rem;
-        height: 1rem;
+        width: 1.25rem;
+        height: 1.25rem;
         flex-shrink: 0;
     }
 
     .bookx-download-disabled {
         width: 100%;
         text-align: center;
-        padding: 0.7rem 1rem;
-        border-radius: 12px;
-        background: #fff7ed;
-        border: 1px dashed #fed7aa;
-        color: #9a3412;
+        padding: clamp(0.75rem, 2.5vw, 1rem) 1rem;
+        border-radius: 16px;
+        background: var(--bg-secondary);
+        border: 2px dashed var(--border-primary);
+        color: var(--text-orange);
         font-weight: 600;
-        font-size: 0.85rem;
+        font-size: clamp(0.8rem, 2.2vw, 0.9rem);
         line-height: 1.5;
-        box-sizing: border-box;
     }
 
-    /* ══════════════════════════════════════════
+    /* ════════════════════════════════════════════════
        BODY
-    ══════════════════════════════════════════ */
+    ════════════════════════════════════════════════ */
     .bookx-body {
-        background: #ffffff;
-        border: 1px solid #f3f4f6;
-        border-radius: 16px;
-        padding: 1.25rem;
-        box-shadow: 0 8px 24px rgba(17, 24, 39, 0.05);
+        background: var(--bg-primary);
+        border: 2px solid var(--border-secondary);
+        border-radius: 20px;
+        padding: clamp(1.25rem, 4vw, 2rem);
+        box-shadow: var(--shadow-light);
     }
 
     .bookx-kicker {
-        color: #9a3412;
+        color: var(--accent-primary);
         font-weight: 800;
-        font-size: 0.72rem;
+        font-size: clamp(0.7rem, 2vw, 0.8rem);
         letter-spacing: 0.08em;
         text-transform: uppercase;
-        margin-bottom: 0.4rem;
+        margin-bottom: 0.75rem;
     }
 
     .bookx-title {
-        color: #111827;
-        font-size: 1.35rem;
-        /* lebih kecil di mobile */
+        color: var(--text-primary);
+        font-size: clamp(1.25rem, 4vw, 1.875rem);
         font-weight: 900;
-        line-height: 1.25;
-        margin: 0 0 0.65rem;
+        line-height: 1.2;
+        margin: 0 0 clamp(0.75rem, 2.5vw, 1rem);
         word-break: break-word;
+        hyphens: auto;
     }
 
-    /* ── Authors ── */
+    /* Authors */
     .bookx-authors {
-        color: #6b7280;
-        font-size: 0.9rem;
+        color: var(--text-muted);
+        font-size: clamp(0.875rem, 2.5vw, 1rem);
         line-height: 1.7;
-        margin-bottom: 1rem;
+        margin-bottom: clamp(1rem, 3vw, 1.5rem);
         display: flex;
         flex-wrap: wrap;
         align-items: center;
-        gap: 0.25rem 0;
+        gap: 0.25rem 0.125rem;
     }
 
     .bookx-author {
         font-weight: 700;
-        color: #374151;
-        font-size: 0.9rem;
+        color: var(--text-secondary);
     }
 
     .bookx-corresponding {
         font-weight: 700;
-        color: #f97316;
-        font-size: 0.8rem;
+        color: var(--accent-primary);
+        font-size: 0.875em;
     }
 
     .bookx-sep {
-        opacity: 0.30;
-        margin: 0 0.3rem;
+        opacity: 0.5;
+        margin: 0 0.375rem;
+        font-weight: 400;
     }
 
     .bookx-muted {
-        color: #9ca3af;
-        font-size: 0.88rem;
+        color: var(--text-muted-light);
+        font-size: 0.9em;
     }
 
-    /* ── Stats grid ── */
+    /* Stats Grid */
     .bookx-meta {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        /* 2 kolom di mobile */
-        gap: 0.65rem;
-        margin-bottom: 1.1rem;
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        gap: clamp(0.75rem, 2.5vw, 1rem);
+        margin-bottom: clamp(1.25rem, 4vw, 1.75rem);
     }
 
     .bookx-meta-item {
-        background: #fff7ed;
-        border: 1px solid #fed7aa;
-        border-radius: 14px;
-        padding: 0.7rem 0.8rem;
+        background: var(--bg-secondary);
+        border: 2px solid var(--border-primary);
+        border-radius: 16px;
+        padding: clamp(0.75rem, 2.5vw, 1rem);
+        text-align: center;
     }
 
     .bookx-meta-label {
-        font-size: 0.68rem;
+        font-size: clamp(0.65rem, 1.8vw, 0.75rem);
         font-weight: 800;
-        color: #9a3412;
-        letter-spacing: 0.04em;
+        color: var(--text-orange);
+        letter-spacing: 0.05em;
         text-transform: uppercase;
+        margin-bottom: 0.25rem;
     }
 
     .bookx-meta-value {
-        margin-top: 0.2rem;
-        font-size: 1.05rem;
+        font-size: clamp(1rem, 3vw, 1.25rem);
         font-weight: 900;
-        color: #111827;
+        color: var(--text-primary);
     }
 
-    /* ── Sections ── */
+    /* Sections */
     .bookx-section {
-        margin-top: 0.9rem;
+        margin-top: clamp(1.25rem, 4vw, 1.75rem);
+    }
+
+    .bookx-section:first-child {
+        margin-top: 0;
     }
 
     .bookx-section-title {
-        font-size: 0.82rem;
+        font-size: clamp(0.8rem, 2.2vw, 0.875rem);
         font-weight: 900;
-        color: #111827;
-        margin-bottom: 0.45rem;
+        color: var(--text-primary);
+        margin-bottom: 0.75rem;
         text-transform: uppercase;
-        letter-spacing: 0.03em;
+        letter-spacing: 0.04em;
     }
 
     .bookx-tags {
         display: flex;
         flex-wrap: wrap;
-        gap: 0.4rem;
+        gap: clamp(0.375rem, 1.5vw, 0.5rem);
     }
 
     .bookx-tag {
-        background: #fffbeb;
-        border: 1px solid rgba(249, 115, 22, 0.20);
-        color: #9a3412;
-        padding: 0.22rem 0.55rem;
-        border-radius: 999px;
-        font-size: 0.8rem;
+        background: color-mix(in srgb, var(--bg-secondary) 100%, transparent);
+        border: 1px solid var(--border-primary);
+        color: var(--text-orange);
+        padding: 0.375rem 0.75rem;
+        border-radius: 9999px;
+        font-size: clamp(0.75rem, 2vw, 0.825rem);
         font-weight: 600;
-        line-height: 1.5;
+        line-height: 1.4;
+        white-space: nowrap;
     }
 
-    /* ── Abstract ── */
+    /* Abstract */
     .bookx-abstract {
-        background: #fff7ed;
-        border: 1px solid #fed7aa;
-        border-radius: 14px;
-        padding: 0.9rem 1rem;
-        color: #111827;
-        font-size: 0.92rem;
-        line-height: 1.8;
+        background: var(--bg-abstract);
+        border: 2px solid var(--border-primary);
+        border-radius: 16px;
+        padding: clamp(1rem, 3vw, 1.25rem);
+        color: var(--text-primary);
+        font-size: clamp(0.875rem, 2.5vw, 0.95rem);
+        line-height: 1.75;
         text-align: justify;
-        text-justify: inter-word;
-        word-break: break-word;
-        overflow-wrap: break-word;
     }
 
     .bookx-abstract :where(p, ul, ol, blockquote, h1, h2, h3, h4, pre, table) {
-        margin-top: 0.7rem;
-        margin-bottom: 0.7rem;
+        margin-top: 1rem;
+        margin-bottom: 1rem;
     }
 
     .bookx-abstract :where(ul, ol) {
-        padding-left: 1.2rem;
+        padding-left: 1.5rem;
     }
 
     .bookx-abstract :where(li) {
-        margin: 0.2rem 0;
+        margin: 0.25rem 0;
     }
 
     .bookx-abstract :where(blockquote) {
-        border-left: 3px solid rgba(249, 115, 22, 0.40);
-        padding-left: 0.85rem;
-        color: #374151;
+        border-left: 4px solid var(--accent-primary);
+        padding-left: 1rem;
+        color: var(--text-secondary);
         font-style: italic;
+        background: color-mix(in srgb, transparent 80%, currentColor);
     }
 
     .bookx-abstract :where(a) {
-        color: #c2410c;
+        color: var(--accent-primary);
         text-decoration: underline;
         word-break: break-all;
     }
 
-    /* ══════════════════════════════════════════
-       TABLET  ≥ 640px
-    ══════════════════════════════════════════ */
-    @media (min-width: 640px) {
-        .bookx {
-            padding: 1rem;
-        }
-
-        .bookx-body {
-            padding: 1.5rem;
-        }
-
-        .bookx-title {
-            font-size: 1.5rem;
-        }
-
-        .bookx-cover img,
-        .bookx-cover-fallback {
-            height: 360px;
-        }
-
-        .bookx-meta {
-            grid-template-columns: repeat(4, 1fr);
-            /* 4 kolom di tablet */
-        }
-    }
-
-    /* ══════════════════════════════════════════
-       DESKTOP  ≥ 860px  →  side-by-side layout
-    ══════════════════════════════════════════ */
-    @media (min-width: 860px) {
-        .bookx {
-            padding: 0;
-        }
-
+    /* ════════════════════════════════════════════════
+       TABLET & DESKTOP - SIDE-BY-SIDE LAYOUT
+    ════════════════════════════════════════════════ */
+    @media (min-width: 768px) {
         .bookx-wrap {
-            display: grid;
-            grid-template-columns: 300px 1fr;
-            flex-direction: unset;
-            gap: 1.5rem;
+            flex-direction: row;
             align-items: start;
         }
 
-        .bookx-cover img,
-        .bookx-cover-fallback {
-            height: 460px;
-        }
-
-        .bookx-title {
-            font-size: 1.6rem;
+        .bookx-cover {
+            flex: 0 0 280px;
+            max-height: 420px;
         }
 
         .bookx-body {
-            padding: 1.5rem;
+            flex: 1;
+            margin-left: clamp(1.5rem, 4vw, 2rem);
         }
     }
 
-    /* ══════════════════════════════════════════
-       WIDE DESKTOP  ≥ 1024px
-    ══════════════════════════════════════════ */
     @media (min-width: 1024px) {
-        .bookx-wrap {
-            grid-template-columns: 320px 1fr;
+        .bookx-cover {
+            flex: 0 0 320px;
+            max-height: 480px;
+        }
+    }
+
+    @media (min-width: 1200px) {
+        .bookx-meta {
+            grid-template-columns: repeat(4, 1fr);
+        }
+    }
+
+    /* ════════════════════════════════════════════════
+       PRINT STYLES
+    ════════════════════════════════════════════════ */
+    @media print {
+        .bookx {
+            box-shadow: none;
+            padding: 0;
         }
 
-        .bookx-title {
-            font-size: 1.75rem;
+        .bookx-wrap,
+        .bookx-cover,
+        .bookx-body {
+            box-shadow: none;
+            border: 1px solid #ccc;
+            break-inside: avoid;
+        }
+
+        .bookx-download {
+            display: none;
+        }
+    }
+
+    /* ════════════════════════════════════════════════
+       REDUCED MOTION
+    ════════════════════════════════════════════════ */
+    @media (prefers-reduced-motion: reduce) {
+        * {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
         }
     }
 </style>
