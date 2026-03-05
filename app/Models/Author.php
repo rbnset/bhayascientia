@@ -17,86 +17,230 @@ class Author extends Model
 
     protected $fillable = [
         'user_id',
-        'name',
-        'email',
-        'affiliation',
-        'bio',
-        'photo_path',
+        'name',        // NULL jika linked ke user — dibaca dari users.name
+        'email',       // NULL jika linked ke user — dibaca dari users.email
+        'affiliation', // NULL = fallback ke users.affiliation / users.job_title
+        'bio',         // NULL = fallback ke users.bio
+        'photo_path',  // NULL = fallback ke users.profile_photo / users.avatar
     ];
 
+    // ========================================
+    // ACCESSORS — Baca dari User jika linked
+    // ========================================
+
     /**
-     * ✅ Accessor untuk mendapatkan URL foto author
+     * ✅ Override accessor 'name':
+     * - Jika linked ke user → ambil dari users.name
+     * - Jika external → ambil dari authors.name
+     */
+    public function getNameAttribute($value): string
+    {
+        if ($this->user_id) {
+            // Hindari infinite loop: load hanya jika belum
+            if (!$this->relationLoaded('user')) {
+                $this->load('user');
+            }
+
+            $resolved = $this->getRelation('user')?->name;
+            if (!empty($resolved)) return $resolved;
+        }
+
+        return $value ?? 'Unknown Author';
+    }
+
+    /**
+     * ✅ Override accessor 'email'
+     */
+    public function getEmailAttribute($value): ?string
+    {
+        if ($this->user_id) {
+            if (!$this->relationLoaded('user')) {
+                $this->load('user');
+            }
+
+            $resolved = $this->getRelation('user')?->email;
+            if (!empty($resolved)) return $resolved;
+        }
+
+        return $value;
+    }
+
+    /**
+     * ✅ Affiliation: authors.affiliation override, fallback ke user
+     */
+    public function getAffiliationAttribute($value): ?string
+    {
+        if (!empty($value)) return $value;
+
+        if ($this->user_id) {
+            if (!$this->relationLoaded('user')) {
+                $this->load('user');
+            }
+
+            $user = $this->getRelation('user');
+            if ($user) return $user->affiliation ?? $user->job_title;
+        }
+
+        return null;
+    }
+
+    /**
+     * ✅ Bio: authors.bio override, fallback ke user
+     */
+    public function getBioAttribute($value): ?string
+    {
+        if (!empty($value)) return $value;
+
+        if ($this->user_id) {
+            $user = $this->relationLoaded('user')
+                ? $this->user
+                : User::find($this->user_id);
+
+            if ($user) return $user->bio;
+        }
+
+        return null;
+    }
+
+    /**
+     * ✅ Foto: photo_path author override, fallback ke user photo
      */
     public function getPhotoUrlAttribute(): string
     {
-        // 1. Cek photo_path dari author table
-        if ($this->photo_path) {
-            $cleanPath = $this->cleanPath($this->photo_path);
+        // 1. Foto khusus author (foto formal/akademik)
+        if ($this->getRawOriginal('photo_path')) {
+            $cleanPath = $this->cleanPath($this->getRawOriginal('photo_path'));
 
             if ($cleanPath && Storage::disk('public')->exists($cleanPath)) {
                 return asset('storage/' . $cleanPath);
             }
         }
 
-        // 2. Cek user relation (fallback ke User model)
-        if ($this->user_id && $this->user) {
-            // Gunakan accessor photo_url dari User model
-            return $this->user->photo_url;
+        // 2. Foto dari user yang terhubung
+        if ($this->user_id) {
+            $user = $this->relationLoaded('user')
+                ? $this->user
+                : User::find($this->user_id);
+
+            if ($user) return $user->photo_url;
         }
 
         // 3. Fallback UI Avatars
-        return 'https://ui-avatars.com/api/?name=' . urlencode($this->name) .
+        $name = $this->getRawOriginal('name') ?? 'Author';
+        return 'https://ui-avatars.com/api/?name=' . urlencode($name) .
             '&background=FF6B18&color=fff&size=160&bold=true&font-size=0.4&length=2';
     }
 
     /**
-     * ✅ Accessor untuk mendapatkan inisial nama
+     * ✅ Initials — gunakan nama yang sudah di-resolve
      */
     public function getInitialsAttribute(): string
     {
-        $words = explode(' ', trim($this->name));
+        $name  = $this->name; // pakai accessor name yang sudah resolved
+        $words = explode(' ', trim($name));
 
         if (count($words) >= 2) {
             return strtoupper(substr($words[0], 0, 1) . substr($words[1], 0, 1));
         }
 
-        return strtoupper(substr($this->name, 0, 2));
+        return strtoupper(substr($name, 0, 2));
     }
 
     /**
-     * ✅ Accessor untuk bio pendek (150 karakter)
+     * ✅ Short bio — gunakan bio yang sudah di-resolve
      */
     public function getShortBioAttribute(): ?string
     {
-        if (!$this->bio) {
-            return $this->affiliation ?? null;
+        $bio = $this->bio; // pakai accessor bio yang sudah resolved
+
+        if (!$bio) {
+            return $this->affiliation; // pakai accessor affiliation yang sudah resolved
         }
 
-        return strlen($this->bio) > 150
-            ? substr($this->bio, 0, 147) . '...'
-            : $this->bio;
+        return strlen($bio) > 150
+            ? substr($bio, 0, 147) . '...'
+            : $bio;
+    }
+
+    // ========================================
+    // CLAIM AUTHORSHIP
+    // ========================================
+
+    /**
+     * ✅ Cek apakah author sudah terhubung ke akun user
+     */
+    public function isClaimed(): bool
+    {
+        return !is_null($this->user_id);
     }
 
     /**
-     * ✅ Helper untuk clean path (hapus prefix 'public/')
+     * ✅ Claim author oleh user
+     * Data name/email di authors menjadi NULL karena sudah dibaca dari user
      */
+    public function claimBy(User $user): array
+    {
+        if ($user->authorProfile()->exists()) {
+            return [
+                'success' => false,
+                'message' => 'Akun Anda sudah terhubung ke profil author lain.',
+            ];
+        }
+
+        if ($this->isClaimed()) {
+            return [
+                'success' => false,
+                'message' => 'Profil author ini sudah terhubung ke akun lain.',
+            ];
+        }
+
+        $this->update([
+            'user_id' => $user->id,
+            'name'    => null, // tidak perlu duplikasi, baca dari user
+            'email'   => null, // tidak perlu duplikasi, baca dari user
+        ]);
+
+        return [
+            'success' => true,
+            'message' => 'Berhasil! Profil author telah terhubung ke akun Anda.',
+        ];
+    }
+
+    /**
+     * ✅ Lepas claim — kembalikan data dari user ke authors agar tidak hilang
+     */
+    public function unclaim(): void
+    {
+        $user = $this->user;
+
+        $this->update([
+            'user_id'     => null,
+            'name'        => $user?->name ?? $this->getRawOriginal('name'),
+            'email'       => $user?->email ?? $this->getRawOriginal('email'),
+            'bio'         => $this->getRawOriginal('bio') ?? $user?->bio,
+            'affiliation' => $this->getRawOriginal('affiliation')
+                ?? $user?->affiliation
+                ?? $user?->job_title,
+        ]);
+    }
+
+    // ========================================
+    // PRIVATE HELPERS
+    // ========================================
+
     private function cleanPath(?string $path): ?string
     {
-        if (!$path) {
-            return null;
-        }
+        if (!$path) return null;
 
-        // Hapus prefix 'public/' jika ada
-        if (str_starts_with($path, 'public/')) {
-            return substr($path, 7);
-        }
-
-        return $path;
+        return str_starts_with($path, 'public/')
+            ? substr($path, 7)
+            : $path;
     }
 
-    /**
-     * Relationships
-     */
+    // ========================================
+    // RELATIONSHIPS
+    // ========================================
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -110,10 +254,7 @@ class Author extends Model
             'author_id',
             'publication_id'
         )
-            ->withPivot([
-                'order',
-                'is_corresponding',
-            ])
+            ->withPivot(['order', 'is_corresponding'])
             ->withTimestamps();
     }
 
@@ -122,17 +263,15 @@ class Author extends Model
         return $this->hasMany(AuthorPublication::class, 'author_id');
     }
 
-    /**
-     * ✅ Scope untuk author dengan publikasi
-     */
+    // ========================================
+    // SCOPES
+    // ========================================
+
     public function scopeHasPublications($query)
     {
         return $query->has('publications');
     }
 
-    /**
-     * ✅ Scope untuk author dengan publikasi published
-     */
     public function scopeHasPublishedPublications($query)
     {
         return $query->whereHas('publications', function ($q) {
@@ -140,5 +279,15 @@ class Author extends Model
                 ->whereNotNull('published_at')
                 ->where('published_at', '<=', now());
         });
+    }
+
+    public function scopeExternal($query)
+    {
+        return $query->whereNull('user_id');
+    }
+
+    public function scopeLinked($query)
+    {
+        return $query->whereNotNull('user_id');
     }
 }

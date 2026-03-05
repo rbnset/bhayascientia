@@ -25,53 +25,96 @@ class AuthorsTable
     {
         return $table
             ->columns([
+
+                // ── Foto: pakai accessor photo_url di Author model ──────────
                 ImageColumn::make('photo_url')
                     ->label('')
                     ->circular()
                     ->size(40)
-                    ->defaultImageUrl(fn($record) => 'https://ui-avatars.com/api/?name=' . urlencode(
-                        $record->name ?: ($record->user?->name ?? 'Author')
-                    ))
+                    // ✅ Accessor sudah handle fallback ke user/UI Avatars
+                    ->defaultImageUrl(
+                        fn($record) =>
+                        'https://ui-avatars.com/api/?name=' . urlencode($record->name) .
+                            '&background=FF6B18&color=fff&size=80&bold=true'
+                    )
                     ->toggleable(),
 
-                TextColumn::make('display_name')
+                // ── Nama: accessor name di Author sudah resolved dari user ──
+                TextColumn::make('name')
                     ->label('Author')
-                    ->state(fn($record) => $record->name ?: ($record->user?->name ?? '—'))
-                    ->searchable(query: function ($query, string $search) {
-                        $query
-                            ->where('name', 'like', "%{$search}%")
-                            ->orWhereHas('user', fn($q) => $q->where('name', 'like', "%{$search}%"));
+                    ->searchable(query: function (Builder $query, string $search) {
+                        // ✅ Cari di authors.name DAN users.name
+                        $query->where(function ($q) use ($search) {
+                            $q->where('authors.name', 'like', "%{$search}%")
+                                ->orWhereHas(
+                                    'user',
+                                    fn($u) =>
+                                    $u->where('name', 'like', "%{$search}%")
+                                );
+                        });
                     })
-                    ->sortable(query: function ($query, string $direction) {
-                        $query->orderBy('name', $direction);
+                    ->sortable(query: function (Builder $query, string $direction) {
+                        // ✅ Sort gabungan: COALESCE(authors.name, users.name)
+                        $query->leftJoin('users', 'authors.user_id', '=', 'users.id')
+                            ->orderByRaw("COALESCE(authors.name, users.name) {$direction}");
                     })
                     ->weight('medium')
-                    ->description(fn($record) => $record->email ?: ($record->user?->email ?? null)),
+                    // ✅ Deskripsi: email resolved dari accessor
+                    ->description(fn($record) => $record->email ?? '—'),
 
-                TextColumn::make('email')
-                    ->label('Email')
-                    ->state(fn($record) => $record->email ?: ($record->user?->email ?? '—'))
-                    ->searchable()
-                    ->copyable()
-                    ->copyMessage('Email disalin')
-                    ->toggleable(isToggledHiddenByDefault: true),
-
+                // ── Affiliasi: resolved dari accessor ──────────────────────
                 TextColumn::make('affiliation')
-                    ->label('Affiliation')
+                    ->label('Affiliasi')
+                    ->state(fn($record) => $record->affiliation ?? '—')
                     ->badge()
                     ->color('primary')
-                    ->searchable()
+                    ->searchable(query: function (Builder $query, string $search) {
+                        $query->where(function ($q) use ($search) {
+                            $q->where('authors.affiliation', 'like', "%{$search}%")
+                                ->orWhereHas(
+                                    'user',
+                                    fn($u) =>
+                                    $u->where('affiliation', 'like', "%{$search}%")
+                                        ->orWhere('job_title', 'like', "%{$search}%")
+                                );
+                        });
+                    })
                     ->placeholder('—'),
 
-                TextColumn::make('user_id')
-                    ->label('Account')
-                    ->state(fn($record) => $record->user_id ? 'Linked' : 'External')
+                // ── Status claim ────────────────────────────────────────────
+                TextColumn::make('claim_status')
+                    ->label('Status')
+                    ->state(fn($record) => $record->isClaimed() ? 'Linked' : 'External')
                     ->badge()
-                    ->color(fn($record) => $record->user_id ? 'success' : 'gray')
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->color(fn($record) => $record->isClaimed() ? 'success' : 'gray')
+                    ->icon(
+                        fn($record) => $record->isClaimed()
+                            ? 'heroicon-o-link'
+                            : 'heroicon-o-user-minus'
+                    )
+                    ->tooltip(
+                        fn($record) => $record->isClaimed()
+                            ? 'Terhubung ke akun: ' . ($record->user?->email ?? '-')
+                            : 'External author — belum terhubung ke akun manapun'
+                    ),
+
+                // ── Akun user yang terhubung ────────────────────────────────
+                TextColumn::make('user.name')
+                    ->label('Akun User')
+                    ->placeholder('—')
+                    ->description(fn($record) => $record->user?->email)
+                    ->toggleable(),
+
+                // ── Jumlah publikasi ────────────────────────────────────────
+                TextColumn::make('publications_count')
+                    ->label('Publikasi')
+                    ->counts('publications')
+                    ->badge()
+                    ->color('warning')
+                    ->sortable(),
 
                 TextColumn::make('created_at')
-                    ->label('Created')
+                    ->label('Dibuat')
                     ->date('d M Y')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -79,9 +122,9 @@ class AuthorsTable
             ->filters([
                 TrashedFilter::make(),
 
-                // 1. Filter: apakah author terhubung ke akun User atau tidak
+                // Filter: linked vs external
                 TernaryFilter::make('account_status')
-                    ->label('Account Status')
+                    ->label('Status Claim')
                     ->placeholder('Semua Author')
                     ->trueLabel('Linked (punya akun)')
                     ->falseLabel('External (tanpa akun)')
@@ -91,21 +134,32 @@ class AuthorsTable
                         blank: fn(Builder $query) => $query,
                     ),
 
-                // 2. Filter: berdasarkan affiliation (distinct dari DB)
+                // Filter: affiliasi
                 SelectFilter::make('affiliation')
-                    ->label('Affiliation')
-                    ->options(
-                        fn() => \App\Models\Author::query()
+                    ->label('Affiliasi')
+                    ->options(function () {
+                        // ✅ Gabungkan affiliasi dari authors + users
+                        $fromAuthors = \App\Models\Author::query()
                             ->whereNotNull('affiliation')
                             ->distinct()
-                            ->orderBy('affiliation')
-                            ->pluck('affiliation', 'affiliation')
-                            ->toArray()
-                    )
+                            ->pluck('affiliation');
+
+                        $fromUsers = \App\Models\User::query()
+                            ->whereHas('author')
+                            ->whereNotNull('affiliation')
+                            ->distinct()
+                            ->pluck('affiliation');
+
+                        return $fromAuthors->merge($fromUsers)
+                            ->unique()
+                            ->sort()
+                            ->mapWithKeys(fn($v) => [$v => $v])
+                            ->toArray();
+                    })
                     ->searchable()
                     ->placeholder('Semua Affiliasi'),
 
-                // 3. Filter: author yang punya email (baik di authors maupun via relasi user)
+                // Filter: punya email
                 Filter::make('has_email')
                     ->label('Punya Email')
                     ->query(fn(Builder $query) => $query->where(function ($q) {
@@ -114,17 +168,15 @@ class AuthorsTable
                     }))
                     ->toggle(),
 
-                // 4. Filter: rentang tanggal dibuat
+                // Filter: tanggal dibuat
                 Filter::make('created_at')
                     ->label('Tanggal Dibuat')
                     ->form([
-                        \Filament\Forms\Components\DatePicker::make('created_from')
-                            ->label('Dari'),
-                        \Filament\Forms\Components\DatePicker::make('created_until')
-                            ->label('Sampai'),
+                        \Filament\Forms\Components\DatePicker::make('created_from')->label('Dari'),
+                        \Filament\Forms\Components\DatePicker::make('created_until')->label('Sampai'),
                     ])
-                    ->query(function (Builder $query, array $data) {
-                        return $query
+                    ->query(
+                        fn(Builder $query, array $data) => $query
                             ->when(
                                 $data['created_from'],
                                 fn($q, $date) => $q->whereDate('created_at', '>=', $date)
@@ -132,15 +184,17 @@ class AuthorsTable
                             ->when(
                                 $data['created_until'],
                                 fn($q, $date) => $q->whereDate('created_at', '<=', $date)
-                            );
-                    })
+                            )
+                    )
                     ->indicateUsing(function (array $data): array {
                         $indicators = [];
                         if ($data['created_from'] ?? null) {
-                            $indicators['created_from'] = 'Dari: ' . \Carbon\Carbon::parse($data['created_from'])->format('d M Y');
+                            $indicators['created_from'] = 'Dari: ' .
+                                \Carbon\Carbon::parse($data['created_from'])->format('d M Y');
                         }
                         if ($data['created_until'] ?? null) {
-                            $indicators['created_until'] = 'Sampai: ' . \Carbon\Carbon::parse($data['created_until'])->format('d M Y');
+                            $indicators['created_until'] = 'Sampai: ' .
+                                \Carbon\Carbon::parse($data['created_until'])->format('d M Y');
                         }
                         return $indicators;
                     }),
@@ -169,21 +223,20 @@ class AuthorsTable
                     ->label('Hapus')
                     ->icon('heroicon-o-trash')
                     ->successNotification(
-                        fn() => Notification::make()
+                        Notification::make()
                             ->danger()
                             ->title('Author berhasil dihapus')
-                            ->body('Data author telah dihapus secara permanen.')
+                            ->body('Data author telah dihapus.')
                     ),
 
                 ForceDeleteAction::make()
                     ->label('Hapus Permanen')
                     ->icon('heroicon-o-x-circle'),
-
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make()
-                        ->label('Delete Selected')
+                        ->label('Hapus Terpilih')
                         ->icon('heroicon-o-trash'),
                 ]),
             ]);

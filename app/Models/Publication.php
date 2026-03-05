@@ -18,13 +18,13 @@ class Publication extends Model
 {
     use SoftDeletes, HasFactory;
 
-    public const STATUS_DRAFT = 'draft';
-    public const STATUS_SUBMITTED = 'submitted';
-    public const STATUS_IN_REVIEW = 'in_review';
+    public const STATUS_DRAFT             = 'draft';
+    public const STATUS_SUBMITTED         = 'submitted';
+    public const STATUS_IN_REVIEW         = 'in_review';
     public const STATUS_REVISION_REQUIRED = 'revision_required';
-    public const STATUS_ACCEPTED = 'accepted';
-    public const STATUS_REJECTED = 'rejected';
-    public const STATUS_PUBLISHED = 'published';
+    public const STATUS_ACCEPTED          = 'accepted';
+    public const STATUS_REJECTED          = 'rejected';
+    public const STATUS_PUBLISHED         = 'published';
 
     protected $fillable = [
         'publication_type_id',
@@ -41,7 +41,6 @@ class Publication extends Model
         'published_at' => 'datetime',
     ];
 
-    // ✅ Appends accessor
     protected $appends = [
         'cover_url',
         'formatted_date',
@@ -50,7 +49,6 @@ class Publication extends Model
         'downloads_count',
     ];
 
-    // ✅ Cache untuk menghindari multiple file exists check
     protected $coverUrlCache = null;
 
     /*
@@ -136,9 +134,6 @@ class Publication extends Model
     |--------------------------------------------------------------------------
     */
 
-    /**
-     * Scope query untuk publikasi yang sudah dipublish
-     */
     public function scopePublished($query)
     {
         return $query->where('status', 'published')
@@ -146,17 +141,11 @@ class Publication extends Model
             ->where('published_at', '<=', now());
     }
 
-    /**
-     * Scope query untuk publikasi terbaru
-     */
     public function scopeLatest($query)
     {
         return $query->orderBy('published_at', 'desc');
     }
 
-    /**
-     * Scope query berdasarkan tipe publikasi
-     */
     public function scopeOfType($query, $typeSlug)
     {
         return $query->whereHas('publicationType', function ($q) use ($typeSlug) {
@@ -170,12 +159,8 @@ class Publication extends Model
     |--------------------------------------------------------------------------
     */
 
-    /**
-     * Accessor untuk mendapatkan kategori pertama
-     */
     public function getCategoryNameAttribute()
     {
-        // ✅ Gunakan relationLoaded untuk avoid N+1
         if ($this->relationLoaded('categories')) {
             return $this->categories->first()?->name ?? 'Umum';
         }
@@ -183,21 +168,13 @@ class Publication extends Model
         return $this->categories()->first()?->name ?? 'Umum';
     }
 
-    /**
-     * Accessor untuk format tanggal Indonesia
-     */
     public function getFormattedDateAttribute()
     {
-        if (!$this->published_at) {
-            return '-';
-        }
+        if (!$this->published_at) return '-';
 
         return $this->published_at->locale('id')->isoFormat('D MMMM YYYY');
     }
 
-    /**
-     * ✅ Accessor untuk URL cover image - Return NULL untuk support custom placeholder
-     */
     public function getCoverUrlAttribute(): string
     {
         if ($this->coverUrlCache !== null) {
@@ -210,7 +187,6 @@ class Publication extends Model
                 : $this->cover_image_path;
 
             if (Storage::disk('public')->exists($cleanPath)) {
-                // ✅ asset() → ikut APP_URL, benar di lokal & production
                 return $this->coverUrlCache = asset('storage/' . $cleanPath);
             }
         }
@@ -218,9 +194,9 @@ class Publication extends Model
         return $this->coverUrlCache = $this->generatePlaceholderUrl();
     }
 
-
     private function generatePlaceholderUrl(): string
     {
+        // ✅ Nama author sudah resolved via accessor di Author model
         $authorName = 'Anonymous';
         if ($this->relationLoaded('authors') && $this->authors->isNotEmpty()) {
             $authorName = $this->authors->pluck('name')->join(', ');
@@ -250,41 +226,29 @@ class Publication extends Model
         ]);
     }
 
-    /**
-     * ✅ Get cover URL dengan fallback placehold.co (untuk backward compatibility)
-     */
     public function getCoverUrlWithFallback()
     {
         return $this->cover_url ?? $this->generatePlaceholder();
     }
 
-    /**
-     * ✅ Accessor: Total views (with caching)
-     */
     public function getViewsCountAttribute(): int
     {
         return \Cache::remember(
             "publication.{$this->id}.views_count",
-            now()->addMinutes(5), // Cache 5 menit
+            now()->addMinutes(5),
             fn() => $this->viewLogs()->count()
         );
     }
 
-    /**
-     * ✅ Accessor: Total downloads (with caching)
-     */
     public function getDownloadsCountAttribute(): int
     {
         return \Cache::remember(
             "publication.{$this->id}.downloads_count",
-            now()->addMinutes(5), // Cache 5 menit
+            now()->addMinutes(5),
             fn() => $this->downloadLogs()->count()
         );
     }
 
-    /**
-     * ✅ Accessor: Unique visitors (based on IP)
-     */
     public function getUniqueViewsCountAttribute(): int
     {
         return \Cache::remember(
@@ -300,12 +264,8 @@ class Publication extends Model
     |--------------------------------------------------------------------------
     */
 
-    /**
-     * ✅ Set cover image path (normalize path)
-     */
     public function setCoverImagePathAttribute($value)
     {
-        // Remove 'public/' prefix jika ada saat save
         if ($value && Str::startsWith($value, 'public/')) {
             $value = Str::after($value, 'public/');
         }
@@ -319,21 +279,16 @@ class Publication extends Model
     |--------------------------------------------------------------------------
     */
 
-    /**
-     * Boot model events
-     */
     protected static function boot()
     {
         parent::boot();
 
-        // Auto-generate slug saat create
         static::creating(function ($publication) {
             if (empty($publication->slug)) {
                 $publication->slug = Str::slug($publication->title);
             }
         });
 
-        // Clear cover cache saat update
         static::updating(function ($publication) {
             $publication->coverUrlCache = null;
         });
@@ -345,31 +300,21 @@ class Publication extends Model
     |--------------------------------------------------------------------------
     */
 
-    /**
-     * ✅ Generate placeholder cover URL (untuk backward compatibility)
-     */
     private function generatePlaceholder()
     {
-        // Get category name (avoid N+1)
         $categoryName = 'Publikasi';
         if ($this->relationLoaded('categories') && $this->categories->isNotEmpty()) {
             $categoryName = $this->categories->first()->name;
         }
 
-        // Truncate title
         $titleShort = Str::limit($this->title, 20, '');
 
         return 'https://placehold.co/400x600/FF6B18/white?text=' . urlencode($titleShort);
     }
 
-    /**
-     * ✅ Check if publication has valid cover image
-     */
     public function hasCover(): bool
     {
-        if (!$this->cover_image_path) {
-            return false;
-        }
+        if (!$this->cover_image_path) return false;
 
         $cleanPath = Str::startsWith($this->cover_image_path, 'public/')
             ? Str::after($this->cover_image_path, 'public/')
@@ -378,14 +323,9 @@ class Publication extends Model
         return Storage::disk('public')->exists($cleanPath);
     }
 
-    /**
-     * ✅ Get file size in human readable format
-     */
     public function getCoverFileSize(): ?string
     {
-        if (!$this->hasCover()) {
-            return null;
-        }
+        if (!$this->hasCover()) return null;
 
         $cleanPath = Str::startsWith($this->cover_image_path, 'public/')
             ? Str::after($this->cover_image_path, 'public/')
@@ -396,22 +336,16 @@ class Publication extends Model
         return $this->formatBytes($bytes);
     }
 
-    /**
-     * Format bytes ke KB/MB
-     */
     private function formatBytes($bytes, $precision = 2)
     {
         $units = ['B', 'KB', 'MB', 'GB'];
         $bytes = max($bytes, 0);
-        $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
-        $pow = min($pow, count($units) - 1);
+        $pow   = floor(($bytes ? log($bytes) : 0) / log(1024));
+        $pow   = min($pow, count($units) - 1);
 
         return round($bytes / (1024 ** $pow), $precision) . ' ' . $units[$pow];
     }
 
-    /**
-     * ✅ Clear cache saat ada view/download baru
-     */
     public function clearStatsCache(): void
     {
         \Cache::forget("publication.{$this->id}.views_count");

@@ -46,15 +46,72 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
     }
 
     // ========================================
+    // BOOT — Auto-sync Author saat User update
+    // ========================================
+
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        /**
+         * ✅ Saat user update nama/bio/foto/affiliasi,
+         * otomatis sync ke Author profile jika ada
+         */
+        static::updated(function (User $user) {
+            if (!$user->authorProfile()->exists()) {
+                return;
+            }
+
+            $changes    = $user->getChanges();
+            $syncFields = [];
+
+            if (isset($changes['name'])) {
+                $syncFields['name'] = null; // ✅ Null karena sekarang dibaca dari user
+            }
+
+            if (isset($changes['email'])) {
+                $syncFields['email'] = null; // ✅ Null karena dibaca dari user
+            }
+
+            if (isset($changes['bio'])) {
+                // Hanya sync jika author belum punya bio sendiri
+                $author = $user->authorProfile;
+                if (empty($author->getRawOriginal('bio'))) {
+                    $syncFields['bio'] = null; // tetap null, accessor akan baca dari user
+                }
+            }
+
+            if (isset($changes['affiliation']) || isset($changes['job_title'])) {
+                $author = $user->authorProfile;
+                if (empty($author->getRawOriginal('affiliation'))) {
+                    $syncFields['affiliation'] = null;
+                }
+            }
+
+            if (isset($changes['profile_photo'])) {
+                $author = $user->authorProfile;
+                // Hanya sync jika author tidak punya foto sendiri
+                if (empty($author->getRawOriginal('photo_path'))) {
+                    $syncFields['photo_path'] = null;
+                }
+            }
+
+            if (!empty($syncFields)) {
+                $user->authorProfile()->update($syncFields);
+            }
+        });
+    }
+
+    // ========================================
     // ACCESSORS
     // ========================================
 
+    /**
+     * ✅ FIXED: Upload manual lebih prioritas dari Google avatar
+     */
     public function getPhotoUrlAttribute(): string
     {
-        if ($this->avatar && filter_var($this->avatar, FILTER_VALIDATE_URL)) {
-            return $this->avatar;
-        }
-
+        // 1. Foto upload manual — paling prioritas
         if ($this->profile_photo) {
             $cleanPath = str_starts_with($this->profile_photo, 'public/')
                 ? substr($this->profile_photo, 7)
@@ -65,6 +122,12 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
             }
         }
 
+        // 2. Avatar Google/OAuth
+        if ($this->avatar && filter_var($this->avatar, FILTER_VALIDATE_URL)) {
+            return $this->avatar;
+        }
+
+        // 3. Fallback UI Avatars
         return 'https://ui-avatars.com/api/?name=' . urlencode($this->name) .
             '&background=FF6B18&color=fff&size=128&bold=true&font-size=0.4';
     }
@@ -95,12 +158,11 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
     // FILAMENT METHODS
     // ========================================
 
+    /**
+     * ✅ FIXED: Prioritas sama dengan getPhotoUrlAttribute
+     */
     public function getFilamentAvatarUrl(): ?string
     {
-        if ($this->avatar && filter_var($this->avatar, FILTER_VALIDATE_URL)) {
-            return $this->avatar;
-        }
-
         if ($this->profile_photo) {
             $cleanPath = str_starts_with($this->profile_photo, 'public/')
                 ? substr($this->profile_photo, 7)
@@ -109,6 +171,10 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
             if (Storage::disk('public')->exists($cleanPath)) {
                 return asset('storage/' . $cleanPath);
             }
+        }
+
+        if ($this->avatar && filter_var($this->avatar, FILTER_VALIDATE_URL)) {
+            return $this->avatar;
         }
 
         return null;
@@ -157,26 +223,16 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         return $this->hasOne(Author::class);
     }
 
+    /**
+     * ✅ FIXED: Ganti hasManyThrough yang salah dengan JOIN via pivot
+     */
     public function publications()
     {
-        return $this->hasManyThrough(
-            Publication::class,
-            Author::class,
-            'user_id',
-            'id',
-            'id',
-            'id'
-        )->distinct();
-    }
-
-    public function directPublications()
-    {
-        return $this->belongsToMany(Publication::class, 'author_publication', 'author_id', 'publication_id')
-            ->wherePivot('author_id', function ($query) {
-                $query->select('id')
-                    ->from('authors')
-                    ->where('user_id', $this->id);
-            });
+        return Publication::select('publications.*')
+            ->join('author_publication', 'publications.id', '=', 'author_publication.publication_id')
+            ->join('authors', 'authors.id', '=', 'author_publication.author_id')
+            ->where('authors.user_id', $this->id)
+            ->distinct();
     }
 
     public function favoritePublications()
@@ -204,14 +260,71 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         return $this->hasOne(Subscription::class);
     }
 
-    // ── OTP Relationship ──────────────────────────────────────────────────────
-
-    /**
-     * Relasi ke tabel otp_codes (tabel terpisah — lebih baik untuk normalisasi)
-     */
     public function otpCodes()
     {
         return $this->hasMany(OtpCode::class);
+    }
+
+    // ========================================
+    // ROLE OVERRIDE — Auto-create Author Profile
+    // ========================================
+
+    /**
+     * ✅ Override assignRole Spatie — otomatis buat Author saat role 'author' diberikan
+     */
+    public function assignRole(...$roles): static
+    {
+        parent::assignRole(...$roles);
+        $this->createAuthorProfileIfNeeded($roles);
+        return $this;
+    }
+
+    /**
+     * ✅ Override syncRoles — handle saat role di-sync via Filament edit user
+     */
+    public function syncRoles(...$roles): static
+    {
+        $hadAuthorRole = $this->hasRole('author');
+        parent::syncRoles(...$roles);
+
+        if (!$hadAuthorRole) {
+            $this->createAuthorProfileIfNeeded($roles);
+        }
+
+        return $this;
+    }
+
+    /**
+     * ✅ Helper: buat Author profile jika belum ada
+     * Dengan pendekatan nullable — name & email NULL karena dibaca dari user
+     */
+    private function createAuthorProfileIfNeeded(mixed $roles): void
+    {
+        $roleNames = collect(is_array($roles) ? $roles : [$roles])
+            ->flatten()
+            ->map(fn($r) => is_string($r) ? $r : (is_object($r) ? $r->name : null))
+            ->filter()
+            ->toArray();
+
+        if (!in_array('author', $roleNames)) {
+            return;
+        }
+
+        $this->refresh();
+
+        if ($this->authorProfile()->exists()) {
+            return;
+        }
+
+        // ✅ name & email NULL — dibaca dari User via accessor di Author model
+        Author::create([
+            'user_id'     => $this->id,
+            'name'        => null,
+            'email'       => null,
+            'affiliation' => null,
+            'bio'         => null,
+            'photo_path'  => null,
+        ]);
     }
 
     // ========================================
@@ -260,22 +373,17 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
     }
 
     // ========================================
-    // OTP METHODS — pakai tabel otp_codes
+    // OTP METHODS
     // ========================================
 
-    /**
-     * Generate OTP baru — simpan ke tabel otp_codes
-     */
     public function generateOtp(): string
     {
         $code = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
-        // Hapus semua OTP lama milik user ini dulu
         $this->otpCodes()->delete();
 
-        // Buat OTP baru di tabel terpisah
         $this->otpCodes()->create([
-            'code'       => bcrypt($code), // hash sebelum simpan
+            'code'       => bcrypt($code),
             'expires_at' => now()->addMinutes(10),
             'is_used'    => false,
         ]);
@@ -283,42 +391,28 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         return $code;
     }
 
-    /**
-     * Verifikasi OTP — ambil dari tabel otp_codes
-     */
     public function verifyOtp(string $code): bool
     {
-        // Ambil OTP terbaru yang belum dipakai langsung dari DB (no cache)
         $otp = $this->otpCodes()
             ->where('is_used', false)
             ->latest()
             ->first();
 
-        // Tidak ada OTP
-        if (!$otp) {
-            return false;
-        }
+        if (!$otp) return false;
 
-        // Sudah kadaluarsa
         if ($otp->isExpired()) {
             $otp->delete();
             return false;
         }
 
-        // Timing-safe comparison
         if (!\Illuminate\Support\Facades\Hash::check($code, $otp->code)) {
             return false;
         }
 
-        // One-time use: hapus setelah berhasil
         $otp->delete();
-
         return true;
     }
 
-    /**
-     * Cek apakah email sudah diverifikasi
-     */
     public function isEmailVerified(): bool
     {
         return !is_null($this->email_verified_at);

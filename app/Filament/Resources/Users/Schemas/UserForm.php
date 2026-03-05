@@ -2,13 +2,15 @@
 
 namespace App\Filament\Resources\Users\Schemas;
 
+use App\Models\Author;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
 
 class UserForm
@@ -19,20 +21,14 @@ class UserForm
             ->columns(1)
             ->components([
                 Grid::make()
-                    ->columns([
-                        'default' => 1,
-                        'lg'      => 3,
-                    ])
+                    ->columns(['default' => 1, 'lg' => 3])
                     ->schema([
 
                         // =============================================
-                        // KOLOM KIRI — Foto + Preview Card (1/3 lebar)
+                        // KOLOM KIRI — Foto Profil
                         // =============================================
                         Section::make()
-                            ->columnSpan([
-                                'default' => 1,
-                                'lg'      => 1,
-                            ])
+                            ->columnSpan(['default' => 1, 'lg' => 1])
                             ->schema([
                                 FileUpload::make('profile_photo')
                                     ->label('Foto Profil')
@@ -45,34 +41,45 @@ class UserForm
                                     ->imageEditorMode(2)
                                     ->maxSize(2048)
                                     ->live()
-                                    ->helperText('JPG, PNG. Maks 2MB')
+                                    ->helperText('JPG, PNG. Maks 2MB. Foto ini juga dipakai di profil author jika tidak ada foto khusus.')
                                     ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/jpg'])
                                     ->moveFiles()
                                     ->extraAttributes([
                                         'class' => 'flex flex-col items-center justify-center',
                                     ]),
-
-                                // Preview card di bawah foto
-                                // View::make('filament.users.preview-card'),
                             ]),
 
                         // =============================================
-                        // KOLOM KANAN — Form Input (2/3 lebar)
+                        // KOLOM KANAN — Form Input
                         // =============================================
                         Section::make('Informasi Pengguna')
                             ->description('Informasi akun pengguna')
                             ->icon('heroicon-o-user')
-                            ->columnSpan([
-                                'default' => 1,
-                                'lg'      => 2,
-                            ])
+                            ->columnSpan(['default' => 1, 'lg' => 2])
                             ->schema([
 
+                                // ── Info: status author profile ───────────────
+                                Placeholder::make('author_profile_info')
+                                    ->label('')
+                                    ->content(function ($record) {
+                                        if (!$record) return null;
+
+                                        if ($record->authorProfile()->exists()) {
+                                            return '✅ User ini sudah memiliki profil author. ' .
+                                                'Perubahan nama, email, dan foto akan otomatis tersinkron ke profil author.';
+                                        }
+
+                                        if ($record->hasRole('author')) {
+                                            return '⚠️ User memiliki role author tapi belum ada profil author. ' .
+                                                'Profil author akan dibuat otomatis saat disimpan.';
+                                        }
+
+                                        return null;
+                                    })
+                                    ->visible(fn($record) => (bool) $record?->id),
+
                                 Grid::make()
-                                    ->columns([
-                                        'default' => 1,
-                                        'md'      => 2,
-                                    ])
+                                    ->columns(['default' => 1, 'md' => 2])
                                     ->schema([
                                         TextInput::make('name')
                                             ->label('Nama Lengkap')
@@ -80,7 +87,8 @@ class UserForm
                                             ->required()
                                             ->live(debounce: 500)
                                             ->maxLength(255)
-                                            ->prefixIcon('heroicon-o-user'),
+                                            ->prefixIcon('heroicon-o-user')
+                                            ->helperText('Nama ini otomatis dipakai di profil author jika terhubung.'),
 
                                         TextInput::make('email')
                                             ->label('Alamat Email')
@@ -89,7 +97,8 @@ class UserForm
                                             ->required()
                                             ->live(debounce: 500)
                                             ->maxLength(255)
-                                            ->prefixIcon('heroicon-o-envelope'),
+                                            ->prefixIcon('heroicon-o-envelope')
+                                            ->helperText('Email ini otomatis dipakai di profil author jika terhubung.'),
 
                                         TextInput::make('whatsapp_number')
                                             ->label('Nomor WhatsApp')
@@ -106,17 +115,45 @@ class UserForm
 
                                         TextInput::make('job_title')
                                             ->label('Pekerjaan / Jabatan')
-                                            ->placeholder('Contoh: Mahasiswa, Admin')
+                                            ->placeholder('Contoh: Mahasiswa, Dosen, Admin')
                                             ->live(debounce: 500)
                                             ->maxLength(255)
-                                            ->prefixIcon('heroicon-o-briefcase'),
+                                            ->prefixIcon('heroicon-o-briefcase')
+                                            ->helperText('Dipakai sebagai fallback affiliasi di profil author.'),
                                     ]),
 
+                                // ── Affiliasi & Bio — tersinkron ke Author ────
                                 Grid::make()
-                                    ->columns([
-                                        'default' => 1,
-                                        'md'      => 2,
-                                    ])
+                                    ->columns(['default' => 1, 'md' => 2])
+                                    ->schema([
+                                        TextInput::make('affiliation')
+                                            ->label('Affiliasi / Institusi')
+                                            ->placeholder('Universitas / Organisasi')
+                                            ->live(debounce: 500)
+                                            ->maxLength(255)
+                                            ->prefixIcon('heroicon-o-building-office')
+                                            ->helperText('Dipakai sebagai affiliasi di profil author jika tidak diisi khusus.'),
+
+                                        TextInput::make('username')
+                                            ->label('Username')
+                                            ->placeholder('robinsetiyawan')
+                                            ->live(debounce: 500)
+                                            ->maxLength(255)
+                                            ->prefixIcon('heroicon-o-at-symbol')
+                                            ->unique(table: 'users', column: 'username', ignoreRecord: true),
+                                    ]),
+
+                                Textarea::make('bio')
+                                    ->label('Bio')
+                                    ->placeholder('Tulis bio singkat...')
+                                    ->live(debounce: 500)
+                                    ->rows(3)
+                                    ->maxLength(500)
+                                    ->helperText('Dipakai sebagai bio di profil author jika tidak diisi khusus.'),
+
+                                // ── Password ──────────────────────────────────
+                                Grid::make()
+                                    ->columns(['default' => 1, 'md' => 2])
                                     ->schema([
                                         TextInput::make('password')
                                             ->label('Password')
@@ -139,11 +176,9 @@ class UserForm
                                             ->prefixIcon('heroicon-o-lock-closed'),
                                     ]),
 
+                                // ── Role & Verifikasi ─────────────────────────
                                 Grid::make()
-                                    ->columns([
-                                        'default' => 1,
-                                        'md'      => 2,
-                                    ])
+                                    ->columns(['default' => 1, 'md' => 2])
                                     ->schema([
                                         Select::make('roles')
                                             ->label('Peran')
@@ -151,7 +186,8 @@ class UserForm
                                             ->relationship('roles', 'name')
                                             ->preload()
                                             ->searchable()
-                                            ->prefixIcon('heroicon-o-shield-check'),
+                                            ->prefixIcon('heroicon-o-shield-check')
+                                            ->helperText('Memberikan role "author" akan otomatis membuat profil author.'),
 
                                         DateTimePicker::make('email_verified_at')
                                             ->label('Email Terverifikasi Pada')

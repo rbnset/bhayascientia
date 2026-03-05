@@ -11,17 +11,20 @@ use Filament\Actions\Action;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Textarea;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\View;
 use Filament\Schemas\Components\Wizard;
 use Filament\Schemas\Components\Wizard\Step;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components\Utilities\Get;
-use Illuminate\Support\Str;
 use Filament\Schemas\Components\Utilities\Set;
+use Illuminate\Support\Str;
 
 class PublicationForm
 {
@@ -33,14 +36,35 @@ class PublicationForm
     private static function publicationTypeSlug(callable $get): ?string
     {
         $id = $get('publication_type_id');
+        if (!$id) return null;
 
-        if (! $id) {
-            return null;
-        }
+        return PublicationType::query()->whereKey($id)->value('slug');
+    }
 
-        return PublicationType::query()
-            ->whereKey($id)
-            ->value('slug');
+    /**
+     * ✅ Helper: ambil atau buat Author profile untuk user yang sedang login
+     * Selalu load relasi user agar accessor name bisa resolve
+     */
+    private static function resolveCurrentAuthor(): ?Author
+    {
+        $currentUser = auth()->user();
+        if (!$currentUser) return null;
+
+        $author = Author::firstOrCreate(
+            ['user_id' => $currentUser->id],
+            [
+                'name'        => null,
+                'email'       => null,
+                'affiliation' => null,
+                'bio'         => null,
+                'photo_path'  => null,
+            ]
+        );
+
+        // ✅ Paksa load relasi user agar accessor name bisa resolve
+        $author->setRelation('user', $currentUser);
+
+        return $author;
     }
 
     public static function configure(Schema $schema): Schema
@@ -65,7 +89,6 @@ class PublicationForm
                                 ->columnSpanFull()
                                 ->schema([
 
-                                    // ── Publication Type ──────────────────────────
                                     Select::make('publication_type_id')
                                         ->label('Publication Type')
                                         ->relationship(
@@ -82,8 +105,7 @@ class PublicationForm
                                         ->disabled(fn() => self::isReviewer())
                                         ->columnSpan(1),
 
-                                    // ── Title ─────────────────────────────────────
-                                    \Filament\Forms\Components\TextInput::make('title')
+                                    TextInput::make('title')
                                         ->label(fn($get) => match (self::publicationTypeSlug($get)) {
                                             'jurnal' => 'Judul Artikel',
                                             'buku'   => 'Judul Buku',
@@ -101,8 +123,7 @@ class PublicationForm
                                         ->disabled(fn() => self::isReviewer())
                                         ->columnSpanFull(),
 
-                                    // ── Abstract: berbeda label & helper per tipe ─
-                                    // Jurnal → "Abstrak" (wajib, formal)
+                                    // Jurnal → Abstrak
                                     RichEditor::make('abstract')
                                         ->columnSpanFull()
                                         ->label('Abstrak')
@@ -113,10 +134,10 @@ class PublicationForm
                                             ['bulletList', 'orderedList', 'blockquote'],
                                             ['undo', 'redo'],
                                         ])
-                                        ->helperText('Wajib. Tulis abstrak sesuai standar jurnal (latar belakang, tujuan, metode, hasil, simpulan).')
+                                        ->helperText('Wajib. Tulis abstrak sesuai standar jurnal.')
                                         ->disabled(fn() => self::isReviewer()),
 
-                                    // Buku → "Sinopsis" (opsional, naratif)
+                                    // Buku → Sinopsis
                                     RichEditor::make('abstract')
                                         ->columnSpanFull()
                                         ->label('Sinopsis')
@@ -127,10 +148,10 @@ class PublicationForm
                                             ['bulletList', 'orderedList'],
                                             ['undo', 'redo'],
                                         ])
-                                        ->helperText('Opsional. Tulis sinopsis menarik yang membuat pembaca ingin membaca buku ini.')
+                                        ->helperText('Opsional. Tulis sinopsis menarik.')
                                         ->disabled(fn() => self::isReviewer()),
 
-                                    // Opini → "Isi Opini" (wajib, konten utama)
+                                    // Opini → Isi Opini
                                     RichEditor::make('abstract')
                                         ->columnSpanFull()
                                         ->label('Isi Opini')
@@ -141,111 +162,62 @@ class PublicationForm
                                             ['bulletList', 'orderedList', 'blockquote', 'h2', 'h3'],
                                             ['undo', 'redo'],
                                         ])
-                                        ->helperText('Wajib. Tulis isi opini secara lengkap dan argumentatif.')
+                                        ->helperText('Wajib. Tulis isi opini secara lengkap.')
                                         ->disabled(fn() => self::isReviewer()),
 
-                                    // ── Keywords (Jurnal) — label "Keywords" ──────
+                                    // Keywords — Jurnal
                                     Select::make('keywords')
                                         ->label('Keywords')
-                                        ->relationship(
-                                            name: 'keywords',
-                                            titleAttribute: 'name',
-                                            modifyQueryUsing: fn($query) => $query->orderBy('name'),
-                                        )
-                                        ->multiple()
-                                        ->searchable()
-                                        ->preload()
+                                        ->relationship('keywords', 'name', fn($query) => $query->orderBy('name'))
+                                        ->multiple()->searchable()->preload()
                                         ->visible(fn($get) => self::publicationTypeSlug($get) === 'jurnal')
                                         ->required(fn($get) => self::publicationTypeSlug($get) === 'jurnal')
                                         ->createOptionForm([
-                                            \Filament\Forms\Components\TextInput::make('name')
-                                                ->label('Keyword')
-                                                ->required()
-                                                ->maxLength(100)
-                                                ->live(onBlur: true)
-                                                ->unique(table: 'keywords', column: 'name', ignoreRecord: true)
+                                            TextInput::make('name')->label('Keyword')->required()->maxLength(100)
+                                                ->live(onBlur: true)->unique(table: 'keywords', column: 'name', ignoreRecord: true)
                                                 ->afterStateUpdated(fn($state, callable $set) => $set('slug', Str::slug($state))),
-                                            \Filament\Forms\Components\TextInput::make('slug')
-                                                ->label('Slug')
-                                                ->required()
-                                                ->disabled()
-                                                ->dehydrated(),
+                                            TextInput::make('slug')->label('Slug')->required()->disabled()->dehydrated(),
                                         ])
                                         ->createOptionUsing(fn(array $data) => Keyword::create($data)->getKey())
-                                        ->helperText('Wajib. Pilih 3–7 keyword yang mewakili konsep utama penelitian.')
-                                        ->disabled(fn() => self::isReviewer())
-                                        ->columnSpanFull(),
+                                        ->helperText('Wajib. Pilih 3–7 keyword.')
+                                        ->disabled(fn() => self::isReviewer())->columnSpanFull(),
 
-                                    // ── Tags (Buku) — label "Tags" ────────────────
+                                    // Tags — Buku
                                     Select::make('keywords')
                                         ->label('Tags')
-                                        ->relationship(
-                                            name: 'keywords',
-                                            titleAttribute: 'name',
-                                            modifyQueryUsing: fn($query) => $query->orderBy('name'),
-                                        )
-                                        ->multiple()
-                                        ->searchable()
-                                        ->preload()
+                                        ->relationship('keywords', 'name', fn($query) => $query->orderBy('name'))
+                                        ->multiple()->searchable()->preload()
                                         ->visible(fn($get) => self::publicationTypeSlug($get) === 'buku')
                                         ->required(false)
                                         ->createOptionForm([
-                                            \Filament\Forms\Components\TextInput::make('name')
-                                                ->label('Tag')
-                                                ->required()
-                                                ->maxLength(100)
-                                                ->live(onBlur: true)
-                                                ->unique(table: 'keywords', column: 'name', ignoreRecord: true)
+                                            TextInput::make('name')->label('Tag')->required()->maxLength(100)
+                                                ->live(onBlur: true)->unique(table: 'keywords', column: 'name', ignoreRecord: true)
                                                 ->afterStateUpdated(fn($state, callable $set) => $set('slug', Str::slug($state))),
-                                            \Filament\Forms\Components\TextInput::make('slug')
-                                                ->label('Slug')
-                                                ->required()
-                                                ->disabled()
-                                                ->dehydrated(),
+                                            TextInput::make('slug')->label('Slug')->required()->disabled()->dehydrated(),
                                         ])
                                         ->createOptionUsing(fn(array $data) => Keyword::create($data)->getKey())
-                                        ->helperText('Opsional. Tambahkan tag yang membantu pembaca menemukan buku ini.')
-                                        ->disabled(fn() => self::isReviewer())
-                                        ->columnSpanFull(),
+                                        ->helperText('Opsional.')
+                                        ->disabled(fn() => self::isReviewer())->columnSpanFull(),
 
-                                    // ── Topik (Opini) — label "Topik" ─────────────
+                                    // Topik — Opini
                                     Select::make('keywords')
                                         ->label('Topik')
-                                        ->relationship(
-                                            name: 'keywords',
-                                            titleAttribute: 'name',
-                                            modifyQueryUsing: fn($query) => $query->orderBy('name'),
-                                        )
-                                        ->multiple()
-                                        ->searchable()
-                                        ->preload()
+                                        ->relationship('keywords', 'name', fn($query) => $query->orderBy('name'))
+                                        ->multiple()->searchable()->preload()->maxItems(3)
                                         ->visible(fn($get) => self::publicationTypeSlug($get) === 'opini')
                                         ->required(false)
-                                        ->maxItems(3)
                                         ->createOptionForm([
-                                            \Filament\Forms\Components\TextInput::make('name')
-                                                ->label('Topik')
-                                                ->required()
-                                                ->maxLength(100)
-                                                ->live(onBlur: true)
-                                                ->unique(table: 'keywords', column: 'name', ignoreRecord: true)
+                                            TextInput::make('name')->label('Topik')->required()->maxLength(100)
+                                                ->live(onBlur: true)->unique(table: 'keywords', column: 'name', ignoreRecord: true)
                                                 ->afterStateUpdated(fn($state, callable $set) => $set('slug', Str::slug($state))),
-                                            \Filament\Forms\Components\TextInput::make('slug')
-                                                ->label('Slug')
-                                                ->required()
-                                                ->disabled()
-                                                ->dehydrated(),
+                                            TextInput::make('slug')->label('Slug')->required()->disabled()->dehydrated(),
                                         ])
                                         ->createOptionUsing(fn(array $data) => Keyword::create($data)->getKey())
-                                        ->helperText('Opsional. Maks. 3 topik utama yang dibahas dalam opini ini.')
-                                        ->disabled(fn() => self::isReviewer())
-                                        ->columnSpanFull(),
+                                        ->helperText('Opsional. Maks. 3 topik.')
+                                        ->disabled(fn() => self::isReviewer())->columnSpanFull(),
                                 ]),
                         ]),
 
-                    // ─────────────────────────────────────────
-                    // STEP 2 — Klasifikasi
-                    // ─────────────────────────────────────────
                     // ─────────────────────────────────────────
                     // STEP 2 — Klasifikasi
                     // ─────────────────────────────────────────
@@ -261,83 +233,45 @@ class PublicationForm
                                 ->columnSpanFull()
                                 ->schema([
 
-                                    // ── Category (hanya 1, semua tipe wajib) ──────
                                     Select::make('categories')
                                         ->label('Category')
-                                        ->relationship(
-                                            name: 'categories',
-                                            titleAttribute: 'name',
-                                            modifyQueryUsing: fn($query) => $query->orderBy('name'),
-                                        )
-                                        ->multiple()        // ← wajib karena relasi BelongsToMany
-                                        ->maxItems(1)       // ← batasi hanya 1 pilihan
-                                        ->searchable()
-                                        ->preload()
-                                        ->required()
+                                        ->relationship('categories', 'name', fn($query) => $query->orderBy('name'))
+                                        ->multiple()->maxItems(1)->searchable()->preload()->required()
                                         ->createOptionForm([
-                                            \Filament\Forms\Components\TextInput::make('name')
-                                                ->label('Category Name')
-                                                ->required()
-                                                ->maxLength(100)
-                                                ->live(onBlur: true)
-                                                ->unique(table: 'categories', column: 'name', ignoreRecord: true)
+                                            TextInput::make('name')->label('Category Name')->required()->maxLength(100)
+                                                ->live(onBlur: true)->unique(table: 'categories', column: 'name', ignoreRecord: true)
                                                 ->afterStateUpdated(fn($state, callable $set) => $set('slug', Str::slug($state))),
-                                            \Filament\Forms\Components\TextInput::make('slug')
-                                                ->label('Slug')
-                                                ->required()
-                                                ->disabled()
-                                                ->dehydrated(),
+                                            TextInput::make('slug')->label('Slug')->required()->disabled()->dehydrated(),
                                         ])
                                         ->createOptionUsing(fn(array $data) => Category::create($data)->getKey())
-                                        ->helperText('Pilih 1 kategori yang paling mewakili publikasi ini.')
-                                        ->disabled(fn() => self::isReviewer())
-                                        ->columnSpan(1),
+                                        ->helperText('Pilih 1 kategori.')
+                                        ->disabled(fn() => self::isReviewer())->columnSpan(1),
 
-
-                                    // ── Research Method ───────────────────────────
-                                    // Jurnal  → wajib
-                                    // Buku    → opsional (tampil)
-                                    // Opini   → disembunyikan
                                     Select::make('method_id')
                                         ->label(fn($get) => match (self::publicationTypeSlug($get)) {
                                             'jurnal' => 'Research Method',
                                             'buku'   => 'Metode Penulisan',
                                             default  => 'Research Method',
                                         })
-                                        ->relationship(
-                                            name: 'method',
-                                            titleAttribute: 'name',
-                                            modifyQueryUsing: fn($query) => $query->orderBy('name'),
-                                        )
-                                        ->searchable()
-                                        ->preload()
+                                        ->relationship('method', 'name', fn($query) => $query->orderBy('name'))
+                                        ->searchable()->preload()
                                         ->visible(fn($get) => self::publicationTypeSlug($get) !== 'opini')
                                         ->required(fn($get) => self::publicationTypeSlug($get) === 'jurnal')
                                         ->createOptionForm([
-                                            \Filament\Forms\Components\TextInput::make('name')
-                                                ->label('Method Name')
-                                                ->required()
-                                                ->maxLength(100)
-                                                ->live(onBlur: true)
-                                                ->unique(table: 'methods', column: 'name', ignoreRecord: true)
+                                            TextInput::make('name')->label('Method Name')->required()->maxLength(100)
+                                                ->live(onBlur: true)->unique(table: 'methods', column: 'name', ignoreRecord: true)
                                                 ->afterStateUpdated(fn($state, callable $set) => $set('slug', Str::slug($state))),
-                                            \Filament\Forms\Components\TextInput::make('slug')
-                                                ->label('Slug')
-                                                ->required()
-                                                ->disabled()
-                                                ->dehydrated(),
+                                            TextInput::make('slug')->label('Slug')->required()->disabled()->dehydrated(),
                                         ])
                                         ->createOptionUsing(fn(array $data) => Method::create($data)->getKey())
                                         ->helperText(fn($get) => match (self::publicationTypeSlug($get)) {
-                                            'jurnal' => 'Wajib. Pilih metode penelitian utama yang digunakan.',
-                                            'buku'   => 'Opsional. Pilih jika buku menggunakan pendekatan metodologi tertentu.',
+                                            'jurnal' => 'Wajib. Pilih metode penelitian.',
+                                            'buku'   => 'Opsional.',
                                             default  => '',
                                         })
-                                        ->disabled(fn() => self::isReviewer())
-                                        ->columnSpan(1),
+                                        ->disabled(fn() => self::isReviewer())->columnSpan(1),
 
-                                    // ── Info hint untuk opini (pengganti method) ──
-                                    \Filament\Forms\Components\Placeholder::make('method_info')
+                                    Placeholder::make('method_info')
                                         ->label('')
                                         ->content('Opini tidak memerlukan klasifikasi metode penelitian.')
                                         ->visible(fn($get) => self::publicationTypeSlug($get) === 'opini')
@@ -354,7 +288,7 @@ class PublicationForm
                         ->completedIcon('heroicon-o-check-circle')
                         ->schema([
                             Section::make('Authors')
-                                ->description('Penulis corresponding mengikuti data publication (tidak ikut user yang sedang login)')
+                                ->description('Penulis corresponding diisi otomatis dari akun yang login.')
                                 ->icon('heroicon-o-users')
                                 ->schema([
                                     Repeater::make('authorPublications')
@@ -363,14 +297,15 @@ class PublicationForm
                                         ->relationship('authorPublications')
                                         ->orderColumn('order')
                                         ->reorderable()
-                                        ->defaultItems(0)
+                                        ->defaultItems(0)   // ✅ Jangan pakai default, kita set manual
                                         ->minItems(1)
-                                        ->addActionLabel('Tambah penulis')
+                                        ->addActionLabel('Tambah penulis lain')
                                         ->collapsed()
                                         ->afterStateHydrated(function (?array $state, callable $set) {
                                             $state ??= [];
                                             $state = array_values($state);
 
+                                            // ✅ Jika sudah ada data (mode edit), skip init
                                             if (count($state) > 0) {
                                                 foreach ($state as $i => $row) {
                                                     $state[$i]['order'] = $i + 1;
@@ -379,22 +314,13 @@ class PublicationForm
                                                 return;
                                             }
 
-                                            $currentUser = auth()->user();
-                                            if (! $currentUser) {
-                                                return;
-                                            }
+                                            // ✅ Init: ambil/buat Author profile untuk user yang login
+                                            $author = self::resolveCurrentAuthor();
+                                            if (!$author) return;
 
-                                            $currentAuthor = Author::query()->firstOrCreate(
-                                                ['user_id' => $currentUser->id],
-                                                [
-                                                    'name'        => $currentUser->name,
-                                                    'email'       => $currentUser->email,
-                                                    'affiliation' => null,
-                                                ]
-                                            );
-
+                                            // ✅ Set HANYA 1 item dengan author dari user login
                                             $set('authorPublications', [[
-                                                'author_id'        => $currentAuthor->id,
+                                                'author_id'        => $author->id,
                                                 'is_corresponding' => true,
                                                 'order'            => 1,
                                             ]]);
@@ -403,32 +329,70 @@ class PublicationForm
                                             Select::make('author_id')
                                                 ->label('Author')
                                                 ->required()
-                                                ->searchable(['name', 'email'])
-                                                ->preload()
                                                 ->live()
                                                 ->disableOptionsWhenSelectedInSiblingRepeaterItems()
-                                                ->disabled(function (Get $get): bool {
-                                                    return (bool) $get('is_corresponding');
-                                                })
+                                                // ✅ Corresponding author tidak bisa diganti
+                                                ->disabled(fn(Get $get): bool => (bool) $get('is_corresponding'))
                                                 ->relationship('author', 'name')
-                                                ->dehydrated()
-                                                ->createOptionForm([
-                                                    \Filament\Forms\Components\TextInput::make('name')
-                                                        ->label('Name')
-                                                        ->required()
-                                                        ->maxLength(255),
+                                                ->searchable()
+                                                // ✅ FIXED: Search gabungan authors + users dengan load('user')
+                                                ->getSearchResultsUsing(function (string $search) {
+                                                    return Author::query()
+                                                        ->with('user')
+                                                        ->where(function ($q) use ($search) {
+                                                            $q->where('authors.name', 'like', "%{$search}%")
+                                                                ->orWhere('authors.email', 'like', "%{$search}%")
+                                                                ->orWhereHas(
+                                                                    'user',
+                                                                    fn($u) =>
+                                                                    $u->where('name', 'like', "%{$search}%")
+                                                                        ->orWhere('email', 'like', "%{$search}%")
+                                                                );
+                                                        })
+                                                        ->limit(20)
+                                                        ->get()
+                                                        ->mapWithKeys(function (Author $author) {
+                                                            // ✅ Accessor name sudah resolved karena with('user')
+                                                            $label = $author->name;
+                                                            if ($author->email) $label .= " — {$author->email}";
+                                                            if ($author->affiliation) $label .= " ({$author->affiliation})";
+                                                            return [$author->id => $label];
+                                                        });
+                                                })
+                                                // ✅ FIXED: getOptionLabelUsing dengan with('user')
+                                                ->getOptionLabelUsing(function ($value): string {
+                                                    $author = Author::with('user')->find($value);
+                                                    if (!$author) return '—';
 
-                                                    \Filament\Forms\Components\TextInput::make('email')
+                                                    // ✅ Jika linked ke user, set relasi manual agar accessor resolve
+                                                    $label = $author->name; // accessor sudah resolve karena with('user')
+                                                    if ($author->email) $label .= " — {$author->email}";
+                                                    return $label;
+                                                })
+                                                ->dehydrated()
+                                                // ✅ Create form — untuk tambah external author
+                                                ->createOptionForm([
+                                                    TextInput::make('name')
+                                                        ->label('Nama Lengkap')
+                                                        ->required()
+                                                        ->maxLength(255)
+                                                        ->helperText('Untuk external author yang tidak punya akun.'),
+
+                                                    TextInput::make('email')
                                                         ->label('Email')
                                                         ->email()
-                                                        ->required()
                                                         ->maxLength(255)
-                                                        ->unique(table: 'authors', column: 'email', ignoreRecord: true),
+                                                        ->unique(table: 'authors', column: 'email', ignoreRecord: true)
+                                                        ->helperText('Opsional.'),
 
-                                                    \Filament\Forms\Components\TextInput::make('affiliation')
-                                                        ->label('Affiliation')
-                                                        ->maxLength(255)
-                                                        ->nullable(),
+                                                    TextInput::make('affiliation')
+                                                        ->label('Affiliasi / Institusi')
+                                                        ->maxLength(255),
+
+                                                    Textarea::make('bio')
+                                                        ->label('Bio Singkat')
+                                                        ->rows(3)
+                                                        ->maxLength(500),
                                                 ])
                                                 ->createOptionUsing(fn(array $data) => Author::create($data)->getKey()),
 
@@ -438,11 +402,16 @@ class PublicationForm
                                                 ->dehydrated(),
                                         ])
                                         ->mutateDehydratedStateUsing(function (array $state): array {
-                                            $state = array_values(array_filter($state, fn($row) => ! empty($row['author_id'])));
+                                            $state = array_values(array_filter(
+                                                $state,
+                                                fn($row) => !empty($row['author_id'])
+                                            ));
 
-                                            $hasCorresponding = collect($state)->contains(fn($row) => (bool) ($row['is_corresponding'] ?? false));
+                                            $hasCorresponding = collect($state)->contains(
+                                                fn($row) => (bool) ($row['is_corresponding'] ?? false)
+                                            );
 
-                                            if (! $hasCorresponding && count($state) > 0) {
+                                            if (!$hasCorresponding && count($state) > 0) {
                                                 $state[0]['is_corresponding'] = true;
                                             }
 
@@ -450,7 +419,7 @@ class PublicationForm
                                             foreach ($state as $i => $row) {
                                                 $state[$i]['order'] = $i + 1;
                                                 $isCorr = (bool) ($row['is_corresponding'] ?? false);
-                                                if ($isCorr && ! $already) {
+                                                if ($isCorr && !$already) {
                                                     $already = true;
                                                     $state[$i]['is_corresponding'] = true;
                                                 } else {
@@ -465,9 +434,6 @@ class PublicationForm
                                 ]),
                         ]),
 
-                    // ─────────────────────────────────────────
-                    // STEP 4 — Finalisasi
-                    // ─────────────────────────────────────────
                     // ─────────────────────────────────────────
                     // STEP 4 — Finalisasi
                     // ─────────────────────────────────────────
@@ -488,19 +454,16 @@ class PublicationForm
                                         ->disk('public')
                                         ->directory('publications/covers')
                                         ->visibility('public')
-                                        ->imageEditor()                         // ← bisa di-crop/edit seperti di Author
-                                        ->imageEditorAspectRatios([
-                                            null,                              // bebas
-                                            '2:3',                             // portrait buku standar (600×900)
-                                        ])
-                                        ->imageCropAspectRatio('2:3')           // default crop 2:3
-                                        ->imageResizeTargetWidth(600)           // target width 600px
-                                        ->imageResizeTargetHeight(900)          // target height 900px
-                                        ->imageResizeMode('cover')              // fill seluruh area crop
-                                        ->imagePreviewHeight('300')             // preview lebih tinggi agar proporsional
+                                        ->imageEditor()
+                                        ->imageEditorAspectRatios([null, '2:3'])
+                                        ->imageCropAspectRatio('2:3')
+                                        ->imageResizeTargetWidth(600)
+                                        ->imageResizeTargetHeight(900)
+                                        ->imageResizeMode('cover')
+                                        ->imagePreviewHeight('300')
                                         ->maxSize(2048)
                                         ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
-                                        ->helperText('Format: JPG/PNG/WebP. Maks. 2MB. Rasio ideal 2:3 (600×900px).')
+                                        ->helperText('Format: JPG/PNG/WebP. Maks. 2MB. Rasio ideal 2:3.')
                                         ->disabled(fn() => self::isReviewer()),
                                 ]),
 
@@ -552,14 +515,12 @@ class PublicationForm
                         ->completedIcon('heroicon-o-check-circle')
                         ->schema([
                             View::make('filament.publications.preview')
-                                ->viewData([
-                                    'titleLabel' => 'Judul',
-                                ]),
+                                ->viewData(['titleLabel' => 'Judul']),
                         ]),
 
                 ])
-                    ->skippable()                              // ← icon step bisa diklik bebas
-                    ->persistStepInQueryString()               // ← step tersimpan di URL saat refresh
+                    ->skippable()
+                    ->persistStepInQueryString()
                     ->nextAction(
                         fn(Action $action) => $action
                             ->label('Lanjut')
