@@ -3,6 +3,11 @@
 @section('title', $name . ' - Profil Penulis')
 @section('main_class', 'pb-16')
 
+@section('custom_navbar')
+<x-navbar ctaLabel="Mulai Berlangganan" ctaRoute="subscription.index" ctaIcon="sparkles" ctaSubtext="Gratis"
+    ctaVariant="premium" :showAvatarWhenAuth="true" :showCtaAlways="true" :showSearch="false" />
+@endsection
+
 @push('styles')
 <style>
     /* ═══════════════════════════════════════
