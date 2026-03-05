@@ -8,6 +8,10 @@
 @endsection
 
 @section('content')
+
+{{-- ✨ Anchor scroll ke atas --}}
+<div id="top-anchor"></div>
+
 <div x-data="profilePage()" class="min-h-screen bg-gradient-to-br from-[#F8F9FC] via-white to-[#FFF7F2] py-8 sm:py-12">
     <div class="max-w-5xl px-4 mx-auto sm:px-6 lg:px-8">
 
@@ -879,7 +883,15 @@
     </div>
 </div>
 
+{{-- ✨ Scroll to Top --}}
+<x-scroll-to-top />
+
+
 @push('scripts')
+
+{{-- ✨ Scroll to Top Script --}}
+<x-scroll-to-top-script />
+
 <script>
     // ✅ Detect tab dari session (setelah redirect error validasi)
     function profilePage() {
