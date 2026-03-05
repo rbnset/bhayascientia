@@ -3,6 +3,11 @@
 @section('title', $publication->title)
 @section('main_class', 'mt-0 pb-16')
 
+@section('custom_navbar')
+<x-navbar ctaLabel="Mulai Berlangganan" ctaRoute="subscription.index" ctaIcon="sparkles" ctaSubtext="Gratis"
+    ctaVariant="premium" :showAvatarWhenAuth="true" :showCtaAlways="true" :showSearch="false" />
+@endsection
+
 @push('styles')
 <style>
     /* Force Grid Layout - Override any conflicting CSS */
