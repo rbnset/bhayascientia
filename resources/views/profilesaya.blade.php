@@ -2,6 +2,11 @@
 
 @section('title', 'Profil Saya - ' . auth()->user()->name)
 
+@section('custom_navbar')
+<x-navbar ctaLabel="Mulai Berlangganan" ctaRoute="subscription.index" ctaIcon="sparkles" ctaSubtext="Gratis"
+    ctaVariant="premium" :showAvatarWhenAuth="true" :showCtaAlways="true" />
+@endsection
+
 @section('content')
 <div x-data="profilePage()" class="min-h-screen bg-gradient-to-br from-[#F8F9FC] via-white to-[#FFF7F2] py-8 sm:py-12">
     <div class="max-w-5xl px-4 mx-auto sm:px-6 lg:px-8">
