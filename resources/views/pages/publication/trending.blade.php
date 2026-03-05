@@ -7,7 +7,7 @@
 {{-- Custom Navbar dengan Avatar --}}
 @section('custom_navbar')
 <x-navbar ctaLabel="Browse Publikasi" ctaRoute="publikasi.index" ctaIcon="book" :showAvatarWhenAuth="true"
-    :showCtaAlways="true" />
+    :showCtaAlways="true" :showSearch="false" />
 @endsection
 
 @push('styles')
