@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Author;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -12,59 +13,51 @@ class RolesAndUsersSeeder extends Seeder
 {
     public function run(): void
     {
-        // Reset cached roles and permissions
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $guard = 'web';
 
-        // Create roles
-        $roles = [
-            'super_admin',
-            'admin',
-            'author',
-            'reviewer',
-        ];
+        $roles = ['super_admin', 'admin', 'author', 'reviewer'];
 
         foreach ($roles as $roleName) {
             Role::firstOrCreate([
-                'name' => $roleName,
+                'name'       => $roleName,
                 'guard_name' => $guard,
             ]);
         }
 
-        // Create users with complete attributes
         $users = [
             [
-                'name' => 'Super Admin',
-                'email' => 'super_admin@admin.com',
-                'password' => 'password',
+                'name'            => 'Super Admin',
+                'email'           => 'super_admin@admin.com',
+                'password'        => 'password',
                 'whatsapp_number' => '+62812345678901',
-                'job_title' => 'Super Administrator',
-                'role' => 'super_admin',
+                'job_title'       => 'Super Administrator',
+                'role'            => 'super_admin',
             ],
             [
-                'name' => 'Admin',
-                'email' => 'admin@admin.com',
-                'password' => 'password',
+                'name'            => 'Admin',
+                'email'           => 'admin@admin.com',
+                'password'        => 'password',
                 'whatsapp_number' => '+62812345678902',
-                'job_title' => 'Administrator',
-                'role' => 'admin',
+                'job_title'       => 'Administrator',
+                'role'            => 'admin',
             ],
             [
-                'name' => 'Author',
-                'email' => 'author@admin.com',
-                'password' => 'password',
+                'name'            => 'Author',
+                'email'           => 'author@admin.com',
+                'password'        => 'password',
                 'whatsapp_number' => '+62812345678903',
-                'job_title' => 'Content Author',
-                'role' => 'author',
+                'job_title'       => 'Content Author',
+                'role'            => 'author',
             ],
             [
-                'name' => 'Reviewer',
-                'email' => 'reviewer@admin.com',
-                'password' => 'password',
+                'name'            => 'Reviewer',
+                'email'           => 'reviewer@admin.com',
+                'password'        => 'password',
                 'whatsapp_number' => '+62812345678904',
-                'job_title' => 'Manuscript Reviewer',
-                'role' => 'reviewer',
+                'job_title'       => 'Manuscript Reviewer',
+                'role'            => 'reviewer',
             ],
         ];
 
@@ -75,17 +68,32 @@ class RolesAndUsersSeeder extends Seeder
             $user = User::updateOrCreate(
                 ['email' => $data['email']],
                 [
-                    'name' => $data['name'],
-                    'password' => Hash::make($data['password']),
+                    'name'            => $data['name'],
+                    'password'        => Hash::make($data['password']),
                     'whatsapp_number' => $data['whatsapp_number'] ?? null,
-                    'job_title' => $data['job_title'] ?? null,
+                    'job_title'       => $data['job_title'] ?? null,
                 ]
             );
 
+            // ✅ Pakai syncRoles dari Spatie langsung (tidak override)
             $user->syncRoles([$role]);
+
+            // ✅ Buat Author profile jika role = author dan belum ada
+            if ($role === 'author' && !$user->authorProfile()->exists()) {
+                Author::create([
+                    'user_id'     => $user->id,
+                    'name'        => null,
+                    'email'       => null,
+                    'affiliation' => null,
+                    'bio'         => null,
+                    'photo_path'  => null,
+                ]);
+            }
         }
 
-        // Reset cache again after assigning roles
         app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $this->command->info('✅ Roles & Users selesai dibuat.');
+        $this->command->info('✅ Author profile otomatis dibuat untuk user dengan role author.');
     }
 }

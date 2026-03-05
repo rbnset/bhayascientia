@@ -266,68 +266,6 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
     }
 
     // ========================================
-    // ROLE OVERRIDE — Auto-create Author Profile
-    // ========================================
-
-    /**
-     * ✅ Override assignRole Spatie — otomatis buat Author saat role 'author' diberikan
-     */
-    public function assignRole(...$roles): static
-    {
-        parent::assignRole(...$roles);
-        $this->createAuthorProfileIfNeeded($roles);
-        return $this;
-    }
-
-    /**
-     * ✅ Override syncRoles — handle saat role di-sync via Filament edit user
-     */
-    public function syncRoles(...$roles): static
-    {
-        $hadAuthorRole = $this->hasRole('author');
-        parent::syncRoles(...$roles);
-
-        if (!$hadAuthorRole) {
-            $this->createAuthorProfileIfNeeded($roles);
-        }
-
-        return $this;
-    }
-
-    /**
-     * ✅ Helper: buat Author profile jika belum ada
-     * Dengan pendekatan nullable — name & email NULL karena dibaca dari user
-     */
-    private function createAuthorProfileIfNeeded(mixed $roles): void
-    {
-        $roleNames = collect(is_array($roles) ? $roles : [$roles])
-            ->flatten()
-            ->map(fn($r) => is_string($r) ? $r : (is_object($r) ? $r->name : null))
-            ->filter()
-            ->toArray();
-
-        if (!in_array('author', $roleNames)) {
-            return;
-        }
-
-        $this->refresh();
-
-        if ($this->authorProfile()->exists()) {
-            return;
-        }
-
-        // ✅ name & email NULL — dibaca dari User via accessor di Author model
-        Author::create([
-            'user_id'     => $this->id,
-            'name'        => null,
-            'email'       => null,
-            'affiliation' => null,
-            'bio'         => null,
-            'photo_path'  => null,
-        ]);
-    }
-
-    // ========================================
     // PUBLICATION INTERACTION METHODS
     // ========================================
 
@@ -416,5 +354,66 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
     public function isEmailVerified(): bool
     {
         return !is_null($this->email_verified_at);
+    }
+
+    // ❌ HAPUS ini dari User.php:
+// public function assignRole(...$roles): static { ... }
+// public function syncRoles(...$roles): static { ... }
+
+// ✅ GANTI dengan method baru yang tidak konflik dengan Spatie:
+
+    /**
+     * ✅ Assign role + auto-create Author profile
+     * Panggil method ini sebagai pengganti assignRole() jika butuh auto-create
+     */
+    public function assignRoleWithProfile(string|array $roles): static
+    {
+        $this->assignRole($roles);
+        $this->createAuthorProfileIfNeeded(
+            is_array($roles) ? $roles : [$roles]
+        );
+        return $this;
+    }
+
+    /**
+     * ✅ Sync role + auto-create Author profile
+     * Panggil method ini sebagai pengganti syncRoles() jika butuh auto-create
+     */
+    public function syncRolesWithProfile(string|array $roles): static
+    {
+        $hadAuthorRole = $this->hasRole('author');
+        $this->syncRoles($roles);
+
+        if (!$hadAuthorRole) {
+            $this->createAuthorProfileIfNeeded(
+                is_array($roles) ? $roles : [$roles]
+            );
+        }
+
+        return $this;
+    }
+
+    private function createAuthorProfileIfNeeded(array $roleNames): void
+    {
+        $roleNames = collect($roleNames)
+            ->flatten()
+            ->map(fn($r) => is_string($r) ? $r : (is_object($r) ? $r->name : null))
+            ->filter()
+            ->toArray();
+
+        if (!in_array('author', $roleNames)) return;
+
+        $this->refresh();
+
+        if ($this->authorProfile()->exists()) return;
+
+        \App\Models\Author::create([
+            'user_id'     => $this->id,
+            'name'        => null,
+            'email'       => null,
+            'affiliation' => null,
+            'bio'         => null,
+            'photo_path'  => null,
+        ]);
     }
 }
