@@ -6,8 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Verifikasi Dokumen — {{ config('app.name') }}</title>
     <meta name="robots" content="noindex, nofollow">
-
-    {{-- Google Fonts --}}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -55,7 +53,6 @@
             flex-direction: column;
         }
 
-        /* ── Noise texture overlay ── */
         body::before {
             content: '';
             position: fixed;
@@ -65,7 +62,6 @@
             z-index: 0;
         }
 
-        /* ── Header ── */
         .site-header {
             position: sticky;
             top: 0;
@@ -111,7 +107,6 @@
             font-weight: 500;
         }
 
-        /* ── Main ── */
         main {
             flex: 1;
             display: flex;
@@ -127,7 +122,6 @@
             max-width: 680px;
         }
 
-        /* ── Page title ── */
         .page-eyebrow {
             font-size: 0.7rem;
             letter-spacing: 0.15em;
@@ -159,7 +153,6 @@
             line-height: 1.6;
         }
 
-        /* ── Code display ── */
         .code-display {
             display: inline-flex;
             align-items: center;
@@ -179,7 +172,7 @@
         }
 
         .code-value {
-            font-family: 'DM Mono', 'Courier New', monospace;
+            font-family: 'Courier New', monospace;
             font-size: 0.95rem;
             font-weight: 600;
             color: var(--text-main);
@@ -188,10 +181,8 @@
 
         .code-sep {
             color: var(--border);
-            font-size: 1rem;
         }
 
-        /* ── Result card ── */
         .result-card {
             background: var(--surface);
             border-radius: 20px;
@@ -213,7 +204,6 @@
             }
         }
 
-        /* ── Status banner ── */
         .status-banner {
             padding: 24px 28px;
             display: flex;
@@ -280,7 +270,6 @@
             line-height: 1.5;
         }
 
-        /* ── Info grid ── */
         .info-grid {
             padding: 24px 28px;
             display: grid;
@@ -318,7 +307,38 @@
             font-weight: 400;
         }
 
-        /* ── Status badge ── */
+        .author-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 2px;
+        }
+
+        .author-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 2px 10px;
+            font-size: 0.8rem;
+            color: var(--text-main);
+        }
+
+        .author-chip.corresponding {
+            background: var(--gold-light);
+            border-color: #FDE68A;
+            color: var(--gold);
+        }
+
+        .author-chip-dot {
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
         .status-pill {
             display: inline-flex;
             align-items: center;
@@ -341,9 +361,29 @@
             color: #92400E;
         }
 
-        .status-pill.review {
+        .status-pill.in_review {
             background: #DBEAFE;
             color: #1E40AF;
+        }
+
+        .status-pill.accepted {
+            background: #D1FAE5;
+            color: #065F46;
+        }
+
+        .status-pill.submitted {
+            background: #FEF3C7;
+            color: #92400E;
+        }
+
+        .status-pill.revision_required {
+            background: #FEE2E2;
+            color: #991B1B;
+        }
+
+        .status-pill.rejected {
+            background: #FEE2E2;
+            color: #991B1B;
         }
 
         .status-pill-dot {
@@ -353,14 +393,12 @@
             background: currentColor;
         }
 
-        /* ── Divider ── */
         .card-divider {
             border: none;
             border-top: 1px solid var(--border);
             margin: 0 28px;
         }
 
-        /* ── Scan counter ── */
         .scan-strip {
             padding: 14px 28px;
             display: flex;
@@ -393,7 +431,6 @@
             border-radius: 999px;
         }
 
-        /* ── Actions ── */
         .card-actions {
             padding: 20px 28px;
             display: flex;
@@ -443,7 +480,6 @@
             height: 16px;
         }
 
-        /* ── Invalid tips ── */
         .tips-list {
             padding: 20px 28px;
             list-style: none;
@@ -470,7 +506,6 @@
             flex-shrink: 0;
         }
 
-        /* ── Footer ── */
         .site-footer {
             text-align: center;
             padding: 24px;
@@ -490,7 +525,6 @@
             color: var(--text-main);
         }
 
-        /* ── Responsive ── */
         @media (max-width: 520px) {
             .info-grid {
                 grid-template-columns: 1fr;
@@ -500,19 +534,16 @@
                 padding: 18px 20px;
             }
 
-            .card-actions {
-                padding: 16px 20px;
-            }
-
-            .card-divider {
-                margin: 0 20px;
-            }
-
+            .card-actions,
             .scan-strip,
             .tips-list,
             .info-grid {
                 padding-left: 20px;
                 padding-right: 20px;
+            }
+
+            .card-divider {
+                margin: 0 20px;
             }
         }
     </style>
@@ -520,7 +551,6 @@
 
 <body>
 
-    {{-- ── Header ── --}}
     <header class="site-header">
         <div class="header-inner">
             <a href="{{ url('/') }}" class="site-logo">
@@ -531,7 +561,6 @@
         </div>
     </header>
 
-    {{-- ── Main ── --}}
     <main>
         <div class="container">
 
@@ -542,18 +571,30 @@
                 tidak dimanipulasi.
             </p>
 
-            {{-- Kode yang dicek --}}
             <div class="code-display">
                 <span class="code-label">Kode</span>
                 <span class="code-sep">|</span>
                 <span class="code-value">{{ $code }}</span>
             </div>
 
-            {{-- Result card --}}
             <div class="result-card">
 
                 @if($valid && $pub && $version)
+
                 {{-- ✅ VALID --}}
+                @php
+                $authors = $pub->relationLoaded('authors') ? $pub->authors : collect();
+                $statusKey = strtolower($pub->status ?? 'draft');
+                $statusLabel = [
+                'published' => 'Diterbitkan',
+                'draft' => 'Draft',
+                'in_review' => 'Dalam Review',
+                'submitted' => 'Terkirim',
+                'accepted' => 'Diterima',
+                'rejected' => 'Ditolak',
+                'revision_required' => 'Perlu Revisi',
+                ][$statusKey] ?? ucfirst($statusKey);
+                @endphp
 
                 <div class="status-banner valid">
                     <div class="status-icon valid">
@@ -570,15 +611,25 @@
                 </div>
 
                 <div class="info-grid">
+
                     <div class="info-item full">
                         <span class="info-key">Judul Publikasi</span>
                         <span class="info-val">{{ $pub->title }}</span>
                     </div>
 
-                    @if($pub->author)
-                    <div class="info-item">
-                        <span class="info-key">Penulis / Author</span>
-                        <span class="info-val">{{ $pub->author }}</span>
+                    @if($authors->isNotEmpty())
+                    <div class="info-item full">
+                        <span class="info-key">Penulis</span>
+                        <div class="author-list">
+                            @foreach($authors as $author)
+                            <span class="author-chip {{ $author->pivot->is_corresponding ? 'corresponding' : '' }}">
+                                @if($author->pivot->is_corresponding)
+                                <span class="author-chip-dot"></span>
+                                @endif
+                                {{ $author->name }}
+                            </span>
+                            @endforeach
+                        </div>
                     </div>
                     @endif
 
@@ -588,23 +639,19 @@
                     </div>
 
                     <div class="info-item">
-                        <span class="info-key">Tanggal Diterbitkan</span>
-                        <span class="info-val muted">
-                            {{ $version->created_at?->translatedFormat('d F Y') ?? '-' }}
+                        <span class="info-key">Status</span>
+                        <span class="info-val">
+                            <span class="status-pill {{ $statusKey }}">
+                                <span class="status-pill-dot"></span>
+                                {{ $statusLabel }}
+                            </span>
                         </span>
                     </div>
 
                     <div class="info-item">
-                        <span class="info-key">Status</span>
-                        <span class="info-val">
-                            @php
-                            $status = strtolower($pub->status ?? 'published');
-                            $labels = ['published' => 'Diterbitkan', 'draft' => 'Draft', 'review' => 'Dalam Review'];
-                            @endphp
-                            <span class="status-pill {{ $status }}">
-                                <span class="status-pill-dot"></span>
-                                {{ $labels[$status] ?? ucfirst($status) }}
-                            </span>
+                        <span class="info-key">Tanggal Diterbitkan</span>
+                        <span class="info-val muted">
+                            {{ $pub->published_at?->translatedFormat('d F Y') ?? '-' }}
                         </span>
                     </div>
 
@@ -612,6 +659,7 @@
                         <span class="info-key">ID Publikasi</span>
                         <span class="info-val muted">#{{ str_pad($pub->id, 4, '0', STR_PAD_LEFT) }}</span>
                     </div>
+
                 </div>
 
                 @if($verification)
@@ -653,14 +701,12 @@
                     </a>
                     @endif
                     @endauth
-                    <a href="{{ url('/') }}" class="btn btn-ghost">
-                        ← Kembali
-                    </a>
+                    <a href="{{ url('/') }}" class="btn btn-ghost">← Kembali</a>
                 </div>
 
                 @else
-                {{-- ❌ INVALID --}}
 
+                {{-- ❌ INVALID --}}
                 <div class="status-banner invalid">
                     <div class="status-icon invalid">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
@@ -693,7 +739,6 @@
         </div>
     </main>
 
-    {{-- ── Footer ── --}}
     <footer class="site-footer">
         &copy; {{ date('Y') }} <a href="{{ url('/') }}">{{ config('app.name') }}</a>
         &nbsp;·&nbsp; Sistem Verifikasi Dokumen Resmi

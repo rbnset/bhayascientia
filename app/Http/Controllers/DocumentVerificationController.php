@@ -12,26 +12,36 @@ class DocumentVerificationController extends Controller
 {
     public function verify(Request $request, string $code)
     {
-        $code   = strtoupper(trim($code));
+        $code = strtoupper(trim($code));
 
-        // Cache hasil verifikasi 5 menit untuk performa
-        $cacheKey = 'verify:' . md5($code);
+        $cacheKey = 'verify:doc:' . md5($code);
         $result   = Cache::remember($cacheKey, 300, fn() => $this->resolveCode($code));
 
-        // Catat scan (di luar cache agar selalu tercatat)
-        if ($result['valid'] && isset($result['verification'])) {
-            $result['verification']->recordScan(
+        if (! $result['valid']) {
+            return view('verify.document', [
+                'code'         => $code,
+                'valid'        => false,
+                'version'      => null,
+                'pub'          => null,
+                'verification' => null,
+            ]);
+        }
+
+        $verification = DocumentVerification::where('code', $code)->first();
+
+        if ($verification) {
+            $verification->recordScan(
                 $request->ip(),
                 $request->userAgent() ?? 'Unknown'
             );
         }
 
         return view('verify.document', [
-            'code'    => $code,
-            'valid'   => $result['valid'],
-            'version' => $result['version'] ?? null,
-            'pub'     => $result['publication'] ?? null,
-            'verification' => $result['verification'] ?? null,
+            'code'         => $code,
+            'valid'        => true,
+            'version'      => $result['version'],
+            'pub'          => $result['publication'],
+            'verification' => $verification,
         ]);
     }
 
@@ -43,9 +53,11 @@ class DocumentVerificationController extends Controller
 
         [, $pubId, $versionNumber, $inputHash] = $m;
 
-        // Query optimal: single query dengan eager loading
         $version = PublicationVersion::query()
-            ->with(['publication:id,title,author,status,created_at'])
+            ->with([
+                'publication:id,title,status,published_at',
+                'publication.authors', // load relasi authors
+            ])
             ->where('version_number', (int) $versionNumber)
             ->whereHas('publication', fn($q) => $q->where('id', (int) $pubId))
             ->select(['id', 'publication_id', 'version_number', 'created_at', 'pdf_file_path'])
@@ -65,17 +77,15 @@ class DocumentVerificationController extends Controller
             return ['valid' => false];
         }
 
-        // Upsert record verifikasi
-        $verification = DocumentVerification::firstOrCreate(
+        DocumentVerification::firstOrCreate(
             ['code' => $code],
             ['publication_version_id' => $version->id]
         );
 
         return [
-            'valid'        => true,
-            'version'      => $version,
-            'publication'  => $version->publication,
-            'verification' => $verification,
+            'valid'       => true,
+            'version'     => $version,
+            'publication' => $version->publication,
         ];
     }
 }

@@ -9,6 +9,7 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Schema;
 use Filament\Support\Enums\FontFamily;
 use Filament\Support\Enums\FontWeight;
+use Filament\Support\Icons\Heroicon;
 
 class DocumentVerificationInfolist
 {
@@ -49,9 +50,27 @@ class DocumentVerificationInfolist
                             ->columnSpanFull()
                             ->weight(FontWeight::Medium),
 
-                        TextEntry::make('publicationVersion.publication.author')
+                        // Authors via relasi — join nama
+                        TextEntry::make('publicationVersion.publication.id')
                             ->label('Penulis')
-                            ->placeholder('-'),
+                            ->columnSpanFull()
+                            ->formatStateUsing(function ($state, $record) {
+                                $authors = $record->publicationVersion
+                                    ?->publication
+                                    ?->authors;
+
+                                if (! $authors || $authors->isEmpty()) {
+                                    return '-';
+                                }
+
+                                return $authors->map(function ($author) {
+                                    $label = $author->name;
+                                    if ($author->pivot?->is_corresponding) {
+                                        $label .= ' ✦';
+                                    }
+                                    return $label;
+                                })->join(', ');
+                            }),
 
                         TextEntry::make('publicationVersion.version_number')
                             ->label('Versi Dokumen')
@@ -61,27 +80,33 @@ class DocumentVerificationInfolist
                             ->label('Status Publikasi')
                             ->badge()
                             ->formatStateUsing(fn($state) => match (strtolower($state ?? '')) {
-                                'published' => 'Diterbitkan',
-                                'draft'     => 'Draft',
-                                'review'    => 'Dalam Review',
-                                default     => ucfirst($state ?? '-'),
+                                'published'         => 'Diterbitkan',
+                                'draft'             => 'Draft',
+                                'in_review'         => 'Dalam Review',
+                                'submitted'         => 'Terkirim',
+                                'accepted'          => 'Diterima',
+                                'rejected'          => 'Ditolak',
+                                'revision_required' => 'Perlu Revisi',
+                                default             => ucfirst($state ?? '-'),
                             })
                             ->color(fn($state) => match (strtolower($state ?? '')) {
-                                'published' => 'success',
-                                'draft'     => 'warning',
-                                'review'    => 'info',
-                                default     => 'gray',
+                                'published', 'accepted' => 'success',
+                                'draft', 'submitted'    => 'warning',
+                                'in_review'             => 'info',
+                                'rejected', 'revision_required' => 'danger',
+                                default                 => 'gray',
                             }),
+
+                        TextEntry::make('publicationVersion.publication.published_at')
+                            ->label('Tanggal Diterbitkan')
+                            ->date('d M Y')
+                            ->placeholder('-'),
 
                         TextEntry::make('publicationVersion.publication.id')
                             ->label('ID Publikasi')
                             ->formatStateUsing(fn($state) => '#' . str_pad($state, 4, '0', STR_PAD_LEFT))
                             ->fontFamily(FontFamily::Mono)
                             ->color('gray'),
-
-                        TextEntry::make('publicationVersion.created_at')
-                            ->label('Tanggal Versi Dibuat')
-                            ->date('d M Y'),
                     ]),
                 ]),
 
@@ -117,7 +142,6 @@ class DocumentVerificationInfolist
                             ->placeholder('-'),
                     ]),
                 ]),
-
         ]);
     }
 }
