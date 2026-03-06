@@ -17,7 +17,7 @@ class ViewDocumentVerification extends ViewRecord
         return [
             Action::make('open_verify')
                 ->label('Buka Halaman Verifikasi Publik')
-                ->icon(Heroicon::MiniArrowTopRightOnSquare)
+                ->icon(Heroicon::ArrowTopRightOnSquare)
                 ->color('gray')
                 ->url(fn() => route('document.verify', $this->record->code))
                 ->openUrlInNewTab(),
