@@ -19,10 +19,53 @@ class EditPublication extends EditRecord
 {
     protected static string $resource = PublicationResource::class;
 
+    // ─────────────────────────────────────────────────────────────
+    // Mount — blokir akses URL langsung untuk author jika terkunci
+    // Notifikasi hanya muncul saat halaman ini benar-benar diakses
+    // ─────────────────────────────────────────────────────────────
+
+    public function mount(int|string $record): void
+    {
+        parent::mount($record);
+
+        if (
+            auth()->user()?->hasRole('author') &&
+            in_array($this->record->status, PublicationResource::AUTHOR_LOCKED_STATUSES, true)
+        ) {
+            Notification::make()
+                ->title('Tidak dapat mengedit publikasi')
+                ->body(
+                    'Publikasi berstatus "' . str($this->record->status)->headline() . '" ' .
+                        'tidak dapat diubah. Hubungi editor jika ada koreksi yang diperlukan.'
+                )
+                ->warning()
+                ->persistent()
+                ->send();
+
+            $this->redirect(PublicationResource::getUrl('index'));
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Helpers
+    // ─────────────────────────────────────────────────────────────
+
     protected function isReviewer(): bool
     {
         return (bool) auth()->user()?->hasRole('reviewer');
     }
+
+    protected function shortTitle(): string
+    {
+        return Str::of((string) $this->record->title)
+            ->squish()
+            ->words(8, '…')
+            ->toString();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Widgets
+    // ─────────────────────────────────────────────────────────────
 
     protected function getHeaderWidgets(): array
     {
@@ -30,6 +73,10 @@ class EditPublication extends EditRecord
             PublicationStatusBanner::class,
         ];
     }
+
+    // ─────────────────────────────────────────────────────────────
+    // Mutate before save
+    // ─────────────────────────────────────────────────────────────
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
@@ -45,7 +92,7 @@ class EditPublication extends EditRecord
             return $filtered;
         }
 
-        // ✅ Non-reviewer: cek apakah judul berubah dan sudah digunakan publikasi lain
+        // Non-reviewer: cek apakah judul berubah dan sudah digunakan publikasi lain
         $title = trim($data['title'] ?? '');
         if (filled($title) && $title !== $this->record->title) {
             $exists = Publication::where('title', $title)
@@ -55,7 +102,11 @@ class EditPublication extends EditRecord
             if ($exists) {
                 Notification::make()
                     ->title('Judul sudah digunakan')
-                    ->body('Judul karya ilmiah ini sudah pernah digunakan oleh publikasi lain. Silakan gunakan judul yang berbeda atau tambahkan penjelasan spesifik (metode, lokasi, atau konteks).')
+                    ->body(
+                        'Judul karya ilmiah ini sudah pernah digunakan oleh publikasi lain. ' .
+                            'Silakan gunakan judul yang berbeda atau tambahkan penjelasan spesifik ' .
+                            '(metode, lokasi, atau konteks).'
+                    )
                     ->danger()
                     ->persistent()
                     ->send();
@@ -67,6 +118,10 @@ class EditPublication extends EditRecord
         return $data;
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // Handle record update
+    // ─────────────────────────────────────────────────────────────
+
     protected function handleRecordUpdate(\Illuminate\Database\Eloquent\Model $record, array $data): \Illuminate\Database\Eloquent\Model
     {
         try {
@@ -74,7 +129,10 @@ class EditPublication extends EditRecord
         } catch (UniqueConstraintViolationException $e) {
             Notification::make()
                 ->title('Gagal memperbarui publikasi')
-                ->body('Perubahan yang Anda lakukan bertabrakan dengan data yang sudah ada. Silakan cek kembali judul atau data yang diubah.')
+                ->body(
+                    'Perubahan yang Anda lakukan bertabrakan dengan data yang sudah ada. ' .
+                        'Silakan cek kembali judul atau data yang diubah.'
+                )
                 ->danger()
                 ->persistent()
                 ->send();
@@ -83,12 +141,16 @@ class EditPublication extends EditRecord
         }
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // After save
+    // ─────────────────────────────────────────────────────────────
+
     protected function afterSave(): void
     {
         if ($this->isReviewer()) {
             if (
-                $this->record->status === 'published'
-                && ($this->record->wasChanged('status') || $this->record->wasChanged('published_at'))
+                $this->record->status === 'published' &&
+                ($this->record->wasChanged('status') || $this->record->wasChanged('published_at'))
             ) {
                 $authorUserIds = $this->record->authors()
                     ->pluck('authors.user_id')
@@ -138,13 +200,9 @@ class EditPublication extends EditRecord
             ->update(['is_corresponding' => false]);
     }
 
-    protected function shortTitle(): string
-    {
-        return Str::of((string) $this->record->title)
-            ->squish()
-            ->words(8, '…')
-            ->toString();
-    }
+    // ─────────────────────────────────────────────────────────────
+    // Saved notification
+    // ─────────────────────────────────────────────────────────────
 
     protected function getSavedNotification(): ?Notification
     {
@@ -153,6 +211,10 @@ class EditPublication extends EditRecord
             ->title('Publikasi berhasil diubah')
             ->body('Judul: ' . $this->shortTitle());
     }
+
+    // ─────────────────────────────────────────────────────────────
+    // Header actions
+    // ─────────────────────────────────────────────────────────────
 
     protected function getHeaderActions(): array
     {
@@ -164,8 +226,8 @@ class EditPublication extends EditRecord
                 ->visible(fn() => $this->record->status === 'draft' && ! $this->isReviewer())
                 ->modalHeading('Submit Manuscript')
                 ->modalDescription(
-                    'Pastikan manuskrip yang Anda unggah sudah benar dan final.
-                    Setelah dikirim, berkas tidak dapat diubah kecuali editor meminta revisi.'
+                    'Pastikan manuskrip yang Anda unggah sudah benar dan final. ' .
+                        'Setelah dikirim, berkas tidak dapat diubah kecuali editor meminta revisi.'
                 )
                 ->modalSubmitActionLabel('Kirim Manuskrip')
                 ->form([

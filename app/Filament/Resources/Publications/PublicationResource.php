@@ -11,7 +11,6 @@ use App\Filament\Resources\Publications\Schemas\PublicationForm;
 use App\Filament\Resources\Publications\Tables\PublicationsTable;
 use App\Models\Publication;
 use BackedEnum;
-use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -41,7 +40,7 @@ class PublicationResource extends Resource
     // Status yang mengunci aksi edit & delete untuk role author
     // ─────────────────────────────────────────────────────────────
 
-    private const AUTHOR_LOCKED_STATUSES = [
+    public const AUTHOR_LOCKED_STATUSES = [
         'in_review',
         'accepted',
         'rejected',
@@ -49,55 +48,24 @@ class PublicationResource extends Resource
     ];
 
     // ─────────────────────────────────────────────────────────────
-    // Authorization — blokir akses URL langsung untuk author
+    // Authorization — hanya return bool, tanpa Notification
+    // Notifikasi ditangani di EditPublication::mount()
     // ─────────────────────────────────────────────────────────────
 
     public static function canEdit(Model $record): bool
     {
-        $user = auth()->user();
-
-        if (
-            $user?->hasRole('author') &&
+        return ! (
+            auth()->user()?->hasRole('author') &&
             in_array($record->status, self::AUTHOR_LOCKED_STATUSES, true)
-        ) {
-            Notification::make()
-                ->title('Tidak dapat mengedit publikasi')
-                ->body(
-                    'Publikasi berstatus "' . str($record->status)->headline() . '" ' .
-                        'tidak dapat diubah. Hubungi editor jika ada koreksi yang diperlukan.'
-                )
-                ->warning()
-                ->persistent()
-                ->send();
-
-            return false;
-        }
-
-        return true;
+        );
     }
 
     public static function canDelete(Model $record): bool
     {
-        $user = auth()->user();
-
-        if (
-            $user?->hasRole('author') &&
+        return ! (
+            auth()->user()?->hasRole('author') &&
             in_array($record->status, self::AUTHOR_LOCKED_STATUSES, true)
-        ) {
-            Notification::make()
-                ->title('Tidak dapat menghapus publikasi')
-                ->body(
-                    'Publikasi berstatus "' . str($record->status)->headline() . '" ' .
-                        'tidak dapat dihapus. Hubungi editor untuk informasi lebih lanjut.'
-                )
-                ->danger()
-                ->persistent()
-                ->send();
-
-            return false;
-        }
-
-        return true;
+        );
     }
 
     // ─────────────────────────────────────────────────────────────
