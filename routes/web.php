@@ -22,6 +22,7 @@ use App\Http\Controllers\Publication\PublicationTrendingController;
 use App\Http\Controllers\SubmissionGuidelineController;
 use App\Http\Controllers\SubscriptionController;
 use App\Models\PublicationVersion;
+use App\Support\PdfStamper;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 
@@ -32,7 +33,7 @@ use Illuminate\Support\Facades\Storage;
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth', 'verified.otp'])->group(function () {
+Route::middleware(['auth'])->group(function () {
 
     // ── View manuscript (dengan stamp & watermark) ─────────────
     Route::get('/manuscripts/{version}', function (PublicationVersion $version) {
