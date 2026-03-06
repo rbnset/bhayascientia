@@ -219,29 +219,3 @@ class PdfStamper
         return 'DBK-' . str_pad($publication->id, 4, '0', STR_PAD_LEFT) . '-V' . ($version->version_number ?? '1') . '-' . $hash;
     }
 }
-```
-
----
-
-## Yang Berubah
-
-| Area | Sebelum | Sesudah |
-|---|---|---|
-| `$stampWidth` | 58mm | 75mm (lebih lebar untuk QR) |
-| QR Code | ❌ tidak ada | ✅ pojok kanan stamp, 18×18mm |
-| Label bawah QR | ❌ | ✅ "Scan untuk verifikasi" |
-| Kode di stamp | tersembunyi di metadata | ✅ ditampilkan eksplisit `Kode: DBK-...` |
-
----
-
-## Hasil di PDF
-```
-┌─────────────────────────────────────────┐
-│ 🖼 DABRAKA          │                   │
-│   Darma Brata...    │    ██████████     │
-│ ─────────────────── │    ██  QR  ██     │
-│ Diakses: 06/03/2026 │    ██████████     │
-│ Versi: 2  Hal: 1/5  │                   │
-│ Kode: DBK-0029-V2-  │  Scan utk verify  │
-│ ██ PUBLISHED ██████ │                   │
-└─────────────────────────────────────────┘
