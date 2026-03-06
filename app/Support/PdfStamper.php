@@ -8,9 +8,9 @@ use App\Models\PublicationVersion;
 class PdfStamper
 {
     /**
-     * Status yang mendapat diagonal watermark di tengah halaman.
+     * Status yang mendapat watermark vertikal di sisi kiri.
      */
-    private const DIAGONAL_WATERMARK_STATUSES = [
+    private const SIDE_WATERMARK_STATUSES = [
         'submitted',
         'revision_required',
     ];
@@ -43,12 +43,12 @@ class PdfStamper
             $pdf->AddPage($size['orientation'], [$size['width'], $size['height']]);
             $pdf->useTemplate($tplId);
 
-            // ── 1. Header stamp pojok kanan atas ──────────────────────
+            // ── 1. Header stamp pojok kanan atas (tetap) ──────────────
             self::drawHeaderStamp($pdf, $size, $publication, $version, $pageNo, $pageCount);
 
-            // ── 2. Diagonal watermark (hanya status tertentu) ─────────
-            if (in_array($publication->status, self::DIAGONAL_WATERMARK_STATUSES)) {
-                self::drawDiagonalWatermark($pdf, $size, $publication->status);
+            // ── 2. Side watermark vertikal transparan (ganti diagonal) ─
+            if (in_array($publication->status, self::SIDE_WATERMARK_STATUSES)) {
+                self::drawSideWatermark($pdf, $size, $publication->status);
             }
         }
 
@@ -56,7 +56,7 @@ class PdfStamper
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Header stamp pojok kanan atas
+    // Header stamp pojok kanan atas (sama seperti sebelumnya)
     // ─────────────────────────────────────────────────────────────
     private static function drawHeaderStamp(
         PdfWithRotation $pdf,
@@ -66,20 +66,20 @@ class PdfStamper
         int $pageNo,
         int $pageCount,
     ): void {
-        $margin      = 6;   // mm dari tepi
-        $stampWidth  = 58;  // mm lebar kotak stamp
-        $stampHeight = 22;  // mm tinggi kotak stamp
+        $margin      = 6;
+        $stampWidth  = 58;
+        $stampHeight = 22;
         $x           = $size['width'] - $stampWidth - $margin;
         $y           = $margin;
 
-        // ── Background putih semi-transparan ──────────────────────
+        // Background putih semi-transparan
         $pdf->SetFillColor(255, 255, 255);
         $pdf->SetDrawColor(220, 220, 220);
         $pdf->SetLineWidth(0.2);
         $pdf->RoundedRect($x, $y, $stampWidth, $stampHeight, 2, 'DF');
 
-        // ── Logo (jika file tersedia) ──────────────────────────────
-        $logoPath = public_path('images/dabraka-logo.png');
+        // Logo dari path baru
+        $logoPath = public_path('images/logos/logo.png');
         $logoX    = $x + 2;
         $logoY    = $y + 2;
         $logoH    = 6;
@@ -91,7 +91,7 @@ class PdfStamper
             $textX = $logoX;
         }
 
-        // ── Nama platform ──────────────────────────────────────────
+        // Nama platform
         $pdf->SetFont('Helvetica', 'B', 5.5);
         $pdf->SetTextColor(30, 30, 30);
         $pdf->SetXY($textX, $logoY + 0.3);
@@ -102,13 +102,13 @@ class PdfStamper
         $pdf->SetXY($textX, $logoY + 3.2);
         $pdf->Cell($stampWidth - ($textX - $x) - 2, 2.5, 'Darma Brata Buana Cendekia', 0, 1, 'L');
 
-        // ── Divider ────────────────────────────────────────────────
+        // Divider
         $divY = $y + 9;
         $pdf->SetDrawColor(230, 230, 230);
         $pdf->SetLineWidth(0.15);
         $pdf->Line($x + 2, $divY, $x + $stampWidth - 2, $divY);
 
-        // ── Metadata ───────────────────────────────────────────────
+        // Metadata
         $metaY    = $divY + 1.5;
         $colLeft  = $x + 2;
         $colRight = $x + $stampWidth / 2 + 1;
@@ -117,26 +117,24 @@ class PdfStamper
         $pdf->SetFont('Helvetica', '', 3.8);
         $pdf->SetTextColor(120, 120, 120);
 
-        // Baris 1: Tanggal akses | Versi
+        // Baris 1
         $pdf->SetXY($colLeft, $metaY);
         $pdf->Cell($colW, 2.5, 'Diakses: ' . now()->format('d/m/Y H:i'), 0, 0, 'L');
-
         $pdf->SetXY($colRight, $metaY);
         $pdf->Cell($colW, 2.5, 'Versi: ' . ($version->version_number ?? '-'), 0, 1, 'L');
 
-        // Baris 2: Kode unik | Halaman
+        // Baris 2
         $uniqueCode = self::generateCode($publication, $version);
         $pdf->SetXY($colLeft, $metaY + 2.8);
         $pdf->Cell($colW, 2.5, 'ID: ' . $uniqueCode, 0, 0, 'L');
-
         $pdf->SetXY($colRight, $metaY + 2.8);
         $pdf->Cell($colW, 2.5, 'Hal: ' . $pageNo . '/' . $pageCount, 0, 1, 'L');
 
-        // Baris 3: Status badge
-        $statusText   = strtoupper(str_replace('_', ' ', $publication->status));
-        $statusColor  = self::STATUS_COLORS[$publication->status] ?? [100, 100, 100];
-        $badgeY       = $metaY + 5.8;
-        $badgeW       = $stampWidth - 4;
+        // Status badge
+        $statusText  = strtoupper(str_replace('_', ' ', $publication->status));
+        $statusColor = self::STATUS_COLORS[$publication->status] ?? [100, 100, 100];
+        $badgeY      = $metaY + 5.8;
+        $badgeW      = $stampWidth - 4;
 
         $pdf->SetFillColor(...$statusColor);
         $pdf->SetTextColor(255, 255, 255);
@@ -144,16 +142,16 @@ class PdfStamper
         $pdf->SetXY($colLeft, $badgeY);
         $pdf->Cell($badgeW, 3, $statusText, 0, 1, 'C', true);
 
-        // Reset warna
+        // Reset
         $pdf->SetTextColor(0, 0, 0);
         $pdf->SetFillColor(255, 255, 255);
         $pdf->SetDrawColor(0, 0, 0);
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Diagonal watermark di tengah halaman
+    // Side watermark vertikal di sisi kiri — transparan
     // ─────────────────────────────────────────────────────────────
-    private static function drawDiagonalWatermark(
+    private static function drawSideWatermark(
         PdfWithRotation $pdf,
         array $size,
         string $status,
@@ -161,29 +159,23 @@ class PdfStamper
         $text  = strtoupper(str_replace('_', ' ', $status));
         $color = self::STATUS_COLORS[$status] ?? [200, 200, 200];
 
-        $pdf->SetFont('Helvetica', 'B', 42);
-        $pdf->SetTextColor($color[0], $color[1], $color[2]);
+        // Transparansi tinggi (abu-abu terang)
+        $pdf->SetTextColor(230, 230, 230); // lebih terang dari diagonal sebelumnya
 
-        // Opacity simulasi dengan warna terang
-        $pdf->SetTextColor(
-            min(255, $color[0] + 100),
-            min(255, $color[1] + 100),
-            min(255, $color[2] + 100),
-        );
+        // Font lebih kecil & vertikal
+        $pdf->SetFont('Helvetica', 'B', 28); // ukuran lebih kecil
 
-        $pdf->RotatedText(
-            $size['width'] / 2 - 40,
-            $size['height'] / 2 + 10,
-            $text,
-            35
-        );
+        // Posisi sisi kiri, vertikal (90 derajat)
+        $x = 20;  // 20mm dari kiri
+        $y = $size['height'] / 2 + 25; // tengah vertikal
+
+        $pdf->RotatedText($x, $y, $text, 90); // 90 derajat = vertikal
 
         $pdf->SetTextColor(0, 0, 0);
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Generate kode unik untuk penanda dokumen
-    // Format: DBK-{pub_id}-V{version}-{hash4}
+    // Generate kode unik (tetap sama)
     // ─────────────────────────────────────────────────────────────
     private static function generateCode(Publication $publication, PublicationVersion $version): string
     {
