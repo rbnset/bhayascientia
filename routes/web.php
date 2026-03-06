@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\OtpController;
 use App\Http\Controllers\PublicationController;
 use App\Http\Controllers\AuthorController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\DocumentVerificationController;
 use App\Http\Controllers\LegalController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PlaceholderCoverController;
@@ -33,41 +34,18 @@ use Illuminate\Support\Facades\Storage;
 
 Route::middleware(['auth', 'verified.otp'])->group(function () {
 
+    // ── View manuscript (dengan stamp & watermark) ─────────────
     Route::get('/manuscripts/{version}', function (PublicationVersion $version) {
         $version->loadMissing('publication');
+
         abort_unless(filled($version->pdf_file_path), 404);
 
         $absolutePath = Storage::disk('public')->path($version->pdf_file_path);
+
         abort_unless(is_file($absolutePath), 404);
 
-        $publication = $version->publication;
-
-        $pdf       = new \App\Support\PdfWithRotation();
-        $pageCount = $pdf->setSourceFile($absolutePath);
-
-        for ($pageNo = 1; $pageNo <= $pageCount; $pageNo++) {
-            $tplId = $pdf->importPage($pageNo);
-            $size  = $pdf->getTemplateSize($tplId);
-
-            $pdf->AddPage($size['orientation'], [$size['width'], $size['height']]);
-            $pdf->useTemplate($tplId);
-
-            if (in_array($publication->status, ['submitted', 'revision_required'])) {
-                $pdf->SetFont('Helvetica', 'B', 40);
-                $pdf->SetTextColor(210, 210, 210);
-
-                $text = strtoupper(str_replace('_', ' ', $publication->status));
-
-                $pdf->RotatedText(
-                    $size['width'] / 2 - 80,
-                    $size['height'] / 2,
-                    $text,
-                    45
-                );
-            }
-        }
-
-        $content = $pdf->Output('S');
+        // Serahkan semua logic stamp ke PdfStamper
+        $content = PdfStamper::stamp($absolutePath, $version);
 
         return response($content, 200, [
             'Content-Type'        => 'application/pdf',
@@ -77,6 +55,7 @@ Route::middleware(['auth', 'verified.otp'])->group(function () {
         ]);
     })->name('manuscripts.view');
 
+    // ── Download manuscript (tanpa stamp, file asli) ───────────
     Route::get('/manuscripts/{version}/download', function (PublicationVersion $version) {
         abort_unless(filled($version->pdf_file_path), 404);
 
@@ -86,6 +65,10 @@ Route::middleware(['auth', 'verified.otp'])->group(function () {
         );
     })->name('manuscripts.download');
 });
+
+Route::get('/verify/{code}', [DocumentVerificationController::class, 'verify'])
+    ->name('document.verify')
+    ->where('code', '[A-Za-z0-9\-]+');
 
 /*
 |--------------------------------------------------------------------------
