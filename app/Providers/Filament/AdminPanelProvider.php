@@ -90,6 +90,13 @@ class AdminPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([
                 AccountWidget::class,
+                \App\Filament\Widgets\AdminDashboardStats::class,
+                \App\Filament\Widgets\PublicationChartWidget::class,
+                \App\Filament\Widgets\PublicationStatusChartWidget::class,
+                \App\Filament\Widgets\VerificationScanChartWidget::class,
+
+                \App\Filament\Widgets\AuthorDashboardStats::class,
+                \App\Filament\Widgets\AuthorPublicationChartWidget::class,
             ])
             ->databaseNotifications()
             ->databaseNotificationsPolling('30s')
