@@ -12,6 +12,7 @@
         "php": "^8.2",
         "bezhansalleh/filament-shield": "^4.0",
         "diogogpinto/filament-auth-ui-enhancer": "^2.0",
+        "endroid/qr-code": "^6.0",
         "filament/filament": "^4.0",
         "intervention/image-laravel": "^1.5",
         "jeffgreco13/filament-breezy": "^3.0",

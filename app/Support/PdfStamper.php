@@ -4,28 +4,23 @@ namespace App\Support;
 
 use App\Models\Publication;
 use App\Models\PublicationVersion;
+use SimpleSoftwareIO\QrCode\Generator as QrGenerator;
 
 class PdfStamper
 {
-    /**
-     * Status yang mendapat watermark vertikal di sisi kiri.
-     */
     private const SIDE_WATERMARK_STATUSES = [
         'submitted',
         'revision_required',
     ];
 
-    /**
-     * Warna status badge.
-     */
     private const STATUS_COLORS = [
-        'draft'             => [156, 163, 175], // gray
-        'submitted'         => [245, 158, 11],  // amber
-        'in_review'         => [59, 130, 246],  // blue
-        'revision_required' => [239, 68, 68],   // red
-        'accepted'          => [34, 197, 94],   // green
-        'rejected'          => [239, 68, 68],   // red
-        'published'         => [16, 185, 129],  // emerald
+        'draft'             => [156, 163, 175],
+        'submitted'         => [245, 158, 11],
+        'in_review'         => [59, 130, 246],
+        'revision_required' => [239, 68, 68],
+        'accepted'          => [34, 197, 94],
+        'rejected'          => [239, 68, 68],
+        'published'         => [16, 185, 129],
     ];
 
     public static function stamp(string $absolutePath, PublicationVersion $version): string
@@ -43,10 +38,8 @@ class PdfStamper
             $pdf->AddPage($size['orientation'], [$size['width'], $size['height']]);
             $pdf->useTemplate($tplId);
 
-            // ── 1. Header stamp pojok kanan atas (tetap) ──────────────
             self::drawHeaderStamp($pdf, $size, $publication, $version, $pageNo, $pageCount);
 
-            // ── 2. Side watermark vertikal transparan (ganti diagonal) ─
             if (in_array($publication->status, self::SIDE_WATERMARK_STATUSES)) {
                 self::drawSideWatermark($pdf, $size, $publication->status);
             }
@@ -56,7 +49,7 @@ class PdfStamper
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Header stamp pojok kanan atas (sama seperti sebelumnya)
+    // Header stamp — sekarang lebih lebar untuk muat QR Code
     // ─────────────────────────────────────────────────────────────
     private static function drawHeaderStamp(
         PdfWithRotation $pdf,
@@ -67,18 +60,35 @@ class PdfStamper
         int $pageCount,
     ): void {
         $margin      = 6;
-        $stampWidth  = 58;
+        $stampWidth  = 75;   // diperlebar dari 58 → 75 untuk muat QR
         $stampHeight = 22;
         $x           = $size['width'] - $stampWidth - $margin;
         $y           = $margin;
 
-        // Background putih semi-transparan
+        $uniqueCode  = self::generateCode($publication, $version);
+        $verifyUrl   = route('document.verify', $uniqueCode);
+
+        // ── Background ──────────────────────────────────────────
         $pdf->SetFillColor(255, 255, 255);
         $pdf->SetDrawColor(220, 220, 220);
         $pdf->SetLineWidth(0.2);
         $pdf->RoundedRect($x, $y, $stampWidth, $stampHeight, 2, 'DF');
 
-        // Logo dari path baru
+        // ── QR Code (kanan dalam stamp) ──────────────────────────
+        $qrSize    = 18;  // mm — seukuran tinggi stamp
+        $qrX       = $x + $stampWidth - $qrSize - 2;
+        $qrY       = $y + 2;
+        $qrPngPath = self::generateQrPng($verifyUrl);
+
+        if ($qrPngPath) {
+            $pdf->Image($qrPngPath, $qrX, $qrY, $qrSize, $qrSize, 'PNG');
+            @unlink($qrPngPath); // hapus tmp file setelah dipakai
+        }
+
+        // Lebar area teks (kiri QR)
+        $textAreaW = $stampWidth - $qrSize - 6;
+
+        // ── Logo ─────────────────────────────────────────────────
         $logoPath = public_path('images/logos/logo.png');
         $logoX    = $x + 2;
         $logoY    = $y + 2;
@@ -91,65 +101,69 @@ class PdfStamper
             $textX = $logoX;
         }
 
-        // Nama platform
+        // ── Nama platform ─────────────────────────────────────────
         $pdf->SetFont('Helvetica', 'B', 5.5);
         $pdf->SetTextColor(30, 30, 30);
         $pdf->SetXY($textX, $logoY + 0.3);
-        $pdf->Cell($stampWidth - ($textX - $x) - 2, 3, 'DABRAKA', 0, 1, 'L');
+        $pdf->Cell($textAreaW - ($textX - $x), 3, 'DABRAKA', 0, 1, 'L');
 
         $pdf->SetFont('Helvetica', '', 4);
         $pdf->SetTextColor(100, 100, 100);
         $pdf->SetXY($textX, $logoY + 3.2);
-        $pdf->Cell($stampWidth - ($textX - $x) - 2, 2.5, 'Darma Brata Buana Cendekia', 0, 1, 'L');
+        $pdf->Cell($textAreaW - ($textX - $x), 2.5, 'Darma Brata Buana Cendekia', 0, 1, 'L');
 
-        // Divider
+        // ── Divider ───────────────────────────────────────────────
         $divY = $y + 9;
         $pdf->SetDrawColor(230, 230, 230);
         $pdf->SetLineWidth(0.15);
-        $pdf->Line($x + 2, $divY, $x + $stampWidth - 2, $divY);
+        $pdf->Line($x + 2, $divY, $x + $textAreaW, $divY);
 
-        // Metadata
-        $metaY    = $divY + 1.5;
-        $colLeft  = $x + 2;
-        $colRight = $x + $stampWidth / 2 + 1;
-        $colW     = $stampWidth / 2 - 3;
+        // ── Metadata ──────────────────────────────────────────────
+        $metaY   = $divY + 1.5;
+        $colLeft = $x + 2;
+        $colW    = $textAreaW - 4;
 
         $pdf->SetFont('Helvetica', '', 3.8);
         $pdf->SetTextColor(120, 120, 120);
 
-        // Baris 1
         $pdf->SetXY($colLeft, $metaY);
         $pdf->Cell($colW, 2.5, 'Diakses: ' . now()->format('d/m/Y H:i'), 0, 0, 'L');
-        $pdf->SetXY($colRight, $metaY);
-        $pdf->Cell($colW, 2.5, 'Versi: ' . ($version->version_number ?? '-'), 0, 1, 'L');
 
-        // Baris 2
-        $uniqueCode = self::generateCode($publication, $version);
-        $pdf->SetXY($colLeft, $metaY + 2.8);
-        $pdf->Cell($colW, 2.5, 'ID: ' . $uniqueCode, 0, 0, 'L');
-        $pdf->SetXY($colRight, $metaY + 2.8);
-        $pdf->Cell($colW, 2.5, 'Hal: ' . $pageNo . '/' . $pageCount, 0, 1, 'L');
+        $pdf->SetXY($colLeft, $metaY + 2.5);
+        $pdf->Cell($colW / 2, 2.5, 'Versi: ' . ($version->version_number ?? '-'), 0, 0, 'L');
+        $pdf->SetXY($colLeft + $colW / 2, $metaY + 2.5);
+        $pdf->Cell($colW / 2, 2.5, 'Hal: ' . $pageNo . '/' . $pageCount, 0, 0, 'L');
 
-        // Status badge
+        $pdf->SetXY($colLeft, $metaY + 5);
+        $pdf->SetFont('Helvetica', 'B', 3.8);
+        $pdf->SetTextColor(80, 80, 80);
+        $pdf->Cell($colW, 2.5, 'Kode: ' . $uniqueCode, 0, 0, 'L');
+
+        // ── Status badge ──────────────────────────────────────────
         $statusText  = strtoupper(str_replace('_', ' ', $publication->status));
         $statusColor = self::STATUS_COLORS[$publication->status] ?? [100, 100, 100];
-        $badgeY      = $metaY + 5.8;
-        $badgeW      = $stampWidth - 4;
+        $badgeY      = $metaY + 8;
 
         $pdf->SetFillColor(...$statusColor);
         $pdf->SetTextColor(255, 255, 255);
         $pdf->SetFont('Helvetica', 'B', 3.8);
         $pdf->SetXY($colLeft, $badgeY);
-        $pdf->Cell($badgeW, 3, $statusText, 0, 1, 'C', true);
+        $pdf->Cell($colW, 3, $statusText, 0, 1, 'C', true);
 
-        // Reset
+        // ── Label scan di bawah QR ────────────────────────────────
+        $pdf->SetFont('Helvetica', '', 3.2);
+        $pdf->SetTextColor(150, 150, 150);
+        $pdf->SetXY($qrX, $qrY + $qrSize + 0.5);
+        $pdf->Cell($qrSize, 2.5, 'Scan untuk verifikasi', 0, 0, 'C');
+
+        // ── Reset ─────────────────────────────────────────────────
         $pdf->SetTextColor(0, 0, 0);
         $pdf->SetFillColor(255, 255, 255);
         $pdf->SetDrawColor(0, 0, 0);
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Side watermark vertikal di sisi kiri — transparan
+    // Side watermark
     // ─────────────────────────────────────────────────────────────
     private static function drawSideWatermark(
         PdfWithRotation $pdf,
@@ -157,25 +171,42 @@ class PdfStamper
         string $status,
     ): void {
         $text  = strtoupper(str_replace('_', ' ', $status));
-        $color = self::STATUS_COLORS[$status] ?? [200, 200, 200];
 
-        // Transparansi tinggi (abu-abu terang)
-        $pdf->SetTextColor(230, 230, 230); // lebih terang dari diagonal sebelumnya
+        $pdf->SetTextColor(230, 230, 230);
+        $pdf->SetFont('Helvetica', 'B', 28);
 
-        // Font lebih kecil & vertikal
-        $pdf->SetFont('Helvetica', 'B', 28); // ukuran lebih kecil
+        $x = 20;
+        $y = $size['height'] / 2 + 25;
 
-        // Posisi sisi kiri, vertikal (90 derajat)
-        $x = 20;  // 20mm dari kiri
-        $y = $size['height'] / 2 + 25; // tengah vertikal
-
-        $pdf->RotatedText($x, $y, $text, 90); // 90 derajat = vertikal
+        $pdf->RotatedText($x, $y, $text, 90);
 
         $pdf->SetTextColor(0, 0, 0);
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Generate kode unik (tetap sama)
+    // Generate QR Code → simpan ke tmp → return path
+    // ─────────────────────────────────────────────────────────────
+    private static function generateQrPng(string $url): ?string
+    {
+        try {
+            $qrCode = \Endroid\QrCode\QrCode::create($url)
+                ->setSize(200)
+                ->setMargin(4);
+
+            $writer = new \Endroid\QrCode\Writer\PngWriter();
+            $result = $writer->write($qrCode);
+
+            $path = sys_get_temp_dir() . '/qr_' . md5($url) . '.png';
+            $result->saveToFile($path);
+
+            return $path;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Generate kode unik
     // ─────────────────────────────────────────────────────────────
     private static function generateCode(Publication $publication, PublicationVersion $version): string
     {
@@ -188,3 +219,29 @@ class PdfStamper
         return 'DBK-' . str_pad($publication->id, 4, '0', STR_PAD_LEFT) . '-V' . ($version->version_number ?? '1') . '-' . $hash;
     }
 }
+```
+
+---
+
+## Yang Berubah
+
+| Area | Sebelum | Sesudah |
+|---|---|---|
+| `$stampWidth` | 58mm | 75mm (lebih lebar untuk QR) |
+| QR Code | ❌ tidak ada | ✅ pojok kanan stamp, 18×18mm |
+| Label bawah QR | ❌ | ✅ "Scan untuk verifikasi" |
+| Kode di stamp | tersembunyi di metadata | ✅ ditampilkan eksplisit `Kode: DBK-...` |
+
+---
+
+## Hasil di PDF
+```
+┌─────────────────────────────────────────┐
+│ 🖼 DABRAKA          │                   │
+│   Darma Brata...    │    ██████████     │
+│ ─────────────────── │    ██  QR  ██     │
+│ Diakses: 06/03/2026 │    ██████████     │
+│ Versi: 2  Hal: 1/5  │                   │
+│ Kode: DBK-0029-V2-  │  Scan utk verify  │
+│ ██ PUBLISHED ██████ │                   │
+└─────────────────────────────────────────┘
