@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Publications\Tables;
 
 use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
@@ -18,6 +19,25 @@ use Illuminate\Database\Eloquent\Builder;
 
 class PublicationsTable
 {
+    /**
+     * Status yang mengunci aksi edit & delete untuk role author.
+     */
+    private const AUTHOR_LOCKED_STATUSES = [
+        'in_review',
+        'accepted',
+        'rejected',
+        'published',
+    ];
+
+    /**
+     * Apakah record ini terkunci untuk author yang sedang login?
+     */
+    private static function isLockedForAuthor(mixed $record): bool
+    {
+        return auth()->user()?->hasRole('author')
+            && in_array($record->status, self::AUTHOR_LOCKED_STATUSES, true);
+    }
+
     public static function configure(Table $table): Table
     {
         return $table
@@ -32,7 +52,7 @@ class PublicationsTable
                         'class' => 'object-cover rounded-md ring-1 ring-gray-200 dark:ring-gray-700',
                     ]),
 
-                // ── Judul + tipe publikasi ──────────────────────────────────
+                // ── Judul + tipe publikasi ─────────────────────────────────
                 TextColumn::make('title')
                     ->label('Title')
                     ->searchable()
@@ -44,23 +64,18 @@ class PublicationsTable
                     ->tooltip(fn(TextColumn $column): ?string => (string) $column->getState())
                     ->description(fn($record) => $record->publicationType?->name),
 
-                // ── Authors ─────────────────────────────────────────────────
-                // ✅ FIXED: authors.name sekarang resolved via accessor
-                // (jika user_id ada → ambil dari users.name, jika tidak → authors.name)
-                // Kolom ->state() dipakai agar tidak langsung raw dari DB
+                // ── Authors ────────────────────────────────────────────────
                 TextColumn::make('authors_list')
                     ->label('Authors')
                     ->state(function ($record) {
-                        // ✅ Pakai accessor name yang sudah resolved di Author model
                         return $record->authors
                             ->sortBy('pivot.order')
-                            ->pluck('name') // accessor name sudah resolved
+                            ->pluck('name')
                             ->filter()
                             ->implode(', ');
                     })
                     ->wrap()
                     ->searchable(query: function (Builder $query, string $search) {
-                        // ✅ Search ke authors.name DAN users.name
                         $query->whereHas('authors', function ($q) use ($search) {
                             $q->where('authors.name', 'like', "%{$search}%")
                                 ->orWhere('authors.email', 'like', "%{$search}%")
@@ -73,14 +88,13 @@ class PublicationsTable
                         });
                     })
                     ->tooltip(function ($record) {
-                        // Tooltip tampilkan nama + affiliasi
                         return $record->authors
                             ->sortBy('pivot.order')
                             ->map(fn($a) => $a->name . ($a->affiliation ? " ({$a->affiliation})" : ''))
                             ->implode("\n");
                     }),
 
-                // ── Kategori ────────────────────────────────────────────────
+                // ── Kategori ───────────────────────────────────────────────
                 TextColumn::make('categories.name')
                     ->label('Categories')
                     ->badge()
@@ -89,7 +103,7 @@ class PublicationsTable
                     ->limitList(3)
                     ->listWithLineBreaks(),
 
-                // ── Metode ──────────────────────────────────────────────────
+                // ── Metode ─────────────────────────────────────────────────
                 TextColumn::make('method.name')
                     ->label('Method')
                     ->badge()
@@ -97,7 +111,7 @@ class PublicationsTable
                     ->placeholder('—')
                     ->toggleable(),
 
-                // ── Status ──────────────────────────────────────────────────
+                // ── Status ─────────────────────────────────────────────────
                 TextColumn::make('status')
                     ->label('Status')
                     ->badge()
@@ -114,7 +128,7 @@ class PublicationsTable
                     ->formatStateUsing(fn($state) => str($state)->headline())
                     ->sortable(),
 
-                // ── Tanggal publikasi ───────────────────────────────────────
+                // ── Tanggal publikasi ──────────────────────────────────────
                 TextColumn::make('published_at')
                     ->label('Published')
                     ->date('d M Y')
@@ -163,15 +177,12 @@ class PublicationsTable
                     ->searchable()
                     ->preload(),
 
-                // ✅ BARU: Filter berdasarkan kategori
                 SelectFilter::make('categories')
                     ->label('Category')
                     ->relationship('categories', 'name')
                     ->searchable()
                     ->preload(),
 
-                // ✅ BARU: Filter berdasarkan author
-                // Cari di authors.name DAN users.name
                 Filter::make('author')
                     ->label('Author')
                     ->form([
@@ -187,8 +198,7 @@ class PublicationsTable
                             $q->where('authors.name', 'like', "%{$search}%")
                                 ->orWhereHas(
                                     'user',
-                                    fn($u) =>
-                                    $u->where('name', 'like', "%{$search}%")
+                                    fn($u) => $u->where('name', 'like', "%{$search}%")
                                 );
                         });
                     })
@@ -205,7 +215,12 @@ class PublicationsTable
 
                 EditAction::make()
                     ->icon('heroicon-o-pencil-square')
-                    ->label('Edit'),
+                    ->label('Edit')
+                    // Sembunyikan tombol edit jika author + status terkunci
+                    ->visible(fn($record) => ! self::isLockedForAuthor($record)),
+
+                DeleteAction::make() // ← Tambahan: sembunyikan delete juga
+                    ->visible(fn($record) => ! self::isLockedForAuthor($record)),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
