@@ -189,18 +189,29 @@ class PdfStamper
     private static function generateQrPng(string $url): ?string
     {
         try {
-            $qrCode = \Endroid\QrCode\QrCode::create($url)
-                ->setSize(200)
-                ->setMargin(4);
+            $qrCode = new \Endroid\QrCode\QrCode(
+                data: $url,
+                size: 200,
+                margin: 4,
+            );
 
             $writer = new \Endroid\QrCode\Writer\PngWriter();
             $result = $writer->write($qrCode);
 
-            $path = sys_get_temp_dir() . '/qr_' . md5($url) . '.png';
-            $result->saveToFile($path);
+            $filename = 'qr_' . md5($url) . '.png';
+            $path     = storage_path('app/temp/' . $filename);
 
-            return $path;
+            if (! is_dir(storage_path('app/temp'))) {
+                mkdir(storage_path('app/temp'), 0755, true);
+            }
+
+            file_put_contents($path, $result->getString());
+
+            \Illuminate\Support\Facades\Log::info('QR path: ' . $path . ' | exists: ' . (file_exists($path) ? 'YES' : 'NO'));
+
+            return file_exists($path) ? $path : null;
         } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('QR Error: ' . $e->getMessage());
             return null;
         }
     }
