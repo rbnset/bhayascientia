@@ -64,17 +64,6 @@ class EditPublication extends EditRecord
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Widgets
-    // ─────────────────────────────────────────────────────────────
-
-    protected function getHeaderWidgets(): array
-    {
-        return [
-            PublicationStatusBanner::class,
-        ];
-    }
-
-    // ─────────────────────────────────────────────────────────────
     // Mutate before save
     // ─────────────────────────────────────────────────────────────
 
