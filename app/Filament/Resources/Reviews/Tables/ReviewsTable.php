@@ -9,8 +9,10 @@ use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
@@ -23,9 +25,8 @@ class ReviewsTable
     {
         return $table
             ->columns([
-                // =====================
-                // COVER (dari relasi publication)
-                // =====================
+
+                // ── Cover publikasi ────────────────────────────────────────
                 ImageColumn::make('cover_url')
                     ->label('')
                     ->getStateUsing(
@@ -34,18 +35,22 @@ class ReviewsTable
                     ->width(44)
                     ->height(64)
                     ->extraImgAttributes([
-                        'class' => 'object-cover rounded-md ring-1 ring-gray-200 dark:ring-gray-700',
-                    ]),
+                        'class' => 'object-cover rounded-md ring-1 ring-gray-200 dark:ring-gray-700 shadow-sm',
+                    ])
+                    ->defaultImageUrl(fn() => asset('images/publication-placeholder.png')),
 
+                // ── Versi publikasi ────────────────────────────────────────
                 TextColumn::make('publicationVersion.display_label')
-                    ->label('Version')
+                    ->label('Publication / Version')
                     ->sortable()
                     ->searchable()
                     ->wrap()
                     ->lineClamp(2)
                     ->words(8, end: '...')
-                    ->tooltip(fn(TextColumn $column): ?string => (string) $column->getState()),
+                    ->tooltip(fn(TextColumn $column): ?string => (string) $column->getState())
+                    ->description(fn($record) => $record->publicationVersion?->publication?->publicationType?->name),
 
+                // ── Reviewer ───────────────────────────────────────────────
                 TextColumn::make('reviewer.name')
                     ->label('Reviewer')
                     ->searchable()
@@ -53,37 +58,132 @@ class ReviewsTable
                     ->wrap()
                     ->lineClamp(2)
                     ->words(6, end: '...')
-                    ->tooltip(fn(TextColumn $column): ?string => (string) $column->getState()),
+                    ->tooltip(fn(TextColumn $column): ?string => (string) $column->getState())
+                    ->description(fn($record) => $record->reviewer?->email)
+                    ->placeholder('—'),
 
+                // ── Decision ───────────────────────────────────────────────
                 TextColumn::make('decision')
                     ->label('Decision')
                     ->badge()
+                    ->icon(fn(?string $state): string => match ($state) {
+                        'revision_required' => 'heroicon-o-exclamation-circle',
+                        'accepted'          => 'heroicon-o-check-circle',
+                        'rejected'          => 'heroicon-o-x-circle',
+                        default             => 'heroicon-o-clock',
+                    })
                     ->color(fn(?string $state): string => match ($state) {
                         'revision_required' => 'warning',
                         'accepted'          => 'success',
                         'rejected'          => 'danger',
                         default             => 'gray',
                     })
-                    ->formatStateUsing(fn($state) => match ($state) {
+                    ->formatStateUsing(fn(?string $state) => match ($state) {
                         'revision_required' => 'Revision Required',
                         'accepted'          => 'Accepted',
                         'rejected'          => 'Rejected',
-                        default             => '—',
+                        default             => 'Pending',
                     })
                     ->sortable(),
 
+                // ── Status publikasi terkait ───────────────────────────────
+                TextColumn::make('publicationVersion.publication.status')
+                    ->label('Pub. Status')
+                    ->badge()
+                    ->color(fn(?string $state): string => match ($state) {
+                        'draft'             => 'gray',
+                        'submitted'         => 'warning',
+                        'in_review'         => 'info',
+                        'revision_required' => 'danger',
+                        'accepted'          => 'success',
+                        'published'         => 'success',
+                        'rejected'          => 'danger',
+                        default             => 'gray',
+                    })
+                    ->formatStateUsing(fn(?string $state) => $state ? str($state)->headline() : '—')
+                    ->toggleable(),
+
+                // ── Jumlah notes ───────────────────────────────────────────
+                TextColumn::make('notes_count')
+                    ->label('Notes')
+                    ->state(fn($record) => $record->notes->count())
+                    ->badge()
+                    ->color(fn($state) => $state > 0 ? 'warning' : 'gray')
+                    ->formatStateUsing(fn($state) => $state > 0 ? $state : '—')
+                    ->tooltip(
+                        fn($record) => $record->notes->count() > 0
+                            ? 'Has reviewer notes'
+                            : 'No notes'
+                    )
+                    ->toggleable(),
+
+                // ── Ada attachment? ────────────────────────────────────────
+                IconColumn::make('has_attachment')
+                    ->label('File')
+                    ->state(fn($record) => $record->attachments->isNotEmpty())
+                    ->boolean()
+                    ->trueIcon('heroicon-o-paper-clip')
+                    ->falseIcon('heroicon-o-minus')
+                    ->trueColor('primary')
+                    ->falseColor('gray')
+                    ->tooltip(
+                        fn($record) => $record->attachments->isNotEmpty()
+                            ? $record->attachments->count() . ' file(s) attached'
+                            : 'No attachment'
+                    )
+                    ->toggleable(),
+
+                // ── Tanggal review (WIB) ───────────────────────────────────
                 TextColumn::make('created_at')
                     ->label('Reviewed At')
-                    ->date('d M Y')
-                    ->sortable(),
+                    ->sortable()
+                    ->formatStateUsing(
+                        fn($state) => $state
+                            ? \Carbon\Carbon::parse($state)
+                            ->setTimezone('Asia/Jakarta')
+                            ->translatedFormat('d M Y, H:i') . ' WIB'
+                            : '—'
+                    )
+                    ->tooltip(
+                        fn($record) => \Carbon\Carbon::parse($record->created_at)
+                            ->setTimezone('Asia/Jakarta')
+                            ->diffForHumans()
+                    ),
 
                 TextColumn::make('deleted_at')
                     ->label('Deleted')
-                    ->dateTime()
+                    ->formatStateUsing(
+                        fn($state) => $state
+                            ? \Carbon\Carbon::parse($state)
+                            ->setTimezone('Asia/Jakarta')
+                            ->translatedFormat('d M Y, H:i') . ' WIB'
+                            : '—'
+                    )
+                    ->placeholder('—')
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
-            ->defaultSort('created_at', 'desc')
 
+            ->defaultSort('created_at', 'desc')
+            ->modifyQueryUsing(fn($query) => $query->with([
+                'attachments',
+                'notes',
+                'reviewer',
+                'publicationVersion.publication.publicationType',
+            ]))
+            ->striped()
+            ->persistFiltersInSession()
+            ->persistSearchInSession()
+            ->persistSortInSession()
+
+            // ── Row warna sesuai decision ──────────────────────────────────
+            ->recordClasses(fn($record) => match ($record->decision) {
+                'rejected'          => 'bg-red-50/50 dark:bg-red-950/10',
+                'accepted'          => 'bg-emerald-50/50 dark:bg-emerald-950/10',
+                'revision_required' => 'bg-amber-50/50 dark:bg-amber-950/10',
+                default             => null,
+            })
+
+            // ── Filters ────────────────────────────────────────────────────
             ->filters([
                 TrashedFilter::make(),
 
@@ -115,44 +215,86 @@ class ReviewsTable
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         $value = $data['value'] ?? null;
-
-                        if (blank($value)) {
-                            return $query;
-                        }
-
+                        if (blank($value)) return $query;
                         return $query->whereHas(
                             'publicationVersion.publication',
                             fn(Builder $q) => $q->where('status', $value)
                         );
                     }),
-            ])
 
+                // Filter: range tanggal review
+                Filter::make('reviewed_range')
+                    ->label('Reviewed Date Range')
+                    ->form([
+                        \Filament\Forms\Components\DatePicker::make('reviewed_from')
+                            ->label('From')
+                            ->native(false),
+                        \Filament\Forms\Components\DatePicker::make('reviewed_until')
+                            ->label('Until')
+                            ->native(false),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when($data['reviewed_from'], fn($q, $v) => $q->whereDate('created_at', '>=', $v))
+                            ->when($data['reviewed_until'], fn($q, $v) => $q->whereDate('created_at', '<=', $v));
+                    })
+                    ->indicateUsing(function (array $data): array {
+                        $indicators = [];
+                        if ($data['reviewed_from'] ?? null)
+                            $indicators[] = 'From: ' . \Carbon\Carbon::parse($data['reviewed_from'])->translatedFormat('d M Y');
+                        if ($data['reviewed_until'] ?? null)
+                            $indicators[] = 'Until: ' . \Carbon\Carbon::parse($data['reviewed_until'])->translatedFormat('d M Y');
+                        return $indicators;
+                    }),
+            ])
+            ->filtersLayout(\Filament\Tables\Enums\FiltersLayout::AboveContentCollapsible)
+            ->filtersTriggerAction(
+                fn(Action $action) => $action
+                    ->button()
+                    ->label('Filters')
+                    ->icon('heroicon-o-funnel'),
+            )
+
+            // ── Record Actions ─────────────────────────────────────────────
             ->recordActions([
+                // Detail: overall_comment + notes (tanpa attachment)
                 ViewAction::make('preview')
-                    ->label('View')
-                    ->icon('heroicon-o-eye')
+                    ->label('Detail')
+                    ->icon('heroicon-o-chat-bubble-left-ellipsis')
+                    ->color('info')
                     ->slideOver()
-                    ->modalHeading('Review detail')
+                    ->modalHeading(
+                        fn($record) => 'Review — v' .
+                            ($record->publicationVersion?->version_number ?? '?') .
+                            '  ·  ' . ($record->reviewer?->name ?? 'Unknown')
+                    )
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Close')
-                    ->modalContent(fn($record) => view('filament.reviews.preview', ['review' => $record])),
+                    ->modalContent(fn($record) => view(
+                        'filament.reviews.preview',
+                        ['review' => $record->load(['notes', 'attachments', 'reviewer', 'publicationVersion'])]
+                    )),
 
+                // Download: langsung download attachment
                 Action::make('download_revision')
-                    ->label('Download revision')
+                    ->label('Download')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('success')
-                    ->visible(function ($record): bool {
-                        $attachment = $record->attachments()->latest()->first();
-                        return filled($attachment?->file_path);
-                    })
+                    ->tooltip('Download revision attachment')
+                    ->visible(fn($record): bool => $record->attachments->isNotEmpty())
                     ->action(function ($record) {
-                        $attachment = $record->attachments()->latest()->first();
+                        $attachment = $record->attachments->sortByDesc('created_at')->first();
 
                         abort_unless($attachment && filled($attachment->file_path), 404);
 
+                        $filename = 'review-v' .
+                            ($record->publicationVersion?->version_number ?? $record->id) .
+                            '-' . str($record->reviewer?->name ?? 'reviewer')->slug() .
+                            '.pdf';
+
                         return Storage::disk('local')->download(
                             $attachment->file_path,
-                            'review-revision-' . $record->id . '.pdf'
+                            $filename
                         );
                     }),
 
@@ -162,14 +304,18 @@ class ReviewsTable
                     ->visible(fn($record) => auth()->user()?->can('update', $record) ?? false),
             ])
 
+            // ── Toolbar / Bulk Actions ─────────────────────────────────────
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make()
-                        ->visible(fn() => !(auth()->user()?->hasRole('reviewer'))),
-
+                        ->visible(fn() => ! auth()->user()?->hasRole('reviewer')),
                     RestoreBulkAction::make(),
                     ForceDeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+
+            ->emptyStateIcon('heroicon-o-chat-bubble-left-right')
+            ->emptyStateHeading('No reviews found')
+            ->emptyStateDescription('Reviews will appear here once reviewers submit their feedback.');
     }
 }
