@@ -26,7 +26,7 @@ class ReviewsTable
         return $table
             ->columns([
 
-                // ── Cover publikasi ────────────────────────────────────────
+                // ── Cover publikasi ──
                 ImageColumn::make('cover_url')
                     ->label('')
                     ->getStateUsing(
@@ -39,7 +39,7 @@ class ReviewsTable
                     ])
                     ->defaultImageUrl(fn() => asset('images/publication-placeholder.png')),
 
-                // ── Versi publikasi ────────────────────────────────────────
+                // ── Versi publikasi ──
                 TextColumn::make('publicationVersion.display_label')
                     ->label('Publication / Version')
                     ->sortable()
