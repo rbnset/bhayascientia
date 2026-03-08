@@ -120,9 +120,16 @@
         .vm-card {
             border-radius: 16px;
             border: 1px solid rgba(255, 255, 255, 0.07);
-            padding: 24px;
+            padding: 16px;
+            /* mobile: lebih compact */
             background: #1C1F26;
             transition: box-shadow 0.2s ease, transform 0.2s ease;
+        }
+
+        @media (min-width: 768px) {
+            .vm-card {
+                padding: 24px;
+            }
         }
 
         .vm-card:hover {
@@ -130,7 +137,7 @@
             transform: translateY(-2px);
         }
 
-        /* ── Preview card — mirip tampilan publik ── */
+        /* ── Preview card ── */
         .vm-preview-card {
             border-radius: 16px;
             overflow: hidden;
@@ -162,7 +169,7 @@
         .vm-divider {
             border: none;
             border-top: 1px solid rgba(255, 255, 255, 0.06);
-            margin: 14px 0;
+            margin: 12px 0;
         }
 
         /* ── Section title ── */
@@ -173,7 +180,7 @@
             display: flex;
             align-items: center;
             gap: 7px;
-            margin-bottom: 16px;
+            margin-bottom: 14px;
             padding-bottom: 12px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.06);
             text-transform: uppercase;
@@ -199,16 +206,21 @@
             border: 1px solid;
         }
 
-        /* ── Grid layout ── */
+        /* ══════════════════════════════════════════════
+           GRID LAYOUT — Mobile First
+        ══════════════════════════════════════════════ */
+
+        /* Grid 4 col: mobile=1, sm=2, xl=4 */
         .vm-grid-4 {
             display: grid;
             grid-template-columns: 1fr;
-            gap: 14px;
+            gap: 12px;
         }
 
-        @media (min-width: 768px) {
+        @media (min-width: 640px) {
             .vm-grid-4 {
                 grid-template-columns: repeat(2, 1fr);
+                gap: 14px;
             }
         }
 
@@ -218,6 +230,7 @@
             }
         }
 
+        /* Grid 2 col: mobile=1, md=2 */
         .vm-grid-2 {
             display: grid;
             grid-template-columns: 1fr;
@@ -230,10 +243,18 @@
             }
         }
 
+        /* Grid 3 col: mobile=1, sm=3 */
         .vm-grid-3 {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+
+        @media (min-width: 480px) {
+            .vm-grid-3 {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 12px;
+            }
         }
 
         /* ── Copy btn ── */
@@ -244,14 +265,18 @@
             font-size: 11px;
             color: #6b7280;
             cursor: pointer;
-            padding: 2px 7px;
+            padding: 4px 10px;
+            /* touch target lebih besar */
             border-radius: 6px;
             border: 1px solid rgba(255, 255, 255, 0.08);
             background: rgba(255, 255, 255, 0.04);
             transition: all 0.15s;
+            min-height: 32px;
+            /* aksesibilitas touch */
         }
 
-        .vm-copy-btn:hover {
+        .vm-copy-btn:hover,
+        .vm-copy-btn:focus {
             background: rgba(255, 107, 24, 0.15);
             color: #FF6B18;
             border-color: rgba(255, 107, 24, 0.3);
@@ -261,17 +286,45 @@
         .vm-preview-banner {
             background: linear-gradient(135deg, #FF6B18 0%, #E64627 100%);
             border-radius: 14px;
-            padding: 16px 20px;
+            padding: 14px 16px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 12px;
+            flex-wrap: wrap;
+            /* mobile: bungkus jika sempit */
+        }
+
+        @media (min-width: 640px) {
+            .vm-preview-banner {
+                padding: 16px 20px;
+                flex-wrap: nowrap;
+            }
+        }
+
+        .vm-preview-banner-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+            /* cegah overflow teks */
+        }
+
+        .vm-preview-banner-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            border-radius: 10px;
+            width: 36px;
+            height: 36px;
+            background: rgba(255, 255, 255, 0.2);
         }
 
         .vm-preview-link {
             display: inline-flex;
             align-items: center;
-            gap-6px;
+            gap: 6px;
             background: white;
             color: #FF6B18;
             font-size: 13px;
@@ -281,7 +334,8 @@
             text-decoration: none;
             transition: all 0.15s;
             white-space: nowrap;
-            gap: 6px;
+            min-height: 36px;
+            flex-shrink: 0;
         }
 
         .vm-preview-link:hover {
@@ -294,15 +348,21 @@
             background: rgba(255, 255, 255, 0.04);
             border: 1px solid rgba(255, 255, 255, 0.07);
             border-radius: 12px;
-            padding: 16px;
+            padding: 14px;
             text-align: center;
         }
 
         .vm-stat-num {
-            font-size: 26px;
+            font-size: 24px;
             font-weight: 800;
             color: #f9fafb;
             line-height: 1;
+        }
+
+        @media (min-width: 640px) {
+            .vm-stat-num {
+                font-size: 26px;
+            }
         }
 
         .vm-stat-lbl {
@@ -314,10 +374,69 @@
             font-weight: 600;
         }
 
+        /* ── Preview card inner (horizontal on mobile) ── */
+        .vm-profile-inner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            padding: 20px;
+            text-align: center;
+            height: 100%;
+        }
+
+        /* Pada sm ke atas, preview card bisa horizontal */
+        @media (min-width: 640px) and (max-width: 1279px) {
+            .vm-profile-inner {
+                flex-direction: row;
+                text-align: left;
+                align-items: flex-start;
+                padding: 24px;
+            }
+
+            .vm-profile-inner-meta {
+                flex: 1;
+                min-width: 0;
+            }
+
+            .vm-profile-inner-meta .vm-badge,
+            .vm-profile-inner-meta .vm-status,
+            .vm-profile-inner-meta .vm-social {
+                justify-content: flex-start;
+            }
+        }
+
+        @media (min-width: 1280px) {
+            .vm-profile-inner {
+                flex-direction: column;
+                text-align: center;
+                padding: 24px;
+            }
+        }
+
+        /* ── Identitas: urutan + stat box mobile ── */
+        .vm-order-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        /* ── Kontak link min touch target ── */
+        .vm-contact-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
+            min-height: 36px;
+        }
+
         /* ── Metadata collapsible ── */
         details.vm-collapsible summary {
             cursor: pointer;
             list-style: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
         details.vm-collapsible summary::-webkit-details-marker {
@@ -331,16 +450,36 @@
         .vm-arrow {
             transition: transform 0.2s ease;
         }
+
+        /* ── Photo circle sizing mobile ── */
+        .vm-photo-wrap {
+            width: 88px;
+            height: 88px;
+        }
+
+        @media (min-width: 640px) {
+            .vm-photo-wrap {
+                width: 96px;
+                height: 96px;
+            }
+        }
+
+        /* ── Prevent text overflow ── */
+        .vm-text-truncate {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
     </style>
 
-    <div class="space-y-4">
+    <div class="space-y-3 md:space-y-4">
 
         {{-- ═══════════════════════════════════════════════════════════
-        PREVIEW BANNER — link ke halaman publik
+        PREVIEW BANNER
         ═══════════════════════════════════════════════════════════ --}}
         <div class="vm-preview-banner anim anim-1">
-            <div class="flex items-center gap-3">
-                <div class="flex items-center justify-center flex-shrink-0 rounded-lg w-9 h-9 bg-white/20">
+            <div class="vm-preview-banner-info">
+                <div class="vm-preview-banner-icon">
                     <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -348,11 +487,11 @@
                             d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                     </svg>
                 </div>
-                <div>
+                <div class="min-w-0">
                     <div class="text-sm font-bold text-white">Preview Tampilan Publik</div>
-                    <div class="text-white/70 text-xs mt-0.5">
-                        Lihat bagaimana <span class="font-semibold text-white">{{ $record->name }}</span>
-                        tampil di halaman Tentang Kami
+                    <div class="text-white/70 text-xs mt-0.5 truncate">
+                        Lihat <span class="font-semibold text-white">{{ $record->name }}</span>
+                        di halaman Tentang Kami
                     </div>
                 </div>
             </div>
@@ -361,116 +500,132 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
-                Lihat di Website
+                <span class="hidden xs:inline">Lihat di Website</span>
+                <span class="xs:hidden">Buka</span>
             </a>
         </div>
 
         {{-- ═══════════════════════════════════════════════════════════
-        ROW 1 — 4 card sejajar
-        [Preview Card] [Identitas] [Kontak] [Bio]
+        ROW 1 — 4 cards
+        Mobile: 1 col → sm: 2 col → xl: 4 col
         ═══════════════════════════════════════════════════════════ --}}
         <div class="vm-grid-4">
 
-            {{-- Card 1: Preview Card — mirip tampilan publik --}}
+            {{-- Card 1: Preview Card --}}
             <div class="anim anim-1">
-                <div
-                    class="vm-preview-card {{ $levelConfig['card_bg'] }} p-6 text-center h-full flex flex-col items-center justify-center gap-4">
+                <div class="vm-preview-card {{ $levelConfig['card_bg'] }} h-full">
+                    <div class="vm-profile-inner">
 
-                    {{-- Foto + badge icon --}}
-                    <div class="relative inline-block">
-                        <div class="w-24 h-24 rounded-2xl overflow-hidden border-4
-                        {{ $record->level === 'leadership' ? 'border-white/30' : 'border-white/10' }}
-                        mx-auto shadow-lg">
-                            <img src="{{ $finalPhoto }}" alt="{{ $record->name }}" class="object-cover w-full h-full"
-                                onerror="this.src='{{ $fallbackUrl }}'">
+                        {{-- Foto + badge icon --}}
+                        <div class="relative flex-shrink-0 inline-block">
+                            <div class="vm-photo-wrap rounded-2xl overflow-hidden border-4
+                                {{ $record->level === 'leadership' ? 'border-white/30' : 'border-white/10' }}
+                                shadow-lg">
+                                <img src="{{ $finalPhoto }}" alt="{{ $record->name }}"
+                                    class="object-cover w-full h-full" onerror="this.src='{{ $fallbackUrl }}'">
+                            </div>
+                            @if($record->level === 'leadership')
+                            <div
+                                class="absolute flex items-center justify-center w-8 h-8 bg-white shadow-lg -bottom-2 -right-2 md:w-9 md:h-9 rounded-xl">
+                                <svg class="w-4 h-4 md:w-5 md:h-5 text-[#FF6B18]" fill="currentColor"
+                                    viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd"
+                                        d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"
+                                        clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            @elseif($record->icon_type)
+                            <div
+                                class="absolute -bottom-2 -right-2 w-7 h-7 md:w-8 md:h-8 bg-gradient-to-br from-[#FF6B18] to-[#E64627] rounded-lg flex items-center justify-center shadow-lg">
+                                <svg class="w-3.5 h-3.5 md:w-4 md:h-4 text-white" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    {!! $iconSvg !!}
+                                </svg>
+                            </div>
+                            @endif
                         </div>
-                        @if($record->level === 'leadership')
-                        <div
-                            class="absolute flex items-center justify-center bg-white shadow-lg -bottom-2 -right-2 w-9 h-9 rounded-xl">
-                            <svg class="w-5 h-5 text-[#FF6B18]" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd"
-                                    d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"
-                                    clip-rule="evenodd" />
-                            </svg>
+
+                        {{-- Meta --}}
+                        <div class="w-full vm-profile-inner-meta">
+                            {{-- Nama & jabatan --}}
+                            <div class="mb-2">
+                                <div class="font-black text-base md:text-lg
+                                    {{ $record->level === 'leadership' ? 'text-white' : 'text-gray-100' }}
+                                    leading-tight">
+                                    {{ $record->name }}
+                                </div>
+                                <div class="text-sm mt-0.5
+                                    {{ $record->level === 'leadership' ? 'text-white/80' : 'text-[#FF6B18]' }}
+                                    font-semibold">
+                                    {{ $record->title }}
+                                </div>
+                            </div>
+
+                            {{-- Level badge --}}
+                            <div class="flex justify-center mb-2 sm:justify-start xl:justify-center vm-status">
+                                <span
+                                    class="vm-badge {{ $levelConfig['bg'] }} {{ $levelConfig['text'] }} {{ $levelConfig['border'] }}">
+                                    <span class="w-1.5 h-1.5 rounded-full {{ $levelConfig['dot'] }}"></span>
+                                    {{ $levelConfig['label'] }}
+                                </span>
+                            </div>
+
+                            {{-- Status --}}
+                            <div class="flex justify-center mb-2 sm:justify-start xl:justify-center vm-status">
+                                @if($record->is_active)
+                                <span class="flex items-center gap-1.5 text-xs font-semibold text-emerald-400">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Aktif & Tampil
+                                </span>
+                                @else
+                                <span class="flex items-center gap-1.5 text-xs font-semibold text-red-400">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Disembunyikan
+                                </span>
+                                @endif
+                            </div>
+
+                            {{-- Kontak icon --}}
+                            @if($record->email || $record->linkedin)
+                            <div
+                                class="flex items-center justify-center gap-2 sm:justify-start xl:justify-center vm-social">
+                                @if($record->email)
+                                <a href="mailto:{{ $record->email }}"
+                                    class="w-8 h-8 rounded-lg flex items-center justify-center transition-all
+                                    {{ $record->level === 'leadership' ? 'bg-white/20 hover:bg-white/40' : 'bg-white/10 hover:bg-[#FF6B18]' }}"
+                                    title="Email">
+                                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                    </svg>
+                                </a>
+                                @endif
+                                @if($record->linkedin)
+                                <a href="{{ $record->linkedin }}" target="_blank"
+                                    class="w-8 h-8 rounded-lg flex items-center justify-center transition-all
+                                    {{ $record->level === 'leadership' ? 'bg-white/20 hover:bg-white/40' : 'bg-white/10 hover:bg-[#FF6B18]' }}" title="LinkedIn">
+                                    <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                        <path
+                                            d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+                                    </svg>
+                                </a>
+                                @endif
+                            </div>
+                            @endif
+
+                            <div
+                                class="mt-3 text-[10px] text-white/30 font-medium uppercase tracking-widest text-center sm:text-left xl:text-center">
+                                Preview Tampilan Publik
+                            </div>
                         </div>
-                        @elseif($record->icon_type)
-                        <div
-                            class="absolute -bottom-2 -right-2 w-8 h-8 bg-gradient-to-br from-[#FF6B18] to-[#E64627] rounded-lg flex items-center justify-center shadow-lg">
-                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                {!! $iconSvg !!}
-                            </svg>
-                        </div>
-                        @endif
-                    </div>
 
-                    {{-- Nama & jabatan --}}
-                    <div>
-                        <div class="font-black text-lg
-                        {{ $record->level === 'leadership' ? 'text-white' : 'text-gray-100' }}
-                        leading-tight">
-                            {{ $record->name }}
-                        </div>
-                        <div class="text-sm mt-0.5
-                        {{ $record->level === 'leadership' ? 'text-white/80' : 'text-[#FF6B18]' }}
-                        font-semibold">
-                            {{ $record->title }}
-                        </div>
-                    </div>
-
-                    {{-- Level badge --}}
-                    <span
-                        class="vm-badge {{ $levelConfig['bg'] }} {{ $levelConfig['text'] }} {{ $levelConfig['border'] }}">
-                        <span class="w-1.5 h-1.5 rounded-full {{ $levelConfig['dot'] }}"></span>
-                        {{ $levelConfig['label'] }}
-                    </span>
-
-                    {{-- Status --}}
-                    @if($record->is_active)
-                    <span class="flex items-center gap-1.5 text-xs font-semibold text-emerald-400">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        Aktif & Tampil
-                    </span>
-                    @else
-                    <span class="flex items-center gap-1.5 text-xs font-semibold text-red-400">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        Disembunyikan
-                    </span>
-                    @endif
-
-                    {{-- Kontak icon --}}
-                    @if($record->email || $record->linkedin)
-                    <div class="flex items-center gap-2">
-                        @if($record->email)
-                        <a href="mailto:{{ $record->email }}"
-                            class="w-8 h-8 rounded-lg flex items-center justify-center transition-all
-                        {{ $record->level === 'leadership' ? 'bg-white/20 hover:bg-white/40' : 'bg-white/10 hover:bg-[#FF6B18]' }}" title="Email">
-                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                            </svg>
-                        </a>
-                        @endif
-                        @if($record->linkedin)
-                        <a href="{{ $record->linkedin }}" target="_blank"
-                            class="w-8 h-8 rounded-lg flex items-center justify-center transition-all
-                        {{ $record->level === 'leadership' ? 'bg-white/20 hover:bg-white/40' : 'bg-white/10 hover:bg-[#FF6B18]' }}" title="LinkedIn">
-                            <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
-                                <path
-                                    d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
-                            </svg>
-                        </a>
-                        @endif
-                    </div>
-                    @endif
-
-                    <div class="text-[10px] text-white/30 font-medium uppercase tracking-widest">
-                        Preview Tampilan Publik
                     </div>
                 </div>
             </div>
@@ -509,12 +664,12 @@
                         </span>
                     </div>
                     <hr class="vm-divider">
-                    <div class="flex items-center justify-between">
+                    <div class="vm-order-row">
                         <div>
                             <div class="vm-label">Urutan Tampil</div>
                             <div class="vm-value"># {{ $record->order }}</div>
                         </div>
-                        <div class="vm-stat" style="padding: 10px 20px;">
+                        <div class="vm-stat" style="padding: 10px 18px; min-width: 64px;">
                             <div class="vm-stat-num" style="font-size:20px">{{ $record->order }}</div>
                             <div class="vm-stat-lbl">Urutan</div>
                         </div>
@@ -535,8 +690,8 @@
                     <div>
                         <div class="vm-label">Email</div>
                         @if($record->email)
-                        <div class="flex items-start gap-2 mt-1">
-                            <span class="flex-1 text-sm break-all vm-value">{{ $record->email }}</span>
+                        <div class="flex flex-wrap items-center gap-2 mt-1">
+                            <span class="flex-1 min-w-0 text-sm break-all vm-value">{{ $record->email }}</span>
                             <button class="flex-shrink-0 vm-copy-btn" onclick="
                                 navigator.clipboard.writeText('{{ $record->email }}');
                                 this.textContent = '✓ Disalin';
@@ -555,13 +710,13 @@
                         <div class="vm-label">LinkedIn</div>
                         @if($record->linkedin)
                         <a href="{{ $record->linkedin }}" target="_blank" rel="noopener"
-                            class="flex items-center gap-2 mt-1 text-sm font-medium text-blue-400 transition-colors hover:text-blue-300">
+                            class="text-sm font-medium text-blue-400 transition-colors vm-contact-link hover:text-blue-300">
                             <svg class="flex-shrink-0 w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                                 <path
                                     d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
                             </svg>
-                            Lihat Profil LinkedIn
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <span>Lihat Profil LinkedIn</span>
+                            <svg class="flex-shrink-0 w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                             </svg>
@@ -575,8 +730,8 @@
                         <div class="vm-label">Kirim Email</div>
                         @if($record->email)
                         <a href="mailto:{{ $record->email }}"
-                            class="flex items-center gap-2 mt-1 text-[#FF6B18] hover:text-[#e64627] transition-colors text-sm font-medium">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            class="vm-contact-link text-[#FF6B18] hover:text-[#e64627] transition-colors text-sm font-medium">
+                            <svg class="flex-shrink-0 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                             </svg>
@@ -601,7 +756,7 @@
                 @if($record->description)
                 <p class="text-sm leading-relaxed text-gray-300">{{ $record->description }}</p>
                 @else
-                <div class="flex flex-col items-center justify-center py-10 text-center">
+                <div class="flex flex-col items-center justify-center py-8 text-center">
                     <div class="flex items-center justify-center w-12 h-12 mb-3 bg-white/5 rounded-xl">
                         <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -633,11 +788,12 @@
                     <div class="vm-stat-lbl">Jumlah Anggota</div>
                 </div>
                 <div class="vm-stat">
-                    <div class="text-lg vm-stat-num">{{ $record->icon_type ? ucfirst($record->icon_type) : '—' }}</div>
+                    <div class="text-base vm-stat-num">{{ $record->icon_type ? ucfirst($record->icon_type) : '—' }}
+                    </div>
                     <div class="vm-stat-lbl">Ikon Departemen</div>
                 </div>
                 <div class="vm-stat">
-                    <div class="text-lg vm-stat-num"># {{ $record->order }}</div>
+                    <div class="text-base vm-stat-num"># {{ $record->order }}</div>
                     <div class="vm-stat-lbl">Urutan Tampil</div>
                 </div>
             </div>
@@ -657,7 +813,8 @@
                         </svg>
                         Metadata
                     </div>
-                    <svg class="w-4 h-4 text-gray-500 vm-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="flex-shrink-0 w-4 h-4 text-gray-500 vm-arrow" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                     </svg>
                 </div>
