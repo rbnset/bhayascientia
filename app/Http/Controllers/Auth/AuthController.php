@@ -41,7 +41,6 @@ class AuthController extends Controller
             'terms.accepted'     => 'Anda harus menyetujui Terms & Privacy Policy.',
         ]);
 
-        // Buat user baru — email_verified_at null (belum verified)
         $user = User::create([
             'name'              => $validated['name'],
             'email'             => $validated['email'],
@@ -50,13 +49,10 @@ class AuthController extends Controller
             'email_verified_at' => null,
         ]);
 
-        // Assign role "Author" otomatis
         $user->assignRole('Author');
 
-        // Login otomatis
         Auth::login($user);
 
-        // Generate & kirim OTP
         $otp = $user->generateOtp();
 
         try {
@@ -103,7 +99,6 @@ class AuthController extends Controller
 
             $user = Auth::user();
 
-            // Cek apakah email sudah diverifikasi
             if (!$user->isEmailVerified()) {
                 $otp = $user->generateOtp();
 
@@ -124,13 +119,23 @@ class AuthController extends Controller
                     ->with('info', '📧 Akun Anda belum diverifikasi. Kode OTP baru telah dikirim ke ' . $user->email);
             }
 
-            $redirectTo = $request->query('redirect')
-                ? filter_var(urldecode($request->query('redirect')), FILTER_VALIDATE_URL)
-                ? urldecode($request->query('redirect'))
-                : route('publikasi.library')
-                : route('publikasi.library');
+            // ✅ Baca intended redirect: dari hidden input (POST) atau query param (GET)
+            $redirectTo = $request->input('_redirect_to')
+                ?? $request->query('redirect')
+                ?? null;
 
-            return redirect($redirectTo)
+            // ✅ Validasi keamanan — hanya izinkan URL dari domain sendiri
+            if ($redirectTo) {
+                $redirectTo = urldecode($redirectTo);
+                $parsedHost = parse_url($redirectTo, PHP_URL_HOST);
+                $appHost    = parse_url(config('app.url'), PHP_URL_HOST);
+
+                if (!$parsedHost || $parsedHost !== $appHost) {
+                    $redirectTo = null;
+                }
+            }
+
+            return redirect($redirectTo ?? route('publikasi.library'))
                 ->with('success', 'Selamat datang kembali, ' . $user->name . '!');
         }
 

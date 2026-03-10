@@ -150,6 +150,9 @@
                 <form action="{{ route('login.post') }}" method="POST" class="space-y-4">
                     @csrf
 
+                    {{-- ✅ Teruskan intended redirect dari URL ke POST body --}}
+                    <input type="hidden" name="_redirect_to" value="{{ request()->query('redirect') }}">
+
                     {{-- Email Input --}}
                     <div>
                         <label for="email" class="mb-2 block text-sm font-bold text-[#111827]">

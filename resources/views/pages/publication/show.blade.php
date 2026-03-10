@@ -10,7 +10,6 @@
 
 @push('styles')
 <style>
-    /* Force Grid Layout - Override any conflicting CSS */
     #publication-detail-grid {
         display: grid !important;
         grid-template-columns: 1fr !important;
@@ -23,7 +22,6 @@
         }
     }
 
-    /* Ensure sidebar stickiness works */
     #publication-sidebar {
         position: relative;
     }
@@ -35,12 +33,10 @@
         }
     }
 
-    /* Prevent any flex conflicts */
     #publication-detail-grid>* {
         min-width: 0;
     }
 
-    /* Enhanced Cover Image Hover Effect */
     .cover-image-wrapper {
         position: relative;
         overflow: hidden;
@@ -71,7 +67,6 @@
         transform: scale(1.05);
     }
 
-    /* Button Ripple Effect */
     .btn-ripple {
         position: relative;
         overflow: hidden;
@@ -90,7 +85,6 @@
         transform: scale(2);
     }
 
-    /* Download Icon Animation */
     @keyframes download-bounce {
 
         0%,
@@ -107,14 +101,12 @@
         animation: download-bounce 0.6s ease infinite;
     }
 
-    /* ✅ Button Container Spacing */
     .action-buttons-container {
         display: flex;
         flex-direction: column;
         gap: 0.75rem;
     }
 
-    /* ✅ Enhanced Version Badge Styling */
     .version-badge {
         margin-top: 0.75rem;
         padding: 1.25rem;
@@ -148,7 +140,6 @@
         transform: translateY(-2px);
     }
 
-    /* Grid Details Styling */
     .version-badge .grid>div {
         background: linear-gradient(135deg, #FAFBFC 0%, #F3F4F6 100%);
         transition: all 0.3s ease;
@@ -161,17 +152,10 @@
         box-shadow: 0 4px 12px rgba(255, 107, 24, 0.1);
     }
 
-    /* Icon Styling */
     .version-badge svg {
         flex-shrink: 0;
     }
 
-    /* Text Styles */
-    .version-badge .text-xs.uppercase {
-        letter-spacing: 0.05em;
-    }
-
-    /* Animation for status indicator */
     @keyframes pulse-glow {
 
         0%,
@@ -188,7 +172,7 @@
         animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     }
 
-    /* ✅ Modal Styles */
+    /* ── Authors Modal ── */
     .modal-overlay {
         position: fixed;
         inset: 0;
@@ -261,7 +245,6 @@
         background: #E64627;
     }
 
-    /* Author Card in Modal */
     .author-card-modal {
         padding: 1.25rem;
         background: linear-gradient(135deg, #FAFBFC 0%, #FFFFFF 100%);
@@ -274,6 +257,87 @@
         border-color: #FF6B18;
         box-shadow: 0 8px 16px rgba(255, 107, 24, 0.1);
         transform: translateY(-2px);
+    }
+
+    /* ── Login Required Modal ── */
+    #loginRequiredModal {
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        display: none;
+    }
+
+    #loginModalBackdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.55);
+        backdrop-filter: blur(6px);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    #loginModalBackdrop.show {
+        opacity: 1;
+    }
+
+    #loginModalContainer {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        opacity: 0;
+        transform: scale(0.92) translateY(12px);
+        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    #loginModalContainer.show {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+
+    @keyframes slideInRight {
+        from {
+            transform: translateX(110%);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    @keyframes slideOutRight {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        to {
+            transform: translateX(110%);
+            opacity: 0;
+        }
+    }
+
+    /* ── Auto-trigger pulse animation ── */
+    @keyframes actionPulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(255, 107, 24, 0.5);
+        }
+
+        70% {
+            box-shadow: 0 0 0 12px rgba(255, 107, 24, 0);
+        }
+
+        100% {
+            box-shadow: 0 0 0 0 rgba(255, 107, 24, 0);
+        }
+    }
+
+    .action-pulse {
+        animation: actionPulse 0.8s ease-out;
     }
 </style>
 @endpush
@@ -295,32 +359,39 @@
 {{-- Main Content --}}
 <article class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px] mt-6">
 
-    {{-- Header Section (Full Width) --}}
+    {{-- Header Section --}}
     <div class="bg-white rounded-2xl border border-[#EEF0F7] p-6 md:p-8 mb-6">
+
         {{-- Category & Actions --}}
         <div class="flex items-center justify-between mb-4">
             <span class="px-4 py-1.5 bg-[#FFF7F2] text-sm font-bold text-[#FF6B18] rounded-full">
                 {{ $category }}
             </span>
             <div class="flex items-center gap-2">
-                <button type="button" onclick="toggleFavorite()"
+
+                {{-- ✅ Favorite Button --}}
+                <button type="button" id="btnFavorite" onclick="toggleFavorite(event)"
                     class="p-2.5 rounded-full bg-[#F8F9FC] hover:bg-[#FFF7F2] hover:scale-110 transition-all duration-300 group"
                     title="Tambah ke favorit">
-                    <svg class="w-6 h-6 text-[#737373] group-hover:text-[#FF6B18] transition-colors" fill="none"
-                        stroke="currentColor" viewBox="0 0 24 24">
+                    <svg id="iconFavorite" class="w-6 h-6 text-[#737373] group-hover:text-[#FF6B18] transition-colors"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
                     </svg>
                 </button>
-                <button type="button" onclick="saveForLater()"
+
+                {{-- ✅ Save Button --}}
+                <button type="button" id="btnSave" onclick="saveForLater(event)"
                     class="p-2.5 rounded-full bg-[#F8F9FC] hover:bg-[#FFF7F2] hover:scale-110 transition-all duration-300 group"
                     title="Simpan untuk nanti">
-                    <svg class="w-6 h-6 text-[#737373] group-hover:text-[#FF6B18] transition-colors" fill="none"
-                        stroke="currentColor" viewBox="0 0 24 24">
+                    <svg id="iconSave" class="w-6 h-6 text-[#737373] group-hover:text-[#FF6B18] transition-colors"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                     </svg>
                 </button>
+
+                {{-- Share Button --}}
                 <button type="button" onclick="sharePublication()"
                     class="p-2.5 rounded-full bg-[#F8F9FC] hover:bg-[#FFF7F2] hover:scale-110 transition-all duration-300 group"
                     title="Bagikan">
@@ -330,6 +401,7 @@
                             d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                     </svg>
                 </button>
+
             </div>
         </div>
 
@@ -344,11 +416,8 @@
             <p class="text-sm font-bold text-[#737373] uppercase tracking-wide mb-3">Authors</p>
             <div class="flex flex-wrap gap-3">
                 @foreach($authors->take(3) as $author)
-                {{-- ✅ FIXED: Make entire card clickable --}}
                 <a href="{{ route('author.profile', $author['profile_id']) }}"
                     class="inline-flex items-center gap-2.5 px-4 py-2.5 bg-[#F8F9FC] rounded-xl hover:bg-[#FFF7F2] hover:shadow-md hover:scale-105 transition-all duration-300 cursor-pointer group">
-
-                    {{-- Author Avatar --}}
                     @if($author['photo'])
                     <img src="{{ $author['photo'] }}" alt="{{ $author['name'] }}"
                         class="w-10 h-10 rounded-full object-cover ring-2 ring-white group-hover:ring-[#FF6B18] transition-all">
@@ -358,8 +427,6 @@
                         {{ $author['initials'] }}
                     </div>
                     @endif
-
-                    {{-- Author Info --}}
                     <div class="text-left">
                         <p class="text-sm font-bold text-[#1A1A1A] group-hover:text-[#FF6B18] transition-colors">
                             {{ $author['name'] }}
@@ -384,7 +451,6 @@
             </div>
         </div>
         @endif
-
 
         {{-- Meta Info --}}
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 pt-6 border-t border-[#EEF0F7]">
@@ -433,13 +499,12 @@
         </div>
     </div>
 
-    {{-- ✅ TWO COLUMN LAYOUT --}}
+    {{-- Two Column Layout --}}
     <div id="publication-detail-grid">
 
-        {{-- ✅ LEFT COLUMN: Abstract + Keywords --}}
+        {{-- LEFT: Abstract + Keywords --}}
         <div class="space-y-6">
 
-            {{-- Abstract --}}
             @if($publication->abstract)
             <div
                 class="bg-white rounded-2xl border border-[#EEF0F7] p-6 md:p-8 hover:shadow-lg transition-shadow duration-300">
@@ -456,7 +521,6 @@
             </div>
             @endif
 
-            {{-- Keywords --}}
             @if($keywords && count($keywords) > 0)
             <div
                 class="bg-white rounded-2xl border border-[#EEF0F7] p-6 md:p-8 hover:shadow-lg transition-shadow duration-300">
@@ -477,15 +541,13 @@
                 </div>
             </div>
             @endif
+
         </div>
 
-        {{-- ✅ RIGHT COLUMN: Cover + Action Buttons --}}
+        {{-- RIGHT: Cover + Action Buttons --}}
         <aside id="publication-sidebar">
             @php
-            // ✅ Get publication type name
             $publicationType = $publication->publicationType->name ?? 'Publikasi';
-
-            // Generate initials from title
             $words = array_filter(explode(' ', $publication->title));
             $initials = '';
             foreach (array_slice($words, 0, 2) as $word) {
@@ -494,30 +556,23 @@
             if (empty($initials)) {
             $initials = mb_strtoupper(mb_substr($publication->title, 0, 2));
             }
-
-            // Format authors for placeholder
             $firstAuthor = $authors->count() > 0 ? ($authors->first()['name'] ?? 'Unknown') : 'Anonymous';
-
-            // ✅ Generate placeholder URL dengan cache buster
             $placeholderUrl = route('placeholder.cover', [
             'initials' => $initials,
             'type' => $publicationType,
             'title' => $publication->title,
             'category' => $category,
             'author' => $firstAuthor,
-            'v' => time(), // Cache buster
+            'v' => time(),
             ]);
             @endphp
 
             <div class="sticky-cover">
-                {{-- Cover Image with Enhanced Hover --}}
+                {{-- Cover Image --}}
                 <div class="mb-6 cover-image-wrapper aspect-[2/3] relative overflow-hidden rounded-xl">
                     @if($cover_url)
-                    {{-- Real Cover Image --}}
                     <img src="{{ $cover_url }}" alt="Cover {{ $publication->title }}" class="object-cover w-full h-full"
                         onerror="this.onerror=null; this.src='{{ $placeholderUrl }}';">
-
-                    {{-- Enhanced Overlay for Fullscreen --}}
                     <div
                         class="absolute inset-0 z-20 flex items-end justify-center p-6 transition-opacity duration-500 opacity-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent hover:opacity-100 rounded-xl">
                         <button onclick="viewCoverFullscreen()"
@@ -530,7 +585,6 @@
                         </button>
                     </div>
                     @else
-                    {{-- Placeholder Cover (SVG dari controller) --}}
                     <img src="{{ $placeholderUrl }}" alt="Cover {{ $publication->title }}"
                         class="object-cover w-full h-full">
                     @endif
@@ -541,9 +595,8 @@
                 $hasFile = $latestVersion && !empty($latestVersion->pdf_file_path);
                 @endphp
 
-                {{-- ✅ ACTION BUTTONS CONTAINER --}}
+                {{-- Action Buttons --}}
                 <div class="action-buttons-container">
-                    {{-- Button Baca Sekarang (Primary) --}}
                     <a href="{{ route('publikasi.read', $publication->slug) }}"
                         class="btn-ripple w-full px-5 py-3.5 bg-gradient-to-r from-[#FF6B18] to-[#E64627] text-white font-bold text-base rounded-xl hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 flex items-center justify-center gap-3 group">
                         <svg class="w-5 h-5 transition-transform duration-300 group-hover:rotate-12" fill="none"
@@ -556,7 +609,6 @@
                         <span>Baca Sekarang</span>
                     </a>
 
-                    {{-- Button Download PDF (Secondary) --}}
                     @if($hasFile)
                     <a href="{{ route('publikasi.download', $publication->slug) }}"
                         class="btn-ripple w-full px-5 py-3.5 bg-white border-2 border-[#FF6B18] text-[#FF6B18] font-bold text-base rounded-xl hover:bg-[#FF6B18] hover:text-white hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 flex items-center justify-center gap-3 group">
@@ -567,7 +619,6 @@
                         <span>Download PDF</span>
                     </a>
                     @else
-                    {{-- Button Disabled State --}}
                     <button type="button" disabled
                         class="w-full px-5 py-3.5 bg-gray-100 border-2 border-gray-300 text-gray-400 font-bold text-base rounded-xl cursor-not-allowed flex items-center justify-center gap-3 opacity-60">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -579,10 +630,9 @@
                     @endif
                 </div>
 
-                {{-- ✅ ENHANCED VERSION BADGE --}}
+                {{-- Version Badge --}}
                 @if($latestVersion)
                 <div class="version-badge">
-                    {{-- Version Header --}}
                     <div class="flex items-start justify-between mb-3 pb-3 border-b border-[#EEF0F7]">
                         <div class="flex items-center gap-2">
                             <div
@@ -598,19 +648,15 @@
                             </div>
                         </div>
                         @if($hasFile)
-                        <span class="px-3 py-1 bg-[#FFF7F2] text-xs font-bold text-[#FF6B18] rounded-full">
-                            Published
-                        </span>
+                        <span
+                            class="px-3 py-1 bg-[#FFF7F2] text-xs font-bold text-[#FF6B18] rounded-full">Published</span>
                         @else
-                        <span class="px-3 py-1 text-xs font-bold text-gray-500 bg-gray-100 rounded-full">
-                            Unpublished
-                        </span>
+                        <span
+                            class="px-3 py-1 text-xs font-bold text-gray-500 bg-gray-100 rounded-full">Unpublished</span>
                         @endif
                     </div>
 
-                    {{-- File Details Grid --}}
                     <div class="grid grid-cols-2 gap-3">
-                        {{-- Format --}}
                         <div class="bg-[#FAFBFC] p-3 rounded-lg border border-[#EEF0F7]">
                             <p class="text-xs text-[#737373] font-semibold mb-1.5 flex items-center gap-1">
                                 <svg class="w-4 h-4 text-[#FF6B18]" fill="none" stroke="currentColor"
@@ -622,8 +668,6 @@
                             </p>
                             <p class="text-sm font-bold text-[#1A1A1A]">PDF</p>
                         </div>
-
-                        {{-- File Size --}}
                         <div class="bg-[#FAFBFC] p-3 rounded-lg border border-[#EEF0F7]">
                             <p class="text-xs text-[#737373] font-semibold mb-1.5 flex items-center gap-1">
                                 <svg class="w-4 h-4 text-[#FF6B18]" fill="none" stroke="currentColor"
@@ -633,12 +677,8 @@
                                 </svg>
                                 Size
                             </p>
-                            <p class="text-sm font-bold text-[#1A1A1A]">
-                                {{ $fileSizeFormatted ?? 'N/A' }}
-                            </p>
+                            <p class="text-sm font-bold text-[#1A1A1A]">{{ $fileSizeFormatted ?? 'N/A' }}</p>
                         </div>
-
-                        {{-- Downloads --}}
                         <div class="bg-[#FAFBFC] p-3 rounded-lg border border-[#EEF0F7]">
                             <p class="text-xs text-[#737373] font-semibold mb-1.5 flex items-center gap-1">
                                 <svg class="w-4 h-4 text-[#FF6B18]" fill="none" stroke="currentColor"
@@ -650,8 +690,6 @@
                             </p>
                             <p class="text-sm font-bold text-[#1A1A1A]">{{ number_format($downloadCount ?? 0) }}</p>
                         </div>
-
-                        {{-- Date Added --}}
                         <div class="bg-[#FAFBFC] p-3 rounded-lg border border-[#EEF0F7]">
                             <p class="text-xs text-[#737373] font-semibold mb-1.5 flex items-center gap-1">
                                 <svg class="w-4 h-4 text-[#FF6B18]" fill="none" stroke="currentColor"
@@ -667,7 +705,6 @@
                         </div>
                     </div>
 
-                    {{-- File Status Indicator --}}
                     <div class="mt-3 pt-3 border-t border-[#EEF0F7]">
                         @if($hasFile)
                         <div class="flex items-center gap-2 px-3 py-2 bg-[#F0FDF4] rounded-lg border border-[#DCFCE7]">
@@ -686,140 +723,51 @@
             </div>
         </aside>
 
-
-
     </div>
-
 </article>
 
-{{-- ✅ Authors Modal --}}
-<div id="authorsModal" class="modal-overlay" style="display: none;" onclick="closeAuthorsModal(event)">
-    <div class="modal-container">
-        <div class="modal-content" onclick="event.stopPropagation()">
-            {{-- Modal Header --}}
-            <div class="modal-header">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h3 class="text-2xl font-bold text-[#1A1A1A] mb-1">All Authors</h3>
-                        <p class="text-sm text-[#737373]">{{ $authors->count() }} {{ $authors->count() > 1 ?
-                            'contributors' : 'contributor' }} to this publication</p>
-                    </div>
-                    <button onclick="closeAuthorsModal()"
-                        class="p-2 rounded-full hover:bg-[#FFF7F2] transition-colors duration-300 group">
-                        <svg class="w-6 h-6 text-[#737373] group-hover:text-[#FF6B18]" fill="none" stroke="currentColor"
-                            viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                </div>
-            </div>
-
-            {{-- Modal Body --}}
-            <div class="modal-body">
-                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    @foreach($authors as $index => $author)
-                    {{-- ✅ FIXED: Make entire modal card clickable --}}
-                    <a href="{{ route('author.profile', $author['profile_id']) }}" class="block author-card-modal">
-                        <div class="flex items-start gap-4">
-                            {{-- Author Photo/Initial --}}
-                            <div class="flex-shrink-0">
-                                @if($author['photo'])
-                                <img src="{{ $author['photo'] }}" alt="{{ $author['name'] }}"
-                                    class="object-cover w-16 h-16 rounded-full shadow-md ring-2 ring-white">
-                                @else
-                                <div
-                                    class="w-16 h-16 bg-gradient-to-br from-[#FF6B18] to-[#E64627] rounded-full flex items-center justify-center text-white text-lg font-bold ring-2 ring-white shadow-md">
-                                    {{ $author['initials'] }}
-                                </div>
-                                @endif
-                            </div>
-
-                            {{-- Author Info --}}
-                            <div class="flex-1 min-w-0">
-                                <div class="flex items-start justify-between gap-2 mb-2">
-                                    <h4
-                                        class="text-base font-bold text-[#1A1A1A] leading-snug hover:text-[#FF6B18] transition-colors">
-                                        {{ $author['name'] }}
-                                    </h4>
-                                    @if($author['is_corresponding'])
-                                    <span
-                                        class="px-2 py-0.5 bg-[#FFF7F2] text-xs font-bold text-[#FF6B18] rounded-full flex-shrink-0"
-                                        title="Corresponding Author">
-                                        CA
-                                    </span>
-                                    @endif
-                                </div>
-
-                                <p class="text-sm text-[#737373] mb-2">{{ $author['affiliation'] }}</p>
-
-                                {{-- Author Order --}}
-                                <div class="flex items-center gap-2 mt-3 pt-3 border-t border-[#EEF0F7]">
-                                    <svg class="w-4 h-4 text-[#FF6B18]" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
-                                    </svg>
-                                    <span class="text-xs font-semibold text-[#737373]">
-                                        Author #{{ $index + 1 }}
-                                    </span>
-
-                                    {{-- View Profile Indicator --}}
-                                    <svg class="w-4 h-4 text-[#FF6B18] ml-auto" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M9 5l7 7-7 7" />
-                                    </svg>
-                                </div>
-                            </div>
-                        </div>
-                    </a>
-                    @endforeach
-                </div>
-            </div>
-
-        </div>
-    </div>
-</div>
-
-{{-- ✅ Modal: Login Required --}}
-<div id="loginRequiredModal" style="display:none;">
-    {{-- Backdrop --}}
-    <div class="modal-overlay" id="loginModalBackdrop" onclick="closeLoginModal()"></div>
-
-    {{-- Card --}}
-    <div class="modal-container" id="loginModalContainer">
-        <div class="relative w-full max-w-sm p-8 text-center bg-white shadow-2xl rounded-2xl"
+{{-- ✅ Login Required Modal --}}
+<div id="loginRequiredModal">
+    <div id="loginModalBackdrop" onclick="closeLoginModal()"></div>
+    <div id="loginModalContainer">
+        <div class="relative w-full max-w-sm p-8 overflow-hidden text-center bg-white shadow-2xl rounded-2xl"
             onclick="event.stopPropagation()">
 
-            {{-- Close button --}}
+            {{-- Decorative bg circles --}}
+            <div class="absolute -top-8 -left-8 w-32 h-32 rounded-full bg-[#FFF7F2] opacity-60 pointer-events-none">
+            </div>
+            <div class="absolute -bottom-8 -right-8 w-24 h-24 rounded-full bg-[#FFF7F2] opacity-60 pointer-events-none">
+            </div>
+
+            {{-- Close --}}
             <button onclick="closeLoginModal()"
-                class="absolute top-4 right-4 p-1.5 rounded-full hover:bg-[#F8F9FC] transition-colors group">
+                class="absolute top-4 right-4 p-1.5 rounded-full hover:bg-[#F8F9FC] transition-colors group z-10">
                 <svg class="w-5 h-5 text-[#737373] group-hover:text-[#FF6B18]" fill="none" stroke="currentColor"
                     viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
             </button>
 
-            {{-- Ilustrasi Icon --}}
+            {{-- Icon --}}
             <div
-                class="w-20 h-20 bg-gradient-to-br from-[#FFF7F2] to-[#FFE8D6] rounded-full flex items-center justify-center mx-auto mb-5 shadow-inner">
-                <svg class="w-10 h-10 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                class="relative z-10 w-20 h-20 bg-gradient-to-br from-[#FFF7F2] to-[#FFE8D6] rounded-full flex items-center justify-center mx-auto mb-5 shadow-inner">
+                <svg id="loginModalIcon" class="w-10 h-10 text-[#FF6B18]" fill="none" stroke="currentColor"
+                    viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
                         d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
             </div>
 
-            {{-- Title & Desc --}}
-            <h3 id="loginModalTitle" class="text-xl font-bold text-[#1A1A1A] mb-2">
+            {{-- Text --}}
+            <h3 id="loginModalTitle" class="relative z-10 text-xl font-bold text-[#1A1A1A] mb-2">
                 Masuk untuk melanjutkan
             </h3>
-            <p id="loginModalDesc" class="text-[#737373] text-sm mb-7 leading-relaxed px-2">
-                Yuk login dulu biar kamu bisa menyimpan publikasi favoritmu! 🌟
+            <p id="loginModalDesc" class="relative z-10 text-[#737373] text-sm mb-7 leading-relaxed px-2">
+                Yuk login dulu untuk menggunakan fitur ini!
             </p>
 
-            {{-- CTA Buttons --}}
-            <div class="flex flex-col gap-3">
+            {{-- Buttons --}}
+            <div class="relative z-10 flex flex-col gap-3">
                 <a id="loginModalBtn" href="{{ route('login') }}"
                     class="w-full py-3.5 bg-gradient-to-r from-[#FF6B18] to-[#E64627] text-white font-bold rounded-xl hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -841,13 +789,79 @@
                     Nanti saja
                 </button>
             </div>
+        </div>
+    </div>
+</div>
 
-            {{-- Decorative dots --}}
-            <div
-                class="absolute top-0 left-0 w-24 h-24 rounded-full bg-[#FFF7F2] -z-10 -translate-x-8 -translate-y-8 opacity-60">
+{{-- Authors Modal --}}
+<div id="authorsModal" class="modal-overlay" style="display: none;" onclick="closeAuthorsModal(event)">
+    <div class="modal-container">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-2xl font-bold text-[#1A1A1A] mb-1">All Authors</h3>
+                        <p class="text-sm text-[#737373]">
+                            {{ $authors->count() }} {{ $authors->count() > 1 ? 'contributors' : 'contributor' }} to this
+                            publication
+                        </p>
+                    </div>
+                    <button onclick="closeAuthorsModal()"
+                        class="p-2 rounded-full hover:bg-[#FFF7F2] transition-colors duration-300 group">
+                        <svg class="w-6 h-6 text-[#737373] group-hover:text-[#FF6B18]" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
             </div>
-            <div
-                class="absolute bottom-0 right-0 w-16 h-16 rounded-full bg-[#FFF7F2] -z-10 translate-x-6 translate-y-6 opacity-60">
+            <div class="modal-body">
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    @foreach($authors as $index => $author)
+                    <a href="{{ route('author.profile', $author['profile_id']) }}" class="block author-card-modal">
+                        <div class="flex items-start gap-4">
+                            <div class="flex-shrink-0">
+                                @if($author['photo'])
+                                <img src="{{ $author['photo'] }}" alt="{{ $author['name'] }}"
+                                    class="object-cover w-16 h-16 rounded-full shadow-md ring-2 ring-white">
+                                @else
+                                <div
+                                    class="w-16 h-16 bg-gradient-to-br from-[#FF6B18] to-[#E64627] rounded-full flex items-center justify-center text-white text-lg font-bold ring-2 ring-white shadow-md">
+                                    {{ $author['initials'] }}
+                                </div>
+                                @endif
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-start justify-between gap-2 mb-2">
+                                    <h4
+                                        class="text-base font-bold text-[#1A1A1A] leading-snug hover:text-[#FF6B18] transition-colors">
+                                        {{ $author['name'] }}
+                                    </h4>
+                                    @if($author['is_corresponding'])
+                                    <span
+                                        class="px-2 py-0.5 bg-[#FFF7F2] text-xs font-bold text-[#FF6B18] rounded-full flex-shrink-0">CA</span>
+                                    @endif
+                                </div>
+                                <p class="text-sm text-[#737373] mb-2">{{ $author['affiliation'] }}</p>
+                                <div class="flex items-center gap-2 mt-3 pt-3 border-t border-[#EEF0F7]">
+                                    <svg class="w-4 h-4 text-[#FF6B18]" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                                    </svg>
+                                    <span class="text-xs font-semibold text-[#737373]">Author #{{ $index + 1 }}</span>
+                                    <svg class="w-4 h-4 text-[#FF6B18] ml-auto" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 5l7 7-7 7" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                    @endforeach
+                </div>
             </div>
         </div>
     </div>
@@ -855,312 +869,316 @@
 
 @push('scripts')
 <script>
-    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-    const isLoggedIn = {{ auth()->check() ? 'true' : 'false' }};
+    const csrfToken  = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+const isLoggedIn = {{ auth()->check() ? 'true' : 'false' }};
 
-    // =========================================================
-    // ✅ LOGIN REQUIRED MODAL
-    // =========================================================
-    const loginMessages = {
-        favorite: {
-            title: 'Tambahkan ke Favorit? ⭐',
-            desc:  'Login dulu untuk menandai publikasi favoritmu. Temukan lagi dengan mudah kapan saja!',
-        },
-        save: {
-            title: 'Simpan untuk Dibaca Nanti? 📚',
-            desc:  'Login dulu agar publikasi ini tersimpan di koleksimu dan bisa kamu baca kapan pun.',
-        },
+// =============================================================
+// ✅ LOGIN MODAL
+// =============================================================
+const loginMessages = {
+    favorite: {
+        title: 'Tambahkan ke Favorit? ⭐',
+        desc:  'Login dulu untuk menandai publikasi favoritmu. Temukan lagi dengan mudah kapan saja!',
+    },
+    save: {
+        title: 'Simpan untuk Dibaca Nanti? 📚',
+        desc:  'Login dulu agar publikasi ini tersimpan di koleksimu dan bisa kamu baca kapan pun.',
+    },
+};
+
+function showLoginModal(action = 'default') {
+    const msg = loginMessages[action] ?? {
+        title: 'Masuk untuk Melanjutkan',
+        desc:  'Kamu perlu login untuk menggunakan fitur ini.',
     };
 
-    function showLoginModal(action = 'default') {
-        const msg = loginMessages[action] ?? {
-            title: 'Masuk untuk Melanjutkan',
-            desc:  'Kamu perlu login untuk menggunakan fitur ini.',
-        };
+    document.getElementById('loginModalTitle').textContent = msg.title;
+    document.getElementById('loginModalDesc').textContent  = msg.desc;
 
-        document.getElementById('loginModalTitle').textContent = msg.title;
-        document.getElementById('loginModalDesc').textContent  = msg.desc;
+    // ✅ Encode URL + hash aksi — setelah login auto-trigger aksi ini
+    const baseUrl   = window.location.href.split('#')[0];
+    const returnUrl = encodeURIComponent(baseUrl + '#do-' + action);
+    document.getElementById('loginModalBtn').href = `{{ route('login') }}?redirect=${returnUrl}`;
 
-        // Intended redirect — kembali ke halaman ini setelah login
-        const returnUrl = encodeURIComponent(window.location.href);
-        document.getElementById('loginModalBtn').href = `{{ route('login') }}?redirect=${returnUrl}`;
+    const modal     = document.getElementById('loginRequiredModal');
+    const backdrop  = document.getElementById('loginModalBackdrop');
+    const container = document.getElementById('loginModalContainer');
 
-        const modal     = document.getElementById('loginRequiredModal');
-        const backdrop  = document.getElementById('loginModalBackdrop');
-        const container = document.getElementById('loginModalContainer');
+    modal.style.display = 'block';
+    document.body.style.overflow = 'hidden';
 
-        modal.style.display = 'block';
-        document.body.style.overflow = 'hidden';
-
-        // Trigger animasi (pakai class modal-overlay & modal-container yang sudah ada di CSS)
-        requestAnimationFrame(() => {
-            backdrop.classList.add('show');
-            container.classList.add('show');
-        });
-    }
-
-    function closeLoginModal() {
-        const modal     = document.getElementById('loginRequiredModal');
-        const backdrop  = document.getElementById('loginModalBackdrop');
-        const container = document.getElementById('loginModalContainer');
-
-        backdrop.classList.remove('show');
-        container.classList.remove('show');
-
-        setTimeout(() => {
-            modal.style.display = 'none';
-            document.body.style.overflow = '';
-        }, 300);
-    }
-
-    // Tutup dengan Escape
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            const loginModal = document.getElementById('loginRequiredModal');
-            if (loginModal.style.display === 'block') closeLoginModal();
-
-            const authorsModal = document.getElementById('authorsModal');
-            if (authorsModal.style.display === 'block') closeAuthorsModal();
-        }
+    requestAnimationFrame(() => {
+        backdrop.classList.add('show');
+        container.classList.add('show');
     });
+}
 
-    // =========================================================
-    // ✅ TOGGLE FAVORITE
-    // =========================================================
-    function toggleFavorite() {
-        if (!isLoggedIn) {
-            showLoginModal('favorite');
+function closeLoginModal() {
+    const modal     = document.getElementById('loginRequiredModal');
+    const backdrop  = document.getElementById('loginModalBackdrop');
+    const container = document.getElementById('loginModalContainer');
+
+    backdrop.classList.remove('show');
+    container.classList.remove('show');
+
+    setTimeout(() => {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }, 300);
+}
+
+// =============================================================
+// ✅ TOGGLE FAVORITE
+// =============================================================
+function toggleFavorite(e) {
+    if (!isLoggedIn) {
+        showLoginModal('favorite');
+        return;
+    }
+
+    const button = document.getElementById('btnFavorite');
+    const svg    = document.getElementById('iconFavorite');
+
+    if (button.disabled) return;
+    button.disabled = true;
+    button.classList.add('opacity-60');
+
+    fetch('{{ route("publikasi.favorite", $publication->slug) }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': csrfToken,
+            'Accept': 'application/json',
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        button.disabled = false;
+        button.classList.remove('opacity-60');
+
+        if (!data.success) {
+            showNotification(data.message || 'Terjadi kesalahan', 'error');
             return;
         }
 
-        const button = event.currentTarget;
-        const svg    = button.querySelector('svg');
+        setFavoriteState(data.isFavorited);
+        button.classList.add('action-pulse');
+        setTimeout(() => button.classList.remove('action-pulse'), 800);
+        showNotification(data.message, data.status === 'added' ? 'success' : 'info');
+    })
+    .catch(() => {
+        button.disabled = false;
+        button.classList.remove('opacity-60');
+        showNotification('Terjadi kesalahan jaringan', 'error');
+    });
+}
 
-        if (button.disabled) return;
-        button.disabled = true;
-        button.classList.add('opacity-60');
+function setFavoriteState(active) {
+    const svg = document.getElementById('iconFavorite');
+    if (active) {
+        svg.setAttribute('fill', 'currentColor');
+        svg.setAttribute('stroke', 'none');
+        svg.classList.add('text-[#FF6B18]');
+        svg.innerHTML = '<path fill="currentColor" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>';
+    } else {
+        svg.setAttribute('fill', 'none');
+        svg.setAttribute('stroke', 'currentColor');
+        svg.classList.remove('text-[#FF6B18]');
+        svg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>';
+    }
+}
 
-        fetch('{{ route("publikasi.favorite", $publication->slug) }}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken,
-                'Accept': 'application/json'
-            }
-        })
-        .then(res => res.json())
-        .then(data => {
-            button.disabled = false;
-            button.classList.remove('opacity-60');
-
-            if (!data.success) {
-                showNotification(data.message || 'Terjadi kesalahan', 'error');
-                return;
-            }
-
-            if (data.isFavorited) {
-                svg.setAttribute('fill', 'currentColor');
-                svg.setAttribute('stroke', 'none');
-                svg.classList.add('text-[#FF6B18]');
-                svg.innerHTML = '<path fill="currentColor" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>';
-            } else {
-                svg.setAttribute('fill', 'none');
-                svg.setAttribute('stroke', 'currentColor');
-                svg.classList.remove('text-[#FF6B18]');
-                svg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>';
-            }
-
-            showNotification(data.message, data.status === 'added' ? 'success' : 'info');
-        })
-        .catch(() => {
-            button.disabled = false;
-            button.classList.remove('opacity-60');
-            showNotification('Terjadi kesalahan jaringan', 'error');
-        });
+// =============================================================
+// ✅ SAVE FOR LATER
+// =============================================================
+function saveForLater(e) {
+    if (!isLoggedIn) {
+        showLoginModal('save');
+        return;
     }
 
-    // =========================================================
-    // ✅ SAVE FOR LATER
-    // =========================================================
-    function saveForLater() {
-        if (!isLoggedIn) {
-            showLoginModal('save');
+    const button = document.getElementById('btnSave');
+    const svg    = document.getElementById('iconSave');
+
+    if (button.disabled) return;
+    button.disabled = true;
+    button.classList.add('opacity-60');
+
+    fetch('{{ route("publikasi.save", $publication->slug) }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': csrfToken,
+            'Accept': 'application/json',
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        button.disabled = false;
+        button.classList.remove('opacity-60');
+
+        if (!data.success) {
+            showNotification(data.message || 'Terjadi kesalahan', 'error');
             return;
         }
 
-        const button = event.currentTarget;
-        const svg    = button.querySelector('svg');
-
-        if (button.disabled) return;
-        button.disabled = true;
-        button.classList.add('opacity-60');
-
-        fetch('{{ route("publikasi.save", $publication->slug) }}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken,
-                'Accept': 'application/json'
-            }
-        })
-        .then(res => res.json())
-        .then(data => {
-            button.disabled = false;
-            button.classList.remove('opacity-60');
-
-            if (!data.success) {
-                showNotification(data.message || 'Terjadi kesalahan', 'error');
-                return;
-            }
-
-            if (data.isSaved) {
-                svg.setAttribute('fill', 'currentColor');
-                svg.setAttribute('stroke', 'none');
-                svg.classList.add('text-[#FF6B18]');
-            } else {
-                svg.setAttribute('fill', 'none');
-                svg.setAttribute('stroke', 'currentColor');
-                svg.classList.remove('text-[#FF6B18]');
-            }
-
-            showNotification(data.message, data.status === 'added' ? 'success' : 'info');
-        })
-        .catch(() => {
-            button.disabled = false;
-            button.classList.remove('opacity-60');
-            showNotification('Terjadi kesalahan jaringan', 'error');
-        });
-    }
-
-    // =========================================================
-    // ✅ SHARE
-    // =========================================================
-    function sharePublication() {
-        if (navigator.share) {
-            navigator.share({
-                title: '{{ addslashes($publication->title) }}',
-                text: 'Lihat publikasi ilmiah ini',
-                url: window.location.href
-            }).catch(err => {
-                if (err.name !== 'AbortError') console.log('Share error:', err);
-            });
-        } else {
-            navigator.clipboard.writeText(window.location.href)
-                .then(() => showNotification('Link berhasil disalin ke clipboard!', 'success'))
-                .catch(()  => showNotification('Gagal menyalin link', 'error'));
-        }
-    }
-
-    // =========================================================
-    // ✅ AUTHORS MODAL
-    // =========================================================
-    function showAllAuthors() {
-        const modal     = document.getElementById('authorsModal');
-        const container = modal.querySelector('.modal-container');
-
-        modal.style.display = 'block';
-        document.body.style.overflow = 'hidden';
-
-        requestAnimationFrame(() => {
-            modal.classList.add('show');
-            container.classList.add('show');
-        });
-    }
-
-    function closeAuthorsModal(event) {
-        if (event && event.target !== event.currentTarget) return;
-
-        const modal     = document.getElementById('authorsModal');
-        const container = modal.querySelector('.modal-container');
-
-        modal.classList.remove('show');
-        container.classList.remove('show');
-
-        setTimeout(() => {
-            modal.style.display = 'none';
-            document.body.style.overflow = '';
-        }, 300);
-    }
-
-    // =========================================================
-    // ✅ COVER FULLSCREEN
-    // =========================================================
-    function viewCoverFullscreen() {
-        window.open('{{ $cover_url }}', '_blank', 'noopener,noreferrer');
-    }
-
-    // =========================================================
-    // ✅ NOTIFICATION
-    // =========================================================
-    function showNotification(message, type = 'success') {
-        const colors = {
-            success: 'bg-green-500',
-            info:    'bg-blue-500',
-            error:   'bg-red-500'
-        };
-        const icons = {
-            success: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>',
-            info:    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>',
-            error:   '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>'
-        };
-
-        const el = document.createElement('div');
-        el.className = `fixed bottom-4 right-4 ${colors[type]} text-white px-5 py-3 rounded-xl shadow-xl z-[99999] flex items-center gap-2.5 font-medium text-sm`;
-        el.style.animation = 'slideInRight 0.3s ease-out';
-        el.innerHTML = `
-            <svg class="flex-shrink-0 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                ${icons[type]}
-            </svg>
-            <span>${message}</span>
-        `;
-        document.body.appendChild(el);
-
-        setTimeout(() => {
-            el.style.animation = 'slideOutRight 0.3s ease-in forwards';
-            setTimeout(() => el.remove(), 300);
-        }, 3000);
-    }
-
-    // =========================================================
-    // ✅ INITIAL BUTTON STATES
-    // =========================================================
-    document.addEventListener('DOMContentLoaded', function () {
-        @auth
-            @if(auth()->user()->isFavorited($publication->id))
-                const favSvg = document.querySelector('[onclick="toggleFavorite()"] svg');
-                if (favSvg) {
-                    favSvg.setAttribute('fill', 'currentColor');
-                    favSvg.setAttribute('stroke', 'none');
-                    favSvg.classList.add('text-[#FF6B18]');
-                    favSvg.innerHTML = '<path fill="currentColor" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>';
-                }
-            @endif
-            @if(auth()->user()->isSaved($publication->id))
-                const saveSvg = document.querySelector('[onclick="saveForLater()"] svg');
-                if (saveSvg) {
-                    saveSvg.setAttribute('fill', 'currentColor');
-                    saveSvg.setAttribute('stroke', 'none');
-                    saveSvg.classList.add('text-[#FF6B18]');
-                }
-            @endif
-        @endauth
+        setSaveState(data.isSaved);
+        button.classList.add('action-pulse');
+        setTimeout(() => button.classList.remove('action-pulse'), 800);
+        showNotification(data.message, data.status === 'added' ? 'success' : 'info');
+    })
+    .catch(() => {
+        button.disabled = false;
+        button.classList.remove('opacity-60');
+        showNotification('Terjadi kesalahan jaringan', 'error');
     });
+}
 
-    // =========================================================
-    // ✅ CSS ANIMATIONS
-    // =========================================================
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes slideInRight {
-            from { transform: translateX(110%); opacity: 0; }
-            to   { transform: translateX(0);    opacity: 1; }
-        }
-        @keyframes slideOutRight {
-            from { transform: translateX(0);    opacity: 1; }
-            to   { transform: translateX(110%); opacity: 0; }
-        }
+function setSaveState(active) {
+    const svg = document.getElementById('iconSave');
+    if (active) {
+        svg.setAttribute('fill', 'currentColor');
+        svg.setAttribute('stroke', 'none');
+        svg.classList.add('text-[#FF6B18]');
+    } else {
+        svg.setAttribute('fill', 'none');
+        svg.setAttribute('stroke', 'currentColor');
+        svg.classList.remove('text-[#FF6B18]');
+    }
+}
+
+// =============================================================
+// ✅ SHARE
+// =============================================================
+function sharePublication() {
+    if (navigator.share) {
+        navigator.share({
+            title: '{{ addslashes($publication->title) }}',
+            text: 'Lihat publikasi ilmiah ini',
+            url: window.location.href
+        }).catch(err => {
+            if (err.name !== 'AbortError') console.log('Share error:', err);
+        });
+    } else {
+        navigator.clipboard.writeText(window.location.href)
+            .then(() => showNotification('Link berhasil disalin ke clipboard!', 'success'))
+            .catch(()  => showNotification('Gagal menyalin link', 'error'));
+    }
+}
+
+// =============================================================
+// ✅ AUTHORS MODAL
+// =============================================================
+function showAllAuthors() {
+    const modal     = document.getElementById('authorsModal');
+    const container = modal.querySelector('.modal-container');
+    modal.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+    requestAnimationFrame(() => {
+        modal.classList.add('show');
+        container.classList.add('show');
+    });
+}
+
+function closeAuthorsModal(event) {
+    if (event && event.target !== event.currentTarget) return;
+    const modal     = document.getElementById('authorsModal');
+    const container = modal.querySelector('.modal-container');
+    modal.classList.remove('show');
+    container.classList.remove('show');
+    setTimeout(() => {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }, 300);
+}
+
+// =============================================================
+// ✅ COVER FULLSCREEN
+// =============================================================
+function viewCoverFullscreen() {
+    window.open('{{ $cover_url }}', '_blank', 'noopener,noreferrer');
+}
+
+// =============================================================
+// ✅ NOTIFICATION
+// =============================================================
+function showNotification(message, type = 'success') {
+    const colors = { success: 'bg-green-500', info: 'bg-blue-500', error: 'bg-red-500' };
+    const icons  = {
+        success: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>',
+        info:    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>',
+        error:   '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>',
+    };
+    const el = document.createElement('div');
+    el.className = `fixed bottom-4 right-4 ${colors[type]} text-white px-5 py-3 rounded-xl shadow-xl z-[999999] flex items-center gap-2.5 font-medium text-sm`;
+    el.style.animation = 'slideInRight 0.3s ease-out';
+    el.innerHTML = `
+        <svg class="flex-shrink-0 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            ${icons[type]}
+        </svg>
+        <span>${message}</span>
     `;
-    document.head.appendChild(style);
+    document.body.appendChild(el);
+    setTimeout(() => {
+        el.style.animation = 'slideOutRight 0.3s ease-in forwards';
+        setTimeout(() => el.remove(), 300);
+    }, 3000);
+}
+
+// =============================================================
+// ✅ DOM READY — initial states + auto-trigger setelah redirect
+// =============================================================
+document.addEventListener('DOMContentLoaded', function () {
+
+    // ── Set initial button states untuk user yang sudah login ──
+    @auth
+        @if(auth()->user()->isFavorited($publication->id))
+            setFavoriteState(true);
+        @endif
+        @if(auth()->user()->isSaved($publication->id))
+            setSaveState(true);
+        @endif
+    @endauth
+
+    // ── Auto-trigger aksi setelah redirect dari login ──────────
+    const hash = window.location.hash;
+
+    if (hash === '#do-favorite' || hash === '#do-save') {
+        // Bersihkan hash dari URL tanpa reload halaman
+        history.replaceState(null, '', window.location.pathname + window.location.search);
+
+        const action = hash === '#do-favorite' ? 'favorite' : 'save';
+        const btnId  = action === 'favorite' ? 'btnFavorite' : 'btnSave';
+
+        // Scroll ke tombol agar user tahu aksi sedang dijalankan
+        const btn = document.getElementById(btnId);
+        if (btn) {
+            btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            btn.classList.add('action-pulse');
+            setTimeout(() => btn.classList.remove('action-pulse'), 800);
+        }
+
+        // Jalankan aksi setelah sedikit delay (beri waktu halaman render penuh)
+        setTimeout(() => {
+            if (action === 'favorite') {
+                toggleFavorite();
+            } else {
+                saveForLater();
+            }
+        }, 600);
+    }
+});
+
+// ── Tutup modal dengan Escape ───────────────────────────────
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+        const loginModal = document.getElementById('loginRequiredModal');
+        if (loginModal.style.display === 'block') closeLoginModal();
+
+        const authorsModal = document.getElementById('authorsModal');
+        if (authorsModal && authorsModal.style.display === 'block') closeAuthorsModal();
+    }
+});
 </script>
 @endpush
 @endsection
