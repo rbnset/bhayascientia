@@ -866,6 +866,7 @@
         </div>
     </div>
 </div>
+@endsection
 
 @push('scripts')
 <script>
@@ -1209,4 +1210,3 @@ style.textContent = `
 document.head.appendChild(style);
 </script>
 @endpush
-@endsection
