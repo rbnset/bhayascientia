@@ -88,7 +88,7 @@ class GoogleAuthController extends Controller
             }
 
             return redirect($redirectTo ?? route('publikasi.library'))
-                ->with('success', 'Berhasil login dengan Google! Selamat datang, ' . $user->name);
+                ->with('success', 'Berhasil login dengan Google! ...');
         } catch (Exception $e) {
             return redirect()->route('login')
                 ->withErrors(['error' => 'Gagal login dengan Google. Silakan coba lagi.']);
@@ -170,7 +170,7 @@ class GoogleAuthController extends Controller
             }
 
             return redirect($redirectTo ?? route('publikasi.library'))
-                ->with('success', 'Berhasil login dengan Facebook! Selamat datang, ' . $user->name);
+                ->with('success', 'Berhasil login dengan Facebook! ...');
         } catch (Exception $e) {
             return redirect()->route('login')
                 ->withErrors(['error' => 'Gagal login dengan Facebook. Silakan coba lagi.']);
