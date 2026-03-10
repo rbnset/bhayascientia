@@ -21,7 +21,7 @@ class PublicationIndexController extends Controller
     public function index(Request $request)
     {
         // ✅ Cek tour — letakkan paling atas agar tersedia di semua return path
-        $showTour = ! session()->has('has_seen_index_tour');
+        $showTour = ! request()->cookie('has_seen_index_tour');
 
         $publicationTypes = PublicationType::with('content')
             ->where('is_active', true)

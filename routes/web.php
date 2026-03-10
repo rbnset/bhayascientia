@@ -21,6 +21,7 @@ use App\Http\Controllers\Publication\PublicationSearchController;
 use App\Http\Controllers\Publication\PublicationTrendingController;
 use App\Http\Controllers\SubmissionGuidelineController;
 use App\Http\Controllers\SubscriptionController;
+use App\Http\Controllers\TourController;
 use App\Models\PublicationVersion;
 use App\Support\PdfStamper;
 use Illuminate\Support\Facades\Route;
@@ -239,15 +240,8 @@ Route::middleware(['auth', 'verified.otp'])->group(function () {
 | ✅ Product Tour — Session-based, simpan per halaman
 |--------------------------------------------------------------------------
 */
-Route::post('/tour/{page}/complete', function (string $page) {
-    $allowed = ['index', 'browse', 'search', 'library', 'trending', 'kategori'];
-
-    if (in_array($page, $allowed)) {
-        session(["has_seen_{$page}_tour" => true]);
-    }
-
-    return response()->json(['ok' => true]);
-})->name('tour.complete');
+Route::post('/tour/complete/{page}', [TourController::class, 'complete'])
+    ->name('tour.complete');
 
 /*
 |--------------------------------------------------------------------------
