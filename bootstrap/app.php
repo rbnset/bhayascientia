@@ -13,14 +13,14 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
 
         // ── Alias Middleware ──────────────────────────────────────────────────
-        // $middleware->alias([
-        //     'verified.otp' => \App\Http\Middleware\EnsureEmailIsVerified::class,
-        // ]);
+        $middleware->alias([
+            'verified.otp' => \App\Http\Middleware\EnsureEmailIsVerified::class,
+        ]);
 
         // ── Security Headers (berlaku untuk SEMUA halaman web) ────────────────
-        // $middleware->web(append: [
-        //     \App\Http\Middleware\SecurityHeaders::class,
-        // ]);
+        $middleware->web(append: [
+            \App\Http\Middleware\SecurityHeaders::class,
+        ]);
 
         // ✅ Onboarding HARUS pakai appendToGroup 'web'
         // karena butuh session yang sudah di-start oleh middleware web bawaan
