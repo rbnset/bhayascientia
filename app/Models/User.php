@@ -30,6 +30,7 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         'facebook_id',
         'avatar',
         'provider',
+        'has_seen_onboarding',
     ];
 
     protected $hidden = [
@@ -42,6 +43,7 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         return [
             'email_verified_at' => 'datetime',
             'password'          => 'hashed',
+            'has_seen_onboarding'  => 'boolean',
         ];
     }
 

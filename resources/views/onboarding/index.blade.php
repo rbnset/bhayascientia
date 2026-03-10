@@ -20,24 +20,20 @@
     {{-- SPLASH SCREEN — fixed, full screen, semua device --}}
     {{-- ============================================================ --}}
     <div id="splash-screen" style="
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: 99999;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, #FF6B18 0%, #D63A1F 100%);
-    opacity: 1;
-    transition: opacity 0.7s ease-in-out;
-    isolation: isolate;
-    overflow: hidden;
-">
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        width: 100vw; height: 100vh;
+        z-index: 99999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #FF6B18 0%, #D63A1F 100%);
+        opacity: 1;
+        transition: opacity 0.7s ease-in-out;
+        isolation: isolate;
+        overflow: hidden;
+    ">
         {{-- Decorative circles --}}
         <div
             style="position:absolute;top:-4rem;right:-4rem;width:16rem;height:16rem;border-radius:9999px;background:rgba(255,255,255,0.05);pointer-events:none;">
@@ -103,7 +99,6 @@
             height: 100vh !important;
         }
 
-        /* ✅ Kunci utama: pastikan onboarding wrapper tidak buat stacking context baru saat splash aktif */
         body.splash-active>div[x-data] {
             position: relative;
             z-index: 0 !important;
@@ -112,34 +107,53 @@
 
     <script>
         (function () {
-        const splash      = document.getElementById('splash-screen');
-        const STORAGE_KEY = 'dabraka_splash_shown';
+            const splash      = document.getElementById('splash-screen');
+            const STORAGE_KEY = 'dabraka_splash_shown';
 
-        document.body.classList.add('splash-active');
+            // ✅ Safety net: jika user login & sudah seen onboarding → redirect ke home
+            // Ini fallback jika controller somehow tidak menangkapnya
+            const isLoggedIn    = {{ auth()->check() ? 'true' : 'false' }};
+            const hasSeenInDB   = {{ auth()->check() && auth()->user()->has_seen_onboarding ? 'true' : 'false' }};
+            const homeUrl       = '{{ route("home") }}';
 
-        function hideSplash() {
-            splash.style.opacity = '0';
-            setTimeout(function () {
-                splash.style.display     = 'none';
-                splash.style.visibility  = 'hidden';
+            if (isLoggedIn && hasSeenInDB) {
+                // Sembunyikan splash langsung & redirect
+                splash.style.display = 'none';
+                window.location.href = homeUrl;
+                return;
+            }
+
+            // ✅ Blok scroll saat splash aktif
+            document.body.classList.add('splash-active');
+
+            function hideSplash() {
+                splash.style.opacity = '0';
+                setTimeout(function () {
+                    splash.style.display    = 'none';
+                    splash.style.visibility = 'hidden';
+                    document.body.classList.remove('splash-active');
+                }, 700);
+            }
+
+            // ✅ Sudah pernah lihat splash → sembunyikan langsung tanpa animasi
+            if (localStorage.getItem(STORAGE_KEY)) {
+                splash.style.display    = 'none';
+                splash.style.visibility = 'hidden';
                 document.body.classList.remove('splash-active');
-            }, 700);
-        }
+                return;
+            }
 
-        if (localStorage.getItem(STORAGE_KEY)) {
-            splash.style.display    = 'none';
-            splash.style.visibility = 'hidden';
-            document.body.classList.remove('splash-active');
-            return;
-        }
-
-        setTimeout(function () {
-            hideSplash();
-            localStorage.setItem(STORAGE_KEY, '1');
-        }, 2000);
-    })();
+            // ✅ First visit → tampil 2 detik lalu fade out
+            setTimeout(function () {
+                hideSplash();
+                localStorage.setItem(STORAGE_KEY, '1');
+            }, 2000);
+        })();
     </script>
 
+    {{-- ============================================================ --}}
+    {{-- ONBOARDING CONTENT --}}
+    {{-- ============================================================ --}}
     <div x-data="onboarding()" x-cloak class="flex flex-col min-h-screen lg:flex-row">
 
         {{-- ================================================================ --}}
@@ -213,7 +227,8 @@
                             ? 'w-8 h-2.5 bg-white'
                             : i < step
                                 ? 'w-2.5 h-2.5 bg-white/50'
-                                : 'w-2.5 h-2.5 bg-white/25'"></div>
+                                : 'w-2.5 h-2.5 bg-white/25'">
+                    </div>
                 </template>
                 <span class="ml-3 text-sm font-medium text-white/60">
                     <span x-text="step"></span> / <span x-text="totalSteps"></span>
@@ -256,7 +271,7 @@
                     x-transition:enter-end="opacity-100 translate-x-0"
                     x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100"
                     x-transition:leave-end="opacity-0">
-                    {{-- Mobile Illustration --}}
+
                     <div class="flex justify-center mb-5 lg:hidden">
                         <div class="w-16 h-16 bg-[#FFECE1] rounded-[14px] flex items-center justify-center text-4xl">🎓
                         </div>
@@ -314,6 +329,7 @@
                     x-transition:enter-end="opacity-100 translate-x-0"
                     x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100"
                     x-transition:leave-end="opacity-0">
+
                     <div class="flex justify-center mb-5 lg:hidden">
                         <div class="w-16 h-16 bg-[#FFECE1] rounded-[14px] flex items-center justify-center text-4xl">📚
                         </div>
@@ -381,6 +397,7 @@
                     x-transition:enter-end="opacity-100 translate-x-0"
                     x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100"
                     x-transition:leave-end="opacity-0">
+
                     <div class="flex justify-center mb-5 lg:hidden">
                         <div class="w-16 h-16 bg-[#FFECE1] rounded-[14px] flex items-center justify-center text-4xl">
                             🇮🇩</div>

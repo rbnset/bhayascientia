@@ -18,7 +18,6 @@ class GoogleAuthController extends Controller
      */
     public function redirectToGoogle()
     {
-        // ✅ Simpan full redirect URL ke session sebelum ke Google
         if (request()->query('redirect')) {
             Session::put('oauth_redirect', urldecode(request()->query('redirect')));
         }
@@ -34,10 +33,11 @@ class GoogleAuthController extends Controller
         try {
             $googleUser = Socialite::driver('google')->user();
 
-            $user = User::where('email', $googleUser->email)->first();
+            $user        = User::where('email', $googleUser->email)->first();
+            $isNewUser   = false;
 
             if ($user) {
-                if (!$user->google_id) {
+                if (! $user->google_id) {
                     $user->update([
                         'google_id'         => $googleUser->id,
                         'avatar'            => $googleUser->avatar,
@@ -46,30 +46,43 @@ class GoogleAuthController extends Controller
                     ]);
                 }
             } else {
+                // ✅ User baru via Google → has_seen_onboarding = false
                 $user = User::create([
-                    'name'              => $googleUser->name,
-                    'email'             => $googleUser->email,
-                    'google_id'         => $googleUser->id,
-                    'avatar'            => $googleUser->avatar,
-                    'provider'          => 'google',
-                    'email_verified_at' => now(),
-                    'password'          => Hash::make(Str::random(24)),
+                    'name'                => $googleUser->name,
+                    'email'               => $googleUser->email,
+                    'google_id'           => $googleUser->id,
+                    'avatar'              => $googleUser->avatar,
+                    'provider'            => 'google',
+                    'email_verified_at'   => now(),
+                    'password'            => Hash::make(Str::random(24)),
+                    'has_seen_onboarding' => false,
                 ]);
 
                 $user->assignRole('Author');
+                $isNewUser = true;
             }
 
             Auth::login($user, true);
 
-            // ✅ Ambil intended redirect dari session
+            // ✅ User baru → onboarding dulu
+            if ($isNewUser || ! $user->has_seen_onboarding) {
+                $redirectTo = Session::pull('oauth_redirect');
+                if ($redirectTo) {
+                    session(['onboarding_intended' => $redirectTo]);
+                }
+
+                return redirect()->route('onboarding.show')
+                    ->with('success', 'Selamat datang di DABRAKA, ' . $user->name . '! 🎉');
+            }
+
+            // ✅ User lama → ambil intended redirect dari session
             $redirectTo = Session::pull('oauth_redirect');
 
-            // ✅ Validasi keamanan — hanya izinkan URL dari domain sendiri
             if ($redirectTo) {
                 $parsedHost = parse_url($redirectTo, PHP_URL_HOST);
                 $appHost    = parse_url(config('app.url'), PHP_URL_HOST);
 
-                if (!$parsedHost || $parsedHost !== $appHost) {
+                if (! $parsedHost || $parsedHost !== $appHost) {
                     $redirectTo = null;
                 }
             }
@@ -87,7 +100,6 @@ class GoogleAuthController extends Controller
      */
     public function redirectToFacebook()
     {
-        // ✅ Simpan full redirect URL ke session sebelum ke Facebook
         if (request()->query('redirect')) {
             Session::put('oauth_redirect', urldecode(request()->query('redirect')));
         }
@@ -103,10 +115,11 @@ class GoogleAuthController extends Controller
         try {
             $facebookUser = Socialite::driver('facebook')->user();
 
-            $user = User::where('email', $facebookUser->email)->first();
+            $user      = User::where('email', $facebookUser->email)->first();
+            $isNewUser = false;
 
             if ($user) {
-                if (!$user->facebook_id) {
+                if (! $user->facebook_id) {
                     $user->update([
                         'facebook_id'       => $facebookUser->id,
                         'avatar'            => $facebookUser->avatar,
@@ -115,30 +128,43 @@ class GoogleAuthController extends Controller
                     ]);
                 }
             } else {
+                // ✅ User baru via Facebook → has_seen_onboarding = false
                 $user = User::create([
-                    'name'              => $facebookUser->name,
-                    'email'             => $facebookUser->email,
-                    'facebook_id'       => $facebookUser->id,
-                    'avatar'            => $facebookUser->avatar,
-                    'provider'          => 'facebook',
-                    'email_verified_at' => now(),
-                    'password'          => Hash::make(Str::random(24)),
+                    'name'                => $facebookUser->name,
+                    'email'               => $facebookUser->email,
+                    'facebook_id'         => $facebookUser->id,
+                    'avatar'              => $facebookUser->avatar,
+                    'provider'            => 'facebook',
+                    'email_verified_at'   => now(),
+                    'password'            => Hash::make(Str::random(24)),
+                    'has_seen_onboarding' => false,
                 ]);
 
                 $user->assignRole('Author');
+                $isNewUser = true;
             }
 
             Auth::login($user, true);
 
-            // ✅ Ambil intended redirect dari session
+            // ✅ User baru → onboarding dulu
+            if ($isNewUser || ! $user->has_seen_onboarding) {
+                $redirectTo = Session::pull('oauth_redirect');
+                if ($redirectTo) {
+                    session(['onboarding_intended' => $redirectTo]);
+                }
+
+                return redirect()->route('onboarding.show')
+                    ->with('success', 'Selamat datang di DABRAKA, ' . $user->name . '! 🎉');
+            }
+
+            // ✅ User lama → ambil intended redirect dari session
             $redirectTo = Session::pull('oauth_redirect');
 
-            // ✅ Validasi keamanan — hanya izinkan URL dari domain sendiri
             if ($redirectTo) {
                 $parsedHost = parse_url($redirectTo, PHP_URL_HOST);
                 $appHost    = parse_url(config('app.url'), PHP_URL_HOST);
 
-                if (!$parsedHost || $parsedHost !== $appHost) {
+                if (! $parsedHost || $parsedHost !== $appHost) {
                     $redirectTo = null;
                 }
             }

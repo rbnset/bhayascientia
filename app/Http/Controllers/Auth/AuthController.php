@@ -42,11 +42,12 @@ class AuthController extends Controller
         ]);
 
         $user = User::create([
-            'name'              => $validated['name'],
-            'email'             => $validated['email'],
-            'password'          => Hash::make($validated['password']),
-            'provider'          => 'manual',
-            'email_verified_at' => null,
+            'name'                => $validated['name'],
+            'email'               => $validated['email'],
+            'password'            => Hash::make($validated['password']),
+            'provider'            => 'manual',
+            'email_verified_at'   => null,
+            'has_seen_onboarding' => false, // ✅ eksplisit false — user baru wajib lihat onboarding
         ]);
 
         $user->assignRole('Author');
@@ -68,6 +69,8 @@ class AuthController extends Controller
             ]);
         }
 
+        // ✅ Setelah register → OTP dulu, bukan onboarding langsung
+        // Onboarding akan muncul SETELAH OTP verified karena middleware akan redirect
         return redirect()->route('otp.show')
             ->with('info', '📧 Kode verifikasi telah dikirim ke ' . $user->email . '. Silakan cek inbox Anda.');
     }
@@ -99,7 +102,8 @@ class AuthController extends Controller
 
             $user = Auth::user();
 
-            if (!$user->isEmailVerified()) {
+            // Cek OTP
+            if (! $user->isEmailVerified()) {
                 $otp = $user->generateOtp();
 
                 try {
@@ -119,7 +123,19 @@ class AuthController extends Controller
                     ->with('info', '📧 Akun Anda belum diverifikasi. Kode OTP baru telah dikirim ke ' . $user->email);
             }
 
-            // ✅ Baca intended redirect
+            // ✅ Cek onboarding — user lama yang belum pernah lihat onboarding
+            // (misal: existing user sebelum fitur onboarding ada)
+            if (! $user->has_seen_onboarding) {
+                // Simpan intended redirect jika ada
+                $redirectTo = $request->input('_redirect_to') ?? $request->query('redirect') ?? null;
+                if ($redirectTo) {
+                    session(['onboarding_intended' => urldecode(urldecode($redirectTo))]);
+                }
+
+                return redirect()->route('onboarding.show');
+            }
+
+            // ✅ Baca intended redirect (untuk after_login flow dari show.blade.php)
             $redirectTo = $request->input('_redirect_to')
                 ?? $request->query('redirect')
                 ?? null;
@@ -129,7 +145,7 @@ class AuthController extends Controller
                 $parsedHost = parse_url($decoded, PHP_URL_HOST);
                 $appHost    = parse_url(config('app.url'), PHP_URL_HOST);
 
-                if (!$parsedHost || $parsedHost !== $appHost) {
+                if (! $parsedHost || $parsedHost !== $appHost) {
                     $redirectTo = null;
                 } else {
                     $redirectTo = $decoded;
@@ -155,6 +171,10 @@ class AuthController extends Controller
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
+        // ✅ JANGAN hapus has_seen_onboarding dari session
+        // karena user yang logout sudah pasti pernah lihat onboarding
+        // (has_seen_onboarding tersimpan di database, bukan session)
 
         return redirect()->route('home')
             ->with('success', 'Anda telah logout.');
