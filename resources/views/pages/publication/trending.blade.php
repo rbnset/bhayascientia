@@ -157,6 +157,8 @@
         <p class="text-[#737373] text-sm sm:text-base max-w-xl mx-auto">
             Paling populer dalam
             <span class="font-bold text-[#FF6B18]">{{ $period }} hari terakhir</span>
+            —
+            <span class="font-semibold text-[#1A1A1A]">Top {{ $trendingPublications->count() }}</span>
         </p>
 
         @if($typeStats && count($typeStats) > 0)

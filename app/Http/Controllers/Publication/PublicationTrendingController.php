@@ -50,9 +50,10 @@ class PublicationTrendingController extends Controller
             ->orderByDesc('recent_downloads')
             ->orderByDesc('recent_views')
             ->orderByDesc('published_at')
-            ->take(50)
+            ->take(20)
             ->get()
             ->filter(fn($pub) => $pub->recent_views > 0 || $pub->recent_downloads > 0)
+            ->take(10)
             ->values()
             ->map(function ($pub) {
                 // ✅ Get publication type with fallback
