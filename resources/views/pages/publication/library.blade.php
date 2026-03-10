@@ -150,6 +150,28 @@
     </div>
 
     @if(isset($requiresLogin) && $requiresLogin)
+
+    {{-- ✅ MOBILE ONLY: Compact sticky banner (tidak tampil di sm ke atas) --}}
+    <div class="sm:hidden mb-4 sticky top-[64px] z-20">
+        <div
+            class="bg-gradient-to-r from-[#FF6B18] to-[#E64627] rounded-2xl px-4 py-3 shadow-lg flex items-center gap-3">
+            <div class="flex items-center justify-center rounded-full w-9 h-9 bg-white/20 shrink-0">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-bold leading-tight text-white">Login untuk akses Library</p>
+                <p class="text-xs text-white/80">Simpan favorit, history & koleksi pribadi</p>
+            </div>
+            <a href="{{ route('login') }}"
+                class="shrink-0 bg-white text-[#FF6B18] text-xs font-bold px-3 py-1.5 rounded-full hover:bg-[#FFF7F2] transition-all">
+                Login
+            </a>
+        </div>
+    </div>
+
     {{-- LOGIN GATE --}}
     <div class="relative grid grid-cols-1 gap-3 mb-6 sm:gap-4 sm:mb-8 sm:grid-cols-3">
         <div class="absolute inset-0 backdrop-blur-[2px] bg-white/60 z-10 rounded-xl sm:rounded-2xl"></div>
@@ -572,7 +594,8 @@
                         Hapus Filter
                     </a>
                     @else
-                    <p class="text-[#737373] text-base sm:text-lg mb-2 font-semibold">Belum ada publikasi favorit</p>
+                    <p class="text-[#737373] text-base sm:text-lg mb-2 font-semibold">Belum ada publikasi favorit
+                    </p>
                     <p class="text-[#737373] text-sm mb-4">
                         Mulai tandai publikasi yang Anda sukai
                     </p>
@@ -639,7 +662,8 @@
                             {{ $publication['category'] ?? 'Umum' }} • {{ $publication['authors_text'] ?? 'Tanpa
                             penulis' }}
                         </p>
-                        <p class="text-[10px] sm:text-xs text-[#737373]">{{ $publication['action_time'] ?? '-' }}</p>
+                        <p class="text-[10px] sm:text-xs text-[#737373]">{{ $publication['action_time'] ?? '-' }}
+                        </p>
                     </div>
 
                     <svg class="w-4 h-4 sm:w-5 sm:h-5 text-[#737373] group-hover:text-[#FF6B18] transition-colors shrink-0"
@@ -758,7 +782,8 @@
                         Hapus Filter
                     </a>
                     @else
-                    <p class="text-[#737373] text-base sm:text-lg mb-2 font-semibold">Belum ada publikasi yang disimpan
+                    <p class="text-[#737373] text-base sm:text-lg mb-2 font-semibold">Belum ada publikasi yang
+                        disimpan
                     </p>
                     <p class="text-[#737373] text-sm mb-4">
                         Simpan publikasi untuk dibaca nanti
