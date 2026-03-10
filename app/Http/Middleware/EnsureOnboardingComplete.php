@@ -10,31 +10,22 @@ class EnsureOnboardingComplete
 {
     public function handle(Request $request, Closure $next): Response
     {
-        // ✅ Skip semua route yang tidak perlu dicek
         if ($this->shouldSkip($request)) {
             return $next($request);
         }
 
-        // ✅ USER SUDAH LOGIN → cek database
+        // ✅ USER LOGIN → cek database
         if (auth()->check()) {
             if (! auth()->user()->has_seen_onboarding) {
                 session(['onboarding_intended' => $request->fullUrl()]);
                 return redirect()->route('onboarding.show');
             }
 
-            // ✅ Selalu sync session saat user login & sudah seen onboarding
-            // Ini kunci utama: saat logout nanti, session sudah punya
-            // has_seen_onboarding = true SEBELUM session di-invalidate
-            // Tapi karena invalidate menghapus semua, kita set ulang di logout()
-            if (! session()->has('has_seen_onboarding')) {
-                session(['has_seen_onboarding' => true]);
-            }
-
             return $next($request);
         }
 
-        // ✅ GUEST → cek session
-        if (! session()->has('has_seen_onboarding')) {
+        // ✅ GUEST → cek cookie (persisten, tidak hilang saat tutup browser)
+        if (! $request->cookie('has_seen_onboarding')) {
             session(['onboarding_intended' => $request->fullUrl()]);
             return redirect()->route('onboarding.show');
         }

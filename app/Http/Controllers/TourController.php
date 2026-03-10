@@ -3,33 +3,48 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Cookie;
 
 class TourController extends Controller
 {
+    private const ALLOWED_PAGES = ['index', 'browse', 'detail'];
+    private const COOKIE_TTL_MINUTES = 60 * 24 * 365; // 1 tahun
+
     public function complete(Request $request, string $page)
     {
-        $allowedPages = ['index', 'browse', 'detail']; // whitelist page
-
-        if (! in_array($page, $allowedPages)) {
-            return response()->json(['status' => 'ignored']);
+        // ✅ Whitelist validasi page
+        if (! in_array($page, self::ALLOWED_PAGES, strict: true)) {
+            return response()->json([
+                'status'  => 'ignored',
+                'message' => 'Page not recognized.',
+            ], 422);
         }
 
-        $cookieName = "has_seen_{$page}_tour";
+        // ✅ Idempotency — skip kalau cookie sudah ada
+        $cookieName = 'has_seen_' . $page . '_tour';
+        if ($request->cookie($cookieName)) {
+            return response()->json([
+                'status'  => 'already_seen',
+                'message' => 'Tour already completed.',
+            ], 200);
+        }
 
-        // Cookie berlaku 365 hari, httpOnly, aman
+        // ✅ Set cookie dengan flag keamanan
         $cookie = cookie(
             name: $cookieName,
             value: '1',
-            minutes: 60 * 24 * 365, // 1 tahun
+            minutes: self::COOKIE_TTL_MINUTES,
             path: '/',
-            secure: request()->isSecure(),
+            domain: null,
+            secure: $request->isSecure(),
             httpOnly: true,
             sameSite: 'Lax',
         );
 
         return response()
-            ->json(['status' => 'ok'])
+            ->json([
+                'status'  => 'ok',
+                'message' => 'Tour marked as completed.',
+            ], 200)
             ->withCookie($cookie);
     }
 }

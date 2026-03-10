@@ -237,11 +237,12 @@ Route::middleware(['auth', 'verified.otp'])->group(function () {
 
 /*
 |--------------------------------------------------------------------------
-| ✅ Product Tour — Session-based, simpan per halaman
+| ✅ Product Tour — Cookie-based, simpan per halaman
 |--------------------------------------------------------------------------
 */
 Route::post('/tour/complete/{page}', [TourController::class, 'complete'])
-    ->name('tour.complete');
+    ->name('tour.complete')
+    ->whereIn('page', ['index', 'browse', 'detail']);
 
 /*
 |--------------------------------------------------------------------------
