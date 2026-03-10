@@ -453,7 +453,7 @@
 
 @section('custom_navbar')
 <x-navbar ctaLabel="Browse Publikasi" ctaRoute="publikasi.index" ctaIcon="book" :showAvatarWhenAuth="false"
-    :showCtaAlways="true" />
+    :showCtaAlways="true" :showSearch="false" />
 @endsection
 
 @section('content')

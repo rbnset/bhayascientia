@@ -782,299 +782,385 @@
     </div>
 </div>
 
+{{-- ✅ Modal: Login Required --}}
+<div id="loginRequiredModal" style="display:none;">
+    {{-- Backdrop --}}
+    <div class="modal-overlay" id="loginModalBackdrop" onclick="closeLoginModal()"></div>
+
+    {{-- Card --}}
+    <div class="modal-container" id="loginModalContainer">
+        <div class="relative w-full max-w-sm p-8 text-center bg-white shadow-2xl rounded-2xl"
+            onclick="event.stopPropagation()">
+
+            {{-- Close button --}}
+            <button onclick="closeLoginModal()"
+                class="absolute top-4 right-4 p-1.5 rounded-full hover:bg-[#F8F9FC] transition-colors group">
+                <svg class="w-5 h-5 text-[#737373] group-hover:text-[#FF6B18]" fill="none" stroke="currentColor"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+
+            {{-- Ilustrasi Icon --}}
+            <div
+                class="w-20 h-20 bg-gradient-to-br from-[#FFF7F2] to-[#FFE8D6] rounded-full flex items-center justify-center mx-auto mb-5 shadow-inner">
+                <svg class="w-10 h-10 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+            </div>
+
+            {{-- Title & Desc --}}
+            <h3 id="loginModalTitle" class="text-xl font-bold text-[#1A1A1A] mb-2">
+                Masuk untuk melanjutkan
+            </h3>
+            <p id="loginModalDesc" class="text-[#737373] text-sm mb-7 leading-relaxed px-2">
+                Yuk login dulu biar kamu bisa menyimpan publikasi favoritmu! 🌟
+            </p>
+
+            {{-- CTA Buttons --}}
+            <div class="flex flex-col gap-3">
+                <a id="loginModalBtn" href="{{ route('login') }}"
+                    class="w-full py-3.5 bg-gradient-to-r from-[#FF6B18] to-[#E64627] text-white font-bold rounded-xl hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                    </svg>
+                    Masuk Sekarang
+                </a>
+                <a href="{{ route('register') }}"
+                    class="w-full py-3.5 border-2 border-[#FF6B18] text-[#FF6B18] hover:bg-[#FFF7F2] font-bold rounded-xl transition-all duration-200 flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                    </svg>
+                    Daftar Gratis
+                </a>
+                <button onclick="closeLoginModal()"
+                    class="text-[#737373] hover:text-[#1A1A1A] text-sm font-medium transition-colors py-1">
+                    Nanti saja
+                </button>
+            </div>
+
+            {{-- Decorative dots --}}
+            <div
+                class="absolute top-0 left-0 w-24 h-24 rounded-full bg-[#FFF7F2] -z-10 -translate-x-8 -translate-y-8 opacity-60">
+            </div>
+            <div
+                class="absolute bottom-0 right-0 w-16 h-16 rounded-full bg-[#FFF7F2] -z-10 translate-x-6 translate-y-6 opacity-60">
+            </div>
+        </div>
+    </div>
+</div>
+
 @push('scripts')
 <script>
-    // ✅ CSRF Token setup
-const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    const isLoggedIn = {{ auth()->check() ? 'true' : 'false' }};
 
-/**
- * ✅ Toggle Favorite
- */
-function toggleFavorite() {
-    const button = event.currentTarget;
-    const svg = button.querySelector('svg');
+    // =========================================================
+    // ✅ LOGIN REQUIRED MODAL
+    // =========================================================
+    const loginMessages = {
+        favorite: {
+            title: 'Tambahkan ke Favorit? ⭐',
+            desc:  'Login dulu untuk menandai publikasi favoritmu. Temukan lagi dengan mudah kapan saja!',
+        },
+        save: {
+            title: 'Simpan untuk Dibaca Nanti? 📚',
+            desc:  'Login dulu agar publikasi ini tersimpan di koleksimu dan bisa kamu baca kapan pun.',
+        },
+    };
 
-    // Prevent double click
-    if (button.disabled) return;
-    button.disabled = true;
+    function showLoginModal(action = 'default') {
+        const msg = loginMessages[action] ?? {
+            title: 'Masuk untuk Melanjutkan',
+            desc:  'Kamu perlu login untuk menggunakan fitur ini.',
+        };
 
-    button.classList.add('animate-ping');
+        document.getElementById('loginModalTitle').textContent = msg.title;
+        document.getElementById('loginModalDesc').textContent  = msg.desc;
 
-    fetch('{{ route("publikasi.favorite", $publication->slug) }}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': csrfToken,
-            'Accept': 'application/json'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        button.classList.remove('animate-ping');
-        button.disabled = false;
+        // Intended redirect — kembali ke halaman ini setelah login
+        const returnUrl = encodeURIComponent(window.location.href);
+        document.getElementById('loginModalBtn').href = `{{ route('login') }}?redirect=${returnUrl}`;
 
-        if (!data.success) {
-            // Redirect to login if needed
-            if (data.redirect) {
-                window.location.href = data.redirect;
-                return;
-            }
-            showNotification(data.message || 'Terjadi kesalahan', 'error');
-            return;
-        }
+        const modal     = document.getElementById('loginRequiredModal');
+        const backdrop  = document.getElementById('loginModalBackdrop');
+        const container = document.getElementById('loginModalContainer');
 
-        // ✅ Update icon state
-        if (data.isFavorited) {
-            // Filled star (favorited)
-            svg.setAttribute('fill', 'currentColor');
-            svg.setAttribute('stroke', 'none');
-            svg.innerHTML = '<path fill="currentColor" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>';
-        } else {
-            // Outline star (not favorited)
-            svg.setAttribute('fill', 'none');
-            svg.setAttribute('stroke', 'currentColor');
-            svg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>';
-        }
+        modal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
 
-        showNotification(data.message, data.status === 'added' ? 'success' : 'info');
-    })
-    .catch(error => {
-        button.classList.remove('animate-ping');
-        button.disabled = false;
-        showNotification('Terjadi kesalahan jaringan', 'error');
-        console.error('Error:', error);
-    });
-}
-
-/**
- * ✅ Save for Later
- */
-function saveForLater() {
-    const button = event.currentTarget;
-    const svg = button.querySelector('svg');
-
-    if (button.disabled) return;
-    button.disabled = true;
-
-    button.classList.add('animate-ping');
-
-    fetch('{{ route("publikasi.save", $publication->slug) }}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': csrfToken,
-            'Accept': 'application/json'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        button.classList.remove('animate-ping');
-        button.disabled = false;
-
-        if (!data.success) {
-            if (data.redirect) {
-                window.location.href = data.redirect;
-                return;
-            }
-            showNotification(data.message || 'Terjadi kesalahan', 'error');
-            return;
-        }
-
-        // ✅ Update icon state
-        if (data.isSaved) {
-            // Filled bookmark
-            svg.setAttribute('fill', 'currentColor');
-            svg.setAttribute('stroke', 'none');
-        } else {
-            // Outline bookmark
-            svg.setAttribute('fill', 'none');
-            svg.setAttribute('stroke', 'currentColor');
-        }
-
-        showNotification(data.message, data.status === 'added' ? 'success' : 'info');
-    })
-    .catch(error => {
-        button.classList.remove('animate-ping');
-        button.disabled = false;
-        showNotification('Terjadi kesalahan jaringan', 'error');
-        console.error('Error:', error);
-    });
-}
-
-/**
- * ✅ Share Publication
- */
-function sharePublication() {
-    if (navigator.share) {
-        navigator.share({
-            title: '{{ $publication->title }}',
-            text: 'Lihat publikasi ilmiah ini di BHAYACIENTIA',
-            url: window.location.href
-        }).catch(err => {
-            if (err.name !== 'AbortError') {
-                console.log('Error sharing:', err)
-            }
+        // Trigger animasi (pakai class modal-overlay & modal-container yang sudah ada di CSS)
+        requestAnimationFrame(() => {
+            backdrop.classList.add('show');
+            container.classList.add('show');
         });
-    } else {
-        navigator.clipboard.writeText(window.location.href)
-            .then(() => {
-                showNotification('Link berhasil disalin ke clipboard!', 'success');
-            })
-            .catch(() => {
-                showNotification('Gagal menyalin link', 'error');
-            });
     }
-}
 
-/**
- * ✅ Show All Authors Modal
- */
-function showAllAuthors() {
-    const modal = document.getElementById('authorsModal');
-    const container = modal.querySelector('.modal-container');
+    function closeLoginModal() {
+        const modal     = document.getElementById('loginRequiredModal');
+        const backdrop  = document.getElementById('loginModalBackdrop');
+        const container = document.getElementById('loginModalContainer');
 
-    // Show modal
-    modal.style.display = 'block';
-    document.body.style.overflow = 'hidden';
+        backdrop.classList.remove('show');
+        container.classList.remove('show');
 
-    // Trigger animation
-    requestAnimationFrame(() => {
-        modal.classList.add('show');
-        container.classList.add('show');
+        setTimeout(() => {
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }, 300);
+    }
+
+    // Tutup dengan Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const loginModal = document.getElementById('loginRequiredModal');
+            if (loginModal.style.display === 'block') closeLoginModal();
+
+            const authorsModal = document.getElementById('authorsModal');
+            if (authorsModal.style.display === 'block') closeAuthorsModal();
+        }
     });
-}
 
-/**
- * ✅ Close Authors Modal
- */
-function closeAuthorsModal(event) {
-    // If event exists and it's not clicking the overlay, return
-    if (event && event.target !== event.currentTarget) {
-        return;
+    // =========================================================
+    // ✅ TOGGLE FAVORITE
+    // =========================================================
+    function toggleFavorite() {
+        if (!isLoggedIn) {
+            showLoginModal('favorite');
+            return;
+        }
+
+        const button = event.currentTarget;
+        const svg    = button.querySelector('svg');
+
+        if (button.disabled) return;
+        button.disabled = true;
+        button.classList.add('opacity-60');
+
+        fetch('{{ route("publikasi.favorite", $publication->slug) }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            button.disabled = false;
+            button.classList.remove('opacity-60');
+
+            if (!data.success) {
+                showNotification(data.message || 'Terjadi kesalahan', 'error');
+                return;
+            }
+
+            if (data.isFavorited) {
+                svg.setAttribute('fill', 'currentColor');
+                svg.setAttribute('stroke', 'none');
+                svg.classList.add('text-[#FF6B18]');
+                svg.innerHTML = '<path fill="currentColor" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>';
+            } else {
+                svg.setAttribute('fill', 'none');
+                svg.setAttribute('stroke', 'currentColor');
+                svg.classList.remove('text-[#FF6B18]');
+                svg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>';
+            }
+
+            showNotification(data.message, data.status === 'added' ? 'success' : 'info');
+        })
+        .catch(() => {
+            button.disabled = false;
+            button.classList.remove('opacity-60');
+            showNotification('Terjadi kesalahan jaringan', 'error');
+        });
     }
 
-    const modal = document.getElementById('authorsModal');
-    const container = modal.querySelector('.modal-container');
+    // =========================================================
+    // ✅ SAVE FOR LATER
+    // =========================================================
+    function saveForLater() {
+        if (!isLoggedIn) {
+            showLoginModal('save');
+            return;
+        }
 
-    // Remove animation classes
-    modal.classList.remove('show');
-    container.classList.remove('show');
+        const button = event.currentTarget;
+        const svg    = button.querySelector('svg');
 
-    // Hide modal after animation
-    setTimeout(() => {
-        modal.style.display = 'none';
-        document.body.style.overflow = '';
-    }, 300);
-}
+        if (button.disabled) return;
+        button.disabled = true;
+        button.classList.add('opacity-60');
 
-// Close modal on Escape key
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        const modal = document.getElementById('authorsModal');
-        if (modal.style.display === 'block') {
-            closeAuthorsModal();
+        fetch('{{ route("publikasi.save", $publication->slug) }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            button.disabled = false;
+            button.classList.remove('opacity-60');
+
+            if (!data.success) {
+                showNotification(data.message || 'Terjadi kesalahan', 'error');
+                return;
+            }
+
+            if (data.isSaved) {
+                svg.setAttribute('fill', 'currentColor');
+                svg.setAttribute('stroke', 'none');
+                svg.classList.add('text-[#FF6B18]');
+            } else {
+                svg.setAttribute('fill', 'none');
+                svg.setAttribute('stroke', 'currentColor');
+                svg.classList.remove('text-[#FF6B18]');
+            }
+
+            showNotification(data.message, data.status === 'added' ? 'success' : 'info');
+        })
+        .catch(() => {
+            button.disabled = false;
+            button.classList.remove('opacity-60');
+            showNotification('Terjadi kesalahan jaringan', 'error');
+        });
+    }
+
+    // =========================================================
+    // ✅ SHARE
+    // =========================================================
+    function sharePublication() {
+        if (navigator.share) {
+            navigator.share({
+                title: '{{ addslashes($publication->title) }}',
+                text: 'Lihat publikasi ilmiah ini',
+                url: window.location.href
+            }).catch(err => {
+                if (err.name !== 'AbortError') console.log('Share error:', err);
+            });
+        } else {
+            navigator.clipboard.writeText(window.location.href)
+                .then(() => showNotification('Link berhasil disalin ke clipboard!', 'success'))
+                .catch(()  => showNotification('Gagal menyalin link', 'error'));
         }
     }
-});
 
-/**
- * ✅ View Cover Fullscreen
- */
-function viewCoverFullscreen() {
-    const coverUrl = '{{ $cover_url }}';
-    window.open(coverUrl, '_blank', 'noopener,noreferrer');
-}
+    // =========================================================
+    // ✅ AUTHORS MODAL
+    // =========================================================
+    function showAllAuthors() {
+        const modal     = document.getElementById('authorsModal');
+        const container = modal.querySelector('.modal-container');
 
-/**
- * ✅ Notification Helper
- */
-function showNotification(message, type = 'success') {
-    const colors = {
-        success: 'bg-green-500',
-        info: 'bg-blue-500',
-        error: 'bg-red-500'
-    };
+        modal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
 
-    const icons = {
-        success: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>',
-        info: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>',
-        error: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>'
-    };
+        requestAnimationFrame(() => {
+            modal.classList.add('show');
+            container.classList.add('show');
+        });
+    }
 
-    const notification = document.createElement('div');
-    notification.className = `fixed bottom-4 right-4 ${colors[type]} text-white px-6 py-3 rounded-lg shadow-lg z-50 transform transition-all duration-300 ease-out`;
-    notification.style.animation = 'slideInRight 0.3s ease-out';
-    notification.innerHTML = `
-        <div class="flex items-center gap-2">
+    function closeAuthorsModal(event) {
+        if (event && event.target !== event.currentTarget) return;
+
+        const modal     = document.getElementById('authorsModal');
+        const container = modal.querySelector('.modal-container');
+
+        modal.classList.remove('show');
+        container.classList.remove('show');
+
+        setTimeout(() => {
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }, 300);
+    }
+
+    // =========================================================
+    // ✅ COVER FULLSCREEN
+    // =========================================================
+    function viewCoverFullscreen() {
+        window.open('{{ $cover_url }}', '_blank', 'noopener,noreferrer');
+    }
+
+    // =========================================================
+    // ✅ NOTIFICATION
+    // =========================================================
+    function showNotification(message, type = 'success') {
+        const colors = {
+            success: 'bg-green-500',
+            info:    'bg-blue-500',
+            error:   'bg-red-500'
+        };
+        const icons = {
+            success: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>',
+            info:    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>',
+            error:   '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>'
+        };
+
+        const el = document.createElement('div');
+        el.className = `fixed bottom-4 right-4 ${colors[type]} text-white px-5 py-3 rounded-xl shadow-xl z-[99999] flex items-center gap-2.5 font-medium text-sm`;
+        el.style.animation = 'slideInRight 0.3s ease-out';
+        el.innerHTML = `
             <svg class="flex-shrink-0 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 ${icons[type]}
             </svg>
-            <span class="font-medium">${message}</span>
-        </div>
-    `;
+            <span>${message}</span>
+        `;
+        document.body.appendChild(el);
 
-    document.body.appendChild(notification);
-
-    setTimeout(() => {
-        notification.style.animation = 'slideOutRight 0.3s ease-in';
         setTimeout(() => {
-            notification.remove();
-        }, 300);
-    }, 3000);
-}
-
-/**
- * ✅ Set Initial Button States on Page Load
- */
-document.addEventListener('DOMContentLoaded', function() {
-    @auth
-        // ✅ Set favorite button state
-        @if(auth()->user()->isFavorited($publication->id))
-            const favoriteBtn = document.querySelector('[onclick="toggleFavorite()"] svg');
-            if (favoriteBtn) {
-                favoriteBtn.setAttribute('fill', 'currentColor');
-                favoriteBtn.setAttribute('stroke', 'none');
-                favoriteBtn.innerHTML = '<path fill="currentColor" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>';
-            }
-        @endif
-
-        // ✅ Set saved button state
-        @if(auth()->user()->isSaved($publication->id))
-            const savedBtn = document.querySelector('[onclick="saveForLater()"] svg');
-            if (savedBtn) {
-                savedBtn.setAttribute('fill', 'currentColor');
-                savedBtn.setAttribute('stroke', 'none');
-            }
-        @endif
-    @endauth
-});
-
-// ✅ Add CSS Animation
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideInRight {
-        from {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
+            el.style.animation = 'slideOutRight 0.3s ease-in forwards';
+            setTimeout(() => el.remove(), 300);
+        }, 3000);
     }
 
-    @keyframes slideOutRight {
-        from {
-            transform: translateX(0);
-            opacity: 1;
+    // =========================================================
+    // ✅ INITIAL BUTTON STATES
+    // =========================================================
+    document.addEventListener('DOMContentLoaded', function () {
+        @auth
+            @if(auth()->user()->isFavorited($publication->id))
+                const favSvg = document.querySelector('[onclick="toggleFavorite()"] svg');
+                if (favSvg) {
+                    favSvg.setAttribute('fill', 'currentColor');
+                    favSvg.setAttribute('stroke', 'none');
+                    favSvg.classList.add('text-[#FF6B18]');
+                    favSvg.innerHTML = '<path fill="currentColor" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>';
+                }
+            @endif
+            @if(auth()->user()->isSaved($publication->id))
+                const saveSvg = document.querySelector('[onclick="saveForLater()"] svg');
+                if (saveSvg) {
+                    saveSvg.setAttribute('fill', 'currentColor');
+                    saveSvg.setAttribute('stroke', 'none');
+                    saveSvg.classList.add('text-[#FF6B18]');
+                }
+            @endif
+        @endauth
+    });
+
+    // =========================================================
+    // ✅ CSS ANIMATIONS
+    // =========================================================
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideInRight {
+            from { transform: translateX(110%); opacity: 0; }
+            to   { transform: translateX(0);    opacity: 1; }
         }
-        to {
-            transform: translateX(100%);
-            opacity: 0;
+        @keyframes slideOutRight {
+            from { transform: translateX(0);    opacity: 1; }
+            to   { transform: translateX(110%); opacity: 0; }
         }
-    }
-`;
-document.head.appendChild(style);
+    `;
+    document.head.appendChild(style);
 </script>
 @endpush
 @endsection

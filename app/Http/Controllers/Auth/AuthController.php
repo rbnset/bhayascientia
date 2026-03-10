@@ -124,7 +124,13 @@ class AuthController extends Controller
                     ->with('info', '📧 Akun Anda belum diverifikasi. Kode OTP baru telah dikirim ke ' . $user->email);
             }
 
-            return redirect()->intended(route('publikasi.library'))
+            $redirectTo = $request->query('redirect')
+                ? filter_var(urldecode($request->query('redirect')), FILTER_VALIDATE_URL)
+                ? urldecode($request->query('redirect'))
+                : route('publikasi.library')
+                : route('publikasi.library');
+
+            return redirect($redirectTo)
                 ->with('success', 'Selamat datang kembali, ' . $user->name . '!');
         }
 
