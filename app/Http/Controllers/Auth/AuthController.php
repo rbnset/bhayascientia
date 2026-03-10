@@ -119,21 +119,48 @@ class AuthController extends Controller
                     ->with('info', '📧 Akun Anda belum diverifikasi. Kode OTP baru telah dikirim ke ' . $user->email);
             }
 
-            // ✅ Baca intended redirect dari hidden input (POST) atau query param (GET)
+            // ✅ Baca redirect
             $redirectTo = $request->input('_redirect_to')
                 ?? $request->query('redirect')
                 ?? null;
 
-            // ✅ Validasi keamanan — hanya izinkan URL dari domain sendiri
+            // ✅ DEBUG LOG
+            Log::info('=== LOGIN REDIRECT DEBUG ===', [
+                '_redirect_to'        => $request->input('_redirect_to'),
+                'query_redirect'      => $request->query('redirect'),
+                'redirectTo_before'   => $redirectTo,
+                'all_post_keys'       => array_keys($request->all()),
+                'app_url'             => config('app.url'),
+            ]);
+
             if ($redirectTo) {
-                $redirectTo = urldecode($redirectTo);
-                $parsedHost = parse_url($redirectTo, PHP_URL_HOST);
+                // Decode dua kali karena bisa double-encoded
+                $decoded    = urldecode(urldecode($redirectTo));
+                $parsedHost = parse_url($decoded, PHP_URL_HOST);
                 $appHost    = parse_url(config('app.url'), PHP_URL_HOST);
 
+                Log::info('=== VALIDASI DOMAIN ===', [
+                    'redirectTo_raw'     => $redirectTo,
+                    'redirectTo_decoded' => $decoded,
+                    'parsedHost'         => $parsedHost,
+                    'appHost'            => $appHost,
+                    'match'              => ($parsedHost === $appHost) ? 'YES ✅' : 'NO ❌',
+                ]);
+
                 if (!$parsedHost || $parsedHost !== $appHost) {
+                    Log::info('=== REDIRECT NULL — domain tidak match ===');
                     $redirectTo = null;
+                } else {
+                    $redirectTo = $decoded;
+                    Log::info('=== REDIRECT OK ===', ['final' => $redirectTo]);
                 }
+            } else {
+                Log::info('=== REDIRECT NULL — tidak ada input redirect ===');
             }
+
+            Log::info('=== FINAL REDIRECT ===', [
+                'url' => $redirectTo ?? route('publikasi.library')
+            ]);
 
             return redirect($redirectTo ?? route('publikasi.library'))
                 ->with('success', 'Selamat datang kembali, ' . $user->name . '!');
