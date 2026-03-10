@@ -13,7 +13,7 @@
     <div class="grid items-start gap-8 lg:gap-12 lg:grid-cols-2">
 
         {{-- Left: Hero Copy --}}
-        <div class="order-2 text-center lg:order-1 lg:text-left">
+        <div class="order-1 text-center lg:order-1 lg:text-left">
             <span
                 class="inline-flex items-center rounded-full bg-[#FFECE1] px-4 py-2 text-xs sm:text-sm font-bold text-[#FF6B18]">
                 ✨ Create account
@@ -22,7 +22,7 @@
             <h1
                 class="mt-4 text-2xl font-bold leading-tight text-[#1A1A1A] sm:text-3xl sm:leading-[40px] lg:text-4xl lg:leading-[50px]">
                 Daftar akun baru <br class="hidden sm:inline" />
-                di BHAYASCIENTIA
+                di Dabraka
             </h1>
 
             <p
@@ -32,43 +32,41 @@
 
             <div class="flex flex-wrap items-center justify-center gap-3 mt-6 lg:justify-start">
                 <a href="{{ route('home') }}"
-                    class="inline-flex items-center justify-center rounded-full border border-[#EEF0F7] bg-white px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition-all duration-300 hover:bg-[#F4F6FB] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]">
+                    class="inline-flex items-center justify-center rounded-full border border-[#EEF0F7] bg-white px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition-all duration-300 hover:bg-[#F4F6FB] focus:outline-none">
                     🏠 Kembali ke Home
                 </a>
                 <a href="{{ route('login') }}"
-                    class="px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-bold rounded-full text-[#FF6B18] transition-all duration-300 hover:bg-[#FFF7F2] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]">
+                    class="px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-bold rounded-full text-[#FF6B18] transition-all duration-300 hover:bg-[#FFF7F2] focus:outline-none">
                     Sudah punya akun? <span class="underline">Login</span>
                 </a>
             </div>
 
             {{-- Benefits Card --}}
             <div class="mt-8 bg-white p-5 sm:p-6 rounded-[22px] ring-1 ring-[#EEF0F7] shadow-sm">
-                <h3 class="text-base font-bold text-[#111827] mb-3">
-                    ✨ Yang kamu dapatkan
-                </h3>
+                <h3 class="text-base font-bold text-[#111827] mb-3">✨ Yang kamu dapatkan</h3>
                 <ul class="space-y-2 text-sm text-[#6B7280]">
                     <li class="flex items-start gap-2">
                         <span class="text-[#FF6B18] mt-0.5">✓</span>
-                        <span>Simpan publikasi favorit</span>
+                        <span>Simpan publikasi favorit ke library pribadi</span>
                     </li>
                     <li class="flex items-start gap-2">
                         <span class="text-[#FF6B18] mt-0.5">✓</span>
-                        <span>Ikuti kategori yang kamu suka</span>
+                        <span>Ikuti kategori dan topik yang kamu minati</span>
                     </li>
                     <li class="flex items-start gap-2">
                         <span class="text-[#FF6B18] mt-0.5">✓</span>
-                        <span>Notifikasi konten terbaru</span>
+                        <span>Lacak riwayat bacaan dan progres membaca</span>
                     </li>
                     <li class="flex items-start gap-2">
                         <span class="text-[#FF6B18] mt-0.5">✓</span>
-                        <span>Akses fitur premium (coming soon)</span>
+                        <span>Akses fitur premium Dabraka (coming soon)</span>
                     </li>
                 </ul>
             </div>
         </div>
 
         {{-- Right: Register Card --}}
-        <div class="order-1 lg:order-2">
+        <div class="order-2 lg:order-2">
             <div class="bg-white rounded-[22px] ring-1 ring-[#EEF0F7] shadow-sm p-5 sm:p-6 lg:p-8">
 
                 {{-- Card Header --}}
@@ -79,7 +77,6 @@
                             Isi data di bawah untuk membuat akun.
                         </p>
                     </div>
-
                     <span
                         class="hidden sm:inline-flex items-center rounded-full bg-[#F4F6FB] px-4 py-2 text-xs font-bold text-[#111827]">
                         🔒 Secure
@@ -122,9 +119,8 @@
 
                 {{-- Social Login --}}
                 <div class="grid grid-cols-1 gap-3 mb-5 sm:grid-cols-2">
-                    {{-- ✅ Google Register --}}
                     <a href="{{ route('auth.google') }}"
-                        class="inline-flex items-center justify-center gap-2 rounded-full border border-[#EEF0F7] bg-white px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition-all duration-300 hover:border-[#FF6B18]/30 hover:bg-[#F4F6FB] hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]">
+                        class="inline-flex items-center justify-center gap-2 rounded-full border border-[#EEF0F7] bg-white px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition-all duration-300 hover:border-[#FF6B18]/30 hover:bg-[#F4F6FB] hover:shadow-sm focus:outline-none">
                         <svg viewBox="0 0 48 48" class="w-5 h-5" aria-hidden="true">
                             <path fill="#FFC107"
                                 d="M43.611 20.083H42V20H24v8h11.303C33.656 32.91 29.236 36 24 36c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z" />
@@ -135,14 +131,12 @@
                             <path fill="#1976D2"
                                 d="M43.611 20.083H42V20H24v8h11.303c-.792 2.238-2.231 4.166-4.094 5.565l.003-.002 6.19 5.238C36.97 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z" />
                         </svg>
-                        <span class="hidden sm:inline">Google</span>
-                        <span class="sm:hidden">Google</span>
+                        Google
                     </a>
 
-                    {{-- ✅ Facebook Register --}}
                     <a href="{{ route('auth.facebook') }}"
-                        class="inline-flex items-center justify-center gap-2 rounded-full border border-[#EEF0F7] bg-white px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition-all duration-300 hover:border-[#FF6B18]/30 hover:bg-[#F4F6FB] hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]">
-                        <svg viewBox="0 0 24 24" class="w-5 h-5" aria-hidden="true">
+                        class="inline-flex items-center justify-center gap-2 rounded-full border border-[#EEF0F7] bg-white px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition-all duration-300 hover:border-[#FF6B18]/30 hover:bg-[#F4F6FB] hover:shadow-sm focus:outline-none">
+                        <svg viewBox="0 0 24 24" class="w-5 h-5 text-[#1877F2]" aria-hidden="true">
                             <path fill="currentColor"
                                 d="M22 12.06c0-5.52-4.48-10-10-10S2 6.54 2 12.06c0 4.99 3.66 9.13 8.44 9.88v-6.99H7.9v-2.89h2.54V9.85c0-2.5 1.49-3.89 3.77-3.89 1.09 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56v1.87h2.78l-.44 2.89h-2.34v6.99C18.34 21.19 22 17.05 22 12.06z" />
                         </svg>
@@ -150,7 +144,6 @@
                         <span class="sm:hidden">FB</span>
                     </a>
                 </div>
-
 
                 {{-- Divider --}}
                 <div class="flex items-center gap-3 mb-5">
@@ -160,25 +153,22 @@
                 </div>
 
                 {{-- Register Form --}}
-                {{-- Register Form --}}
                 <form action="{{ route('register.post') }}" method="POST" class="space-y-4" id="registerForm">
                     @csrf
 
-                    {{-- Full Name (GABUNG firstName + lastName) --}}
+                    {{-- Nama Lengkap --}}
                     <div>
                         <label for="name" class="mb-2 block text-sm font-bold text-[#111827]">
                             Nama Lengkap <span class="text-red-500">*</span>
                         </label>
-                        <div
-                            class="flex items-center w-full rounded-full ring-1 ring-[#E8EBF4] px-[14px] gap-[10px] overflow-hidden bg-white transition-all duration-300 hover:ring-[#FF6B18]/60 focus-within:ring-2 focus-within:ring-[#FF6B18] @error('name') !ring-2 !ring-red-500 @enderror">
+                        <div class="input-wrapper @error('name') error @enderror">
                             <svg class="w-5 h-5 text-[#A3A6AE] shrink-0" fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                             </svg>
                             <input type="text" id="name" name="name" autocomplete="name" value="{{ old('name') }}"
-                                required placeholder="Budi Santoso"
-                                class="w-full py-[12px] bg-transparent text-sm font-semibold placeholder:font-normal placeholder:text-[#A3A6AE] border-0 focus:border-0 focus:ring-0 focus:outline-none outline-none appearance-none">
+                                required placeholder="Budi Santoso">
                         </div>
                         @error('name')
                         <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
@@ -190,16 +180,14 @@
                         <label for="email" class="mb-2 block text-sm font-bold text-[#111827]">
                             Email <span class="text-red-500">*</span>
                         </label>
-                        <div
-                            class="flex items-center w-full rounded-full ring-1 ring-[#E8EBF4] px-[14px] gap-[10px] overflow-hidden bg-white transition-all duration-300 hover:ring-[#FF6B18]/60 focus-within:ring-2 focus-within:ring-[#FF6B18] @error('email') !ring-2 !ring-red-500 @enderror">
+                        <div class="input-wrapper @error('email') error @enderror">
                             <svg class="w-5 h-5 text-[#A3A6AE] shrink-0" fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
                             </svg>
                             <input type="email" id="email" name="email" autocomplete="email" value="{{ old('email') }}"
-                                required placeholder="nama@email.com"
-                                class="w-full py-[12px] bg-transparent text-sm font-semibold placeholder:font-normal placeholder:text-[#A3A6AE] border-0 focus:border-0 focus:ring-0 focus:outline-none outline-none appearance-none">
+                                required placeholder="nama@email.com">
                         </div>
                         @error('email')
                         <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
@@ -211,19 +199,17 @@
                         <label for="password" class="mb-2 block text-sm font-bold text-[#111827]">
                             Password <span class="text-red-500">*</span>
                         </label>
-                        <div
-                            class="flex items-center w-full rounded-full ring-1 ring-[#E8EBF4] px-[14px] gap-[10px] overflow-hidden bg-white transition-all duration-300 hover:ring-[#FF6B18]/60 focus-within:ring-2 focus-within:ring-[#FF6B18] @error('password') !ring-2 !ring-red-500 @enderror">
+                        <div class="input-wrapper @error('password') error @enderror">
                             <svg class="w-5 h-5 text-[#A3A6AE] shrink-0" fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                             </svg>
                             <input type="password" id="password" name="password" autocomplete="new-password" required
-                                minlength="6" placeholder="Minimal 6 karakter"
-                                class="w-full py-[12px] bg-transparent text-sm font-semibold placeholder:font-normal placeholder:text-[#A3A6AE] border-0 focus:border-0 focus:ring-0 focus:outline-none outline-none appearance-none">
+                                minlength="6" placeholder="Minimal 6 karakter">
                             <button type="button" id="togglePassword"
-                                class="shrink-0 rounded-full px-3 py-1 text-xs font-bold text-[#6B7280] transition hover:bg-[#F4F6FB] hover:text-[#111827] focus:outline-none"
-                                aria-label="Toggle password visibility" aria-pressed="false">
+                                class="shrink-0 rounded-full px-3 py-1 text-xs font-bold text-[#6B7280] transition hover:bg-[#F4F6FB] hover:text-[#111827]"
+                                aria-label="Toggle password visibility">
                                 Show
                             </button>
                         </div>
@@ -232,21 +218,19 @@
                         @enderror
                     </div>
 
-                    {{-- Password Confirmation --}}
+                    {{-- Konfirmasi Password --}}
                     <div>
                         <label for="password_confirmation" class="mb-2 block text-sm font-bold text-[#111827]">
                             Konfirmasi Password <span class="text-red-500">*</span>
                         </label>
-                        <div
-                            class="flex items-center w-full rounded-full ring-1 ring-[#E8EBF4] px-[14px] gap-[10px] overflow-hidden bg-white transition-all duration-300 hover:ring-[#FF6B18]/60 focus-within:ring-2 focus-within:ring-[#FF6B18]">
+                        <div class="input-wrapper" id="confirmWrapper">
                             <svg class="w-5 h-5 text-[#A3A6AE] shrink-0" fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                             <input type="password" id="password_confirmation" name="password_confirmation"
-                                autocomplete="new-password" required minlength="6" placeholder="Ulangi password"
-                                class="w-full py-[12px] bg-transparent text-sm font-semibold placeholder:font-normal placeholder:text-[#A3A6AE] border-0 focus:border-0 focus:ring-0 focus:outline-none outline-none appearance-none">
+                                autocomplete="new-password" required minlength="6" placeholder="Ulangi password">
                         </div>
                         <p id="pwHint" class="hidden mt-2 text-xs font-semibold text-red-600">
                             ❌ Password dan konfirmasi password tidak sama.
@@ -264,17 +248,17 @@
                             dan
                             <button type="button" id="openPrivacyReg"
                                 class="font-bold text-[#FF6B18] hover:underline focus:outline-none">Privacy
-                                Policy</button>.
+                                Policy</button>
+                            Dabraka.
                         </label>
                     </div>
 
-                    {{-- Submit Button --}}
+                    {{-- Submit --}}
                     <button type="submit"
-                        class="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#FF6B18] to-[#E64627] px-5 py-3 sm:py-3.5 text-sm font-bold text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_20px_0_#FF6B1880] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60">
+                        class="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#FF6B18] to-[#E64627] px-5 py-3 sm:py-3.5 text-sm font-bold text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_20px_0_#FF6B1880] focus:outline-none active:scale-95 disabled:cursor-not-allowed disabled:opacity-60">
                         Buat Akun
                     </button>
 
-                    {{-- Login Link --}}
                     <p class="text-center text-xs sm:text-sm text-[#A3A6AE]">
                         Sudah punya akun?
                         <a href="{{ route('login') }}" class="font-bold text-[#FF6B18] hover:underline">Login</a>
@@ -283,11 +267,10 @@
 
             </div>
         </div>
-
     </div>
 </section>
 
-{{-- Legal Modal (Terms & Privacy) - SAMA SEPERTI LOGIN --}}
+{{-- Legal Modal --}}
 <div id="legalOverlay" class="fixed inset-0 z-[60] hidden bg-black/40 backdrop-blur-sm transition-opacity duration-300"
     aria-hidden="true"></div>
 
@@ -305,12 +288,11 @@
                         <span>Terms & Conditions</span>
                     </h2>
                     <p id="legalSubtitle" class="mt-1 text-sm text-[#6B7280]">
-                        Syarat penggunaan layanan BHAYASCIENTIA.
+                        Syarat penggunaan platform Dabraka.
                     </p>
                 </div>
-
                 <button id="legalCloseBtn" type="button"
-                    class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#F4F6FB] transition-all hover:bg-[#FF6B18] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]"
+                    class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#F4F6FB] transition-all hover:bg-[#FF6B18] hover:text-white focus:outline-none"
                     aria-label="Tutup">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -318,16 +300,14 @@
                     </svg>
                 </button>
             </div>
-
-            {{-- Tabs --}}
             <div class="flex gap-2 px-5 pb-4 sm:px-6">
                 <button id="tabTerms" type="button"
-                    class="rounded-full px-5 py-2.5 text-sm font-bold transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]"
+                    class="rounded-full px-5 py-2.5 text-sm font-bold transition-all duration-300 focus:outline-none"
                     aria-selected="true">
                     📜 Terms
                 </button>
                 <button id="tabPrivacy" type="button"
-                    class="rounded-full px-5 py-2.5 text-sm font-bold transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]"
+                    class="rounded-full px-5 py-2.5 text-sm font-bold transition-all duration-300 focus:outline-none"
                     aria-selected="false">
                     🔒 Privacy Policy
                 </button>
@@ -337,210 +317,205 @@
         {{-- Modal Body --}}
         <div class="max-h-[60vh] overflow-y-auto px-5 py-6 sm:px-6">
 
-            {{-- Terms Content (SAMA SEPERTI LOGIN) --}}
+            {{-- Terms --}}
             <article id="contentTerms" class="prose-sm prose max-w-none">
                 <div class="bg-[#FFF7F2] rounded-2xl p-4 mb-6 border-l-4 border-[#FF6B18]">
                     <p class="text-sm leading-relaxed text-[#6B7280] m-0">
-                        Dokumen ini menjelaskan syarat dan ketentuan penggunaan platform BHAYASCIENTIA untuk publikasi
-                        akademik non-formal.
+                        Dokumen ini mengatur syarat dan ketentuan penggunaan platform <strong>Dabraka</strong> —
+                        platform publikasi ilmiah dan akademik Indonesia. Dengan mendaftar, Anda dianggap telah membaca
+                        dan menyetujui seluruh ketentuan ini.
                     </p>
                 </div>
-
                 <div class="space-y-6">
                     <div>
                         <h3 class="text-lg font-bold text-[#111827] mb-3 flex items-center gap-2">
                             <span
                                 class="flex items-center justify-center w-8 h-8 rounded-full bg-[#FF6B18] text-white text-sm font-bold">1</span>
-                            Penggunaan Layanan
+                            Tentang Dabraka
                         </h3>
                         <ul class="space-y-2 text-sm text-[#6B7280] leading-relaxed">
-                            <li class="flex items-start gap-2">
-                                <span class="text-[#FF6B18] mt-1">✓</span>
-                                <span>Pengguna wajib memberikan data yang benar dan valid saat registrasi.</span>
-                            </li>
-                            <li class="flex items-start gap-2">
-                                <span class="text-[#FF6B18] mt-1">✓</span>
-                                <span>Dilarang menyalahgunakan layanan, termasuk mencoba mengakses akun orang
-                                    lain.</span>
-                            </li>
-                            <li class="flex items-start gap-2">
-                                <span class="text-[#FF6B18] mt-1">✓</span>
-                                <span>Layanan dapat berubah atau ditingkatkan sewaktu-waktu untuk pengalaman yang lebih
-                                    baik.</span>
-                            </li>
+                            <li class="flex items-start gap-2"><span class="text-[#FF6B18] mt-1">✓</span><span>Dabraka
+                                    adalah platform digital yang menyediakan akses terhadap publikasi ilmiah, jurnal,
+                                    dan karya akademik dari berbagai penulis dan institusi di Indonesia.</span></li>
+                            <li class="flex items-start gap-2"><span class="text-[#FF6B18] mt-1">✓</span><span>Platform
+                                    ini beroperasi di bawah domain <strong>dabraka.rbnset.me</strong> dan tunduk pada
+                                    hukum yang berlaku di Republik Indonesia.</span></li>
+                            <li class="flex items-start gap-2"><span class="text-[#FF6B18] mt-1">✓</span><span>Layanan
+                                    dapat berkembang, ditingkatkan, atau diubah sewaktu-waktu untuk memberikan
+                                    pengalaman terbaik bagi pengguna.</span></li>
                         </ul>
                     </div>
-
                     <div>
                         <h3 class="text-lg font-bold text-[#111827] mb-3 flex items-center gap-2">
                             <span
                                 class="flex items-center justify-center w-8 h-8 rounded-full bg-[#FF6B18] text-white text-sm font-bold">2</span>
-                            Akun & Keamanan
+                            Syarat Penggunaan Akun
                         </h3>
                         <ul class="space-y-2 text-sm text-[#6B7280] leading-relaxed">
-                            <li class="flex items-start gap-2">
-                                <span class="text-[#FF6B18] mt-1">✓</span>
-                                <span>Jaga kerahasiaan password dan token reset Anda.</span>
-                            </li>
-                            <li class="flex items-start gap-2">
-                                <span class="text-[#FF6B18] mt-1">✓</span>
-                                <span>Semua aktivitas pada akun dianggap dilakukan oleh pemilik akun yang sah.</span>
-                            </li>
-                            <li class="flex items-start gap-2">
-                                <span class="text-[#FF6B18] mt-1">✓</span>
-                                <span>Segera hubungi kami jika ada indikasi akun Anda diakses tanpa izin.</span>
-                            </li>
+                            <li class="flex items-start gap-2"><span class="text-[#FF6B18] mt-1">✓</span><span>Pengguna
+                                    wajib mendaftarkan diri dengan data yang benar, lengkap, dan valid.</span></li>
+                            <li class="flex items-start gap-2"><span class="text-[#FF6B18] mt-1">✓</span><span>Satu
+                                    orang hanya diperbolehkan memiliki satu akun aktif di Dabraka.</span></li>
+                            <li class="flex items-start gap-2"><span class="text-[#FF6B18] mt-1">✓</span><span>Pengguna
+                                    bertanggung jawab penuh atas keamanan akun, termasuk menjaga kerahasiaan
+                                    password.</span></li>
+                            <li class="flex items-start gap-2"><span class="text-[#FF6B18] mt-1">✓</span><span>Dabraka
+                                    berhak menonaktifkan akun yang melanggar ketentuan tanpa pemberitahuan
+                                    sebelumnya.</span></li>
                         </ul>
                     </div>
-
                     <div>
                         <h3 class="text-lg font-bold text-[#111827] mb-3 flex items-center gap-2">
                             <span
                                 class="flex items-center justify-center w-8 h-8 rounded-full bg-[#FF6B18] text-white text-sm font-bold">3</span>
-                            Konten Publikasi
+                            Hak & Kewajiban Penulis
                         </h3>
                         <ul class="space-y-2 text-sm text-[#6B7280] leading-relaxed">
-                            <li class="flex items-start gap-2">
-                                <span class="text-[#FF6B18] mt-1">✓</span>
-                                <span>Konten disediakan untuk tujuan informasi dan edukasi, bukan nasihat
-                                    profesional.</span>
-                            </li>
-                            <li class="flex items-start gap-2">
-                                <span class="text-[#FF6B18] mt-1">✓</span>
-                                <span>Dilarang menyalin atau menyebarkan konten tanpa izin jika dilindungi hak
-                                    cipta.</span>
-                            </li>
-                            <li class="flex items-start gap-2">
-                                <span class="text-[#FF6B18] mt-1">✓</span>
-                                <span>Penulis bertanggung jawab penuh atas konten yang dipublikasikan.</span>
-                            </li>
+                            <li class="flex items-start gap-2"><span class="text-[#FF6B18] mt-1">✓</span><span>Penulis
+                                    menjamin bahwa karya yang dipublikasikan adalah original dan tidak melanggar hak
+                                    cipta pihak lain.</span></li>
+                            <li class="flex items-start gap-2"><span class="text-[#FF6B18] mt-1">✓</span><span>Penulis
+                                    memberikan izin kepada Dabraka untuk menampilkan, mendistribusikan, dan
+                                    mempromosikan karya dalam platform.</span></li>
+                            <li class="flex items-start gap-2"><span class="text-[#FF6B18] mt-1">✓</span><span>Penulis
+                                    tetap memegang hak cipta atas karya yang dipublikasikan.</span></li>
+                            <li class="flex items-start gap-2"><span class="text-[#FF6B18] mt-1">✓</span><span>Konten
+                                    yang mengandung plagiarisme, SARA, pornografi, atau melanggar hukum akan dihapus
+                                    tanpa pemberitahuan.</span></li>
                         </ul>
                     </div>
-
                     <div>
                         <h3 class="text-lg font-bold text-[#111827] mb-3 flex items-center gap-2">
                             <span
                                 class="flex items-center justify-center w-8 h-8 rounded-full bg-[#FF6B18] text-white text-sm font-bold">4</span>
-                            Pembatasan Tanggung Jawab
+                            Hak & Kewajiban Pembaca
                         </h3>
-                        <div class="bg-gray-50 rounded-xl p-4 text-sm text-[#6B7280] leading-relaxed">
-                            <p>Layanan disediakan "sebagaimana adanya". BHAYASCIENTIA tidak bertanggung jawab atas
-                                kerugian tidak langsung akibat penggunaan layanan.</p>
-                        </div>
+                        <ul class="space-y-2 text-sm text-[#6B7280] leading-relaxed">
+                            <li class="flex items-start gap-2"><span class="text-[#FF6B18] mt-1">✓</span><span>Pembaca
+                                    dapat mengakses, membaca, dan menyimpan publikasi untuk keperluan pribadi dan
+                                    non-komersial.</span></li>
+                            <li class="flex items-start gap-2"><span class="text-[#FF6B18] mt-1">✓</span><span>Dilarang
+                                    mendistribusikan, menjual, atau menggunakan konten untuk keperluan komersial tanpa
+                                    izin tertulis.</span></li>
+                            <li class="flex items-start gap-2"><span
+                                    class="text-[#FF6B18] mt-1">✓</span><span>Penggunaan konten untuk keperluan akademik
+                                    wajib menyertakan atribusi/sitasi yang tepat.</span></li>
+                        </ul>
                     </div>
-
                     <div>
                         <h3 class="text-lg font-bold text-[#111827] mb-3 flex items-center gap-2">
                             <span
                                 class="flex items-center justify-center w-8 h-8 rounded-full bg-[#FF6B18] text-white text-sm font-bold">5</span>
-                            Kontak
+                            Pembatasan Tanggung Jawab
+                        </h3>
+                        <div class="bg-gray-50 rounded-xl p-4 text-sm text-[#6B7280] leading-relaxed">
+                            <p>Dabraka menyediakan layanan "sebagaimana adanya" tanpa jaminan apapun. Dabraka tidak
+                                bertanggung jawab atas kerugian langsung maupun tidak langsung akibat penggunaan
+                                layanan, termasuk kesalahan konten yang dipublikasikan oleh penulis.</p>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-[#111827] mb-3 flex items-center gap-2">
+                            <span
+                                class="flex items-center justify-center w-8 h-8 rounded-full bg-[#FF6B18] text-white text-sm font-bold">6</span>
+                            Hubungi Kami
                         </h3>
                         <p class="text-sm text-[#6B7280] leading-relaxed">
-                            Pertanyaan terkait Terms dapat dikirim melalui halaman
-                            <a href="{{ route('kontak') }}"
-                                class="text-[#FF6B18] font-semibold hover:underline">Contact</a>.
+                            Pertanyaan terkait Terms & Conditions dapat disampaikan melalui
+                            <a href="{{ route('kontak') }}" class="text-[#FF6B18] font-semibold hover:underline">halaman
+                                Kontak Dabraka</a>.
                         </p>
                     </div>
                 </div>
             </article>
 
-            {{-- Privacy Content (SAMA SEPERTI LOGIN) --}}
+            {{-- Privacy --}}
             <article id="contentPrivacy" class="hidden prose-sm prose max-w-none">
                 <div class="bg-[#FFF7F2] rounded-2xl p-4 mb-6 border-l-4 border-[#FF6B18]">
                     <p class="text-sm leading-relaxed text-[#6B7280] m-0">
-                        Kebijakan Privasi BHAYASCIENTIA menjelaskan bagaimana kami mengumpulkan, menggunakan, dan
-                        melindungi data pribadi Anda.
+                        Kebijakan Privasi ini menjelaskan bagaimana <strong>Dabraka</strong> mengumpulkan, menggunakan,
+                        menyimpan, dan melindungi data pribadi Anda. Kami berkomitmen menjaga kepercayaan Anda.
                     </p>
                 </div>
-
                 <div class="space-y-6">
                     <div>
                         <h3 class="text-lg font-bold text-[#111827] mb-3 flex items-center gap-2">
                             <span
                                 class="flex items-center justify-center w-8 h-8 rounded-full bg-[#FF6B18] text-white text-sm font-bold">1</span>
-                            Data yang Dikumpulkan
+                            Data yang Kami Kumpulkan
                         </h3>
                         <ul class="space-y-2 text-sm text-[#6B7280] leading-relaxed">
-                            <li class="flex items-start gap-2">
-                                <span class="text-[#FF6B18] mt-1">✓</span>
-                                <span><strong>Data akun:</strong> nama, email, dan password (disimpan dalam bentuk hash
-                                    yang aman).</span>
+                            <li class="flex items-start gap-2"><span
+                                    class="text-[#FF6B18] mt-1">✓</span><span><strong>Data registrasi:</strong> nama
+                                    lengkap, alamat email, dan password (disimpan dalam bentuk hash terenkripsi).</span>
                             </li>
-                            <li class="flex items-start gap-2">
-                                <span class="text-[#FF6B18] mt-1">✓</span>
-                                <span><strong>Data penggunaan:</strong> halaman yang diakses, device/browser untuk
-                                    analitik dan perbaikan layanan.</span>
-                            </li>
-                            <li class="flex items-start gap-2">
-                                <span class="text-[#FF6B18] mt-1">✓</span>
-                                <span><strong>Data interaksi:</strong> publikasi yang disimpan, dibaca, dan
-                                    difavoritkan.</span>
+                            <li class="flex items-start gap-2"><span
+                                    class="text-[#FF6B18] mt-1">✓</span><span><strong>Data OAuth:</strong> jika login
+                                    via Google/Facebook, kami menerima nama, email, dan foto profil dari provider
+                                    tersebut.</span></li>
+                            <li class="flex items-start gap-2"><span
+                                    class="text-[#FF6B18] mt-1">✓</span><span><strong>Data aktivitas:</strong> publikasi
+                                    yang Anda baca, favoritkan, dan simpan untuk personalisasi pengalaman.</span></li>
+                            <li class="flex items-start gap-2"><span
+                                    class="text-[#FF6B18] mt-1">✓</span><span><strong>Data teknis:</strong> jenis
+                                    browser, sistem operasi, dan alamat IP untuk keamanan dan analitik platform.</span>
                             </li>
                         </ul>
                     </div>
-
                     <div>
                         <h3 class="text-lg font-bold text-[#111827] mb-3 flex items-center gap-2">
                             <span
                                 class="flex items-center justify-center w-8 h-8 rounded-full bg-[#FF6B18] text-white text-sm font-bold">2</span>
-                            Cara Penggunaan Data
+                            Cara Kami Menggunakan Data
                         </h3>
                         <ul class="space-y-2 text-sm text-[#6B7280] leading-relaxed">
-                            <li class="flex items-start gap-2">
-                                <span class="text-[#FF6B18] mt-1">✓</span>
-                                <span>Membuat dan mengelola akun pengguna.</span>
-                            </li>
-                            <li class="flex items-start gap-2">
-                                <span class="text-[#FF6B18] mt-1">✓</span>
-                                <span>Memproses reset password dan menjaga keamanan akun.</span>
-                            </li>
-                            <li class="flex items-start gap-2">
-                                <span class="text-[#FF6B18] mt-1">✓</span>
-                                <span>Mengirim informasi penting terkait layanan (opsional: newsletter jika Anda
-                                    setuju).</span>
-                            </li>
-                            <li class="flex items-start gap-2">
-                                <span class="text-[#FF6B18] mt-1">✓</span>
-                                <span>Personalisasi rekomendasi publikasi berdasarkan preferensi Anda.</span>
-                            </li>
+                            <li class="flex items-start gap-2"><span class="text-[#FF6B18] mt-1">✓</span><span>Membuat
+                                    dan mengelola akun pengguna di platform Dabraka.</span></li>
+                            <li class="flex items-start gap-2"><span
+                                    class="text-[#FF6B18] mt-1">✓</span><span>Mengirimkan kode OTP untuk verifikasi
+                                    email dan keamanan akun.</span></li>
+                            <li class="flex items-start gap-2"><span
+                                    class="text-[#FF6B18] mt-1">✓</span><span>Personalisasi tampilan dan rekomendasi
+                                    publikasi berdasarkan preferensi dan riwayat bacaan Anda.</span></li>
+                            <li class="flex items-start gap-2"><span
+                                    class="text-[#FF6B18] mt-1">✓</span><span>Mengirimkan notifikasi penting terkait
+                                    akun dan layanan (bukan iklan pihak ketiga).</span></li>
                         </ul>
                     </div>
-
                     <div>
                         <h3 class="text-lg font-bold text-[#111827] mb-3 flex items-center gap-2">
                             <span
                                 class="flex items-center justify-center w-8 h-8 rounded-full bg-[#FF6B18] text-white text-sm font-bold">3</span>
-                            Berbagi Data
+                            Berbagi Data dengan Pihak Ketiga
                         </h3>
-                        <div class="bg-gray-50 rounded-xl p-4 text-sm text-[#6B7280] leading-relaxed">
-                            <p>Data dapat dibagikan ke penyedia layanan pihak ketiga (mis. email delivery, analytics)
-                                hanya untuk operasional platform. Kami <strong>tidak menjual data Anda</strong> ke pihak
-                                lain.</p>
+                        <div class="bg-gray-50 rounded-xl p-4 text-sm text-[#6B7280] leading-relaxed space-y-2">
+                            <p>Dabraka <strong>tidak menjual atau memperdagangkan data pribadi Anda</strong> kepada
+                                pihak manapun.</p>
+                            <p>Data hanya dapat dibagikan kepada penyedia layanan teknis (seperti layanan email untuk
+                                OTP) yang mendukung operasional Dabraka, dengan kewajiban menjaga kerahasiaan.</p>
                         </div>
                     </div>
-
                     <div>
                         <h3 class="text-lg font-bold text-[#111827] mb-3 flex items-center gap-2">
                             <span
                                 class="flex items-center justify-center w-8 h-8 rounded-full bg-[#FF6B18] text-white text-sm font-bold">4</span>
-                            Hak Pengguna
+                            Hak-Hak Anda
                         </h3>
                         <ul class="space-y-2 text-sm text-[#6B7280] leading-relaxed">
-                            <li class="flex items-start gap-2">
-                                <span class="text-[#FF6B18] mt-1">✓</span>
-                                <span>Meminta akses, perubahan, atau penghapusan data pribadi.</span>
-                            </li>
-                            <li class="flex items-start gap-2">
-                                <span class="text-[#FF6B18] mt-1">✓</span>
-                                <span>Menonaktifkan atau menghapus akun kapan saja.</span>
-                            </li>
-                            <li class="flex items-start gap-2">
-                                <span class="text-[#FF6B18] mt-1">✓</span>
-                                <span>Mengontrol pengaturan privasi dan notifikasi.</span>
-                            </li>
+                            <li class="flex items-start gap-2"><span
+                                    class="text-[#FF6B18] mt-1">✓</span><span><strong>Akses:</strong> Anda berhak
+                                    meminta salinan data pribadi yang kami simpan.</span></li>
+                            <li class="flex items-start gap-2"><span
+                                    class="text-[#FF6B18] mt-1">✓</span><span><strong>Koreksi:</strong> Anda berhak
+                                    memperbarui data yang tidak akurat melalui halaman profil.</span></li>
+                            <li class="flex items-start gap-2"><span
+                                    class="text-[#FF6B18] mt-1">✓</span><span><strong>Penghapusan:</strong> Anda berhak
+                                    meminta penghapusan akun dan data pribadi dari sistem Dabraka.</span></li>
+                            <li class="flex items-start gap-2"><span
+                                    class="text-[#FF6B18] mt-1">✓</span><span><strong>Portabilitas:</strong> Anda berhak
+                                    meminta ekspor data aktivitas Anda di platform.</span></li>
                         </ul>
                     </div>
-
                     <div>
                         <h3 class="text-lg font-bold text-[#111827] mb-3 flex items-center gap-2">
                             <span
@@ -548,20 +523,48 @@
                             Keamanan Data
                         </h3>
                         <div class="bg-gray-50 rounded-xl p-4 text-sm text-[#6B7280] leading-relaxed">
-                            <p>Kami menerapkan upaya keamanan standar industri untuk melindungi data Anda. Namun, tidak
-                                ada sistem yang 100% aman. Segera hubungi kami bila ada indikasi kebocoran data.</p>
+                            <p>Dabraka menerapkan enkripsi data, proteksi CSRF, validasi input, dan praktik keamanan
+                                standar industri. Password disimpan dalam format hash yang tidak dapat dibalikkan.
+                                Segera hubungi kami jika Anda menduga ada kebocoran data.</p>
                         </div>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-[#111827] mb-3 flex items-center gap-2">
+                            <span
+                                class="flex items-center justify-center w-8 h-8 rounded-full bg-[#FF6B18] text-white text-sm font-bold">6</span>
+                            Cookies & Sesi
+                        </h3>
+                        <ul class="space-y-2 text-sm text-[#6B7280] leading-relaxed">
+                            <li class="flex items-start gap-2"><span class="text-[#FF6B18] mt-1">✓</span><span>Dabraka
+                                    menggunakan cookies sesi untuk menjaga status login Anda.</span></li>
+                            <li class="flex items-start gap-2"><span class="text-[#FF6B18] mt-1">✓</span><span>Kami
+                                    tidak menggunakan cookies untuk tracking iklan atau pihak ketiga.</span></li>
+                            <li class="flex items-start gap-2"><span class="text-[#FF6B18] mt-1">✓</span><span>Anda
+                                    dapat menghapus cookies kapan saja melalui pengaturan browser.</span></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-[#111827] mb-3 flex items-center gap-2">
+                            <span
+                                class="flex items-center justify-center w-8 h-8 rounded-full bg-[#FF6B18] text-white text-sm font-bold">7</span>
+                            Hubungi Kami
+                        </h3>
+                        <p class="text-sm text-[#6B7280] leading-relaxed">
+                            Untuk pertanyaan terkait privasi atau permintaan penghapusan data, silakan hubungi kami
+                            melalui
+                            <a href="{{ route('kontak') }}" class="text-[#FF6B18] font-semibold hover:underline">halaman
+                                Kontak Dabraka</a>.
+                        </p>
                     </div>
                 </div>
             </article>
-
         </div>
 
         {{-- Modal Footer --}}
         <div class="sticky bottom-0 border-t border-[#EEF0F7] bg-white p-5 sm:p-6">
             <button id="legalOkBtn" type="button"
-                class="inline-flex w-full items-center justify-center rounded-full bg-gradient-to-r from-[#FF6B18] to-[#E64627] px-6 py-3 sm:py-3.5 text-sm font-bold text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_20px_0_#FF6B1880] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 active:scale-95">
-                Saya mengerti
+                class="inline-flex w-full items-center justify-center rounded-full bg-gradient-to-r from-[#FF6B18] to-[#E64627] px-6 py-3 sm:py-3.5 text-sm font-bold text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_20px_0_#FF6B1880] focus:outline-none active:scale-95">
+                Saya Mengerti
             </button>
         </div>
     </div>
@@ -570,24 +573,28 @@
 
 @push('scripts')
 <script>
-    // Toggle password visibility
+    // ========================================
+    // Toggle Password Visibility
+    // ========================================
     (function() {
         const input = document.getElementById("password");
-        const btn = document.getElementById("togglePassword");
+        const btn   = document.getElementById("togglePassword");
         if (!input || !btn) return;
-
         btn.addEventListener("click", () => {
             const isHidden = input.type === "password";
-            input.type = isHidden ? "text" : "password";
+            input.type     = isHidden ? "text" : "password";
             btn.textContent = isHidden ? "Hide" : "Show";
             btn.setAttribute("aria-pressed", String(isHidden));
         });
     })();
 
-    // Client-side password confirmation validation
+    // ========================================
+    // Password Confirmation Validation
+    // ========================================
     (function() {
-        const form = document.getElementById("registerForm");
-        const hint = document.getElementById("pwHint");
+        const form    = document.getElementById("registerForm");
+        const hint    = document.getElementById("pwHint");
+        const wrapper = document.getElementById("confirmWrapper");
         if (!form || !hint) return;
 
         function validatePasswords() {
@@ -595,12 +602,12 @@
             const p2 = form.password_confirmation?.value || "";
             const mismatch = p1 && p2 && p1 !== p2;
             hint.classList.toggle("hidden", !mismatch);
+            if (wrapper) wrapper.classList.toggle("error", mismatch);
             return !mismatch;
         }
 
         form.password_confirmation?.addEventListener("input", validatePasswords);
         form.password?.addEventListener("input", validatePasswords);
-
         form.addEventListener("submit", (e) => {
             if (!validatePasswords()) {
                 e.preventDefault();
@@ -609,19 +616,21 @@
         });
     })();
 
-    // Legal Modal with improved UX
+    // ========================================
+    // Legal Modal
+    // ========================================
     (function() {
-        const openTerms = document.getElementById("openTermsReg");
+        const openTerms   = document.getElementById("openTermsReg");
         const openPrivacy = document.getElementById("openPrivacyReg");
-        const overlay = document.getElementById("legalOverlay");
-        const modal = document.getElementById("legalModal");
-        const closeBtn = document.getElementById("legalCloseBtn");
-        const okBtn = document.getElementById("legalOkBtn");
-        const tabTerms = document.getElementById("tabTerms");
-        const tabPrivacy = document.getElementById("tabPrivacy");
-        const contentTerms = document.getElementById("contentTerms");
+        const overlay     = document.getElementById("legalOverlay");
+        const modal       = document.getElementById("legalModal");
+        const closeBtn    = document.getElementById("legalCloseBtn");
+        const okBtn       = document.getElementById("legalOkBtn");
+        const tabTerms    = document.getElementById("tabTerms");
+        const tabPrivacy  = document.getElementById("tabPrivacy");
+        const contentTerms   = document.getElementById("contentTerms");
         const contentPrivacy = document.getElementById("contentPrivacy");
-        const title = document.getElementById("legalTitle");
+        const title    = document.getElementById("legalTitle");
         const subtitle = document.getElementById("legalSubtitle");
 
         if (!openTerms || !modal) return;
@@ -645,44 +654,95 @@
             }
         }
 
+        const activeClass   = "px-5 py-2.5 text-sm font-bold rounded-full transition-all duration-300 bg-[#FF6B18] text-white shadow-md focus:outline-none";
+        const inactiveClass = "px-5 py-2.5 text-sm font-bold rounded-full transition-all duration-300 bg-[#F4F6FB] text-[#6B7280] hover:bg-[#FFECE1] focus:outline-none";
+
         function setTab(which) {
             const isTerms = which === "terms";
-
             tabTerms.setAttribute("aria-selected", String(isTerms));
             tabPrivacy.setAttribute("aria-selected", String(!isTerms));
 
             if (isTerms) {
-                tabTerms.className = "px-5 py-2.5 text-sm font-bold rounded-full transition-all duration-300 bg-[#FF6B18] text-white shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]";
-                tabPrivacy.className = "px-5 py-2.5 text-sm font-bold rounded-full transition-all duration-300 bg-[#F4F6FB] text-[#6B7280] hover:bg-[#FFECE1] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]";
+                tabTerms.className   = activeClass;
+                tabPrivacy.className = inactiveClass;
                 contentTerms.classList.remove("hidden");
                 contentPrivacy.classList.add("hidden");
-                title.innerHTML = '<span class="text-2xl">📋</span> <span>Terms & Conditions</span>';
-                subtitle.textContent = "Syarat penggunaan layanan BHAYASCIENTIA.";
+                title.innerHTML      = '<span class="text-2xl">📋</span> <span>Terms & Conditions</span>';
+                subtitle.textContent = "Syarat penggunaan platform Dabraka.";
             } else {
-                tabTerms.className = "px-5 py-2.5 text-sm font-bold rounded-full transition-all duration-300 bg-[#F4F6FB] text-[#6B7280] hover:bg-[#FFECE1] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]";
-                tabPrivacy.className = "px-5 py-2.5 text-sm font-bold rounded-full transition-all duration-300 bg-[#FF6B18] text-white shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18]";
+                tabTerms.className   = inactiveClass;
+                tabPrivacy.className = activeClass;
                 contentTerms.classList.add("hidden");
                 contentPrivacy.classList.remove("hidden");
-                title.innerHTML = '<span class="text-2xl">🔒</span> <span>Privacy Policy</span>';
-                subtitle.textContent = "Kebijakan privasi BHAYASCIENTIA.";
+                title.innerHTML      = '<span class="text-2xl">🔒</span> <span>Privacy Policy</span>';
+                subtitle.textContent = "Kebijakan privasi platform Dabraka.";
             }
         }
 
-        openTerms.addEventListener("click", () => { setOpen(true); setTab("terms"); });
+        openTerms.addEventListener("click",  () => { setOpen(true); setTab("terms"); });
         openPrivacy.addEventListener("click", () => { setOpen(true); setTab("privacy"); });
-        closeBtn.addEventListener("click", () => setOpen(false));
-        okBtn.addEventListener("click", () => setOpen(false));
-        overlay.addEventListener("click", () => setOpen(false));
-        tabTerms.addEventListener("click", () => setTab("terms"));
+        closeBtn.addEventListener("click",   () => setOpen(false));
+        okBtn.addEventListener("click",      () => setOpen(false));
+        overlay.addEventListener("click",    () => setOpen(false));
+        tabTerms.addEventListener("click",   () => setTab("terms"));
         tabPrivacy.addEventListener("click", () => setTab("privacy"));
+        document.addEventListener("keydown", (e) => { if (e.key === "Escape") setOpen(false); });
 
-        document.addEventListener("keydown", (e) => {
-            if (e.key === "Escape") setOpen(false);
-        });
+        setTab("terms");
     })();
 </script>
 
 <style>
+    /* ✅ FIX DOUBLE BORDER — sama seperti login.blade.php */
+    .input-wrapper {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        border-radius: 9999px;
+        border: 1.5px solid #E8EBF4;
+        padding: 0 14px;
+        gap: 10px;
+        overflow: hidden;
+        background: white;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .input-wrapper:hover {
+        border-color: rgba(255, 107, 24, 0.5);
+    }
+
+    .input-wrapper:focus-within {
+        border-color: #FF6B18;
+        box-shadow: 0 0 0 3px rgba(255, 107, 24, 0.15);
+    }
+
+    .input-wrapper.error {
+        border-color: #ef4444;
+    }
+
+    .input-wrapper input {
+        width: 100%;
+        padding: 12px 0;
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
+        background: white;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #111827;
+        -webkit-appearance: none;
+        appearance: none;
+    }
+
+    .input-wrapper input::placeholder {
+        font-weight: 400;
+        color: #A3A6AE;
+    }
+
+    .input-wrapper input:-webkit-autofill {
+        -webkit-box-shadow: 0 0 0 30px white inset !important;
+    }
+
     @keyframes shake {
 
         0%,
