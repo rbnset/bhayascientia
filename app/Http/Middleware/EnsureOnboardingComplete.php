@@ -22,6 +22,14 @@ class EnsureOnboardingComplete
                 return redirect()->route('onboarding.show');
             }
 
+            // ✅ Selalu sync session saat user login & sudah seen onboarding
+            // Ini kunci utama: saat logout nanti, session sudah punya
+            // has_seen_onboarding = true SEBELUM session di-invalidate
+            // Tapi karena invalidate menghapus semua, kita set ulang di logout()
+            if (! session()->has('has_seen_onboarding')) {
+                session(['has_seen_onboarding' => true]);
+            }
+
             return $next($request);
         }
 

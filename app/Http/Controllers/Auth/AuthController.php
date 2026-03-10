@@ -172,9 +172,10 @@ class AuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        // ✅ JANGAN hapus has_seen_onboarding dari session
-        // karena user yang logout sudah pasti pernah lihat onboarding
-        // (has_seen_onboarding tersimpan di database, bukan session)
+        // ✅ Set has_seen_onboarding ke session SETELAH invalidate
+        // agar guest (setelah logout) tidak diarahkan ke onboarding lagi
+        // User yang logout sudah pasti pernah selesai onboarding
+        session(['has_seen_onboarding' => true]);
 
         return redirect()->route('home')
             ->with('success', 'Anda telah logout.');
