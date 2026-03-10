@@ -895,7 +895,6 @@ function showLoginModal(action = 'default') {
     document.getElementById('loginModalTitle').textContent = msg.title;
     document.getElementById('loginModalDesc').textContent  = msg.desc;
 
-    // ✅ Encode URL + hash aksi — setelah login auto-trigger aksi ini
     const baseUrl   = window.location.href.split('#')[0];
     const returnUrl = encodeURIComponent(baseUrl + '#do-' + action);
     document.getElementById('loginModalBtn').href = `{{ route('login') }}?redirect=${returnUrl}`;
@@ -928,16 +927,19 @@ function closeLoginModal() {
 }
 
 // =============================================================
-// ✅ TOGGLE FAVORITE
+// ✅ TOGGLE FAVORITE — wrapper (cek login dulu)
 // =============================================================
 function toggleFavorite(e) {
     if (!isLoggedIn) {
         showLoginModal('favorite');
         return;
     }
+    doToggleFavorite();
+}
 
+// ✅ Logic fetch favorite — bisa dipanggil langsung tanpa event
+function doToggleFavorite() {
     const button = document.getElementById('btnFavorite');
-    const svg    = document.getElementById('iconFavorite');
 
     if (button.disabled) return;
     button.disabled = true;
@@ -989,16 +991,19 @@ function setFavoriteState(active) {
 }
 
 // =============================================================
-// ✅ SAVE FOR LATER
+// ✅ SAVE FOR LATER — wrapper (cek login dulu)
 // =============================================================
 function saveForLater(e) {
     if (!isLoggedIn) {
         showLoginModal('save');
         return;
     }
+    doSaveForLater();
+}
 
+// ✅ Logic fetch save — bisa dipanggil langsung tanpa event
+function doSaveForLater() {
     const button = document.getElementById('btnSave');
-    const svg    = document.getElementById('iconSave');
 
     if (button.disabled) return;
     button.disabled = true;
@@ -1126,7 +1131,7 @@ function showNotification(message, type = 'success') {
 }
 
 // =============================================================
-// ✅ DOM READY — initial states + auto-trigger setelah redirect
+// ✅ DOM READY
 // =============================================================
 document.addEventListener('DOMContentLoaded', function () {
 
@@ -1140,17 +1145,25 @@ document.addEventListener('DOMContentLoaded', function () {
         @endif
     @endauth
 
-    // ── Auto-trigger aksi setelah redirect dari login ──────────
+    // ── Auto-trigger aksi setelah redirect dari login/OAuth ────
     const hash = window.location.hash;
 
+    console.log('[AutoTrigger] hash:', hash, '| isLoggedIn:', isLoggedIn);
+
     if (hash === '#do-favorite' || hash === '#do-save') {
-        // Bersihkan hash dari URL tanpa reload halaman
+
+        // Bersihkan hash dari URL tanpa reload
         history.replaceState(null, '', window.location.pathname + window.location.search);
 
         const action = hash === '#do-favorite' ? 'favorite' : 'save';
         const btnId  = action === 'favorite' ? 'btnFavorite' : 'btnSave';
 
-        // Scroll ke tombol agar user tahu aksi sedang dijalankan
+        if (!isLoggedIn) {
+            console.warn('[AutoTrigger] User belum login, skip.');
+            return;
+        }
+
+        // Scroll ke tombol + animasi pulse
         const btn = document.getElementById(btnId);
         if (btn) {
             btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1158,14 +1171,15 @@ document.addEventListener('DOMContentLoaded', function () {
             setTimeout(() => btn.classList.remove('action-pulse'), 800);
         }
 
-        // Jalankan aksi setelah sedikit delay (beri waktu halaman render penuh)
+        // ✅ Delay 1000ms — beri waktu cukup untuk OAuth session settle
         setTimeout(() => {
+            console.log('[AutoTrigger] Menjalankan aksi:', action);
             if (action === 'favorite') {
-                toggleFavorite();
+                doToggleFavorite();
             } else {
-                saveForLater();
+                doSaveForLater();
             }
-        }, 600);
+        }, 1000);
     }
 });
 
@@ -1179,6 +1193,20 @@ document.addEventListener('keydown', function (e) {
         if (authorsModal && authorsModal.style.display === 'block') closeAuthorsModal();
     }
 });
+
+// ── CSS Animations ──────────────────────────────────────────
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideInRight {
+        from { transform: translateX(110%); opacity: 0; }
+        to   { transform: translateX(0);    opacity: 1; }
+    }
+    @keyframes slideOutRight {
+        from { transform: translateX(0);    opacity: 1; }
+        to   { transform: translateX(110%); opacity: 0; }
+    }
+`;
+document.head.appendChild(style);
 </script>
 @endpush
 @endsection
