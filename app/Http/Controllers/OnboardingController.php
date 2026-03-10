@@ -10,13 +10,13 @@ class OnboardingController extends Controller
 {
     public function show(): View|RedirectResponse
     {
-        // ✅ User login & sudah selesai onboarding → langsung home
+        // User login → cek database (tidak berubah)
         if (auth()->check() && auth()->user()->has_seen_onboarding) {
             return redirect()->route('home');
         }
 
-        // ✅ Guest & sudah pernah lihat onboarding → langsung home
-        if (! auth()->check() && session()->has('has_seen_onboarding')) {
+        // Guest → cek cookie (lebih persisten dari session)
+        if (! auth()->check() && request()->cookie('has_seen_onboarding')) {
             return redirect()->route('home');
         }
 
@@ -25,18 +25,25 @@ class OnboardingController extends Controller
 
     public function complete(Request $request): RedirectResponse
     {
-        // ✅ User login → tandai permanen di database
+        // User login → simpan ke database (tidak berubah)
         if (auth()->check()) {
             auth()->user()->update(['has_seen_onboarding' => true]);
         }
 
-        // ✅ Selalu set session juga (fallback untuk guest)
+        // Selalu set session sebagai backup
         session(['has_seen_onboarding' => true]);
 
-        // Ambil URL intended
-        $intended = session()->pull('onboarding_intended', null);
+        // ✅ Tambahan: set cookie untuk guest agar persisten
+        $cookie = cookie(
+            name: 'has_seen_onboarding',
+            value: '1',
+            minutes: 60 * 24 * 365, // 1 tahun
+            httpOnly: true,
+            secure: $request->isSecure(),
+            sameSite: 'Lax',
+        );
 
-        // Validasi: jangan redirect ke halaman auth
+        $intended   = session()->pull('onboarding_intended', null);
         $safeRoutes = ['login', 'register', 'otp.show', 'otp.verify'];
         $isSafe     = true;
 
@@ -48,11 +55,11 @@ class OnboardingController extends Controller
                         break;
                     }
                 } catch (\Exception $e) {
-                    // route tidak ada, skip
                 }
             }
         }
 
-        return redirect($isSafe && $intended ? $intended : route('home'));
+        return redirect($isSafe && $intended ? $intended : route('home'))
+            ->withCookie($cookie); // ✅ kirim cookie ke browser
     }
 }
