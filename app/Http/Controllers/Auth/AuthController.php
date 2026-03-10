@@ -151,8 +151,7 @@ class AuthController extends Controller
                     $redirectTo = $decoded;
                 }
             }
-
-            return redirect($redirectTo ?? route('publikasi.library'))
+            return redirect($redirectTo ?? route('home'))
                 ->with('success', 'Selamat datang kembali, ' . $user->name . '!');
         }
 
