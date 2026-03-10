@@ -15,55 +15,127 @@
 </head>
 
 <body class="min-h-screen bg-[#F0F2F5] antialiased">
+
     {{-- ============================================================ --}}
-    {{-- SPLASH SCREEN — muncul sekali saat first visit --}}
+    {{-- SPLASH SCREEN — fixed, full screen, semua device --}}
     {{-- ============================================================ --}}
-    <div id="splash-screen"
-        class="fixed inset-0 z-[999] flex flex-col items-center justify-center bg-gradient-to-br from-[#FF6B18] to-[#D63A1F] transition-opacity duration-700 ease-in-out">
+    <div id="splash-screen" style="
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #FF6B18 0%, #D63A1F 100%);
+    opacity: 1;
+    transition: opacity 0.7s ease-in-out;
+    isolation: isolate;
+    overflow: hidden;
+">
+        {{-- Decorative circles --}}
+        <div
+            style="position:absolute;top:-4rem;right:-4rem;width:16rem;height:16rem;border-radius:9999px;background:rgba(255,255,255,0.05);pointer-events:none;">
+        </div>
+        <div
+            style="position:absolute;bottom:-5rem;left:-2.5rem;width:18rem;height:18rem;border-radius:9999px;background:rgba(255,255,255,0.04);pointer-events:none;">
+        </div>
 
-        {{-- Decorative background circles --}}
-        <div class="absolute w-64 h-64 rounded-full pointer-events-none -top-16 -right-16 bg-white/5"></div>
-        <div class="absolute -bottom-20 -left-10 w-72 h-72 rounded-full bg-white/[0.04] pointer-events-none"></div>
+        {{-- Content --}}
+        <div
+            style="position:relative;z-index:10;display:flex;flex-direction:column;align-items:center;gap:1rem;text-align:center;padding:2rem;">
 
-        {{-- Logo --}}
-        <div class="relative z-10 flex flex-col items-center gap-4 splash-content">
-            <img src="{{ config('app.url') }}/assets/images/logos/logo-light.svg" alt="DABRAKA" class="w-auto h-16"
-                onerror="this.style.display='none';this.nextElementSibling.classList.remove('hidden')">
-            <span class="hidden text-3xl font-extrabold tracking-tight text-white">DABRAKA</span>
+            {{-- Logo --}}
+            <img src="{{ config('app.url') }}/assets/images/logos/logo-light.svg" alt="DABRAKA" id="splash-logo"
+                style="height:4rem;width:auto;display:block;"
+                onerror="this.style.display='none';document.getElementById('splash-logo-text').style.display='block';">
+            <span id="splash-logo-text"
+                style="display:none;font-size:2rem;font-weight:900;color:white;letter-spacing:-0.02em;">
+                DABRAKA
+            </span>
 
-            {{-- Nama & tagline --}}
-            <div class="text-center">
-                <h1 class="text-2xl font-extrabold tracking-tight text-white">DABRAKA</h1>
-                <p class="mt-1 text-sm font-medium text-white/70">Darma Brata Buana Cendekia</p>
+            {{-- App name --}}
+            <div>
+                <h1
+                    style="font-size:clamp(1.5rem,4vw,2.25rem);font-weight:900;color:white;letter-spacing:-0.02em;margin:0;">
+                    DABRAKA
+                </h1>
+                <p
+                    style="margin-top:0.25rem;font-size:clamp(0.75rem,2vw,0.875rem);color:rgba(255,255,255,0.7);font-weight:500;margin-bottom:0;">
+                    Darma Brata Buana Cendekia
+                </p>
             </div>
 
             {{-- Loading dots --}}
-            <div class="flex items-center gap-1.5 mt-4">
-                <span class="w-2 h-2 rounded-full bg-white/60 animate-bounce" style="animation-delay: 0ms"></span>
-                <span class="w-2 h-2 rounded-full bg-white/60 animate-bounce" style="animation-delay: 150ms"></span>
-                <span class="w-2 h-2 rounded-full bg-white/60 animate-bounce" style="animation-delay: 300ms"></span>
+            <div style="display:flex;align-items:center;gap:0.375rem;margin-top:1rem;">
+                <span
+                    style="width:0.5rem;height:0.5rem;border-radius:9999px;background:rgba(255,255,255,0.6);display:inline-block;animation:splashBounce 1s ease-in-out infinite;animation-delay:0ms;"></span>
+                <span
+                    style="width:0.5rem;height:0.5rem;border-radius:9999px;background:rgba(255,255,255,0.6);display:inline-block;animation:splashBounce 1s ease-in-out infinite;animation-delay:150ms;"></span>
+                <span
+                    style="width:0.5rem;height:0.5rem;border-radius:9999px;background:rgba(255,255,255,0.6);display:inline-block;animation:splashBounce 1s ease-in-out infinite;animation-delay:300ms;"></span>
             </div>
         </div>
     </div>
 
+    <style>
+        @keyframes splashBounce {
+
+            0%,
+            100% {
+                transform: translateY(0);
+                opacity: 0.6;
+            }
+
+            50% {
+                transform: translateY(-6px);
+                opacity: 1;
+            }
+        }
+
+        body.splash-active {
+            overflow: hidden !important;
+            height: 100vh !important;
+        }
+
+        /* ✅ Kunci utama: pastikan onboarding wrapper tidak buat stacking context baru saat splash aktif */
+        body.splash-active>div[x-data] {
+            position: relative;
+            z-index: 0 !important;
+        }
+    </style>
+
     <script>
         (function () {
-        const splash = document.getElementById('splash-screen');
+        const splash      = document.getElementById('splash-screen');
         const STORAGE_KEY = 'dabraka_splash_shown';
 
-        // Jika sudah pernah lihat splash → langsung sembunyikan tanpa animasi
+        document.body.classList.add('splash-active');
+
+        function hideSplash() {
+            splash.style.opacity = '0';
+            setTimeout(function () {
+                splash.style.display     = 'none';
+                splash.style.visibility  = 'hidden';
+                document.body.classList.remove('splash-active');
+            }, 700);
+        }
+
         if (localStorage.getItem(STORAGE_KEY)) {
-            splash.style.display = 'none';
+            splash.style.display    = 'none';
+            splash.style.visibility = 'hidden';
+            document.body.classList.remove('splash-active');
             return;
         }
 
-        // First visit: tampilkan splash ~2 detik lalu fade out
         setTimeout(function () {
-            splash.style.opacity = '0';
-            setTimeout(function () {
-                splash.style.display = 'none';
-                localStorage.setItem(STORAGE_KEY, '1');
-            }, 700); // durasi transition-opacity di CSS
+            hideSplash();
+            localStorage.setItem(STORAGE_KEY, '1');
         }, 2000);
     })();
     </script>
