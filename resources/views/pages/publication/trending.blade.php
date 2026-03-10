@@ -4,7 +4,6 @@
 @section('main_class', 'pb-16')
 @section('hide_footer', 'true')
 
-{{-- Custom Navbar dengan Avatar --}}
 @section('custom_navbar')
 <x-navbar ctaLabel="Browse Publikasi" ctaRoute="publikasi.index" ctaIcon="book" :showAvatarWhenAuth="true"
     :showCtaAlways="true" :showSearch="false" />
@@ -12,9 +11,9 @@
 
 @push('styles')
 <style>
-    /* Smooth transition for filter pills */
+    /* ── Filter Pills ── */
     .filter-pill {
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         touch-action: manipulation;
         -webkit-tap-highlight-color: transparent;
     }
@@ -22,16 +21,15 @@
     .filter-pill.active {
         background: linear-gradient(135deg, #FF6B18 0%, #E64627 100%);
         color: white;
-        box-shadow: 0 4px 12px rgba(255, 107, 24, 0.3);
-        transform: scale(1.02);
+        box-shadow: 0 4px 14px rgba(255, 107, 24, 0.35);
     }
 
-    /* Ranking badge animation */
+    /* ── Rank badge pulse ── */
     @keyframes pulse-glow {
 
         0%,
         100% {
-            box-shadow: 0 0 0 0 rgba(255, 107, 24, 0.4);
+            box-shadow: 0 0 0 0 rgba(255, 107, 24, 0.35);
         }
 
         50% {
@@ -40,96 +38,178 @@
     }
 
     .rank-badge-top3 {
-        animation: pulse-glow 2s infinite;
+        animation: pulse-glow 2.2s ease-in-out infinite;
     }
 
-    /* Smooth scroll behavior */
-    html {
-        scroll-behavior: smooth;
+    /* ── Publication card ── */
+    .pub-card {
+        transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+            box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+            border-color 0.25s ease;
     }
 
-    /* Mobile-optimized card hover */
     @media (hover: hover) {
-        .publication-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+        .pub-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 16px 32px rgba(0, 0, 0, 0.09);
         }
     }
 
-    /* Touch feedback for mobile */
-    .publication-card:active {
-        transform: scale(0.98);
+    .pub-card:active {
+        transform: scale(0.985);
+    }
+
+    /* ── Cover — ukuran FIXED via CSS, bukan inline/Tailwind responsive ── */
+    .pub-cover-wrap {
+        width: 56px;
+        height: 80px;
+        border-radius: 8px;
+        overflow: hidden;
+        background: #E8EAF0;
+        flex-shrink: 0;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+        transition: box-shadow 0.25s ease;
+        display: block;
+    }
+
+    @media (min-width: 640px) {
+        .pub-cover-wrap {
+            width: 72px;
+            height: 100px;
+            border-radius: 10px;
+        }
+    }
+
+    .pub-cover-wrap img {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: cover !important;
+        object-position: center !important;
+        display: block !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+
+    .pub-card:hover .pub-cover-wrap {
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+    }
+
+    /* ── Avatar — SELALU tampil, tidak butuh hover ── */
+    .avatar-item {
+        display: block;
+        flex-shrink: 0;
+    }
+
+    /* ── Arrow circle hover ── */
+    .arrow-circle {
+        transition: background 0.2s ease, transform 0.2s ease;
+    }
+
+    .pub-card:hover .arrow-circle {
+        background: #FF6B18;
+        transform: translateX(2px);
+    }
+
+    .pub-card:hover .arrow-circle svg {
+        color: white;
+    }
+
+    /* ── Card stagger entry ── */
+    @keyframes card-in {
+        from {
+            opacity: 0;
+            transform: translateY(14px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .pub-card {
+        animation: card-in 0.35s ease both;
     }
 </style>
 @endpush
 
 @section('content')
 
-{{-- ✨ Anchor scroll ke atas --}}
 <div id="top-anchor"></div>
-
-{{-- Navigation --}}
 <x-publication.navigation :items="config('publication.navigation')" />
 
-{{-- Hero Section --}}
-<section class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px] mt-6 sm:mt-8">
+<section class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px] mt-6 sm:mt-10">
 
-    {{-- Hero Header --}}
+    {{-- ── Hero Header ── --}}
     <div class="mb-6 text-center sm:mb-8">
-        <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold text-[#1A1A1A] mb-3 sm:mb-4 leading-tight">
-            🔥 Publikasi Trending
+        <div
+            class="inline-flex items-center gap-1.5 px-3 py-1 bg-[#FFF7F2] border border-[#FFD4B8] rounded-full text-[11px] font-black text-[#FF6B18] uppercase tracking-wider mb-3">
+            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                <path fill-rule="evenodd"
+                    d="M12.963 2.286a.75.75 0 00-1.071-.136 9.742 9.742 0 00-3.539 6.177A7.547 7.547 0 016.648 6.61a.75.75 0 00-1.152-.082A9 9 0 1015.68 4.534a7.46 7.46 0 01-2.717-2.248zM15.75 14.25a3.75 3.75 0 11-7.313-1.172c.628.465 1.35.81 2.133 1a5.99 5.99 0 011.925-3.545 3.75 3.75 0 013.255 3.717z"
+                    clip-rule="evenodd" />
+            </svg>
+            Sedang Trending
+        </div>
+        <h1 class="text-2xl sm:text-3xl md:text-4xl font-black text-[#1A1A1A] mb-2 leading-tight tracking-tight">
+            Publikasi Trending
         </h1>
-        <p class="text-[#737373] text-sm sm:text-base md:text-lg max-w-2xl mx-auto px-2">
-            Publikasi paling populer dalam
+        <p class="text-[#737373] text-sm sm:text-base max-w-xl mx-auto">
+            Paling populer dalam
             <span class="font-bold text-[#FF6B18]">{{ $period }} hari terakhir</span>
         </p>
 
-        {{-- Quick Stats --}}
         @if($typeStats && count($typeStats) > 0)
-        <div class="flex flex-wrap items-center justify-center gap-2 mt-3 sm:gap-3 sm:mt-4">
+        <div class="flex flex-wrap items-center justify-center gap-2 mt-3">
             @foreach($typeStats as $stat)
-            <span class="px-3 sm:px-4 py-1 sm:py-1.5 bg-[#F8F9FC] rounded-full text-xs sm:text-sm">
+            <span class="px-3 py-1 bg-[#F8F9FC] border border-[#EEF0F7] rounded-full text-xs">
                 <span class="font-bold text-[#1A1A1A]">{{ $stat['count'] }}</span>
-                <span class="text-[#737373]">{{ $stat['name'] }}</span>
+                <span class="text-[#737373] ml-0.5">{{ $stat['name'] }}</span>
             </span>
             @endforeach
         </div>
         @endif
     </div>
 
-    {{-- Filter Section (Mobile-First) --}}
-    <div class="bg-white rounded-xl sm:rounded-2xl border border-[#EEF0F7] p-4 sm:p-6 mb-4 sm:mb-6">
+    {{-- ── Filter Section ── --}}
+    <div class="bg-white rounded-2xl border border-[#EEF0F7] p-4 sm:p-5 mb-5 shadow-sm">
 
-        {{-- Period Filter --}}
-        <div class="mb-4 sm:mb-6">
-            <h3 class="text-xs sm:text-sm font-bold text-[#737373] uppercase tracking-wide mb-2 sm:mb-3">
-                📅 Periode Waktu
-            </h3>
-            <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">
-                <a href="{{ route('publikasi.trending', ['period' => '7', 'type' => $typeSlug]) }}"
-                    class="filter-pill px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg font-semibold text-xs sm:text-sm text-center {{ $period == '7' ? 'active' : 'bg-[#F8F9FC] text-[#737373] hover:bg-[#FFF7F2] hover:text-[#FF6B18]' }}">
-                    7 Hari
+        {{-- Period --}}
+        <div class="mb-4">
+            <p class="flex items-center gap-1.5 text-[10px] font-black text-[#A3A6AE] uppercase tracking-widest mb-2.5">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+                </svg>
+                Periode Waktu
+            </p>
+            <div class="grid grid-cols-2 gap-2 sm:flex sm:gap-2">
+                @foreach([['7','7 Hari'],['30','30 Hari']] as [$val,$label])
+                <a href="{{ route('publikasi.trending', ['period' => $val, 'type' => $typeSlug]) }}"
+                    class="filter-pill px-4 py-2 rounded-xl font-bold text-xs sm:text-sm text-center {{ $period == $val ? 'active' : 'bg-[#F8F9FC] text-[#555] hover:bg-[#FFF7F2] hover:text-[#FF6B18]' }}">
+                    {{ $label }}
                 </a>
-                <a href="{{ route('publikasi.trending', ['period' => '30', 'type' => $typeSlug]) }}"
-                    class="filter-pill px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg font-semibold text-xs sm:text-sm text-center {{ $period == '30' ? 'active' : 'bg-[#F8F9FC] text-[#737373] hover:bg-[#FFF7F2] hover:text-[#FF6B18]' }}">
-                    30 Hari
-                </a>
+                @endforeach
             </div>
         </div>
 
-        {{-- Type Filter --}}
+        {{-- Type --}}
         <div>
-            <h3 class="text-xs sm:text-sm font-bold text-[#737373] uppercase tracking-wide mb-2 sm:mb-3">
-                📚 Jenis Publikasi
-            </h3>
-            <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">
+            <p class="flex items-center gap-1.5 text-[10px] font-black text-[#A3A6AE] uppercase tracking-widest mb-2.5">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+                </svg>
+                Jenis Publikasi
+            </p>
+            <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-2">
                 <a href="{{ route('publikasi.trending', ['period' => $period, 'type' => 'all']) }}"
-                    class="filter-pill px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg font-semibold text-xs sm:text-sm text-center {{ $typeSlug == 'all' ? 'active' : 'bg-[#F8F9FC] text-[#737373] hover:bg-[#FFF7F2] hover:text-[#FF6B18]' }}">
+                    class="filter-pill px-4 py-2 rounded-xl font-bold text-xs sm:text-sm text-center {{ $typeSlug == 'all' ? 'active' : 'bg-[#F8F9FC] text-[#555] hover:bg-[#FFF7F2] hover:text-[#FF6B18]' }}">
                     Semua
                 </a>
                 @foreach($publicationTypes as $type)
                 <a href="{{ route('publikasi.trending', ['period' => $period, 'type' => $type->slug]) }}"
-                    class="filter-pill px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg font-semibold text-xs sm:text-sm text-center {{ $typeSlug == $type->slug ? 'active' : 'bg-[#F8F9FC] text-[#737373] hover:bg-[#FFF7F2] hover:text-[#FF6B18]' }}">
+                    class="filter-pill px-4 py-2 rounded-xl font-bold text-xs sm:text-sm text-center {{ $typeSlug == $type->slug ? 'active' : 'bg-[#F8F9FC] text-[#555] hover:bg-[#FFF7F2] hover:text-[#FF6B18]' }}">
                     {{ $type->name }}
                 </a>
                 @endforeach
@@ -137,221 +217,272 @@
         </div>
     </div>
 
-    {{-- Trending List (Mobile-Optimized) --}}
-    <div class="space-y-3 sm:space-y-4">
+    {{-- ── Trending List ── --}}
+    <div class="space-y-3">
         @forelse($trendingPublications as $index => $publication)
         @php
-        // Generate initials
-        $words = array_filter(explode(' ', $publication['title']));
+        /* ── Initials ── */
+        $words = array_filter(explode(' ', $publication['title'] ?? ''));
         $initials = '';
         foreach (array_slice($words, 0, 2) as $word) {
         $initials .= mb_strtoupper(mb_substr(trim($word), 0, 1));
         }
         if (empty($initials)) {
-        $initials = mb_strtoupper(mb_substr($publication['title'], 0, 2));
+        $initials = mb_strtoupper(mb_substr($publication['title'] ?? 'UN', 0, 2));
         }
 
-        // Get first author
+        /* ── First author ── */
         $firstAuthor = 'Anonymous';
-        if (isset($publication['authors']) && count($publication['authors']) > 0) {
+        if (!empty($publication['authors']) && count($publication['authors']) > 0) {
         $firstAuthor = $publication['authors'][0]['name'] ?? 'Unknown';
         }
 
-        // ✅ Generate placeholder URL dengan http_build_query
+        /* ── Cover URL — SAMA PERSIS dengan cara di kode asli Anda ── */
+        $publicationType = $publication['publication_type'] ?? $publication['type'] ?? 'Publikasi';
+
         $placeholderParams = http_build_query([
         'initials' => $initials,
-        'type' => $publication['publication_type'] ?? $publication['type'] ?? 'Publikasi',
-        'title' => $publication['title'],
+        'type' => $publicationType,
+        'title' => $publication['title'] ?? 'Untitled',
         'category' => $publication['category'] ?? 'Umum',
         'author' => $firstAuthor,
         'v' => time(),
         ]);
-
         $placeholderUrl = route('placeholder.cover') . '?' . $placeholderParams;
+        $fallbackUrl = 'https://placehold.co/300x420/E64627/white?text=' . urlencode($initials);
+        $finalCoverUrl = !empty($publication['cover_url'])
+        ? $publication['cover_url']
+        : $placeholderUrl;
 
-        // Fallback eksternal
-        $fallbackUrl = 'https://placehold.co/600x900/6B7280/white?text=' . urlencode($initials);
+        /* ── Rank ── */
+        $ranks = [
+        0 => ['bg' => 'linear-gradient(135deg,#F59E0B,#D97706)', 'emoji' => '🥇'],
+        1 => ['bg' => 'linear-gradient(135deg,#94A3B8,#64748B)', 'emoji' => '🥈'],
+        2 => ['bg' => 'linear-gradient(135deg,#F97316,#EA580C)', 'emoji' => '🥉'],
+        ];
+        $rank = $ranks[$index] ?? null;
 
-        // Final URL
-        $finalCoverUrl = $publication['cover_url'] ?? $placeholderUrl;
+        /* ── Type label ── */
+        $typeLabel = mb_strtoupper(mb_substr($publication['type'] ?? 'PUB', 0, 6));
+
+        /* ── Card stagger delay ── */
+        $cardDelay = min($index * 60, 400);
         @endphp
 
         <a href="{{ $publication['detail_url'] }}"
-            class="publication-card group flex gap-3 sm:gap-4 bg-white rounded-xl sm:rounded-2xl border border-[#EEF0F7] p-3 sm:p-4 md:p-5 hover:shadow-xl transition-all duration-300 relative overflow-hidden">
+            class="pub-card group flex gap-3 bg-white rounded-2xl border border-[#EEF0F7] p-3 sm:p-4 hover:border-[#FFD4B8] relative overflow-hidden"
+            style="animation-delay: {{ $cardDelay }}ms">
 
-            {{-- Background gradient for top 3 --}}
-            @if($index < 3) <div
-                class="absolute inset-0 bg-gradient-to-r from-[#FFF7F2] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-    </div>
-    @endif
+            {{-- Hover glow overlay --}}
+            <div
+                class="absolute inset-0 bg-gradient-to-r from-[#FFF7F2] via-[#FFFAF7] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+            </div>
 
-    {{-- Rank Badge (Mobile Optimized) --}}
-    <div class="relative z-10 flex-shrink-0">
-        @if($index < 3) <div
-            class="rank-badge-top3 w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-lg sm:rounded-xl bg-gradient-to-br {{ $index == 0 ? 'from-yellow-400 to-yellow-600' : ($index == 1 ? 'from-gray-300 to-gray-500' : 'from-orange-400 to-orange-600') }} flex items-center justify-center shadow-lg">
-            <span class="text-base font-bold text-white sm:text-lg md:text-xl">
-                {{ $index == 0 ? '🥇' : ($index == 1 ? '🥈' : '🥉') }}
-            </span>
-    </div>
-    @else
-    <div
-        class="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-lg sm:rounded-xl bg-gradient-to-br from-[#FF6B18] to-[#E64627] flex items-center justify-center shadow-md">
-        <span class="text-sm font-bold text-white sm:text-base md:text-lg">{{ $index + 1 }}</span>
-    </div>
-    @endif
-    </div>
-
-    {{-- ✅ Cover with Placeholder (FIXED WITH INLINE STYLES) --}}
-    <div class="relative z-10 flex-shrink-0 w-16 h-20 overflow-hidden transition-shadow rounded-lg shadow-md sm:w-20 sm:h-28 md:w-24 md:h-32 group-hover:shadow-xl"
-        style="display: block; background-color: #F8F9FC;">
-        <img src="{{ $finalCoverUrl }}" alt="Cover {{ $publication['title'] }}" loading="lazy" decoding="async"
-            style="width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; opacity: 1 !important; visibility: visible !important;"
-            onerror="if(!this.dataset.errored){this.dataset.errored='1';this.src='{{ $fallbackUrl }}';}">
-
-        {{-- Type badge on cover --}}
-        <div
-            class="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 px-1.5 py-0.5 sm:px-2 sm:py-1 bg-[#FF6B18] text-white text-[10px] sm:text-xs font-bold rounded shadow z-10">
-            {{ $publication['type'] ?? 'PUB' }}
-        </div>
-    </div>
-
-    {{-- Content (Mobile Optimized) --}}
-    <div class="relative z-10 flex-1 min-w-0">
-        {{-- Title --}}
-        <h3
-            class="text-sm sm:text-base md:text-lg lg:text-xl font-bold text-[#1A1A1A] mb-1.5 sm:mb-2 group-hover:text-[#FF6B18] transition-colors line-clamp-2">
-            {{ $publication['title'] }}
-        </h3>
-
-        {{-- Authors (Mobile Optimized) --}}
-        <div class="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3 overflow-hidden">
-            @foreach($publication['authors'] as $author)
-            @if($loop->index < 2) <div class="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
-                <img src="{{ $author['photo'] }}" alt="{{ $author['name'] }}"
-                    class="object-cover w-5 h-5 border-2 border-white rounded-full shadow sm:w-6 sm:h-6">
-                @if($loop->first)
-                <span class="text-xs sm:text-sm text-[#737373] truncate max-w-[120px] sm:max-w-none">{{ $author['name']
-                    }}</span>
+            {{-- ── Rank Badge ── --}}
+            <div class="relative z-10 self-start flex-shrink-0" style="padding-top: 22px;">
+                @if($rank)
+                <div class="flex items-center justify-center w-10 h-10 rank-badge-top3 sm:w-11 sm:h-11 rounded-xl"
+                    style="background: {{ $rank['bg'] }}; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                    <span class="text-lg leading-none">{{ $rank['emoji'] }}</span>
+                </div>
+                @else
+                <div class="flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-xl"
+                    style="background: linear-gradient(135deg,#FF6B18,#E64627); box-shadow: 0 4px 12px rgba(255,107,24,0.3);">
+                    <span class="text-sm font-black text-white sm:text-base">{{ $index + 1 }}</span>
+                </div>
                 @endif
+            </div>
+
+            {{-- ── Cover + Label tipe ── --}}
+            <div class="relative z-10 self-start flex-shrink-0">
+
+                {{-- Label ATAS cover — di luar overflow:hidden ── --}}
+                <div class="flex justify-end mb-1">
+                    <span
+                        class="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-black tracking-wider text-white leading-none"
+                        style="background: #FF6B18; box-shadow: 0 2px 6px rgba(255,107,24,0.4);">
+                        {{ $typeLabel }}
+                    </span>
+                </div>
+
+                {{-- Cover image — pakai class .pub-cover-wrap --}}
+                <div class="pub-cover-wrap">
+                    <img src="{{ $finalCoverUrl }}" alt="Cover {{ $publication['title'] }}" loading="lazy"
+                        decoding="async"
+                        onerror="if(!this.dataset.errored){this.dataset.errored='1';this.src='{{ $fallbackUrl }}';}">
+                </div>
+            </div>
+
+            {{-- ── Content ── --}}
+            <div class="relative z-10 flex-1 min-w-0 flex flex-col pt-1 gap-1.5">
+
+                {{-- Title --}}
+                <h3
+                    class="text-sm sm:text-base font-bold text-[#1A1A1A] group-hover:text-[#FF6B18] transition-colors duration-200 line-clamp-2 leading-snug">
+                    {{ $publication['title'] }}
+                </h3>
+
+                {{-- ── Authors row — avatar SELALU tampil ── --}}
+                <div class="flex items-center gap-2 overflow-hidden">
+
+                    {{-- Avatar stack — visible tanpa hover --}}
+                    @if(!empty($publication['authors']))
+                    <div class="flex items-center flex-shrink-0">
+                        @foreach($publication['authors'] as $author)
+                        @if($loop->index < 3) <div class="avatar-item {{ $loop->first ? '' : '-ml-2' }}"
+                            style="position: relative; z-index: {{ 10 - $loop->index }};">
+                            <img src="{{ $author['photo'] }}" alt="{{ $author['name'] }}" title="{{ $author['name'] }}"
+                                style="width:24px; height:24px; border-radius:9999px; object-fit:cover; border:2px solid white; box-shadow: 0 1px 4px rgba(0,0,0,0.15); display:block;">
+                    </div>
+                    @endif
+                    @endforeach
+                </div>
+                @endif
+
+                {{-- Nama author --}}
+                <div class="flex items-center flex-1 min-w-0 gap-1">
+                    <svg class="w-3.5 h-3.5 text-[#C0C3CC] flex-shrink-0" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                    </svg>
+                    <span class="text-xs text-[#555] font-medium truncate">{{ $firstAuthor }}</span>
+                    @if($publication['total_authors'] > 1)
+                    <span class="flex-shrink-0 text-xs text-[#A3A6AE]">+{{ $publication['total_authors'] - 1 }}</span>
+                    @endif
+                </div>
+            </div>
+
+            {{-- ── Stats ── --}}
+            <div class="flex flex-wrap items-center gap-1.5 mt-auto">
+
+                {{-- Score --}}
+                <div class="flex items-center gap-1 px-2 py-1 rounded-lg border border-[#FFD4B8] bg-[#FFF7F2]">
+                    <svg class="w-3.5 h-3.5 text-[#FF6B18]" fill="currentColor" viewBox="0 0 24 24">
+                        <path fill-rule="evenodd"
+                            d="M12.963 2.286a.75.75 0 00-1.071-.136 9.742 9.742 0 00-3.539 6.177A7.547 7.547 0 016.648 6.61a.75.75 0 00-1.152-.082A9 9 0 1015.68 4.534a7.46 7.46 0 01-2.717-2.248zM15.75 14.25a3.75 3.75 0 11-7.313-1.172c.628.465 1.35.81 2.133 1a5.99 5.99 0 011.925-3.545 3.75 3.75 0 013.255 3.717z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    <span class="text-xs font-black text-[#FF6B18]">{{ number_format($publication['trending_score'])
+                        }}</span>
+                </div>
+
+                {{-- Views --}}
+                <div class="flex items-center gap-1 px-2 py-1 rounded-lg bg-[#F8F9FC]">
+                    <svg class="w-3.5 h-3.5 text-[#737373]" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span class="text-xs font-semibold text-[#555]">{{ number_format($publication['recent_views'])
+                        }}</span>
+                </div>
+
+                {{-- Downloads --}}
+                <div class="flex items-center gap-1 px-2 py-1 rounded-lg bg-[#F8F9FC]">
+                    <svg class="w-3.5 h-3.5 text-[#737373]" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                    </svg>
+                    <span class="text-xs font-semibold text-[#555]">{{ number_format($publication['recent_downloads'])
+                        }}</span>
+                </div>
+
+                {{-- Category --}}
+                @if(!empty($publication['category']))
+                <div class="hidden sm:flex items-center gap-1 px-2 py-1 rounded-lg bg-[#F8F9FC] max-w-[120px]">
+                    <svg class="w-3.5 h-3.5 text-[#A3A6AE] flex-shrink-0" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6z" />
+                    </svg>
+                    <span class="text-xs text-[#737373] truncate">{{ $publication['category'] }}</span>
+                </div>
+                @endif
+            </div>
+    </div>
+
+    {{-- ── Arrow ── --}}
+    <div class="relative z-10 self-center flex-shrink-0 hidden ml-1 sm:flex">
+        <div class="arrow-circle w-8 h-8 rounded-full bg-[#F4F6FB] flex items-center justify-center">
+            <svg class="w-4 h-4 text-[#A3A6AE] transition-colors duration-200" fill="none" stroke="currentColor"
+                viewBox="0 0 24 24" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+            </svg>
         </div>
-        @endif
-        @endforeach
-        @if($publication['total_authors'] > 1)
-        <span class="text-xs sm:text-sm text-[#737373] flex-shrink-0">+{{ $publication['total_authors'] - 1 }}</span>
-        @endif
     </div>
 
-    {{-- Stats Row (Mobile Optimized) --}}
-    <div class="flex flex-wrap items-center gap-2 sm:gap-3 text-[10px] sm:text-xs md:text-sm">
-        {{-- Trending Score --}}
-        <div class="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 bg-[#FFF7F2] rounded-lg">
-            <span class="text-sm sm:text-base md:text-lg">🔥</span>
-            <span class="font-bold text-[#FF6B18]">{{ number_format($publication['trending_score']) }}</span>
-            <span class="hidden xs:inline text-[#737373]">poin</span>
-        </div>
-
-        {{-- Views --}}
-        <span class="flex items-center gap-1 sm:gap-1.5 text-[#737373]">
-            <svg class="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            </svg>
-            <span class="font-semibold">{{ number_format($publication['recent_views']) }}</span>
-        </span>
-
-        {{-- Downloads --}}
-        <span class="flex items-center gap-1 sm:gap-1.5 text-[#737373]">
-            <svg class="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            <span class="font-semibold">{{ number_format($publication['recent_downloads']) }}</span>
-        </span>
-
-        {{-- Category (Hidden on very small screens) --}}
-        <span class="hidden sm:inline-flex items-center gap-1 text-[#737373]">
-            <svg class="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-            </svg>
-            <span class="truncate max-w-[100px]">{{ $publication['category'] ?? 'Umum' }}</span>
-        </span>
-    </div>
-    </div>
-
-    {{-- Arrow Icon (Hidden on mobile) --}}
-    <div class="relative z-10 self-center flex-shrink-0 hidden sm:block">
-        <svg class="w-5 h-5 sm:w-6 sm:h-6 text-[#737373] group-hover:text-[#FF6B18] group-hover:translate-x-2 transition-all"
-            fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-        </svg>
-    </div>
     </a>
     @empty
-    {{-- Empty State (Mobile Optimized) --}}
-    <div class="bg-white rounded-xl sm:rounded-2xl border border-[#EEF0F7] p-8 sm:p-12 text-center">
-        <svg class="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 mx-auto mb-3 sm:mb-4 text-[#EEF0F7]" fill="none"
-            stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-        </svg>
-        <h3 class="text-lg sm:text-xl font-bold text-[#1A1A1A] mb-2">
-            Belum Ada Publikasi Trending
-        </h3>
-        <p class="text-sm sm:text-base text-[#737373] mb-4 sm:mb-6 px-4">
+
+    {{-- ── Empty State ── --}}
+    <div class="bg-white rounded-2xl border border-[#EEF0F7] p-10 sm:p-14 text-center">
+        <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[#FFF7F2] flex items-center justify-center">
+            <svg class="w-8 h-8 text-[#FFD4B8]" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+            </svg>
+        </div>
+        <h3 class="text-lg font-bold text-[#1A1A1A] mb-2">Belum Ada Publikasi Trending</h3>
+        <p class="text-sm text-[#737373] mb-6 max-w-xs mx-auto">
             Belum ada aktivitas dalam periode ini untuk {{ $typeSlug == 'all' ? 'semua tipe' : 'tipe ini' }}
         </p>
         <a href="{{ route('publikasi.index') }}"
-            class="inline-block px-5 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-[#FF6B18] to-[#E64627] text-white text-sm sm:text-base font-bold rounded-lg hover:shadow-lg transition-all">
+            class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white rounded-xl hover:shadow-lg hover:scale-105 transition-all duration-200"
+            style="background: linear-gradient(135deg,#FF6B18,#E64627)">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+            </svg>
             Jelajahi Semua Publikasi
         </a>
     </div>
+
     @endforelse
     </div>
 
-    {{-- Info Footer (Mobile Optimized) --}}
+    {{-- ── Info Footer ── --}}
     @if($trendingPublications->count() > 0)
-    <div class="mt-6 sm:mt-8 p-4 sm:p-6 bg-[#F8F9FC] rounded-xl border border-[#EEF0F7]">
-        <div class="flex items-start gap-2 sm:gap-3">
-            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-[#FF6B18] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor"
-                viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <div class="text-xs sm:text-sm text-[#737373] leading-relaxed">
-                <p class="font-semibold text-[#1A1A1A] mb-2">📊 Cara Perhitungan Trending Score</p>
-
-                <div class="space-y-2">
-                    <p>
-                        <strong class="text-[#FF6B18]">Score = (Views × 1) + (Downloads × 2)</strong>
-                    </p>
-
-                    <p>
-                        Download memiliki bobot <strong>2x lebih tinggi</strong> karena menunjukkan engagement yang
-                        lebih serius.
-                    </p>
-
-                    <div class="mt-3 pt-3 border-t border-[#EEF0F7]">
-                        <p class="font-semibold text-[#1A1A1A] mb-1.5">🎯 Jika Score Sama</p>
-                        <p class="mb-1">Urutan ditentukan berdasarkan:</p>
-                        <ol class="list-decimal list-inside mt-1 space-y-0.5 ml-2">
-                            <li>Jumlah <strong>downloads</strong> tertinggi</li>
-                            <li>Jumlah <strong>views</strong> tertinggi</li>
-                            <li>Tanggal publikasi <strong>terbaru</strong></li>
-                        </ol>
+    <div class="mt-6 p-4 sm:p-5 bg-[#F8F9FC] rounded-2xl border border-[#EEF0F7]">
+        <div class="flex items-start gap-3">
+            <div
+                class="flex-shrink-0 w-8 h-8 rounded-xl bg-[#FFF7F2] border border-[#FFD4B8] flex items-center justify-center mt-0.5">
+                <svg class="w-4 h-4 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                    stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                </svg>
+            </div>
+            <div class="text-xs sm:text-sm text-[#737373] leading-relaxed flex-1">
+                <p class="font-bold text-[#1A1A1A] mb-2 text-sm">Cara Perhitungan Trending Score</p>
+                <p class="mb-2">
+                    <span class="font-black text-[#FF6B18]">Score = (Views × 1) + (Downloads × 2)</span>
+                </p>
+                <p class="mb-3">Download memiliki bobot <strong class="text-[#1A1A1A]">2× lebih tinggi</strong> karena
+                    menunjukkan engagement yang lebih serius.</p>
+                <div class="pt-3 border-t border-[#E8EAF0]">
+                    <p class="font-bold text-[#1A1A1A] mb-2">Jika Score Sama</p>
+                    <div class="space-y-1.5">
+                        @foreach(['Downloads tertinggi','Views tertinggi','Publikasi terbaru'] as $i => $rule)
+                        <div class="flex items-center gap-2">
+                            <span
+                                class="w-5 h-5 rounded-full text-white text-[10px] font-black flex items-center justify-center flex-shrink-0"
+                                style="background: linear-gradient(135deg,#FF6B18,#E64627);">{{ $i+1 }}</span>
+                            <span class="text-xs text-[#555]">{{ $rule }}</span>
+                        </div>
+                        @endforeach
                     </div>
-
-                    <div class="mt-3 pt-3 border-t border-[#EEF0F7] text-[10px] sm:text-xs">
-                        <p class="flex items-start sm:items-center gap-1.5">
-                            <svg class="w-3 h-3 sm:w-4 sm:h-4 text-[#FF6B18] flex-shrink-0 mt-0.5 sm:mt-0" fill="none"
-                                stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <span>Data diperbarui setiap kali ada aktivitas baru (view/download)</span>
-                        </p>
-                    </div>
+                </div>
+                <div class="flex items-center gap-1.5 mt-3 pt-3 border-t border-[#E8EAF0] text-[11px] text-[#A3A6AE]">
+                    <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Data diperbarui setiap ada aktivitas baru
                 </div>
             </div>
         </div>
@@ -360,13 +491,10 @@
 
 </section>
 
-{{-- ✨ Scroll to Top --}}
 <x-scroll-to-top />
 
 @endsection
 
 @push('scripts')
-
-{{-- ✨ Scroll to Top Script --}}
 <x-scroll-to-top-script />
 @endpush
