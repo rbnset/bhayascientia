@@ -15,6 +15,58 @@
 </head>
 
 <body class="min-h-screen bg-[#F0F2F5] antialiased">
+    {{-- ============================================================ --}}
+    {{-- SPLASH SCREEN — muncul sekali saat first visit --}}
+    {{-- ============================================================ --}}
+    <div id="splash-screen"
+        class="fixed inset-0 z-[999] flex flex-col items-center justify-center bg-gradient-to-br from-[#FF6B18] to-[#D63A1F] transition-opacity duration-700 ease-in-out">
+
+        {{-- Decorative background circles --}}
+        <div class="absolute w-64 h-64 rounded-full pointer-events-none -top-16 -right-16 bg-white/5"></div>
+        <div class="absolute -bottom-20 -left-10 w-72 h-72 rounded-full bg-white/[0.04] pointer-events-none"></div>
+
+        {{-- Logo --}}
+        <div class="relative z-10 flex flex-col items-center gap-4 splash-content">
+            <img src="{{ config('app.url') }}/assets/images/logos/logo-light.svg" alt="DABRAKA" class="w-auto h-16"
+                onerror="this.style.display='none';this.nextElementSibling.classList.remove('hidden')">
+            <span class="hidden text-3xl font-extrabold tracking-tight text-white">DABRAKA</span>
+
+            {{-- Nama & tagline --}}
+            <div class="text-center">
+                <h1 class="text-2xl font-extrabold tracking-tight text-white">DABRAKA</h1>
+                <p class="mt-1 text-sm font-medium text-white/70">Darma Brata Buana Cendekia</p>
+            </div>
+
+            {{-- Loading dots --}}
+            <div class="flex items-center gap-1.5 mt-4">
+                <span class="w-2 h-2 rounded-full bg-white/60 animate-bounce" style="animation-delay: 0ms"></span>
+                <span class="w-2 h-2 rounded-full bg-white/60 animate-bounce" style="animation-delay: 150ms"></span>
+                <span class="w-2 h-2 rounded-full bg-white/60 animate-bounce" style="animation-delay: 300ms"></span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+        const splash = document.getElementById('splash-screen');
+        const STORAGE_KEY = 'dabraka_splash_shown';
+
+        // Jika sudah pernah lihat splash → langsung sembunyikan tanpa animasi
+        if (localStorage.getItem(STORAGE_KEY)) {
+            splash.style.display = 'none';
+            return;
+        }
+
+        // First visit: tampilkan splash ~2 detik lalu fade out
+        setTimeout(function () {
+            splash.style.opacity = '0';
+            setTimeout(function () {
+                splash.style.display = 'none';
+                localStorage.setItem(STORAGE_KEY, '1');
+            }, 700); // durasi transition-opacity di CSS
+        }, 2000);
+    })();
+    </script>
 
     <div x-data="onboarding()" x-cloak class="flex flex-col min-h-screen lg:flex-row">
 
