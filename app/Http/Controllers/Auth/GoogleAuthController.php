@@ -15,11 +15,10 @@ class GoogleAuthController extends Controller
 {
     /**
      * Redirect user ke Google OAuth page
-     * ✅ Simpan intended redirect ke session sebelum ke Google
      */
     public function redirectToGoogle()
     {
-        // Simpan ?redirect= ke session agar tidak hilang saat OAuth roundtrip
+        // ✅ Simpan full redirect URL ke session sebelum ke Google
         if (request()->query('redirect')) {
             Session::put('oauth_redirect', urldecode(request()->query('redirect')));
         }
@@ -40,21 +39,21 @@ class GoogleAuthController extends Controller
             if ($user) {
                 if (!$user->google_id) {
                     $user->update([
-                        'google_id'          => $googleUser->id,
-                        'avatar'             => $googleUser->avatar,
-                        'provider'           => 'google',
-                        'email_verified_at'  => $user->email_verified_at ?? now(),
+                        'google_id'         => $googleUser->id,
+                        'avatar'            => $googleUser->avatar,
+                        'provider'          => 'google',
+                        'email_verified_at' => $user->email_verified_at ?? now(),
                     ]);
                 }
             } else {
                 $user = User::create([
-                    'name'               => $googleUser->name,
-                    'email'              => $googleUser->email,
-                    'google_id'          => $googleUser->id,
-                    'avatar'             => $googleUser->avatar,
-                    'provider'           => 'google',
-                    'email_verified_at'  => now(),
-                    'password'           => Hash::make(Str::random(24)),
+                    'name'              => $googleUser->name,
+                    'email'             => $googleUser->email,
+                    'google_id'         => $googleUser->id,
+                    'avatar'            => $googleUser->avatar,
+                    'provider'          => 'google',
+                    'email_verified_at' => now(),
+                    'password'          => Hash::make(Str::random(24)),
                 ]);
 
                 $user->assignRole('Author');
@@ -85,10 +84,10 @@ class GoogleAuthController extends Controller
 
     /**
      * Redirect user ke Facebook OAuth page
-     * ✅ Simpan intended redirect ke session sebelum ke Facebook
      */
     public function redirectToFacebook()
     {
+        // ✅ Simpan full redirect URL ke session sebelum ke Facebook
         if (request()->query('redirect')) {
             Session::put('oauth_redirect', urldecode(request()->query('redirect')));
         }
@@ -109,21 +108,21 @@ class GoogleAuthController extends Controller
             if ($user) {
                 if (!$user->facebook_id) {
                     $user->update([
-                        'facebook_id'        => $facebookUser->id,
-                        'avatar'             => $facebookUser->avatar,
-                        'provider'           => 'facebook',
-                        'email_verified_at'  => $user->email_verified_at ?? now(),
+                        'facebook_id'       => $facebookUser->id,
+                        'avatar'            => $facebookUser->avatar,
+                        'provider'          => 'facebook',
+                        'email_verified_at' => $user->email_verified_at ?? now(),
                     ]);
                 }
             } else {
                 $user = User::create([
-                    'name'               => $facebookUser->name,
-                    'email'              => $facebookUser->email,
-                    'facebook_id'        => $facebookUser->id,
-                    'avatar'             => $facebookUser->avatar,
-                    'provider'           => 'facebook',
-                    'email_verified_at'  => now(),
-                    'password'           => Hash::make(Str::random(24)),
+                    'name'              => $facebookUser->name,
+                    'email'             => $facebookUser->email,
+                    'facebook_id'       => $facebookUser->id,
+                    'avatar'            => $facebookUser->avatar,
+                    'provider'          => 'facebook',
+                    'email_verified_at' => now(),
+                    'password'          => Hash::make(Str::random(24)),
                 ]);
 
                 $user->assignRole('Author');
@@ -134,6 +133,7 @@ class GoogleAuthController extends Controller
             // ✅ Ambil intended redirect dari session
             $redirectTo = Session::pull('oauth_redirect');
 
+            // ✅ Validasi keamanan — hanya izinkan URL dari domain sendiri
             if ($redirectTo) {
                 $parsedHost = parse_url($redirectTo, PHP_URL_HOST);
                 $appHost    = parse_url(config('app.url'), PHP_URL_HOST);

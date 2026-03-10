@@ -119,7 +119,7 @@ class AuthController extends Controller
                     ->with('info', '📧 Akun Anda belum diverifikasi. Kode OTP baru telah dikirim ke ' . $user->email);
             }
 
-            // ✅ Baca intended redirect: dari hidden input (POST) atau query param (GET)
+            // ✅ Baca intended redirect dari hidden input (POST) atau query param (GET)
             $redirectTo = $request->input('_redirect_to')
                 ?? $request->query('redirect')
                 ?? null;

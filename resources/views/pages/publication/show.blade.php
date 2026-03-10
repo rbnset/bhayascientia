@@ -896,9 +896,13 @@ function showLoginModal(action = 'default') {
     document.getElementById('loginModalTitle').textContent = msg.title;
     document.getElementById('loginModalDesc').textContent  = msg.desc;
 
-    const baseUrl   = window.location.href.split('#')[0];
-    const returnUrl = encodeURIComponent(baseUrl + '#do-' + action);
-    document.getElementById('loginModalBtn').href = `{{ route('login') }}?redirect=${returnUrl}`;
+    // ✅ Pakai query param ?after_login= bukan hash #
+    // Hash tidak pernah dikirim ke server, jadi tidak bisa survive OAuth redirect
+    const baseUrl   = window.location.href.split('#')[0].split('?')[0];
+    const returnUrl = encodeURIComponent(baseUrl + '?after_login=' + action);
+
+    document.getElementById('loginModalBtn').href =
+        `{{ route('login') }}?redirect=${returnUrl}`;
 
     const modal     = document.getElementById('loginRequiredModal');
     const backdrop  = document.getElementById('loginModalBackdrop');
@@ -928,7 +932,7 @@ function closeLoginModal() {
 }
 
 // =============================================================
-// ✅ TOGGLE FAVORITE — wrapper (cek login dulu)
+// ✅ TOGGLE FAVORITE — wrapper
 // =============================================================
 function toggleFavorite(e) {
     if (!isLoggedIn) {
@@ -938,7 +942,6 @@ function toggleFavorite(e) {
     doToggleFavorite();
 }
 
-// ✅ Logic fetch favorite — bisa dipanggil langsung tanpa event
 function doToggleFavorite() {
     const button = document.getElementById('btnFavorite');
 
@@ -992,7 +995,7 @@ function setFavoriteState(active) {
 }
 
 // =============================================================
-// ✅ SAVE FOR LATER — wrapper (cek login dulu)
+// ✅ SAVE FOR LATER — wrapper
 // =============================================================
 function saveForLater(e) {
     if (!isLoggedIn) {
@@ -1002,7 +1005,6 @@ function saveForLater(e) {
     doSaveForLater();
 }
 
-// ✅ Logic fetch save — bisa dipanggil langsung tanpa event
 function doSaveForLater() {
     const button = document.getElementById('btnSave');
 
@@ -1136,7 +1138,7 @@ function showNotification(message, type = 'success') {
 // =============================================================
 document.addEventListener('DOMContentLoaded', function () {
 
-    // ── Set initial button states untuk user yang sudah login ──
+    // ── Set initial button states ──────────────────────────
     @auth
         @if(auth()->user()->isFavorited($publication->id))
             setFavoriteState(true);
@@ -1146,41 +1148,38 @@ document.addEventListener('DOMContentLoaded', function () {
         @endif
     @endauth
 
-    // ── Auto-trigger aksi setelah redirect dari login/OAuth ────
-    const hash = window.location.hash;
+    // ── Auto-trigger setelah redirect dari login/OAuth ─────
+    // Pakai ?after_login= bukan #hash karena hash tidak dikirim ke server
+    // sehingga tidak bisa survive Google/Facebook OAuth redirect
+    const urlParams  = new URLSearchParams(window.location.search);
+    const afterLogin = urlParams.get('after_login');
 
-    console.log('[AutoTrigger] hash:', hash, '| isLoggedIn:', isLoggedIn);
+    console.log('[AutoTrigger] after_login:', afterLogin, '| isLoggedIn:', isLoggedIn);
 
-    if (hash === '#do-favorite' || hash === '#do-save') {
+    if (afterLogin && isLoggedIn) {
 
-        // Bersihkan hash dari URL tanpa reload
-        history.replaceState(null, '', window.location.pathname + window.location.search);
+        // Bersihkan query param dari URL tanpa reload halaman
+        history.replaceState(null, '', window.location.pathname);
 
-        const action = hash === '#do-favorite' ? 'favorite' : 'save';
-        const btnId  = action === 'favorite' ? 'btnFavorite' : 'btnSave';
+        const btnId = afterLogin === 'favorite' ? 'btnFavorite' : 'btnSave';
+        const btn   = document.getElementById(btnId);
 
-        if (!isLoggedIn) {
-            console.warn('[AutoTrigger] User belum login, skip.');
-            return;
-        }
-
-        // Scroll ke tombol + animasi pulse
-        const btn = document.getElementById(btnId);
+        // Scroll ke tombol + animasi pulse orange
         if (btn) {
             btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
             btn.classList.add('action-pulse');
             setTimeout(() => btn.classList.remove('action-pulse'), 800);
         }
 
-        // ✅ Delay 1000ms — beri waktu cukup untuk OAuth session settle
+        // Delay 800ms — beri waktu halaman & session fully settled
         setTimeout(() => {
-            console.log('[AutoTrigger] Menjalankan aksi:', action);
-            if (action === 'favorite') {
+            console.log('[AutoTrigger] Menjalankan:', afterLogin);
+            if (afterLogin === 'favorite') {
                 doToggleFavorite();
-            } else {
+            } else if (afterLogin === 'save') {
                 doSaveForLater();
             }
-        }, 1000);
+        }, 800);
     }
 });
 
