@@ -7,6 +7,7 @@ use App\Filament\Resources\PublicationVersionResource;
 use App\Filament\Resources\Reviews\ReviewResource;
 use App\Models\User;
 use App\Notifications\PublicationAccepted;
+use App\Notifications\PublicationInReview;
 use App\Notifications\PublicationRejected;
 use App\Notifications\PublicationRevisionRequired;
 use App\Notifications\ReviewDecisionForAuthor;
@@ -40,11 +41,14 @@ class EditReview extends EditRecord
         return (bool) auth()->user()?->hasAnyRole(['admin', 'super_admin']);
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // Mount — author redirect ke ViewReview
+    // ─────────────────────────────────────────────────────────────
+
     public function mount(int|string $record): void
     {
         parent::mount($record);
 
-        // Author redirect ke ViewReview
         if ($this->isAuthor()) {
             $this->redirect(
                 ReviewResource::getUrl('view', ['record' => $record])
@@ -61,8 +65,34 @@ class EditReview extends EditRecord
         return $this->record->attachments()->latest()->first();
     }
 
+    protected function hasNewerVersion(): bool
+    {
+        $current = $this->record->publicationVersion?->version_number ?? 0;
+        $latest  = $this->record->publicationVersion?->publication
+            ?->versions()->max('version_number') ?? 0;
+        return $latest > $current;
+    }
+
+    protected function latestPublicationVersion(): ?\App\Models\PublicationVersion
+    {
+        return $this->record->publicationVersion?->publication
+            ?->versions()->latest('version_number')->first();
+    }
+
+    protected function authorRecipients()
+    {
+        $publication   = $this->record->publicationVersion?->publication;
+        $authorUserIds = $publication?->authors()
+            ->pluck('authors.user_id')
+            ->filter()->unique()->values();
+
+        if (!$authorUserIds || $authorUserIds->isEmpty()) return collect();
+
+        return User::whereIn('id', $authorUserIds)->get();
+    }
+
     // ─────────────────────────────────────────────────────────────
-    // Status banner — pesan disesuaikan per role & decision
+    // Status banner
     // ─────────────────────────────────────────────────────────────
 
     protected function renderStatusBanner(): HtmlString
@@ -74,7 +104,6 @@ class EditReview extends EditRecord
             default             => 'admin',
         };
 
-        // [decision][role] => config
         $map = [
             null => [
                 'reviewer' => [
@@ -93,7 +122,7 @@ class EditReview extends EditRecord
                     'icon'    => '⏳',
                     'label'   => 'Dalam Review',
                     'title'   => 'Naskah Anda sedang direview',
-                    'message' => 'Reviewer sedang memeriksa naskah Anda. Harap tunggu hasil keputusan dari reviewer.',
+                    'message' => 'Reviewer sedang memeriksa naskah Anda. Harap tunggu hasil keputusan.',
                 ],
                 'admin' => [
                     'color'   => '#3B82F6',
@@ -194,8 +223,7 @@ class EditReview extends EditRecord
             ],
         ];
 
-        $cfg = $map[$decision][$role] ?? $map[null]['admin'];
-
+        $cfg         = $map[$decision][$role] ?? $map[null]['admin'];
         $publication = $this->record->publicationVersion?->publication;
         $pubTitle    = e($publication?->title ?? '-');
         $pubType     = $publication?->publicationType?->name ?? 'Publikasi';
@@ -204,12 +232,32 @@ class EditReview extends EditRecord
             : '-';
         $reviewer    = $this->record->reviewer?->name ?? '-';
 
-        // Info row berbeda per role
         $infoRow = match ($role) {
             'reviewer' => "<span>📄 <strong>{$pubType}</strong> · {$version}</span><span>📝 {$pubTitle}</span>",
             'author'   => "<span>📄 <strong>{$pubType}</strong> · {$version}</span><span>👤 Reviewer: <strong>{$reviewer}</strong></span>",
             default    => "<span>📄 <strong>{$pubType}</strong> · {$version}</span><span>📝 {$pubTitle}</span><span>👤 Reviewer: <strong>{$reviewer}</strong></span>",
         };
+
+        // Alert revisi baru — hanya untuk reviewer
+        $revisionAlert = '';
+        if ($this->isReviewer() && $this->hasNewerVersion()) {
+            $latestNo      = $this->latestPublicationVersion()?->version_number;
+            $revisionAlert = "
+                <div style='
+                    margin-top:12px;
+                    padding:10px 14px;
+                    background:#FEF3C7;
+                    border:1px solid #FDE68A;
+                    border-radius:8px;
+                    font-size:13px;
+                    color:#92400E;
+                    line-height:1.6;
+                '>
+                    🔔 <strong>Author telah mengirim revisi baru (v{$latestNo}).</strong>
+                    Gunakan tombol <strong>\"Review Revisi Terbaru (v{$latestNo})\"</strong> di header untuk mulai mereview versi terbaru.
+                </div>
+            ";
+        }
 
         return new HtmlString("
             <div style='
@@ -232,6 +280,7 @@ class EditReview extends EditRecord
                         </div>
                         <div style='font-size:14px;font-weight:600;color:#1F2937;margin-bottom:4px;'>{$cfg['title']}</div>
                         <div style='font-size:13px;color:#4B5563;line-height:1.6;'>{$cfg['message']}</div>
+                        {$revisionAlert}
                         <div style='
                             display:flex;flex-wrap:wrap;gap:16px;
                             margin-top:10px;padding-top:10px;
@@ -295,7 +344,7 @@ class EditReview extends EditRecord
                 ]))
                 ->openUrlInNewTab(),
 
-            // ── Download PDF Anotasi (semua role) ─────────────────
+            // ── Download PDF Anotasi ──────────────────────────────
             Action::make('downloadAnnotatedPdf')
                 ->label('Download PDF Anotasi')
                 ->icon('heroicon-o-arrow-down-tray')
@@ -307,45 +356,85 @@ class EditReview extends EditRecord
                     return Storage::disk('local')->download($attachment->file_path);
                 }),
 
-            // ── Upload Revisi — khusus AUTHOR ─────────────────────
-            Action::make('uploadRevisi')
-                ->label('Upload Revisi')
-                ->icon('heroicon-o-arrow-up-tray')
-                ->color('warning')
-                ->visible(
-                    fn() =>
-                    $this->isAuthor() &&
-                        $this->record->decision === 'revision_required'
-                )
-                ->url(fn() => PublicationResource::getUrl('edit', [
-                    'record' => $this->record->publicationVersion?->publication,
-                ]))
-                ->tooltip('Perbaiki naskah lalu upload revisi di halaman publikasi'),
-
-            // ── Lihat Revisi Terbaru — khusus REVIEWER & ADMIN ────
+            // ── Lihat Revisi Terbaru PDF — REVIEWER & ADMIN ───────
             Action::make('lihatRevisiTerbaru')
-                ->label(function () {
-                    $latest = $this->record->publicationVersion?->publication
-                        ?->versions()->latest('version_number')->first();
-                    return $latest
-                        ? 'Lihat Revisi Terbaru (v' . $latest->version_number . ')'
-                        : 'Lihat Revisi Terbaru';
-                })
+                ->label(fn() => 'Lihat Revisi (v' . ($this->latestPublicationVersion()?->version_number ?? '-') . ')')
                 ->icon('heroicon-o-document-magnifying-glass')
-                ->color('primary')
+                ->color('gray')
                 ->visible(
                     fn() => ($this->isReviewer() || $this->isAdmin()) &&
-                        $this->record->decision === 'revision_required'
+                        $this->hasNewerVersion()
                 )
-                ->url(function () {
-                    $latest = $this->record->publicationVersion?->publication
-                        ?->versions()->latest('version_number')->first();
-                    return $latest
-                        ? PublicationVersionResource::getUrl('pdf', ['record' => $latest])
-                        : null;
-                })
+                ->url(
+                    fn() => $this->latestPublicationVersion()
+                        ? PublicationVersionResource::getUrl('pdf', ['record' => $this->latestPublicationVersion()])
+                        : null
+                )
                 ->openUrlInNewTab()
                 ->tooltip('Buka PDF revisi terbaru dari author'),
+
+            // ── Review Revisi Terbaru — khusus REVIEWER ──────────
+            Action::make('mulaiReviewRevisi')
+                ->label(fn() => 'Review Revisi Terbaru (v' . ($this->latestPublicationVersion()?->version_number ?? '-') . ')')
+                ->icon('heroicon-o-arrow-path')
+                ->color('warning')
+                ->visible(fn() => $this->isReviewer() && $this->hasNewerVersion())
+                ->requiresConfirmation()
+                ->modalHeading('Mulai Review Revisi Terbaru?')
+                ->modalDescription(function () {
+                    $latest  = $this->latestPublicationVersion();
+                    $current = $this->record->publicationVersion?->version_number;
+                    return new HtmlString(
+                        "📄 Saat ini Anda melihat review untuk <strong>v{$current}</strong>.<br><br>" .
+                            "Author telah mengirim revisi <strong>v{$latest?->version_number}</strong>. " .
+                            "Klik lanjut untuk membuat review baru terhadap versi terbaru ini."
+                    );
+                })
+                ->modalSubmitActionLabel('Ya, Mulai Review')
+                ->modalCancelActionLabel('Batal')
+                ->action(function () {
+                    $latestVersion = $this->latestPublicationVersion();
+                    $publication   = $this->record->publicationVersion?->publication;
+
+                    if (!$latestVersion || !$publication) return;
+
+                    // Cek review existing untuk versi ini
+                    $existingReview = \App\Models\Review::query()
+                        ->where('publication_version_id', $latestVersion->id)
+                        ->where('reviewer_id', auth()->id())
+                        ->first();
+
+                    if ($existingReview) {
+                        $this->redirect(ReviewResource::getUrl('edit', ['record' => $existingReview->id]));
+                        return;
+                    }
+
+                    // Buat review baru
+                    $newReview = \App\Models\Review::create([
+                        'publication_version_id' => $latestVersion->id,
+                        'reviewer_id'            => auth()->id(),
+                    ]);
+
+                    // Update status publikasi → in_review
+                    $publication->update(['status' => 'in_review']);
+
+                    // Notifikasi ke author bahwa revisinya sedang direview
+                    $recipients = $this->authorRecipients();
+                    if ($recipients->isNotEmpty()) {
+                        \Illuminate\Support\Facades\Notification::send(
+                            $recipients,
+                            new PublicationInReview($publication)
+                        );
+                    }
+
+                    Notification::make()
+                        ->success()
+                        ->title('Review revisi dimulai')
+                        ->body('Revisi v' . $latestVersion->version_number . ' sedang Anda review. Author telah dinotifikasi.')
+                        ->send();
+
+                    $this->redirect(ReviewResource::getUrl('edit', ['record' => $newReview->id]));
+                }),
 
             // ── Delete — admin & reviewer saja ───────────────────
             DeleteAction::make()
@@ -372,7 +461,7 @@ class EditReview extends EditRecord
 
         if (!$publication) return;
 
-        // Sync status publikasi
+        // Sync status publikasi dari decision
         $newStatus = match ($review->decision) {
             'revision_required' => 'revision_required',
             'accepted'          => 'accepted',
@@ -384,14 +473,9 @@ class EditReview extends EditRecord
             $publication->update(['status' => $newStatus]);
         }
 
-        // Kirim notifikasi spesifik ke author
-        $authorUserIds = $publication->authors()
-            ->pluck('authors.user_id')
-            ->filter()->unique()->values();
-
-        if ($authorUserIds->isEmpty()) return;
-
-        $recipients = User::whereIn('id', $authorUserIds)->get();
+        // Kirim notifikasi ke author
+        $recipients = $this->authorRecipients();
+        if ($recipients->isEmpty()) return;
 
         match ($review->decision) {
             'revision_required' => \Illuminate\Support\Facades\Notification::send(
