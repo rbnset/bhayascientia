@@ -43,18 +43,29 @@ Route::middleware(['auth'])->group(function () {
         abort_unless(filled($version->pdf_file_path), 404);
 
         $absolutePath = Storage::disk('public')->path($version->pdf_file_path);
-
         abort_unless(is_file($absolutePath), 404);
 
-        // Serahkan semua logic stamp ke PdfStamper
-        $content = PdfStamper::stamp($absolutePath, $version);
+        try {
+            $content = PdfStamper::stamp($absolutePath, $version);
 
-        return response($content, 200, [
-            'Content-Type'        => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="manuscript.pdf"',
-            'Content-Length'      => strlen($content),
-            'Cache-Control'       => 'no-store, no-cache, must-revalidate, max-age=0',
-        ]);
+            return response($content, 200, [
+                'Content-Type'        => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="manuscript.pdf"',
+                'Content-Length'      => strlen($content),
+                'Cache-Control'       => 'no-store, no-cache, must-revalidate, max-age=0',
+            ]);
+        } catch (\Throwable $e) {
+            // FPDI gagal parse PDF modern → fallback serve langsung
+            \Illuminate\Support\Facades\Log::warning('PdfStamper fallback: ' . $e->getMessage(), [
+                'version_id' => $version->id,
+            ]);
+
+            return response()->file($absolutePath, [
+                'Content-Type'        => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="manuscript.pdf"',
+                'Cache-Control'       => 'no-store, no-cache, must-revalidate, max-age=0',
+            ]);
+        }
     })->name('manuscripts.view');
 
     // ── Download manuscript (tanpa stamp, file asli) ───────────
