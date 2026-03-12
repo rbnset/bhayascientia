@@ -103,24 +103,24 @@ $abstractHtml = filled($abstract) ? str($abstract)->sanitizeHtml() : null;
             @endif
 
             <div class="bookx-cover-badge">{{ $statusLabel }}</div>
+        </div>
 
-            <div class="bookx-cover-actions">
-                @if($downloadUrl)
-                <a class="bookx-download" href="{{ $downloadUrl }}" target="_blank" rel="noopener">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="bookx-download-icon" viewBox="0 0 20 20"
-                        fill="currentColor">
-                        <path fill-rule="evenodd"
-                            d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
-                            clip-rule="evenodd" />
-                    </svg>
-                    Download Manuscript
-                </a>
-                @else
-                <div class="bookx-download-disabled">
-                    Manuscript belum ada — upload di Publication Versions.
-                </div>
-                @endif
+        <div class="bookx-cover-actions">
+            @if($downloadUrl)
+            <a class="bookx-download" href="{{ $downloadUrl }}" target="_blank" rel="noopener">
+                <svg xmlns="http://www.w3.org/2000/svg" class="bookx-download-icon" viewBox="0 0 20 20"
+                    fill="currentColor">
+                    <path fill-rule="evenodd"
+                        d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
+                        clip-rule="evenodd" />
+                </svg>
+                Download Manuscript
+            </a>
+            @else
+            <div class="bookx-download-disabled">
+                Manuscript belum ada — upload di Publication Versions.
             </div>
+            @endif
         </div>
 
         {{-- BODY COLUMN --}}
@@ -366,18 +366,17 @@ $abstractHtml = filled($abstract) ? str($abstract)->sanitizeHtml() : null;
     }
 
     .bookx-cover-actions {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        padding: clamp(0.75rem, 3vw, 1rem);
-        background: var(--bg-primary);
-        border-top: 2px solid var(--border-primary);
+        position: static;
+        /* hapus absolute */
+        padding: clamp(0.75rem, 3vw, 1rem) 0 0 0;
+        background: transparent;
+        border-top: none;
     }
 
     .bookx-download {
-        display: flex;
-        width: 100%;
+        display: inline-flex;
+        /* bukan full width */
+        width: auto;
         justify-content: center;
         align-items: center;
         gap: 0.5rem;
@@ -385,13 +384,28 @@ $abstractHtml = filled($abstract) ? str($abstract)->sanitizeHtml() : null;
         background: var(--accent-gradient);
         color: white;
         font-weight: 800;
-        font-size: clamp(0.85rem, 2.5vw, 0.95rem);
-        border-radius: 16px;
-        padding: clamp(0.75rem, 2.5vw, 1rem) clamp(1rem, 4vw, 1.25rem);
+        font-size: clamp(0.75rem, 2vw, 0.85rem);
+        border-radius: 12px;
+        padding: 0.6rem 1rem;
         box-shadow: var(--shadow-accent);
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         touch-action: manipulation;
         border: none;
+        white-space: nowrap;
+    }
+
+    .bookx-download-disabled {
+        width: 100%;
+        text-align: center;
+        padding: 0.6rem 0.75rem;
+        border-radius: 12px;
+        background: var(--bg-secondary);
+        border: 2px dashed var(--border-primary);
+        color: var(--text-orange);
+        font-weight: 600;
+        font-size: clamp(0.75rem, 2vw, 0.8rem);
+        line-height: 1.5;
+        margin-top: 0.75rem;
     }
 
     .bookx-download:hover,
@@ -409,19 +423,6 @@ $abstractHtml = filled($abstract) ? str($abstract)->sanitizeHtml() : null;
         width: 1.25rem;
         height: 1.25rem;
         flex-shrink: 0;
-    }
-
-    .bookx-download-disabled {
-        width: 100%;
-        text-align: center;
-        padding: clamp(0.75rem, 2.5vw, 1rem) 1rem;
-        border-radius: 16px;
-        background: var(--bg-secondary);
-        border: 2px dashed var(--border-primary);
-        color: var(--text-orange);
-        font-weight: 600;
-        font-size: clamp(0.8rem, 2.2vw, 0.9rem);
-        line-height: 1.5;
     }
 
     /* ════════════════════════════════════════════════
