@@ -80,11 +80,212 @@ class PublicationForm
         ];
     }
 
+    private static function renderStatusBanner(?object $record): string
+    {
+        if (!$record) return '';
+
+        $status = $record->status ?? 'draft';
+
+        $map = [
+            'draft' => [
+                'color'   => '#F59E0B',
+                'bg'      => '#FFFBEB',
+                'border'  => '#FDE68A',
+                'icon'    => '✏️',
+                'label'   => 'Draft',
+                'title'   => 'Publikasi masih dalam tahap Draft',
+                'message' => 'Lengkapi semua informasi, lalu pilih <strong>Submit Manuscript</strong> pada pojok kanan atas untuk mengajukan ke reviewer. Pastikan judul, abstrak, penulis, dan file sudah lengkap sebelum submit.',
+                'steps'   => [
+                    ['done' => true,  'text' => 'Buat publikasi'],
+                    ['done' => false, 'text' => 'Submit ke reviewer'],
+                    ['done' => false, 'text' => 'Proses review'],
+                    ['done' => false, 'text' => 'Diterbitkan'],
+                ],
+            ],
+            'submitted' => [
+                'color'   => '#3B82F6',
+                'bg'      => '#EFF6FF',
+                'border'  => '#BFDBFE',
+                'icon'    => '📬',
+                'label'   => 'Submitted',
+                'title'   => 'Publikasi telah diajukan',
+                'message' => 'Publikasi kamu sudah diterima dan sedang <strong>menunggu reviewer</strong> untuk ditugaskan. Kamu akan mendapat notifikasi ketika proses review dimulai.',
+                'steps'   => [
+                    ['done' => true,  'text' => 'Buat publikasi'],
+                    ['done' => true,  'text' => 'Submit ke reviewer'],
+                    ['done' => false, 'text' => 'Proses review'],
+                    ['done' => false, 'text' => 'Diterbitkan'],
+                ],
+            ],
+            'in_review' => [
+                'color'   => '#8B5CF6',
+                'bg'      => '#F5F3FF',
+                'border'  => '#DDD6FE',
+                'icon'    => '🔍',
+                'label'   => 'In Review',
+                'title'   => 'Sedang dalam proses review',
+                'message' => 'Reviewer sedang <strong>memeriksa publikasi kamu</strong>. Harap tunggu hasil review. Jangan ubah konten utama selama proses review berlangsung.',
+                'steps'   => [
+                    ['done' => true,  'text' => 'Buat publikasi'],
+                    ['done' => true,  'text' => 'Submit ke reviewer'],
+                    ['done' => true,  'text' => 'Proses review'],
+                    ['done' => false, 'text' => 'Diterbitkan'],
+                ],
+            ],
+            'revision_required' => [
+                'color'   => '#EF4444',
+                'bg'      => '#FEF2F2',
+                'border'  => '#FECACA',
+                'icon'    => '🔄',
+                'label'   => 'Revisi Diperlukan',
+                'title'   => 'Publikasi perlu direvisi',
+                'message' => 'Reviewer telah memberikan <strong>catatan revisi</strong>. Silakan buka tab Review, pelajari catatan dari reviewer, lakukan perbaikan, lalu submit ulang dengan cara pilih <strong>Upload Revisi</strong> pada pojok kanan atas',
+                'steps'   => [
+                    ['done' => true,  'text' => 'Buat publikasi'],
+                    ['done' => true,  'text' => 'Submit ke reviewer'],
+                    ['done' => true,  'text' => 'Proses review'],
+                    ['done' => false, 'text' => 'Revisi & resubmit'],
+                ],
+            ],
+            'accepted' => [
+                'color'   => '#10B981',
+                'bg'      => '#ECFDF5',
+                'border'  => '#A7F3D0',
+                'icon'    => '✅',
+                'label'   => 'Accepted',
+                'title'   => 'Publikasi diterima!',
+                'message' => 'Selamat! Publikasi kamu telah <strong>diterima oleh reviewer</strong>. Tim editor akan segera menjadwalkan penerbitan. Tidak perlu melakukan perubahan apapun.',
+                'steps'   => [
+                    ['done' => true,  'text' => 'Buat publikasi'],
+                    ['done' => true,  'text' => 'Submit ke reviewer'],
+                    ['done' => true,  'text' => 'Proses review'],
+                    ['done' => false, 'text' => 'Diterbitkan'],
+                ],
+            ],
+            'rejected' => [
+                'color'   => '#6B7280',
+                'bg'      => '#F9FAFB',
+                'border'  => '#E5E7EB',
+                'icon'    => '❌',
+                'label'   => 'Rejected',
+                'title'   => 'Publikasi ditolak',
+                'message' => 'Mohon maaf, publikasi kamu <strong>tidak dapat diterima</strong> pada saat ini. Silakan baca catatan reviewer untuk mengetahui alasan penolakan. Kamu dapat membuat publikasi baru dengan cara membuat publikasi baru pada menu <strong>Daftar Publikasi</strong>',
+                'steps'   => [
+                    ['done' => true,  'text' => 'Buat publikasi'],
+                    ['done' => true,  'text' => 'Submit ke reviewer'],
+                    ['done' => true,  'text' => 'Proses review'],
+                    ['done' => false, 'text' => 'Ditolak'],
+                ],
+            ],
+            'published' => [
+                'color'   => '#059669',
+                'bg'      => '#ECFDF5',
+                'border'  => '#6EE7B7',
+                'icon'    => '🎉',
+                'label'   => 'Published',
+                'title'   => 'Publikasi telah diterbitkan!',
+                'message' => 'Publikasi kamu sudah <strong>live dan dapat diakses publik</strong>. Bagikan ke rekan-rekan dan komunitas kamu untuk memperluas dampak karya ilmiahmu.',
+                'steps'   => [
+                    ['done' => true,  'text' => 'Buat publikasi'],
+                    ['done' => true,  'text' => 'Submit ke reviewer'],
+                    ['done' => true,  'text' => 'Proses review'],
+                    ['done' => true,  'text' => 'Diterbitkan'],
+                ],
+            ],
+        ];
+
+        $cfg = $map[$status] ?? $map['draft'];
+
+        // Build step indicators
+        $stepsHtml = '';
+        $stepCount = count($cfg['steps']);
+        foreach ($cfg['steps'] as $i => $step) {
+            $isLast   = $i === $stepCount - 1;
+            $dotColor = $step['done'] ? $cfg['color'] : '#D1D5DB';
+            $txtColor = $step['done'] ? $cfg['color'] : '#9CA3AF';
+            $weight   = $step['done'] ? '600' : '400';
+
+            $stepsHtml .= "
+            <div style='display:flex;align-items:center;gap:6px;'>
+                <div style='width:20px;height:20px;border-radius:50%;background:{$dotColor};
+                            display:flex;align-items:center;justify-content:center;flex-shrink:0;'>
+                    <span style='color:white;font-size:11px;font-weight:700;'>" . ($step['done'] ? '✓' : ($i + 1)) . "</span>
+                </div>
+                <span style='font-size:13px;color:{$txtColor};font-weight:{$weight};white-space:nowrap;'>{$step['text']}</span>
+                " . (!$isLast ? "<div style='width:32px;height:2px;background:{$dotColor};margin:0 4px;border-radius:2px;'></div>" : '') . "
+            </div>
+        ";
+        }
+
+        $publishedAt = '';
+        if ($status === 'published' && $record->published_at) {
+            $date        = $record->published_at->locale('id')->isoFormat('D MMMM YYYY, HH:mm');
+            $publishedAt = "<div style='margin-top:8px;font-size:12px;color:{$cfg['color']};'>
+                            🕐 Diterbitkan pada: <strong>{$date}</strong>
+                        </div>";
+        }
+
+        return "
+        <div style='
+            background:{$cfg['bg']};
+            border:1.5px solid {$cfg['border']};
+            border-left:5px solid {$cfg['color']};
+            border-radius:10px;
+            padding:16px 20px;
+            margin-bottom:4px;
+        '>
+            <div style='display:flex;align-items:flex-start;gap:12px;'>
+                <span style='font-size:24px;line-height:1;flex-shrink:0;'>{$cfg['icon']}</span>
+                <div style='flex:1;'>
+                    <div style='display:flex;align-items:center;gap:8px;margin-bottom:6px;'>
+                        <span style='
+                            background:{$cfg['color']};
+                            color:white;
+                            font-size:11px;
+                            font-weight:700;
+                            padding:2px 10px;
+                            border-radius:20px;
+                            text-transform:uppercase;
+                            letter-spacing:0.5px;
+                        '>{$cfg['label']}</span>
+                    </div>
+                    <div style='font-size:14px;font-weight:600;color:#1F2937;margin-bottom:4px;'>{$cfg['title']}</div>
+                    <div style='font-size:13px;color:#4B5563;line-height:1.6;'>{$cfg['message']}</div>
+                    {$publishedAt}
+                </div>
+            </div>
+            <div style='
+                display:flex;
+                align-items:center;
+                flex-wrap:wrap;
+                gap:4px;
+                margin-top:14px;
+                padding-top:12px;
+                border-top:1px solid {$cfg['border']};
+            '>
+                <span style='font-size:12px;color:#6B7280;margin-right:6px;'>Progress:</span>
+                {$stepsHtml}
+            </div>
+        </div>
+    ";
+    }
+
     public static function configure(Schema $schema): Schema
     {
         return $schema
             ->columns(1)
             ->components([
+                // ─────────────────────────────────────────
+                // STATUS BANNER — Ditampilkan di atas Wizard
+                // ─────────────────────────────────────────
+                Placeholder::make('status_banner')
+                    ->label('')
+                    ->content(fn($record) => new \Illuminate\Support\HtmlString(
+                        self::renderStatusBanner($record)
+                    ))
+                    ->visible(fn($record) => (bool) $record?->id)
+                    ->columnSpanFull(),
+
                 Wizard::make([
 
                     // ─────────────────────────────────────────
