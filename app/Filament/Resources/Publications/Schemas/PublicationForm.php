@@ -17,6 +17,7 @@ use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\View;
 use Filament\Schemas\Components\Wizard;
@@ -515,7 +516,29 @@ class PublicationForm
                                 ->schema([
                                     Repeater::make('authorPublications')
                                         ->label('Authors')
-                                        ->deletable(false)
+                                        ->deletable(!self::isReviewer())
+                                        ->deleteAction(
+                                            fn(\Filament\Actions\Action $action) => $action
+                                                ->requiresConfirmation()
+                                                ->modalHeading('Hapus Author?')
+                                                ->modalDescription('Author ini akan dihapus dari publikasi. Tindakan ini tidak dapat dibatalkan.')
+                                                ->modalSubmitActionLabel('Ya, Hapus')
+                                                ->color('danger')
+                                                ->hidden(function (array $arguments, \Filament\Forms\Components\Repeater $component): bool {
+                                                    // Reviewer tidak boleh hapus
+                                                    if (self::isReviewer()) return true;
+
+                                                    $items    = $component->getState();
+                                                    $authorId = $items[$arguments['item']]['author_id'] ?? null;
+
+                                                    if (!$authorId) return false;
+
+                                                    // Sembunyikan jika ini author milik user yang sedang login
+                                                    $myAuthorId = \App\Models\Author::where('user_id', auth()->id())->value('id');
+
+                                                    return (int) $authorId === (int) $myAuthorId;
+                                                })
+                                        )
                                         ->relationship('authorPublications')
                                         ->orderColumn('order')
                                         ->reorderable()
@@ -584,24 +607,89 @@ class PublicationForm
                                                 })
                                                 ->dehydrated()
                                                 ->createOptionForm([
-                                                    TextInput::make('name')
-                                                        ->label('Nama Lengkap')
-                                                        ->required()
-                                                        ->maxLength(255)
-                                                        ->helperText('Untuk external author yang tidak punya akun.'),
-                                                    TextInput::make('email')
-                                                        ->label('Email')
-                                                        ->email()
-                                                        ->maxLength(255)
-                                                        ->unique(table: 'authors', column: 'email', ignoreRecord: true)
-                                                        ->helperText('Opsional.'),
+
+                                                    // ── Foto Profil ───────────────────────────────────────────
+                                                    FileUpload::make('photo_path')
+                                                        ->label('Foto Profil')
+                                                        ->avatar()
+                                                        ->disk('public')
+                                                        ->directory('authors/photos')
+                                                        ->visibility('public')
+                                                        ->imageEditor()
+                                                        ->circleCropper()
+                                                        ->imageEditorMode(2)
+                                                        ->maxSize(2048)
+                                                        ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/jpg'])
+                                                        ->helperText('JPG, PNG. Maks 2MB. Opsional.')
+                                                        ->moveFiles()
+                                                        ->extraAttributes([
+                                                            'class' => 'flex flex-col items-center justify-center',
+                                                        ]),
+
+                                                    // ── Nama & Email ──────────────────────────────────────────
+                                                    Grid::make()
+                                                        ->columns(['default' => 1, 'md' => 2])
+                                                        ->schema([
+                                                            TextInput::make('name')
+                                                                ->label('Nama Lengkap')
+                                                                ->required()
+                                                                ->maxLength(255)
+                                                                ->placeholder('Contoh: Dr. John Doe, M.T.')
+                                                                ->prefixIcon('heroicon-o-user')
+                                                                ->helperText('Wajib untuk external author (tanpa akun).'),
+
+                                                            TextInput::make('email')
+                                                                ->label('Email')
+                                                                ->email()
+                                                                ->maxLength(255)
+                                                                ->placeholder('john@example.com')
+                                                                ->prefixIcon('heroicon-o-envelope')
+                                                                ->unique(table: 'authors', column: 'email', ignoreRecord: true)
+                                                                ->helperText('Opsional.'),
+                                                        ]),
+
+                                                    // ── Affiliasi ─────────────────────────────────────────────
                                                     TextInput::make('affiliation')
                                                         ->label('Affiliasi / Institusi')
-                                                        ->maxLength(255),
+                                                        ->maxLength(255)
+                                                        ->placeholder('Universitas / Organisasi')
+                                                        ->prefixIcon('heroicon-o-building-office')
+                                                        ->helperText('Opsional.'),
+
+                                                    // ── Bio ───────────────────────────────────────────────────
                                                     Textarea::make('bio')
-                                                        ->label('Bio Singkat')
-                                                        ->rows(3)
-                                                        ->maxLength(500),
+                                                        ->label('Biografi')
+                                                        ->rows(4)
+                                                        ->maxLength(1000)
+                                                        ->placeholder('Tulis bio singkat penulis...')
+                                                        ->helperText('Opsional. Maks. 1000 karakter.'),
+
+                                                    // ── Hubungkan ke Akun User ────────────────────────────────
+                                                    Select::make('user_id')
+                                                        ->label('Hubungkan ke Akun Pengguna')
+                                                        ->relationship(
+                                                            name: 'user',
+                                                            titleAttribute: 'name',
+                                                            modifyQueryUsing: fn($query) => $query
+                                                                ->whereDoesntHave('author')
+                                                                ->orderBy('name')
+                                                        )
+                                                        ->getOptionLabelFromRecordUsing(
+                                                            fn(\App\Models\User $user) => "{$user->name} — {$user->email}"
+                                                        )
+                                                        ->searchable(['name', 'email'])
+                                                        ->preload()
+                                                        ->nullable()
+                                                        ->placeholder('— Tidak terhubung (External Author) —')
+                                                        ->prefixIcon('heroicon-o-link')
+                                                        ->helperText('Opsional. Hubungkan ke akun user yang sudah terdaftar.')
+                                                        ->visible(fn() => auth()->user()?->hasAnyRole(['admin', 'super_admin']))
+                                                        ->afterStateUpdated(function ($state, callable $set) {
+                                                            if ($state) {
+                                                                $set('name', null);
+                                                                $set('email', null);
+                                                            }
+                                                        }),
                                                 ])
                                                 ->createOptionUsing(fn(array $data) => Author::create($data)->getKey()),
 
