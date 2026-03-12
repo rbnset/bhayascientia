@@ -226,7 +226,7 @@ class EditPublication extends EditRecord
                         ->directory('publications/versions')
                         ->acceptedFileTypes(['application/pdf'])
                         ->required()
-                        ->helperText('Pastikan nama dan isi berkas sudah benar sebelum mengirim.'),
+                        ->helperText('Pastikan isi berkas sudah benar sebelum mengirim.'),
 
                     Checkbox::make('confirm_reviewed')
                         ->label('Saya telah meninjau berkas PDF dan memastikan isinya sudah benar')

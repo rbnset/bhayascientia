@@ -545,7 +545,27 @@ class PublicationForm
                                         ->defaultItems(0)
                                         ->minItems(1)
                                         ->addActionLabel('Tambah penulis lain')
-                                        ->collapsed()
+                                        ->collapsed(false)  // ← semua item terbuka saat pertama load
+                                        ->collapseAllAction(
+                                            fn(\Filament\Actions\Action $action) => $action->label('Ciutkan semua')
+                                        )
+                                        ->expandAllAction(
+                                            fn(\Filament\Actions\Action $action) => $action->label('Buka semua')
+                                        )
+                                        ->itemLabel(function (array $state): ?string {
+                                            $authorId = $state['author_id'] ?? null;
+                                            if (!$authorId) return 'Penulis baru';
+
+                                            $author = \App\Models\Author::find($authorId);
+                                            if (!$author) return 'Penulis';
+
+                                            $label = $author->name;
+                                            if ($state['is_corresponding'] ?? false) {
+                                                $label .= ' · Corresponding';
+                                            }
+
+                                            return $label;
+                                        })
                                         ->afterStateHydrated(function (?array $state, callable $set) {
                                             $state ??= [];
                                             $state = array_values($state);
