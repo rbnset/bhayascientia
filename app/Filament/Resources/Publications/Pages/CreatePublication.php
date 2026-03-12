@@ -100,4 +100,9 @@ class CreatePublication extends CreateRecord
             ->title('Publikasi berhasil dibuat')
             ->body("Judul: {$shortTitle}");
     }
+
+    protected function getRedirectUrl(): string
+    {
+        return PublicationResource::getUrl('edit', ['record' => $this->record]);
+    }
 }
