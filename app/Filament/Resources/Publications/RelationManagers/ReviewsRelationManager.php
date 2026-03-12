@@ -2,8 +2,8 @@
 
 namespace App\Filament\Resources\Publications\RelationManagers;
 
+use App\Filament\Resources\Reviews\ReviewResource;
 use Filament\Actions\Action;
-use Filament\Actions\ViewAction;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
@@ -16,6 +16,24 @@ class ReviewsRelationManager extends RelationManager
     protected static string $relationship = 'reviews';
 
     protected static ?string $title = 'Reviews & Feedback';
+
+    // ─────────────────────────────────────────────────────────────
+    // Role helpers
+    // ─────────────────────────────────────────────────────────────
+
+    protected function isAuthor(): bool
+    {
+        return (bool) auth()->user()?->hasRole('author');
+    }
+
+    protected function isReviewer(): bool
+    {
+        return (bool) auth()->user()?->hasRole('reviewer');
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Table
+    // ─────────────────────────────────────────────────────────────
 
     public function table(Table $table): Table
     {
@@ -30,7 +48,7 @@ class ReviewsRelationManager extends RelationManager
             ->modifyQueryUsing(fn($query) => $query->with(['attachments', 'notes', 'reviewer', 'publicationVersion']))
             ->columns([
 
-                // ── Versi naskah yang direview ─────────────────────────────
+                // ── Versi naskah ───────────────────────────────────────────
                 TextColumn::make('publicationVersion.version_number')
                     ->label('Version')
                     ->sortable()
@@ -63,9 +81,7 @@ class ReviewsRelationManager extends RelationManager
                         default             => 'heroicon-o-question-mark-circle',
                     })
                     ->formatStateUsing(
-                        fn(?string $state) => $state
-                            ? str($state)->headline()
-                            : 'Pending'
+                        fn(?string $state) => $state ? str($state)->headline() : 'Pending'
                     ),
 
                 // ── Tanggal review (WIB) ───────────────────────────────────
@@ -85,19 +101,24 @@ class ReviewsRelationManager extends RelationManager
                             ->diffForHumans()
                     ),
 
-                // ── Ringkasan komentar ─────────────────────────────────────
+                // ── Ringkasan komentar — strip HTML ───────────────────────
                 TextColumn::make('overall_comment')
                     ->label('Overall Comment')
                     ->words(12)
                     ->wrap()
                     ->placeholder('No comment')
+                    ->formatStateUsing(
+                        fn(?string $state) => filled($state)
+                            ? strip_tags($state)
+                            : null
+                    )
                     ->tooltip(
                         fn($record) => filled($record->overall_comment)
-                            ? $record->overall_comment
+                            ? strip_tags($record->overall_comment)
                             : null
                     ),
 
-                // ── Indikator ada attachment atau tidak ────────────────────
+                // ── Indikator attachment ───────────────────────────────────
                 Tables\Columns\IconColumn::make('has_attachment')
                     ->label('Attachment')
                     ->state(fn($record) => $record->attachments->isNotEmpty())
@@ -118,7 +139,11 @@ class ReviewsRelationManager extends RelationManager
                     ->state(fn($record) => $record->notes->count())
                     ->badge()
                     ->color(fn($state) => $state > 0 ? 'warning' : 'gray')
-                    ->formatStateUsing(fn($state) => $state > 0 ? $state . ' note' . ($state > 1 ? 's' : '') : '—')
+                    ->formatStateUsing(
+                        fn($state) => $state > 0
+                            ? $state . ' note' . ($state > 1 ? 's' : '')
+                            : '—'
+                    )
                     ->tooltip(
                         fn($record) => $record->notes->count() > 0
                             ? 'Click Detail to read reviewer notes'
@@ -127,25 +152,22 @@ class ReviewsRelationManager extends RelationManager
             ])
 
             ->actions([
-                // ── Detail: hanya overall_comment + notes per section ──────
-                ViewAction::make()
+                // ── Detail — arahkan ke view/edit sesuai role ──────────────
+                Action::make('detail')
                     ->label('Detail')
                     ->icon('heroicon-o-chat-bubble-left-ellipsis')
                     ->color('info')
-                    ->slideOver()
-                    ->modalHeading(
-                        fn($record) => 'Review — v' .
-                            ($record->publicationVersion?->version_number ?? '?') .
-                            '  ·  ' . ($record->reviewer?->name ?? 'Unknown')
-                    )
-                    ->modalSubmitAction(false)
-                    ->modalCancelActionLabel('Close')
-                    ->modalContent(fn($record): ViewContract => view(
-                        'filament.reviews.preview',
-                        ['review' => $record]
-                    )),
+                    ->url(function ($record): string {
+                        // Author → ViewReview (read-only)
+                        if ($this->isAuthor()) {
+                            return ReviewResource::getUrl('view', ['record' => $record->id]);
+                        }
 
-                // ── Download: langsung download attachment, tanpa modal ─────
+                        // Reviewer & admin → EditReview
+                        return ReviewResource::getUrl('edit', ['record' => $record->id]);
+                    }),
+
+                // ── Download attachment ────────────────────────────────────
                 Action::make('download_revision')
                     ->label('Download')
                     ->icon('heroicon-o-arrow-down-tray')
@@ -177,7 +199,7 @@ class ReviewsRelationManager extends RelationManager
             ->bulkActions([])
 
             ->emptyStateIcon('heroicon-o-chat-bubble-left-right')
-            ->emptyStateHeading('No reviews yet')
-            ->emptyStateDescription('Reviews will appear here once a reviewer submits feedback.');
+            ->emptyStateHeading('Belum ada review')
+            ->emptyStateDescription('Review akan muncul di sini setelah reviewer mengirimkan feedback.');
     }
 }
