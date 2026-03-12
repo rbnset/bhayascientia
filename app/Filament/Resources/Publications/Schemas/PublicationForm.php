@@ -88,116 +88,201 @@ class PublicationForm
         if (!$record) return '';
 
         $status = $record->status ?? 'draft';
+        $isReviewer = self::isReviewer();
+        $isAdmin    = auth()->user()?->hasAnyRole(['admin', 'super_admin']);
+        $role       = match (true) {
+            $isReviewer => 'reviewer',
+            $isAdmin    => 'admin',
+            default     => 'author',
+        };
 
+        // [status][role] => config
         $map = [
             'draft' => [
-                'color'   => '#F59E0B',
-                'bg'      => '#FFFBEB',
-                'border'  => '#FDE68A',
-                'icon'    => '✏️',
-                'label'   => 'Draft',
-                'title'   => 'Publikasi masih dalam tahap Draft',
-                'message' => 'Lengkapi semua informasi, lalu pilih <strong>Submit Manuscript</strong> pada pojok kanan atas untuk mengajukan ke reviewer. Pastikan judul, abstrak, penulis, dan file sudah lengkap sebelum submit.',
-                'steps'   => [
+                'color'  => '#F59E0B',
+                'bg' => '#FFFBEB',
+                'border' => '#FDE68A',
+                'icon'   => '✏️',
+                'label' => 'Draft',
+                'author'   => [
+                    'title'   => 'Publikasi masih dalam tahap Draft',
+                    'message' => 'Lengkapi semua informasi, lalu klik <strong>Submit Manuskrip</strong> di pojok kanan atas. Pastikan judul, abstrak, penulis, dan file sudah lengkap sebelum submit.',
+                ],
+                'reviewer' => [
+                    'title'   => 'Naskah belum disubmit',
+                    'message' => 'Author belum mengirimkan naskah ini. Tidak ada tindakan yang diperlukan saat ini.',
+                ],
+                'admin' => [
+                    'title'   => 'Publikasi masih Draft',
+                    'message' => 'Author belum melengkapi atau mengajukan naskah ini. Pantau progres atau hubungi author jika diperlukan.',
+                ],
+                'steps' => [
                     ['done' => true,  'text' => 'Buat publikasi'],
                     ['done' => false, 'text' => 'Submit ke reviewer'],
                     ['done' => false, 'text' => 'Proses review'],
                     ['done' => false, 'text' => 'Diterbitkan'],
                 ],
             ],
+
             'submitted' => [
-                'color'   => '#3B82F6',
-                'bg'      => '#EFF6FF',
-                'border'  => '#BFDBFE',
-                'icon'    => '📬',
-                'label'   => 'Submitted',
-                'title'   => 'Publikasi telah diajukan',
-                'message' => 'Publikasi kamu sudah diterima dan sedang <strong>menunggu reviewer</strong> untuk ditugaskan. Kamu akan mendapat notifikasi ketika proses review dimulai.',
-                'steps'   => [
+                'color'  => '#3B82F6',
+                'bg' => '#EFF6FF',
+                'border' => '#BFDBFE',
+                'icon'   => '📬',
+                'label' => 'Submitted',
+                'author'   => [
+                    'title'   => 'Naskah sudah dikirim ke reviewer',
+                    'message' => 'Naskah kamu sudah diterima dan sedang <strong>menunggu reviewer ditugaskan</strong>. Kamu akan mendapat notifikasi saat proses review dimulai.',
+                ],
+                'reviewer' => [
+                    'title'   => 'Naskah menunggu untuk direview',
+                    'message' => 'Naskah ini sudah disubmit oleh author dan siap untuk direview. Klik tombol <strong>Review Naskah</strong> di pojok kanan atas untuk mulai.',
+                ],
+                'admin' => [
+                    'title'   => 'Naskah menunggu reviewer',
+                    'message' => 'Author telah mengirimkan naskah. Pastikan ada reviewer yang ditugaskan untuk memeriksa naskah ini.',
+                ],
+                'steps' => [
                     ['done' => true,  'text' => 'Buat publikasi'],
                     ['done' => true,  'text' => 'Submit ke reviewer'],
                     ['done' => false, 'text' => 'Proses review'],
                     ['done' => false, 'text' => 'Diterbitkan'],
                 ],
             ],
+
             'in_review' => [
-                'color'   => '#8B5CF6',
-                'bg'      => '#F5F3FF',
-                'border'  => '#DDD6FE',
-                'icon'    => '🔍',
-                'label'   => 'In Review',
-                'title'   => 'Sedang dalam proses review',
-                'message' => 'Reviewer sedang <strong>memeriksa publikasi kamu</strong>. Harap tunggu hasil review. Jangan ubah konten utama selama proses review berlangsung.',
-                'steps'   => [
+                'color'  => '#8B5CF6',
+                'bg' => '#F5F3FF',
+                'border' => '#DDD6FE',
+                'icon'   => '🔍',
+                'label' => 'In Review',
+                'author'   => [
+                    'title'   => 'Naskah sedang diperiksa reviewer',
+                    'message' => 'Reviewer sedang <strong>memeriksa naskah kamu</strong>. Harap tunggu hasilnya. Jangan mengubah konten utama selama proses review berlangsung.',
+                ],
+                'reviewer' => [
+                    'title'   => 'Anda sedang mereview naskah ini',
+                    'message' => 'Buka halaman review melalui tombol <strong>Lihat Detail Review</strong> di atas untuk mengisi catatan dan menentukan keputusan.',
+                ],
+                'admin' => [
+                    'title'   => 'Naskah sedang dalam proses review',
+                    'message' => 'Reviewer sedang aktif memeriksa naskah. Pantau progress melalui halaman review.',
+                ],
+                'steps' => [
                     ['done' => true,  'text' => 'Buat publikasi'],
                     ['done' => true,  'text' => 'Submit ke reviewer'],
                     ['done' => true,  'text' => 'Proses review'],
                     ['done' => false, 'text' => 'Diterbitkan'],
                 ],
             ],
+
             'revision_required' => [
-                'color'   => '#EF4444',
-                'bg'      => '#FEF2F2',
-                'border'  => '#FECACA',
-                'icon'    => '🔄',
-                'label'   => 'Revisi Diperlukan',
-                'title'   => 'Publikasi perlu direvisi',
-                'message' => 'Reviewer telah memberikan <strong>catatan revisi</strong>. Silakan buka tab Review, pelajari catatan dari reviewer, lakukan perbaikan, lalu submit ulang dengan cara pilih <strong>Upload Revisi</strong> pada pojok kanan atas',
-                'steps'   => [
+                'color'  => '#EF4444',
+                'bg' => '#FEF2F2',
+                'border' => '#FECACA',
+                'icon'   => '🔄',
+                'label' => 'Revisi Diperlukan',
+                'author'   => [
+                    'title'   => 'Naskah kamu perlu direvisi',
+                    'message' => 'Reviewer telah memberikan <strong>catatan revisi</strong>. Buka halaman review, pelajari catatan dari reviewer, lakukan perbaikan, lalu klik <strong>Upload Revisi</strong> di pojok kanan atas.',
+                ],
+                'reviewer' => [
+                    'title'   => 'Anda telah meminta revisi — menunggu author',
+                    'message' => 'Keputusan revisi sudah terkirim ke author. Anda akan mendapat notifikasi ketika author mengirimkan naskah yang telah diperbaiki. Gunakan tombol <strong>Review Revisi Terbaru</strong> saat revisi tiba.',
+                ],
+                'admin' => [
+                    'title'   => 'Reviewer meminta revisi dari author',
+                    'message' => 'Author telah dinotifikasi dan perlu mengirimkan ulang naskah yang diperbaiki. Pantau apakah author merespons dalam waktu yang wajar.',
+                ],
+                'steps' => [
                     ['done' => true,  'text' => 'Buat publikasi'],
                     ['done' => true,  'text' => 'Submit ke reviewer'],
                     ['done' => true,  'text' => 'Proses review'],
                     ['done' => false, 'text' => 'Revisi & resubmit'],
                 ],
             ],
+
             'accepted' => [
-                'color'   => '#10B981',
-                'bg'      => '#ECFDF5',
-                'border'  => '#A7F3D0',
-                'icon'    => '✅',
-                'label'   => 'Accepted',
-                'title'   => 'Publikasi diterima!',
-                'message' => 'Selamat! Publikasi kamu telah <strong>diterima oleh reviewer</strong>. Tim editor akan segera menjadwalkan penerbitan. Tidak perlu melakukan perubahan apapun.',
-                'steps'   => [
+                'color'  => '#10B981',
+                'bg' => '#ECFDF5',
+                'border' => '#A7F3D0',
+                'icon'   => '✅',
+                'label' => 'Accepted',
+                'author'   => [
+                    'title'   => 'Selamat! Naskah kamu diterima',
+                    'message' => 'Naskah kamu telah <strong>diterima oleh reviewer</strong>. Tim editor akan segera menjadwalkan penerbitan. Tidak perlu melakukan perubahan apapun.',
+                ],
+                'reviewer' => [
+                    'title'   => 'Anda telah menerima naskah ini',
+                    'message' => 'Keputusan penerimaan sudah terkirim ke author. Naskah ini menunggu jadwal penerbitan dari editor/admin.',
+                ],
+                'admin' => [
+                    'title'   => 'Naskah diterima — siap dijadwalkan terbit',
+                    'message' => 'Reviewer telah menerima naskah ini. Silakan jadwalkan penerbitan dengan mengubah status ke <strong>Published</strong> pada Step Finalisasi.',
+                ],
+                'steps' => [
                     ['done' => true,  'text' => 'Buat publikasi'],
                     ['done' => true,  'text' => 'Submit ke reviewer'],
                     ['done' => true,  'text' => 'Proses review'],
                     ['done' => false, 'text' => 'Diterbitkan'],
                 ],
             ],
+
             'rejected' => [
-                'color'   => '#6B7280',
-                'bg'      => '#F9FAFB',
-                'border'  => '#E5E7EB',
-                'icon'    => '❌',
-                'label'   => 'Rejected',
-                'title'   => 'Publikasi ditolak',
-                'message' => 'Mohon maaf, publikasi kamu <strong>tidak dapat diterima</strong> pada saat ini. Silakan baca catatan reviewer untuk mengetahui alasan penolakan. Kamu dapat membuat publikasi baru dengan cara membuat publikasi baru pada menu <strong>Daftar Publikasi</strong>',
-                'steps'   => [
+                'color'  => '#6B7280',
+                'bg' => '#F9FAFB',
+                'border' => '#E5E7EB',
+                'icon'   => '❌',
+                'label' => 'Rejected',
+                'author'   => [
+                    'title'   => 'Naskah tidak dapat diterima',
+                    'message' => 'Mohon maaf, naskah kamu <strong>tidak dapat diterima</strong> saat ini. Baca catatan reviewer untuk mengetahui alasannya. Kamu dapat mengajukan naskah baru melalui menu <strong>Daftar Publikasi</strong>.',
+                ],
+                'reviewer' => [
+                    'title'   => 'Anda telah menolak naskah ini',
+                    'message' => 'Keputusan penolakan sudah terkirim ke author beserta catatan Anda. Tidak ada tindakan lebih lanjut yang diperlukan.',
+                ],
+                'admin' => [
+                    'title'   => 'Naskah ditolak oleh reviewer',
+                    'message' => 'Author telah dinotifikasi mengenai penolakan ini. Arsip tetap tersimpan untuk referensi.',
+                ],
+                'steps' => [
                     ['done' => true,  'text' => 'Buat publikasi'],
                     ['done' => true,  'text' => 'Submit ke reviewer'],
                     ['done' => true,  'text' => 'Proses review'],
                     ['done' => false, 'text' => 'Ditolak'],
                 ],
             ],
+
             'published' => [
-                'color'   => '#059669',
-                'bg'      => '#ECFDF5',
-                'border'  => '#6EE7B7',
-                'icon'    => '🎉',
-                'label'   => 'Published',
-                'title'   => 'Publikasi telah diterbitkan!',
-                'message' => 'Publikasi kamu sudah <strong>live dan dapat diakses publik</strong>. Bagikan ke rekan-rekan dan komunitas kamu untuk memperluas dampak karya ilmiahmu.',
-                'steps'   => [
-                    ['done' => true,  'text' => 'Buat publikasi'],
-                    ['done' => true,  'text' => 'Submit ke reviewer'],
-                    ['done' => true,  'text' => 'Proses review'],
-                    ['done' => true,  'text' => 'Diterbitkan'],
+                'color'  => '#059669',
+                'bg' => '#ECFDF5',
+                'border' => '#6EE7B7',
+                'icon'   => '🎉',
+                'label' => 'Published',
+                'author'   => [
+                    'title'   => 'Naskah telah diterbitkan!',
+                    'message' => 'Naskah kamu sudah <strong>live dan dapat diakses publik</strong>. Bagikan ke rekan-rekan dan komunitas untuk memperluas dampak karya ilmiahmu.',
+                ],
+                'reviewer' => [
+                    'title'   => 'Naskah ini sudah diterbitkan',
+                    'message' => 'Proses review selesai dan naskah sudah live. Terima kasih atas kontribusi review Anda.',
+                ],
+                'admin' => [
+                    'title'   => 'Naskah sudah live dan dapat diakses publik',
+                    'message' => 'Publikasi berhasil diterbitkan. Pastikan metadata dan URL sudah benar di halaman publik.',
+                ],
+                'steps' => [
+                    ['done' => true, 'text' => 'Buat publikasi'],
+                    ['done' => true, 'text' => 'Submit ke reviewer'],
+                    ['done' => true, 'text' => 'Proses review'],
+                    ['done' => true, 'text' => 'Diterbitkan'],
                 ],
             ],
         ];
 
-        $cfg = $map[$status] ?? $map['draft'];
+        $cfg     = $map[$status] ?? $map['draft'];
+        $content = $cfg[$role] ?? $cfg['author'];
 
         // Build step indicators
         $stepsHtml = '';
@@ -212,7 +297,9 @@ class PublicationForm
             <div style='display:flex;align-items:center;gap:6px;'>
                 <div style='width:20px;height:20px;border-radius:50%;background:{$dotColor};
                             display:flex;align-items:center;justify-content:center;flex-shrink:0;'>
-                    <span style='color:white;font-size:11px;font-weight:700;'>" . ($step['done'] ? '✓' : ($i + 1)) . "</span>
+                    <span style='color:white;font-size:11px;font-weight:700;'>"
+                . ($step['done'] ? '✓' : ($i + 1))
+                . "</span>
                 </div>
                 <span style='font-size:13px;color:{$txtColor};font-weight:{$weight};white-space:nowrap;'>{$step['text']}</span>
                 " . (!$isLast ? "<div style='width:32px;height:2px;background:{$dotColor};margin:0 4px;border-radius:2px;'></div>" : '') . "
@@ -242,28 +329,19 @@ class PublicationForm
                 <div style='flex:1;'>
                     <div style='display:flex;align-items:center;gap:8px;margin-bottom:6px;'>
                         <span style='
-                            background:{$cfg['color']};
-                            color:white;
-                            font-size:11px;
-                            font-weight:700;
-                            padding:2px 10px;
-                            border-radius:20px;
-                            text-transform:uppercase;
-                            letter-spacing:0.5px;
+                            background:{$cfg['color']};color:white;font-size:11px;
+                            font-weight:700;padding:2px 10px;border-radius:20px;
+                            text-transform:uppercase;letter-spacing:0.5px;
                         '>{$cfg['label']}</span>
                     </div>
-                    <div style='font-size:14px;font-weight:600;color:#1F2937;margin-bottom:4px;'>{$cfg['title']}</div>
-                    <div style='font-size:13px;color:#4B5563;line-height:1.6;'>{$cfg['message']}</div>
+                    <div style='font-size:14px;font-weight:600;color:#1F2937;margin-bottom:4px;'>{$content['title']}</div>
+                    <div style='font-size:13px;color:#4B5563;line-height:1.6;'>{$content['message']}</div>
                     {$publishedAt}
                 </div>
             </div>
             <div style='
-                display:flex;
-                align-items:center;
-                flex-wrap:wrap;
-                gap:4px;
-                margin-top:14px;
-                padding-top:12px;
+                display:flex;align-items:center;flex-wrap:wrap;gap:4px;
+                margin-top:14px;padding-top:12px;
                 border-top:1px solid {$cfg['border']};
             '>
                 <span style='font-size:12px;color:#6B7280;margin-right:6px;'>Progress:</span>
