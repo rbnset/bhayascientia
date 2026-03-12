@@ -56,7 +56,7 @@ $overallComment = $review->overall_comment;
             @if(filled($overallComment))
             <div class="rvx-prose"
                 style="border-color: {{ $decisionColor['border'] }}; background: {{ $decisionColor['light'] }}; color: {{ $decisionColor['text'] }};">
-                {{ $overallComment }}
+                {!! $overallComment !!}
             </div>
             @else
             <div class="rvx-muted">No overall comment provided.</div>
@@ -89,7 +89,7 @@ $overallComment = $review->overall_comment;
                         </span>
                     </div>
                     @endif
-                    <div class="rvx-note-body">{{ $note->note ?? '-' }}</div>
+                    <div class="rvx-note-body">{!! $note->note ?? '-' !!}</div>
                 </div>
                 @endforeach
             </div>
