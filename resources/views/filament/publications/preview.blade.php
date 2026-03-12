@@ -41,23 +41,47 @@ $statusLabel = strtoupper(str_replace('_', ' ', $status));
 $coverState = $get('cover_image_path');
 
 $resolveCoverUrl = function ($value) {
+// Kasus 1: TemporaryUploadedFile — embed sebagai base64 agar tidak butuh HTTP request
 if ($value instanceof TemporaryUploadedFile) {
-return $value->temporaryUrl();
+try {
+$tmpPath = $value->getRealPath();
+if ($tmpPath && file_exists($tmpPath)) {
+$mime = $value->getMimeType() ?? 'image/jpeg';
+$base64 = base64_encode(file_get_contents($tmpPath));
+return "data:{$mime};base64,{$base64}";
 }
+} catch (\Throwable $e) {
+// fallback ke null
+}
+return null;
+}
+
+// Kasus 2: String path — sudah tersimpan di storage public
 if (is_string($value) && filled($value)) {
+if (Storage::disk('public')->exists($value)) {
 return Storage::disk('public')->url($value);
 }
+}
+
 return null;
 };
 
-$coverUrl = is_array($coverState)
-? $resolveCoverUrl($coverState[0] ?? null)
-: $resolveCoverUrl($coverState);
+$coverUrl = null;
+if (is_array($coverState)) {
+foreach ($coverState as $item) {
+$resolved = $resolveCoverUrl($item);
+if ($resolved) {
+$coverUrl = $resolved;
+break;
+}
+}
+} else {
+$coverUrl = $resolveCoverUrl($coverState);
+}
 
 $publication = $record ?? null;
 $latestVersion = $publication?->versions()->orderByDesc('version_number')->first();
 $downloadUrl = $latestVersion ? route('manuscripts.download', $latestVersion) : null;
-
 $abstractHtml = filled($abstract) ? str($abstract)->sanitizeHtml() : null;
 @endphp
 
