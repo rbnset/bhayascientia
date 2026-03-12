@@ -944,6 +944,55 @@ class PublicationForm
                         ->icon('heroicon-o-eye')
                         ->completedIcon('heroicon-o-check-circle')
                         ->schema([
+                            Placeholder::make('preview_cover')
+                                ->label('Cover Image')
+                                ->content(function (Get $get, $record): \Illuminate\Support\HtmlString {
+                                    // Prioritas: ambil dari form state dulu (saat upload baru)
+                                    $coverPath = $get('cover_image_path');
+
+                                    // Jika array (Filament FileUpload state), ambil elemen pertama
+                                    if (is_array($coverPath)) {
+                                        $coverPath = array_values(array_filter($coverPath))[0] ?? null;
+                                    }
+
+                                    // Fallback ke record yang tersimpan
+                                    if (!$coverPath && $record?->cover_image_path) {
+                                        $coverPath = $record->cover_image_path;
+                                    }
+
+                                    if (!$coverPath) {
+                                        return new \Illuminate\Support\HtmlString(
+                                            "<div style='
+                            width:200px;height:280px;
+                            background:#F3F4F6;border:2px dashed #D1D5DB;
+                            border-radius:10px;display:flex;align-items:center;
+                            justify-content:center;color:#9CA3AF;font-size:13px;text-align:center;
+                            padding:16px;
+                        '>Belum ada cover image</div>"
+                                        );
+                                    }
+
+                                    // Cek apakah path sudah ada di storage public atau masih temporary
+                                    $url = \Illuminate\Support\Facades\Storage::disk('public')->exists($coverPath)
+                                        ? \Illuminate\Support\Facades\Storage::disk('public')->url($coverPath)
+                                        : (str_starts_with($coverPath, 'http') ? $coverPath : asset('storage/' . $coverPath));
+
+                                    return new \Illuminate\Support\HtmlString(
+                                        "<img src='{$url}'
+                        style='width:200px;height:280px;object-fit:cover;border-radius:10px;box-shadow:0 4px 12px rgba(0,0,0,0.15);'
+                        alt='Cover preview'
+                        onerror=\"this.style.display='none';this.nextElementSibling.style.display='flex';\"
+                    />
+                    <div style='
+                        display:none;width:200px;height:280px;
+                        background:#FEF2F2;border:2px dashed #FECACA;
+                        border-radius:10px;align-items:center;
+                        justify-content:center;color:#EF4444;font-size:12px;text-align:center;padding:16px;
+                    '>Gagal memuat preview.<br>Cover akan tampil setelah disimpan.</div>"
+                                    );
+                                })
+                                ->columnSpanFull(),
+
                             View::make('filament.publications.preview')
                                 ->viewData(['titleLabel' => 'Judul']),
                         ]),
