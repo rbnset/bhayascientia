@@ -426,7 +426,14 @@ class EditPublication extends EditRecord
                         ->disk('public')
                         ->directory('publications/versions')
                         ->acceptedFileTypes(['application/pdf'])
-                        ->required(),
+                        ->required()
+                        ->maxSize(10240)
+                        ->helperText('Pastikan isi berkas revisi sudah benar sebelum mengirim. Maksimal upload 10MB'),
+
+                    Checkbox::make('confirm_reviewed')
+                        ->label('Saya telah meninjau berkas PDF revisi dan memastikan semua catatan reviewer sudah diperbaiki')
+                        ->required()
+                        ->accepted(),
                 ])
                 ->action(function (array $data) {
                     $nextVersion = ($this->record->versions()->max('version_number') ?? 0) + 1;
