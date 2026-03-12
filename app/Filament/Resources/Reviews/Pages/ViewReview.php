@@ -149,6 +149,10 @@ class ViewReview extends ViewRecord
 
     public function infolist(Schema $schema): Schema
     {
+        $hasDecision = filled($this->record->decision);
+        $hasNotes    = $this->record->notes()->exists();
+        $hasComment  = filled($this->record->overall_comment);
+
         return $schema->components([
 
             // ── Status Banner ─────────────────────────────────────
@@ -157,11 +161,11 @@ class ViewReview extends ViewRecord
                 ->content(fn() => $this->renderStatusBanner())
                 ->columnSpanFull(),
 
-            // ── Hasil Review — full width ─────────────────────────
+            // ── Hasil Review — full width, 4 kolom di desktop ────
             Section::make('Hasil Review')
                 ->icon('heroicon-o-clipboard-document-check')
                 ->columnSpanFull()
-                ->columns(4)
+                ->columns(['default' => 2, 'lg' => 4])
                 ->schema([
                     TextEntry::make('reviewer.name')
                         ->label('Reviewer')
@@ -190,24 +194,44 @@ class ViewReview extends ViewRecord
                     TextEntry::make('updated_at')
                         ->label('Tanggal Keputusan')
                         ->dateTime('d M Y, H:i')
-                        ->visible(fn() => filled($this->record->decision)),
+                        ->placeholder('Belum ada keputusan'),
                 ]),
 
-            // ── Catatan & Komentar — 2 kolom berdampingan ────────
+            // ── Menunggu review — tampil jika belum ada keputusan ─
+            Section::make('')
+                ->columnSpanFull()
+                ->visible(fn() => !$hasDecision)
+                ->schema([
+                    TextEntry::make('waiting_info')
+                        ->label('')
+                        ->default(
+                            'Reviewer belum memberikan keputusan. ' .
+                                'Halaman ini akan diperbarui setelah proses review selesai. ' .
+                                'Anda akan mendapat notifikasi ketika hasilnya tersedia.'
+                        )
+                        ->extraAttributes([
+                            'style' => 'color:#6B7280;font-style:italic;text-align:center;padding:16px 0;'
+                        ])
+                        ->columnSpanFull(),
+                ]),
+
+            // ── Catatan & Komentar — 2 kolom, hanya jika ada keputusan
             Grid::make()
                 ->columns(['default' => 1, 'lg' => 2])
                 ->columnSpanFull()
+                ->visible(fn() => $hasDecision && ($hasNotes || $hasComment))
                 ->schema([
 
                     // Kolom kiri — Catatan per Bagian
                     Section::make('Catatan per Bagian')
                         ->icon('heroicon-o-clipboard-document-list')
-                        ->visible(fn() => $this->record->notes()->exists())
                         ->columnSpan(1)
                         ->schema([
+                            // Jika ada catatan
                             RepeatableEntry::make('notes')
                                 ->label('')
                                 ->columnSpanFull()
+                                ->visible(fn() => $hasNotes)
                                 ->schema([
                                     TextEntry::make('section')
                                         ->label('Bagian')
@@ -231,19 +255,38 @@ class ViewReview extends ViewRecord
                                         ->columnSpanFull()
                                         ->extraAttributes(['class' => 'text-justify']),
                                 ]),
+
+                            // Jika tidak ada catatan
+                            TextEntry::make('notes_empty')
+                                ->label('')
+                                ->default('Reviewer tidak memberikan catatan per bagian.')
+                                ->visible(fn() => !$hasNotes)
+                                ->extraAttributes([
+                                    'style' => 'color:#9CA3AF;font-style:italic;'
+                                ]),
                         ]),
 
                     // Kolom kanan — Komentar Umum
                     Section::make('Komentar Umum Reviewer')
                         ->icon('heroicon-o-chat-bubble-left-right')
-                        ->visible(fn() => filled($this->record->overall_comment))
                         ->columnSpan(1)
                         ->schema([
+                            // Jika ada komentar
                             TextEntry::make('overall_comment')
                                 ->label('')
                                 ->html()
                                 ->columnSpanFull()
+                                ->visible(fn() => $hasComment)
                                 ->extraAttributes(['class' => 'text-justify']),
+
+                            // Jika tidak ada komentar
+                            TextEntry::make('comment_empty')
+                                ->label('')
+                                ->default('Reviewer tidak memberikan komentar umum.')
+                                ->visible(fn() => !$hasComment)
+                                ->extraAttributes([
+                                    'style' => 'color:#9CA3AF;font-style:italic;'
+                                ]),
                         ]),
                 ]),
         ]);
