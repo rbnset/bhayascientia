@@ -52,6 +52,7 @@ class ReviewResource extends Resource
             'index'  => ListReviews::route('/'),
             'create' => CreateReview::route('/create'),
             'edit'   => EditReview::route('/{record}/edit'),
+            'view'   => Pages\ViewReview::route('/{record}'),
         ];
     }
 
