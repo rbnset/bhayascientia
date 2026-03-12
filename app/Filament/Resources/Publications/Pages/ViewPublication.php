@@ -66,6 +66,11 @@ class ViewPublication extends ViewRecord
             ->first();
     }
 
+    protected function isPublished(): bool
+    {
+        return $this->record->status === 'published';
+    }
+
     // ─────────────────────────────────────────────────────────────
     // Header actions
     // ─────────────────────────────────────────────────────────────
@@ -95,7 +100,12 @@ class ViewPublication extends ViewRecord
                 })
                 ->icon('heroicon-o-clipboard-document-list')
                 ->color('info')
-                ->visible(fn() => $this->isAuthor() && $this->record->reviews()->exists())
+                ->visible(
+                    fn() =>
+                    $this->isAuthor() &&
+                        $this->record->reviews()->exists() &&
+                        !$this->isPublished()
+                )
                 ->url(function () {
                     $review = $this->latestReview();
                     return $review
@@ -117,6 +127,26 @@ class ViewPublication extends ViewRecord
                     'record' => $this->record,
                 ]))
                 ->tooltip('Klik untuk membuka halaman edit dan upload revisi'),
+
+            // ── Lihat Halaman Publikasi — jika sudah published ────
+            Action::make('lihatPublikasi')
+                ->label('Publikasi Sudah Terbit 🎉')
+                ->icon('heroicon-o-rocket-launch')
+                ->color('success')
+                ->visible(fn() => $this->isAuthor() && $this->isPublished())
+                ->url(fn() => PublicationResource::getUrl('view', [
+                    'record' => $this->record,
+                ]))
+                ->tooltip(function () {
+                    $publishedAt = $this->record->published_at;
+                    return $publishedAt
+                        ? 'Diterbitkan pada ' . \Carbon\Carbon::parse($publishedAt)
+                        ->timezone('Asia/Jakarta')
+                        ->locale('id')
+                        ->isoFormat('D MMMM YYYY, HH:mm') . ' WIB'
+                        : 'Naskah sudah diterbitkan';
+                })
+                ->disabled(),
         ];
     }
 }
