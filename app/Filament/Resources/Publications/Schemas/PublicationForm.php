@@ -73,11 +73,13 @@ class PublicationForm
                 ->live(onBlur: true)
                 ->unique(table: 'keywords', column: 'name', ignoreRecord: true)
                 ->afterStateUpdated(fn($state, callable $set) => $set('slug', Str::slug($state))),
+
             TextInput::make('slug')
                 ->label('Slug')
                 ->required()
                 ->disabled()
-                ->dehydrated(),
+                ->dehydrated()
+                ->visible(fn() => auth()->user()?->hasAnyRole(['admin', 'super_admin'])),
         ];
     }
 
@@ -393,6 +395,8 @@ class PublicationForm
                                     // Keywords — Jurnal (min 3, maks 7)
                                     Select::make('keywords')
                                         ->label('Keywords')
+                                        ->searchPrompt('Ketik kata kunci...')
+                                        ->noSearchResultsMessage('Kata kunci tidak ditemukan. Klik ＋ untuk menambahkan baru.')
                                         ->relationship('keywords', 'name', fn($query) => $query->orderBy('name'))
                                         ->multiple()
                                         ->searchable()
@@ -410,6 +414,8 @@ class PublicationForm
                                     // Tags — Buku (maks 3)
                                     Select::make('keywords')
                                         ->label('Tags')
+                                        ->searchPrompt('Ketik tag...')
+                                        ->noSearchResultsMessage('Tag tidak ditemukan. Klik ＋ untuk menambahkan baru.')
                                         ->relationship('keywords', 'name', fn($query) => $query->orderBy('name'))
                                         ->multiple()
                                         ->searchable()
@@ -426,6 +432,8 @@ class PublicationForm
                                     // Topik — Opini (maks 3)
                                     Select::make('keywords')
                                         ->label('Topik')
+                                        ->searchPrompt('Ketik topik...')
+                                        ->noSearchResultsMessage('Topik tidak ditemukan. Klik ＋ untuk menambahkan baru.')
                                         ->relationship('keywords', 'name', fn($query) => $query->orderBy('name'))
                                         ->multiple()
                                         ->searchable()
@@ -458,13 +466,25 @@ class PublicationForm
 
                                     Select::make('categories')
                                         ->label('Category')
+                                        ->searchPrompt('Ketik nama kategori...')
+                                        ->noSearchResultsMessage('Kategori tidak ditemukan. Klik ＋ untuk menambahkan baru.')
                                         ->relationship('categories', 'name', fn($query) => $query->orderBy('name'))
                                         ->multiple()->maxItems(1)->searchable()->preload()->required()
                                         ->createOptionForm([
-                                            TextInput::make('name')->label('Category Name')->required()->maxLength(100)
-                                                ->live(onBlur: true)->unique(table: 'categories', column: 'name', ignoreRecord: true)
+                                            TextInput::make('name')
+                                                ->label('Nama Kategori')
+                                                ->required()
+                                                ->maxLength(100)
+                                                ->live(onBlur: true)
+                                                ->unique(table: 'categories', column: 'name', ignoreRecord: true)
                                                 ->afterStateUpdated(fn($state, callable $set) => $set('slug', Str::slug($state))),
-                                            TextInput::make('slug')->label('Slug')->required()->disabled()->dehydrated(),
+
+                                            TextInput::make('slug')
+                                                ->label('Slug')
+                                                ->required()
+                                                ->disabled()
+                                                ->dehydrated()
+                                                ->visible(fn() => auth()->user()?->hasAnyRole(['admin', 'super_admin'])),
                                         ])
                                         ->createOptionUsing(fn(array $data) => Category::create($data)->getKey())
                                         ->helperText('Pilih 1 kategori.')
@@ -476,15 +496,27 @@ class PublicationForm
                                             'buku'   => 'Metode Penulisan',
                                             default  => 'Research Method',
                                         })
+                                        ->searchPrompt('Ketik nama metode penelitian...')
+                                        ->noSearchResultsMessage('Metode tidak ditemukan. Klik ＋ untuk menambahkan baru.')
                                         ->relationship('method', 'name', fn($query) => $query->orderBy('name'))
                                         ->searchable()->preload()
                                         ->visible(fn($get) => self::publicationTypeSlug($get) !== 'opini')
                                         ->required(fn($get) => self::publicationTypeSlug($get) === 'jurnal')
                                         ->createOptionForm([
-                                            TextInput::make('name')->label('Method Name')->required()->maxLength(100)
-                                                ->live(onBlur: true)->unique(table: 'methods', column: 'name', ignoreRecord: true)
+                                            TextInput::make('name')
+                                                ->label('Nama Metode')
+                                                ->required()
+                                                ->maxLength(100)
+                                                ->live(onBlur: true)
+                                                ->unique(table: 'methods', column: 'name', ignoreRecord: true)
                                                 ->afterStateUpdated(fn($state, callable $set) => $set('slug', Str::slug($state))),
-                                            TextInput::make('slug')->label('Slug')->required()->disabled()->dehydrated(),
+
+                                            TextInput::make('slug')
+                                                ->label('Slug')
+                                                ->required()
+                                                ->disabled()
+                                                ->dehydrated()
+                                                ->visible(fn() => auth()->user()?->hasAnyRole(['admin', 'super_admin'])),
                                         ])
                                         ->createOptionUsing(fn(array $data) => Method::create($data)->getKey())
                                         ->helperText(fn($get) => match (self::publicationTypeSlug($get)) {
@@ -590,6 +622,8 @@ class PublicationForm
                                         ->schema([
                                             Select::make('author_id')
                                                 ->label('Author')
+                                                ->searchPrompt('Ketik nama atau email penulis...')
+                                                ->noSearchResultsMessage('Penulis tidak ditemukan. Klik ＋ untuk menambahkan sebagai penulis baru.')
                                                 ->required()
                                                 ->live()
                                                 ->disableOptionsWhenSelectedInSiblingRepeaterItems()
