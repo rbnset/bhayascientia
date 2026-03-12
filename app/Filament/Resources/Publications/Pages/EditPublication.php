@@ -424,6 +424,74 @@ class EditPublication extends EditRecord
                     $this->redirect(\App\Filament\Resources\Reviews\ReviewResource::getUrl('edit', ['record' => $review->id]));
                 }),
 
+            // ── Terbitkan Naskah — reviewer & admin, status accepted ─
+            Action::make('publishNaskah')
+                ->label('Terbitkan Naskah')
+                ->icon('heroicon-o-rocket-launch')
+                ->color('success')
+                ->visible(
+                    fn() => ($this->isReviewer() || !$this->isAuthor()) &&
+                        $this->record->status === 'accepted'
+                )
+                ->modalHeading('Terbitkan Naskah')
+                ->modalDescription(new HtmlString(
+                    '🎉 Naskah ini sudah diterima dan siap untuk diterbitkan.<br><br>' .
+                        'Tentukan tanggal dan waktu penerbitan. Naskah akan langsung dapat diakses publik ' .
+                        'setelah status berubah ke <strong>Published</strong>.'
+                ))
+                ->modalSubmitActionLabel('Terbitkan Sekarang')
+                ->modalCancelActionLabel('Batal')
+                ->form([
+                    \Filament\Forms\Components\DateTimePicker::make('published_at')
+                        ->label('Tanggal & Waktu Terbit')
+                        ->required()
+                        ->default(now('Asia/Jakarta'))
+                        ->timezone('Asia/Jakarta')
+                        ->native(false)
+                        ->helperText('Waktu dalam zona WIB (UTC+7). Biarkan sekarang untuk langsung terbit.'),
+
+                    \Filament\Forms\Components\Checkbox::make('confirm_publish')
+                        ->label('Saya yakin ingin menerbitkan naskah ini ke publik')
+                        ->required()
+                        ->accepted(),
+                ])
+                ->action(function (array $data) {
+                    $this->record->update([
+                        'status'       => 'published',
+                        'published_at' => $data['published_at'],
+                    ]);
+
+                    $recipients = $this->authorRecipients();
+                    if ($recipients->isNotEmpty()) {
+                        \Illuminate\Support\Facades\Notification::send(
+                            $recipients,
+                            new \App\Notifications\PublicationScheduledToPublish($this->record)
+                        );
+                    }
+
+                    $tanggal = \Carbon\Carbon::parse($data['published_at'])
+                        ->timezone('Asia/Jakarta')
+                        ->locale('id')
+                        ->isoFormat('D MMMM YYYY, HH:mm');
+
+                    Notification::make()
+                        ->success()
+                        ->title('Naskah berhasil diterbitkan')
+                        ->body('"' . $this->shortTitle() . '" sudah live sejak ' . $tanggal . ' WIB.')
+                        ->send();
+
+                    $this->redirect(request()->header('Referer') ?? PublicationResource::getUrl('edit', ['record' => $this->record]));
+                }),
+
+            // ── Lihat Halaman Publikasi — jika sudah published ────
+            Action::make('lihatPublikasi')
+                ->label('Lihat Halaman Publikasi')
+                ->icon('heroicon-o-arrow-top-right-on-square')
+                ->color('gray')
+                ->visible(fn() => $this->record->status === 'published')
+                ->url(fn() => PublicationResource::getUrl('view', ['record' => $this->record]))
+                ->openUrlInNewTab(false),
+
             // ── Upload Revisi — author, revision_required ─────────
             Action::make('uploadNewVersion')
                 ->label('Upload Revisi')
