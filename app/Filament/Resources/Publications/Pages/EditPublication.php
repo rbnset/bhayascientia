@@ -226,7 +226,8 @@ class EditPublication extends EditRecord
                         ->directory('publications/versions')
                         ->acceptedFileTypes(['application/pdf'])
                         ->required()
-                        ->helperText('Pastikan isi berkas sudah benar sebelum mengirim.'),
+                        ->maxSize(10240)
+                        ->helperText('Pastikan isi berkas sudah benar sebelum mengirim. Maksimal upload 10Mb'),
 
                     Checkbox::make('confirm_reviewed')
                         ->label('Saya telah meninjau berkas PDF dan memastikan isinya sudah benar')
