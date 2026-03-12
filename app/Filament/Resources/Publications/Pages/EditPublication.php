@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\Publications\Pages;
 
 use App\Filament\Resources\Publications\PublicationResource;
-use App\Filament\Resources\Publications\Widgets\PublicationStatusBanner;
 use App\Filament\Resources\PublicationVersionResource;
 use App\Models\Author;
 use App\Models\Publication;
@@ -13,6 +12,7 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 
 class EditPublication extends EditRecord
@@ -20,8 +20,7 @@ class EditPublication extends EditRecord
     protected static string $resource = PublicationResource::class;
 
     // ─────────────────────────────────────────────────────────────
-    // Mount — blokir akses URL langsung untuk author jika terkunci
-    // Notifikasi hanya muncul saat halaman ini benar-benar diakses
+    // Mount
     // ─────────────────────────────────────────────────────────────
 
     public function mount(int|string $record): void
@@ -34,10 +33,7 @@ class EditPublication extends EditRecord
         ) {
             Notification::make()
                 ->title('Tidak dapat mengedit publikasi')
-                ->body(
-                    'Publikasi berstatus "' . str($this->record->status)->headline() . '" ' .
-                        'tidak dapat diubah. Hubungi editor jika ada koreksi yang diperlukan.'
-                )
+                ->body('Publikasi berstatus "' . str($this->record->status)->headline() . '" tidak dapat diubah. Hubungi editor jika ada koreksi.')
                 ->warning()
                 ->persistent()
                 ->send();
@@ -55,12 +51,44 @@ class EditPublication extends EditRecord
         return (bool) auth()->user()?->hasRole('reviewer');
     }
 
+    protected function isAuthor(): bool
+    {
+        return (bool) auth()->user()?->hasRole('author');
+    }
+
     protected function shortTitle(): string
     {
-        return Str::of((string) $this->record->title)
-            ->squish()
-            ->words(8, '…')
-            ->toString();
+        return Str::of((string) $this->record->title)->squish()->words(8, '…')->toString();
+    }
+
+    protected function latestVersion(): ?\App\Models\PublicationVersion
+    {
+        return $this->record->versions()->latest('version_number')->first();
+    }
+
+    protected function hasNewerVersionToReview(): bool
+    {
+        if (!$this->isReviewer()) return false;
+
+        // Ada versi terbaru yang belum punya review dari reviewer ini
+        $latestVersion = $this->latestVersion();
+        if (!$latestVersion) return false;
+
+        return !\App\Models\Review::query()
+            ->where('publication_version_id', $latestVersion->id)
+            ->where('reviewer_id', auth()->id())
+            ->exists();
+    }
+
+    protected function authorRecipients()
+    {
+        $authorUserIds = $this->record->authors()
+            ->pluck('authors.user_id')
+            ->filter()->unique()->values();
+
+        if ($authorUserIds->isEmpty()) return collect();
+
+        return \App\Models\User::whereIn('id', $authorUserIds)->get();
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -70,36 +98,20 @@ class EditPublication extends EditRecord
     protected function mutateFormDataBeforeSave(array $data): array
     {
         if ($this->isReviewer()) {
-            $filtered = [
-                'status' => $data['status'] ?? $this->record->status,
-            ];
-
+            $filtered = ['status' => $data['status'] ?? $this->record->status];
             if (($filtered['status'] ?? null) === 'published') {
                 $filtered['published_at'] = $data['published_at'] ?? $this->record->published_at;
             }
-
             return $filtered;
         }
 
-        // Non-reviewer: cek apakah judul berubah dan sudah digunakan publikasi lain
         $title = trim($data['title'] ?? '');
         if (filled($title) && $title !== $this->record->title) {
-            $exists = Publication::where('title', $title)
-                ->where('id', '!=', $this->record->id)
-                ->exists();
-
-            if ($exists) {
+            if (Publication::where('title', $title)->where('id', '!=', $this->record->id)->exists()) {
                 Notification::make()
                     ->title('Judul sudah digunakan')
-                    ->body(
-                        'Judul karya ilmiah ini sudah pernah digunakan oleh publikasi lain. ' .
-                            'Silakan gunakan judul yang berbeda atau tambahkan penjelasan spesifik ' .
-                            '(metode, lokasi, atau konteks).'
-                    )
-                    ->danger()
-                    ->persistent()
-                    ->send();
-
+                    ->body('Tambahkan konteks spesifik (metode, lokasi, tahun) agar judul menjadi unik.')
+                    ->danger()->persistent()->send();
                 $this->halt();
             }
         }
@@ -117,15 +129,9 @@ class EditPublication extends EditRecord
             return parent::handleRecordUpdate($record, $data);
         } catch (UniqueConstraintViolationException $e) {
             Notification::make()
-                ->title('Gagal memperbarui publikasi')
-                ->body(
-                    'Perubahan yang Anda lakukan bertabrakan dengan data yang sudah ada. ' .
-                        'Silakan cek kembali judul atau data yang diubah.'
-                )
-                ->danger()
-                ->persistent()
-                ->send();
-
+                ->title('Gagal menyimpan')
+                ->body('Data bertabrakan dengan entri lain. Periksa judul atau field unik lainnya.')
+                ->danger()->persistent()->send();
             $this->halt();
         }
     }
@@ -141,50 +147,30 @@ class EditPublication extends EditRecord
                 $this->record->status === 'published' &&
                 ($this->record->wasChanged('status') || $this->record->wasChanged('published_at'))
             ) {
-                $authorUserIds = $this->record->authors()
-                    ->pluck('authors.user_id')
-                    ->filter()
-                    ->unique()
-                    ->values();
-
-                if ($authorUserIds->isNotEmpty()) {
-                    $authors = \App\Models\User::query()
-                        ->whereIn('id', $authorUserIds)
-                        ->get();
-
+                $recipients = $this->authorRecipients();
+                if ($recipients->isNotEmpty()) {
                     \Illuminate\Support\Facades\Notification::send(
-                        $authors,
+                        $recipients,
                         new \App\Notifications\PublicationScheduledToPublish($this->record)
                     );
                 }
             }
-
             return;
         }
 
         $creator = $this->record->creator ?? null;
-        if (! $creator) {
-            return;
-        }
+        if (!$creator) return;
 
-        $author = Author::query()->firstOrCreate(
+        $author = Author::firstOrCreate(
             ['user_id' => $creator->id],
-            [
-                'name'        => $creator->name,
-                'email'       => $creator->email,
-                'affiliation' => null,
-            ]
+            ['name' => $creator->name, 'email' => $creator->email, 'affiliation' => null]
         );
 
         $this->record->authors()->syncWithoutDetaching([
-            $author->id => [
-                'order'            => 1,
-                'is_corresponding' => true,
-            ],
+            $author->id => ['order' => 1, 'is_corresponding' => true],
         ]);
 
-        \App\Models\Pivots\AuthorPublication::query()
-            ->where('publication_id', $this->record->id)
+        \App\Models\Pivots\AuthorPublication::where('publication_id', $this->record->id)
             ->where('author_id', '!=', $author->id)
             ->update(['is_corresponding' => false]);
     }
@@ -197,8 +183,8 @@ class EditPublication extends EditRecord
     {
         return Notification::make()
             ->success()
-            ->title('Publikasi berhasil diubah')
-            ->body('Judul: ' . $this->shortTitle());
+            ->title('Publikasi berhasil diperbarui')
+            ->body('"' . $this->shortTitle() . '" berhasil disimpan.');
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -208,17 +194,19 @@ class EditPublication extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            // ── Submit Manuskrip — author & draft ────────────────
             Action::make('submitManuscript')
-                ->label('Submit Manuscript')
+                ->label('Submit Manuskrip')
                 ->icon('heroicon-o-paper-airplane')
                 ->color('success')
-                ->visible(fn() => $this->record->status === 'draft' && ! $this->isReviewer())
-                ->modalHeading('Submit Manuscript')
+                ->visible(fn() => $this->record->status === 'draft' && !$this->isReviewer())
+                ->modalHeading('Submit Manuskrip ke Reviewer')
                 ->modalDescription(
-                    'Pastikan manuskrip yang Anda unggah sudah benar dan final. ' .
-                        'Setelah dikirim, berkas tidak dapat diubah kecuali editor meminta revisi.'
+                    '⚠️ Setelah dikirim, manuskrip tidak dapat diubah hingga reviewer memberi keputusan. ' .
+                        'Pastikan judul, abstrak, penulis, dan kata kunci sudah lengkap.'
                 )
-                ->modalSubmitActionLabel('Kirim Manuskrip')
+                ->modalSubmitActionLabel('Kirim Sekarang')
+                ->modalCancelActionLabel('Batal, Periksa Lagi')
                 ->form([
                     FileUpload::make('pdf_file_path')
                         ->label('Manuscript (PDF)')
@@ -227,7 +215,7 @@ class EditPublication extends EditRecord
                         ->acceptedFileTypes(['application/pdf'])
                         ->required()
                         ->maxSize(10240)
-                        ->helperText('Pastikan isi berkas sudah benar sebelum mengirim. Maksimal upload 10Mb'),
+                        ->helperText('Pastikan isi berkas sudah benar sebelum mengirim. Maksimal upload 10MB'),
 
                     Checkbox::make('confirm_reviewed')
                         ->label('Saya telah meninjau berkas PDF dan memastikan isinya sudah benar')
@@ -241,96 +229,84 @@ class EditPublication extends EditRecord
                         'submitted_at'   => now(),
                     ]);
 
-                    $this->record->update([
-                        'status' => 'submitted',
-                    ]);
-
-                    $reviewers = \App\Models\User::role('reviewer')->get();
+                    $this->record->update(['status' => 'submitted']);
 
                     \Illuminate\Support\Facades\Notification::send(
-                        $reviewers,
+                        \App\Models\User::role('reviewer')->get(),
                         new \App\Notifications\PublicationSubmitted($this->record)
                     );
 
                     Notification::make()
                         ->success()
                         ->title('Manuskrip berhasil dikirim')
-                        ->body('Judul: ' . $this->shortTitle())
+                        ->body('"' . $this->shortTitle() . '" masuk antrian review.')
                         ->send();
                 }),
 
+            // ── Lihat PDF Manuskrip ───────────────────────────────
             Action::make('previewPdf')
-                ->label('Lihat Manuskrip (PDF)')
+                ->label(function () {
+                    $v = $this->latestVersion()?->version_number;
+                    return $v ? "Lihat Manuskrip (v{$v})" : 'Lihat Manuskrip';
+                })
                 ->icon('heroicon-o-eye')
                 ->color('gray')
                 ->visible(fn() => $this->record->versions()->exists())
                 ->url(fn() => PublicationVersionResource::getUrl('pdf', [
-                    'record' => $this->record->versions()->latest('version_number')->first(),
+                    'record' => $this->latestVersion(),
                 ]))
                 ->openUrlInNewTab(),
 
             // ── Lihat Detail Review ───────────────────────────────
             Action::make('lihatReview')
                 ->label(function () {
-                    $reviewCount = $this->record->reviews()->count();
-                    return $reviewCount > 1
-                        ? "Lihat Review ({$reviewCount})"
-                        : 'Lihat Detail Review';
+                    $count = $this->record->reviews()->count();
+                    return $count > 1 ? "Lihat Review ({$count})" : 'Lihat Detail Review';
                 })
                 ->icon('heroicon-o-clipboard-document-list')
                 ->color('info')
-                ->visible(fn() => $this->record->reviews()->exists())
+                ->visible(
+                    fn() =>
+                    $this->record->reviews()->exists() &&
+                        !$this->hasNewerVersionToReview()
+                )
                 ->url(function () {
-                    // Ambil review yang relevan berdasarkan versi terbaru
-                    $latestVersion = $this->record->versions()
-                        ->latest('version_number')
-                        ->first();
-
+                    $latestVersion = $this->latestVersion();
                     if (!$latestVersion) return null;
 
-                    // Jika reviewer — arahkan ke review miliknya sendiri
+                    // Reviewer → review miliknya
                     if ($this->isReviewer()) {
                         $myReview = $this->record->reviews()
                             ->where('reviews.reviewer_id', auth()->id())
                             ->orderByDesc('reviews.id')
                             ->first();
-
                         return $myReview
-                            ? \App\Filament\Resources\Reviews\ReviewResource::getUrl('edit', [
-                                'record' => $myReview->id,
-                            ])
+                            ? \App\Filament\Resources\Reviews\ReviewResource::getUrl('edit', ['record' => $myReview->id])
                             : null;
                     }
 
-                    // Jika author — arahkan ke ViewReview versi terbaru
-                    if (auth()->user()?->hasRole('author')) {
+                    // Author → ViewReview versi terbaru
+                    if ($this->isAuthor()) {
                         $latestReview = $this->record->reviews()
                             ->where('reviews.publication_version_id', $latestVersion->id)
                             ->orderByDesc('reviews.id')
                             ->first();
-
                         return $latestReview
-                            ? \App\Filament\Resources\Reviews\ReviewResource::getUrl('view', [
-                                'record' => $latestReview->id,
-                            ])
+                            ? \App\Filament\Resources\Reviews\ReviewResource::getUrl('view', ['record' => $latestReview->id])
                             : null;
                     }
 
-                    // Admin — arahkan ke review terbaru versi terbaru
+                    // Admin → review terbaru
                     $latestReview = $this->record->reviews()
                         ->where('reviews.publication_version_id', $latestVersion->id)
                         ->orderByDesc('reviews.id')
                         ->first();
-
                     return $latestReview
-                        ? \App\Filament\Resources\Reviews\ReviewResource::getUrl('edit', [
-                            'record' => $latestReview->id,
-                        ])
+                        ? \App\Filament\Resources\Reviews\ReviewResource::getUrl('edit', ['record' => $latestReview->id])
                         : null;
-                })
-                ->openUrlInNewTab(false),
+                }),
 
-            // ── Mulai Review (khusus Reviewer, status submitted) ──
+            // ── Review Naskah — reviewer, status submitted ────────
             Action::make('reviewManuscript')
                 ->label('Review Naskah')
                 ->icon('heroicon-o-clipboard-document-list')
@@ -338,63 +314,42 @@ class EditPublication extends EditRecord
                 ->visible(fn() => $this->isReviewer() && $this->record->status === 'submitted')
                 ->requiresConfirmation()
                 ->modalHeading('Mulai Review Naskah?')
-                ->modalDescription(new \Illuminate\Support\HtmlString(
+                ->modalDescription(new HtmlString(
                     '📄 <strong>' . e($this->record->title) . '</strong><br><br>' .
                         'Status publikasi akan berubah menjadi <strong>In Review</strong> dan ' .
-                        'Anda akan diarahkan ke halaman review. Pastikan Anda siap untuk meninjau naskah ini.'
+                        'Anda akan diarahkan ke halaman review.'
                 ))
                 ->modalSubmitActionLabel('Ya, Mulai Review')
                 ->modalCancelActionLabel('Batal')
                 ->action(function () {
-                    // 1. Ubah status publikasi menjadi in_review
                     $this->record->update(['status' => 'in_review']);
 
-                    // 2. Ambil versi terbaru
-                    $latestVersion = $this->record->versions()
-                        ->latest('version_number')
-                        ->first();
-
+                    $latestVersion = $this->latestVersion();
                     if (!$latestVersion) {
-                        Notification::make()
-                            ->title('Versi manuskrip tidak ditemukan')
-                            ->body('Tidak ada berkas PDF yang bisa direview.')
-                            ->danger()
-                            ->send();
+                        Notification::make()->title('Versi tidak ditemukan')->danger()->send();
                         return;
                     }
 
-                    // 3. Cek apakah reviewer sudah punya review untuk versi ini
                     $existingReview = \App\Models\Review::query()
                         ->where('publication_version_id', $latestVersion->id)
                         ->where('reviewer_id', auth()->id())
                         ->first();
 
                     if ($existingReview) {
-                        // Sudah ada — langsung ke halaman edit review
-                        $this->redirect(
-                            \App\Filament\Resources\Reviews\ReviewResource::getUrl('edit', [
-                                'record' => $existingReview->id,
-                            ])
-                        );
+                        $this->redirect(\App\Filament\Resources\Reviews\ReviewResource::getUrl('edit', ['record' => $existingReview->id]));
                         return;
                     }
 
-                    // 4. Buat review baru dengan version & reviewer terisi otomatis
                     $review = \App\Models\Review::create([
                         'publication_version_id' => $latestVersion->id,
                         'reviewer_id'            => auth()->id(),
                     ]);
 
-                    // 5. Notifikasi ke author bahwa naskah sedang direview
-                    $authorUserIds = $this->record->authors()
-                        ->pluck('authors.user_id')
-                        ->filter()
-                        ->unique()
-                        ->values();
-
-                    if ($authorUserIds->isNotEmpty()) {
+                    // Notifikasi ke author
+                    $recipients = $this->authorRecipients();
+                    if ($recipients->isNotEmpty()) {
                         \Illuminate\Support\Facades\Notification::send(
-                            \App\Models\User::whereIn('id', $authorUserIds)->get(),
+                            $recipients,
                             new \App\Notifications\PublicationInReview($this->record)
                         );
                     }
@@ -402,24 +357,82 @@ class EditPublication extends EditRecord
                     Notification::make()
                         ->success()
                         ->title('Review dimulai')
-                        ->body('Status naskah diubah ke "In Review". Silakan isi formulir review.')
+                        ->body('Status berubah ke "In Review". Author telah dinotifikasi.')
                         ->send();
 
-                    // 6. Redirect ke halaman edit review yang baru dibuat
-                    $this->redirect(
-                        \App\Filament\Resources\Reviews\ReviewResource::getUrl('edit', [
-                            'record' => $review->id,
-                        ])
-                    );
+                    $this->redirect(\App\Filament\Resources\Reviews\ReviewResource::getUrl('edit', ['record' => $review->id]));
                 }),
 
+            // ── Review Revisi Terbaru — reviewer, ada versi baru ─
+            Action::make('reviewRevisiTerbaru')
+                ->label(fn() => 'Review Revisi Terbaru (v' . ($this->latestVersion()?->version_number ?? '-') . ')')
+                ->icon('heroicon-o-arrow-path')
+                ->color('warning')
+                ->visible(fn() => $this->hasNewerVersionToReview())
+                ->requiresConfirmation()
+                ->modalHeading('Review Revisi Terbaru?')
+                ->modalDescription(function () {
+                    $latest = $this->latestVersion();
+                    return new HtmlString(
+                        '📄 <strong>' . e($this->record->title) . '</strong><br><br>' .
+                            "Author telah mengirim revisi <strong>v{$latest?->version_number}</strong>. " .
+                            'Klik lanjut untuk mulai mereview versi terbaru ini. ' .
+                            'Status publikasi akan berubah ke <strong>In Review</strong>.'
+                    );
+                })
+                ->modalSubmitActionLabel('Ya, Mulai Review')
+                ->modalCancelActionLabel('Batal')
+                ->action(function () {
+                    $latestVersion = $this->latestVersion();
+                    if (!$latestVersion) return;
+
+                    // Cek review existing
+                    $existingReview = \App\Models\Review::query()
+                        ->where('publication_version_id', $latestVersion->id)
+                        ->where('reviewer_id', auth()->id())
+                        ->first();
+
+                    if ($existingReview) {
+                        $this->redirect(\App\Filament\Resources\Reviews\ReviewResource::getUrl('edit', ['record' => $existingReview->id]));
+                        return;
+                    }
+
+                    // Buat review baru
+                    $review = \App\Models\Review::create([
+                        'publication_version_id' => $latestVersion->id,
+                        'reviewer_id'            => auth()->id(),
+                    ]);
+
+                    // Update status → in_review
+                    $this->record->update(['status' => 'in_review']);
+
+                    // Notifikasi ke author bahwa revisinya sedang direview
+                    $recipients = $this->authorRecipients();
+                    if ($recipients->isNotEmpty()) {
+                        \Illuminate\Support\Facades\Notification::send(
+                            $recipients,
+                            new \App\Notifications\PublicationInReview($this->record)
+                        );
+                    }
+
+                    Notification::make()
+                        ->success()
+                        ->title('Review revisi dimulai')
+                        ->body('v' . $latestVersion->version_number . ' sedang Anda review. Author telah dinotifikasi.')
+                        ->send();
+
+                    $this->redirect(\App\Filament\Resources\Reviews\ReviewResource::getUrl('edit', ['record' => $review->id]));
+                }),
+
+            // ── Upload Revisi — author, revision_required ─────────
             Action::make('uploadNewVersion')
                 ->label('Upload Revisi')
                 ->icon('heroicon-o-arrow-up-tray')
-                ->color('primary')
-                ->visible(fn() => $this->record->status === 'revision_required' && ! $this->isReviewer())
+                ->color('warning')
+                ->visible(fn() => $this->record->status === 'revision_required' && !$this->isReviewer())
                 ->modalHeading('Upload Revisi Manuskrip')
                 ->modalSubmitActionLabel('Kirim Revisi')
+                ->modalCancelActionLabel('Batal, Periksa Lagi')
                 ->form([
                     FileUpload::make('pdf_file_path')
                         ->label('Revised Manuscript (PDF)')
@@ -444,43 +457,32 @@ class EditPublication extends EditRecord
                         'submitted_at'   => now(),
                     ]);
 
-                    $this->record->update([
-                        'status' => 'submitted',
-                    ]);
+                    $this->record->update(['status' => 'submitted']);
 
                     $publication = $this->record;
-
                     $reviewerIds = $publication->reviews()
                         ->pluck('reviews.reviewer_id')
-                        ->filter()
-                        ->unique()
-                        ->values();
+                        ->filter()->unique()->values();
 
                     if ($reviewerIds->isNotEmpty()) {
-                        $reviewers = \App\Models\User::query()
-                            ->whereIn('id', $reviewerIds)
-                            ->get();
-
-                        foreach ($reviewers as $reviewer) {
+                        foreach (\App\Models\User::whereIn('id', $reviewerIds)->get() as $reviewer) {
                             $reviewIdToOpen = $publication->reviews()
                                 ->where('reviews.reviewer_id', $reviewer->id)
                                 ->orderByDesc('reviews.id')
                                 ->value('reviews.id');
 
-                            $reviewer->notify(
-                                new \App\Notifications\AuthorSubmittedRevision(
-                                    publication: $publication,
-                                    newVersionNumber: $nextVersion,
-                                    reviewIdToOpen: $reviewIdToOpen,
-                                )
-                            );
+                            $reviewer->notify(new \App\Notifications\AuthorSubmittedRevision(
+                                publication: $publication,
+                                newVersionNumber: $nextVersion,
+                                reviewIdToOpen: $reviewIdToOpen,
+                            ));
                         }
                     }
 
                     Notification::make()
                         ->success()
-                        ->title('Revisi berhasil diunggah')
-                        ->body('Judul: ' . $this->shortTitle() . " (v{$nextVersion})")
+                        ->title('Revisi berhasil dikirim')
+                        ->body('"' . $this->shortTitle() . '" v' . $nextVersion . ' dikirim ke reviewer.')
                         ->send();
                 }),
         ];
