@@ -269,6 +269,67 @@ class EditPublication extends EditRecord
                 ]))
                 ->openUrlInNewTab(),
 
+            // ── Lihat Detail Review ───────────────────────────────
+            Action::make('lihatReview')
+                ->label(function () {
+                    $reviewCount = $this->record->reviews()->count();
+                    return $reviewCount > 1
+                        ? "Lihat Review ({$reviewCount})"
+                        : 'Lihat Detail Review';
+                })
+                ->icon('heroicon-o-clipboard-document-list')
+                ->color('info')
+                ->visible(fn() => $this->record->reviews()->exists())
+                ->url(function () {
+                    // Ambil review yang relevan berdasarkan versi terbaru
+                    $latestVersion = $this->record->versions()
+                        ->latest('version_number')
+                        ->first();
+
+                    if (!$latestVersion) return null;
+
+                    // Jika reviewer — arahkan ke review miliknya sendiri
+                    if ($this->isReviewer()) {
+                        $myReview = $this->record->reviews()
+                            ->where('reviews.reviewer_id', auth()->id())
+                            ->orderByDesc('reviews.id')
+                            ->first();
+
+                        return $myReview
+                            ? \App\Filament\Resources\Reviews\ReviewResource::getUrl('edit', [
+                                'record' => $myReview->id,
+                            ])
+                            : null;
+                    }
+
+                    // Jika author — arahkan ke ViewReview versi terbaru
+                    if (auth()->user()?->hasRole('author')) {
+                        $latestReview = $this->record->reviews()
+                            ->where('reviews.publication_version_id', $latestVersion->id)
+                            ->orderByDesc('reviews.id')
+                            ->first();
+
+                        return $latestReview
+                            ? \App\Filament\Resources\Reviews\ReviewResource::getUrl('view', [
+                                'record' => $latestReview->id,
+                            ])
+                            : null;
+                    }
+
+                    // Admin — arahkan ke review terbaru versi terbaru
+                    $latestReview = $this->record->reviews()
+                        ->where('reviews.publication_version_id', $latestVersion->id)
+                        ->orderByDesc('reviews.id')
+                        ->first();
+
+                    return $latestReview
+                        ? \App\Filament\Resources\Reviews\ReviewResource::getUrl('edit', [
+                            'record' => $latestReview->id,
+                        ])
+                        : null;
+                })
+                ->openUrlInNewTab(false),
+
             // ── Mulai Review (khusus Reviewer, status submitted) ──
             Action::make('reviewManuscript')
                 ->label('Review Naskah')
