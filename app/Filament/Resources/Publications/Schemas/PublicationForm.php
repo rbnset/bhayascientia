@@ -279,7 +279,7 @@ class PublicationForm
                 // STATUS BANNER — Ditampilkan di atas Wizard
                 // ─────────────────────────────────────────
                 Placeholder::make('status_banner')
-                    ->label('')
+                    ->label('Status Publikasi')
                     ->content(fn($record) => new \Illuminate\Support\HtmlString(
                         self::renderStatusBanner($record)
                     ))
