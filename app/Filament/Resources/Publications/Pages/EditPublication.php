@@ -270,9 +270,14 @@ class EditPublication extends EditRecord
                     $this->record->reviews()->exists() &&
                         !$this->hasNewerVersionToReview()
                 )
-                ->url(function () {
+                ->action(function () {
                     $latestVersion = $this->latestVersion();
-                    if (!$latestVersion) return null;
+                    if (!$latestVersion) {
+                        Notification::make()
+                            ->title('Belum ada versi manuskrip')
+                            ->warning()->send();
+                        return;
+                    }
 
                     // Reviewer → review miliknya
                     if ($this->isReviewer()) {
@@ -280,20 +285,38 @@ class EditPublication extends EditRecord
                             ->where('reviews.reviewer_id', auth()->id())
                             ->orderByDesc('reviews.id')
                             ->first();
-                        return $myReview
-                            ? \App\Filament\Resources\Reviews\ReviewResource::getUrl('edit', ['record' => $myReview->id])
-                            : null;
+
+                        if (!$myReview) {
+                            Notification::make()
+                                ->title('Review belum tersedia')
+                                ->body('Anda belum memiliki review untuk publikasi ini.')
+                                ->warning()->send();
+                            return;
+                        }
+
+                        $this->redirect(\App\Filament\Resources\Reviews\ReviewResource::getUrl('edit', ['record' => $myReview->id]));
+                        return;
                     }
 
-                    // Author → ViewReview versi terbaru
+                    // Author → cek apakah review untuk versi terbaru sudah ada
                     if ($this->isAuthor()) {
                         $latestReview = $this->record->reviews()
                             ->where('reviews.publication_version_id', $latestVersion->id)
                             ->orderByDesc('reviews.id')
                             ->first();
-                        return $latestReview
-                            ? \App\Filament\Resources\Reviews\ReviewResource::getUrl('view', ['record' => $latestReview->id])
-                            : null;
+
+                        if (!$latestReview) {
+                            Notification::make()
+                                ->title('Review sedang diproses')
+                                ->body('Reviewer belum membuat catatan review untuk versi terbaru naskah kamu. Harap tunggu notifikasi dari reviewer.')
+                                ->info()
+                                ->persistent()
+                                ->send();
+                            return;
+                        }
+
+                        $this->redirect(\App\Filament\Resources\Reviews\ReviewResource::getUrl('view', ['record' => $latestReview->id]));
+                        return;
                     }
 
                     // Admin → review terbaru
@@ -301,9 +324,16 @@ class EditPublication extends EditRecord
                         ->where('reviews.publication_version_id', $latestVersion->id)
                         ->orderByDesc('reviews.id')
                         ->first();
-                    return $latestReview
-                        ? \App\Filament\Resources\Reviews\ReviewResource::getUrl('edit', ['record' => $latestReview->id])
-                        : null;
+
+                    if (!$latestReview) {
+                        Notification::make()
+                            ->title('Belum ada review')
+                            ->body('Belum ada reviewer yang membuat catatan untuk versi terbaru ini.')
+                            ->warning()->send();
+                        return;
+                    }
+
+                    $this->redirect(\App\Filament\Resources\Reviews\ReviewResource::getUrl('edit', ['record' => $latestReview->id]));
                 }),
 
             // ── Review Naskah — reviewer, status submitted ────────
