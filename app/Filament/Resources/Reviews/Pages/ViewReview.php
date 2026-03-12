@@ -54,12 +54,75 @@ class ViewReview extends ViewRecord
     }
 
     // ─────────────────────────────────────────────────────────────
+    // Helpers
+    // ─────────────────────────────────────────────────────────────
+
+    protected function publicationStatus(): ?string
+    {
+        return $this->record->publicationVersion?->publication?->status;
+    }
+
+    protected function isPublished(): bool
+    {
+        return $this->publicationStatus() === 'published';
+    }
+
+    // ─────────────────────────────────────────────────────────────
     // Status banner
     // ─────────────────────────────────────────────────────────────
 
     protected function renderStatusBanner(): HtmlString
     {
-        $decision = $this->record->decision ?? null;
+        $decision          = $this->record->decision ?? null;
+        $publication       = $this->record->publicationVersion?->publication;
+        $isPublished       = $this->isPublished();
+
+        // Jika sudah published, override banner
+        if ($isPublished) {
+            $publishedAt = $publication?->published_at
+                ? \Carbon\Carbon::parse($publication->published_at)
+                ->timezone('Asia/Jakarta')
+                ->locale('id')
+                ->isoFormat('D MMMM YYYY, HH:mm') . ' WIB'
+                : '-';
+
+            return new HtmlString("
+                <div style='
+                    background:#ECFDF5;
+                    border:1.5px solid #6EE7B7;
+                    border-left:5px solid #059669;
+                    border-radius:10px;
+                    padding:16px 20px;
+                    margin-bottom:4px;
+                '>
+                    <div style='display:flex;align-items:flex-start;gap:12px;'>
+                        <span style='font-size:24px;line-height:1;flex-shrink:0;'>🎉</span>
+                        <div style='flex:1;'>
+                            <div style='display:flex;align-items:center;gap:8px;margin-bottom:6px;'>
+                                <span style='
+                                    background:#059669;color:white;font-size:11px;
+                                    font-weight:700;padding:2px 10px;border-radius:20px;
+                                    text-transform:uppercase;letter-spacing:0.5px;
+                                '>Published</span>
+                            </div>
+                            <div style='font-size:14px;font-weight:600;color:#1F2937;margin-bottom:4px;'>Naskah Anda sudah diterbitkan!</div>
+                            <div style='font-size:13px;color:#4B5563;line-height:1.6;'>
+                                Naskah Anda sudah <strong>live dan dapat diakses publik</strong>.
+                                Klik tombol <strong>Lihat Halaman Publikasi</strong> di atas untuk melihat tampilan publikasinya.
+                            </div>
+                            <div style='
+                                display:flex;flex-wrap:wrap;gap:16px;
+                                margin-top:10px;padding-top:10px;
+                                border-top:1px solid #6EE7B7;
+                                font-size:12px;color:#6B7280;
+                            '>
+                                <span>🕐 Diterbitkan: <strong>{$publishedAt}</strong></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            ");
+        }
 
         $map = [
             null => [
@@ -84,10 +147,10 @@ class ViewReview extends ViewRecord
                 'color'   => '#10B981',
                 'bg'      => '#ECFDF5',
                 'border'  => '#A7F3D0',
-                'icon'    => '🎉',
+                'icon'    => '✅',
                 'label'   => 'Diterima',
                 'title'   => 'Selamat! Naskah Anda diterima',
-                'message' => 'Naskah Anda telah diterima oleh reviewer. Tim editor akan segera menjadwalkan penerbitan.',
+                'message' => 'Naskah Anda telah diterima oleh reviewer. Tim editor sedang menjadwalkan penerbitan. Anda akan mendapat notifikasi saat naskah diterbitkan.',
             ],
             'rejected' => [
                 'color'   => '#EF4444',
@@ -101,7 +164,7 @@ class ViewReview extends ViewRecord
         ];
 
         $cfg      = $map[$decision] ?? $map[null];
-        $pubType  = $this->record->publicationVersion?->publication?->publicationType?->name ?? 'Publikasi';
+        $pubType  = $publication?->publicationType?->name ?? 'Publikasi';
         $version  = $this->record->publicationVersion?->version_number
             ? 'v' . $this->record->publicationVersion->version_number
             : '-';
@@ -155,13 +218,11 @@ class ViewReview extends ViewRecord
 
         return $schema->components([
 
-            // ── Status Banner ─────────────────────────────────────
             \Filament\Forms\Components\Placeholder::make('status_banner')
                 ->label('')
                 ->content(fn() => $this->renderStatusBanner())
                 ->columnSpanFull(),
 
-            // ── Hasil Review — full width, 4 kolom di desktop ────
             Section::make('Hasil Review')
                 ->icon('heroicon-o-clipboard-document-check')
                 ->columnSpanFull()
@@ -197,7 +258,6 @@ class ViewReview extends ViewRecord
                         ->placeholder('Belum ada keputusan'),
                 ]),
 
-            // ── Menunggu review — tampil jika belum ada keputusan ─
             Section::make('')
                 ->columnSpanFull()
                 ->visible(fn() => !$hasDecision)
@@ -215,19 +275,16 @@ class ViewReview extends ViewRecord
                         ->columnSpanFull(),
                 ]),
 
-            // ── Catatan & Komentar — 2 kolom, hanya jika ada keputusan
             Grid::make()
                 ->columns(['default' => 1, 'lg' => 2])
                 ->columnSpanFull()
                 ->visible(fn() => $hasDecision && ($hasNotes || $hasComment))
                 ->schema([
 
-                    // Kolom kiri — Catatan per Bagian
                     Section::make('Catatan per Bagian')
                         ->icon('heroicon-o-clipboard-document-list')
                         ->columnSpan(1)
                         ->schema([
-                            // Jika ada catatan
                             RepeatableEntry::make('notes')
                                 ->label('')
                                 ->columnSpanFull()
@@ -256,22 +313,17 @@ class ViewReview extends ViewRecord
                                         ->extraAttributes(['class' => 'text-justify']),
                                 ]),
 
-                            // Jika tidak ada catatan
                             TextEntry::make('notes_empty')
                                 ->label('')
                                 ->default('Reviewer tidak memberikan catatan per bagian.')
                                 ->visible(fn() => !$hasNotes)
-                                ->extraAttributes([
-                                    'style' => 'color:#9CA3AF;font-style:italic;'
-                                ]),
+                                ->extraAttributes(['style' => 'color:#9CA3AF;font-style:italic;']),
                         ]),
 
-                    // Kolom kanan — Komentar Umum
                     Section::make('Komentar Umum Reviewer')
                         ->icon('heroicon-o-chat-bubble-left-right')
                         ->columnSpan(1)
                         ->schema([
-                            // Jika ada komentar
                             TextEntry::make('overall_comment')
                                 ->label('')
                                 ->html()
@@ -279,14 +331,11 @@ class ViewReview extends ViewRecord
                                 ->visible(fn() => $hasComment)
                                 ->extraAttributes(['class' => 'text-justify']),
 
-                            // Jika tidak ada komentar
                             TextEntry::make('comment_empty')
                                 ->label('')
                                 ->default('Reviewer tidak memberikan komentar umum.')
                                 ->visible(fn() => !$hasComment)
-                                ->extraAttributes([
-                                    'style' => 'color:#9CA3AF;font-style:italic;'
-                                ]),
+                                ->extraAttributes(['style' => 'color:#9CA3AF;font-style:italic;']),
                         ]),
                 ]),
         ]);
@@ -299,6 +348,7 @@ class ViewReview extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            // ── Lihat Manuskrip PDF ───────────────────────────────
             Action::make('previewPdf')
                 ->label(function () {
                     $v = $this->record->publicationVersion?->version_number;
@@ -312,6 +362,7 @@ class ViewReview extends ViewRecord
                 ]))
                 ->openUrlInNewTab(),
 
+            // ── Download PDF Anotasi ──────────────────────────────
             Action::make('downloadAnnotatedPdf')
                 ->label('Download PDF Anotasi')
                 ->icon('heroicon-o-arrow-down-tray')
@@ -323,6 +374,7 @@ class ViewReview extends ViewRecord
                     return Storage::disk('local')->download($attachment->file_path);
                 }),
 
+            // ── Upload Revisi — author, revision_required ─────────
             Action::make('uploadRevisi')
                 ->label('Upload Revisi')
                 ->icon('heroicon-o-arrow-up-tray')
@@ -336,6 +388,17 @@ class ViewReview extends ViewRecord
                     'record' => $this->record->publicationVersion?->publication,
                 ]))
                 ->tooltip('Perbaiki naskah lalu upload revisi di halaman publikasi'),
+
+            // ── Lihat Halaman Publikasi — jika sudah published ────
+            Action::make('lihatPublikasi')
+                ->label('Lihat Halaman Publikasi')
+                ->icon('heroicon-o-arrow-top-right-on-square')
+                ->color('success')
+                ->visible(fn() => $this->isPublished())
+                ->url(fn() => PublicationResource::getUrl('view', [
+                    'record' => $this->record->publicationVersion?->publication,
+                ]))
+                ->openUrlInNewTab(false),
         ];
     }
 }

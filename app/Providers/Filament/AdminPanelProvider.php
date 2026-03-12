@@ -59,7 +59,6 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->viteTheme('resources/css/filament/admin/theme.css')
             ->login()
-            ->registration()
             ->brandName('Dabraka')
             ->brandLogo(asset('assets/images/logos/logo-light.svg'))
             ->darkModeBrandLogo(asset('assets/images/logos/logo-dark.svg'))
