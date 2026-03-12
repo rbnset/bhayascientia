@@ -183,7 +183,11 @@ class UserForm
                                         Select::make('roles')
                                             ->label('Peran')
                                             ->multiple()
-                                            ->relationship('roles', 'name')
+                                            ->relationship(
+                                                'roles',
+                                                'name',
+                                                fn($query) => $query->whereIn('name', ['author', 'reviewer'])
+                                            )
                                             ->preload()
                                             ->searchable()
                                             ->prefixIcon('heroicon-o-shield-check')
