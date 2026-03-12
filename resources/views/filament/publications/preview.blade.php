@@ -87,25 +87,26 @@ $abstractHtml = filled($abstract) ? str($abstract)->sanitizeHtml() : null;
 
 <div class="bookx">
     <div class="bookx-wrap">
-        {{-- COVER COLUMN --}}
-        <div class="bookx-cover">
-            @if($coverUrl)
-            <img src="{{ $coverUrl }}" alt="Cover image preview" loading="lazy" class="bookx-cover-img" />
-            @else
-            <div class="bookx-cover-fallback">
-                <div class="bookx-fallback-icon">
-                    <x-heroicon-o-photo class="bookx-fallback-icon-svg" />
+
+        {{-- KOLOM KIRI: Cover + Download --}}
+        <div class="bookx-left">
+            <div class="bookx-cover">
+                @if($coverUrl)
+                <img src="{{ $coverUrl }}" alt="Cover image preview" loading="lazy" class="bookx-cover-img" />
+                @else
+                <div class="bookx-cover-fallback">
+                    <div class="bookx-fallback-icon">
+                        <x-heroicon-o-photo class="bookx-fallback-icon-svg" />
+                    </div>
+                    <p class="bookx-fallback-text">
+                        Upload cover untuk melihat preview seperti buku.
+                    </p>
                 </div>
-                <p class="bookx-fallback-text">
-                    Upload cover untuk melihat preview seperti buku.
-                </p>
+                @endif
+                <div class="bookx-cover-badge">{{ $statusLabel }}</div>
             </div>
-            @endif
 
-            <div class="bookx-cover-badge">{{ $statusLabel }}</div>
-        </div>
-
-        <div class="bookx-cover-actions">
+            {{-- Download di bawah cover --}}
             @if($downloadUrl)
             <a class="bookx-download" href="{{ $downloadUrl }}" target="_blank" rel="noopener">
                 <svg xmlns="http://www.w3.org/2000/svg" class="bookx-download-icon" viewBox="0 0 20 20"
@@ -123,7 +124,7 @@ $abstractHtml = filled($abstract) ? str($abstract)->sanitizeHtml() : null;
             @endif
         </div>
 
-        {{-- BODY COLUMN --}}
+        {{-- KOLOM KANAN: Body --}}
         <div class="bookx-body">
             <div class="bookx-kicker">Publication Preview</div>
 
@@ -209,17 +210,16 @@ $abstractHtml = filled($abstract) ? str($abstract)->sanitizeHtml() : null;
                 </div>
             </div>
         </div>
+
     </div>
 </div>
 
 <style>
     /* ════════════════════════════════════════════════
        MOBILE-FIRST RESPONSIVE + LIGHT/DARK MODE
-       Uses CSS custom properties & prefers-color-scheme
     ════════════════════════════════════════════════ */
 
     :root {
-        /* Light Mode (default) */
         --bg-primary: #ffffff;
         --bg-secondary: #fff7ed;
         --bg-abstract: #fff7ed;
@@ -239,7 +239,6 @@ $abstractHtml = filled($abstract) ? str($abstract)->sanitizeHtml() : null;
 
     @media (prefers-color-scheme: dark) {
         :root {
-            /* Dark Mode */
             --bg-primary: #1f2937;
             --bg-secondary: #374151;
             --bg-abstract: #374151;
@@ -258,7 +257,6 @@ $abstractHtml = filled($abstract) ? str($abstract)->sanitizeHtml() : null;
         }
     }
 
-    /* Override for forced dark mode (if using class="dark") */
     .dark {
         --bg-primary: #1f2937;
         --bg-secondary: #374151;
@@ -278,14 +276,13 @@ $abstractHtml = filled($abstract) ? str($abstract)->sanitizeHtml() : null;
     }
 
     /* ════════════════════════════════════════════════
-       MOBILE-FIRST BASE STYLES
+       BASE
     ════════════════════════════════════════════════ */
     .bookx {
         display: flex;
         justify-content: center;
         padding: clamp(0.5rem, 2vw, 1rem);
         width: 100%;
-        min-height: 100vh;
     }
 
     .bookx-wrap {
@@ -297,14 +294,27 @@ $abstractHtml = filled($abstract) ? str($abstract)->sanitizeHtml() : null;
     }
 
     /* ════════════════════════════════════════════════
+       KOLOM KIRI — cover + download
+    ════════════════════════════════════════════════ */
+    .bookx-left {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        width: 100%;
+    }
+
+    /* ════════════════════════════════════════════════
        COVER
     ════════════════════════════════════════════════ */
     .bookx-cover {
-        flex: 0 0 280px !important;
-        width: 280px !important;
-        max-width: 280px !important;
-        aspect-ratio: 2/3 !important;
-        max-height: unset !important;
+        position: relative;
+        border-radius: 20px;
+        overflow: hidden;
+        background: var(--bg-secondary);
+        border: 2px solid var(--border-primary);
+        box-shadow: var(--shadow-heavy);
+        width: 100%;
+        aspect-ratio: 2/3;
     }
 
     .bookx-cover-img {
@@ -365,18 +375,12 @@ $abstractHtml = filled($abstract) ? str($abstract)->sanitizeHtml() : null;
         max-width: 85%;
     }
 
-    .bookx-cover-actions {
-        position: static;
-        /* hapus absolute */
-        padding: clamp(0.75rem, 3vw, 1rem) 0 0 0;
-        background: transparent;
-        border-top: none;
-    }
-
+    /* ════════════════════════════════════════════════
+       DOWNLOAD BUTTON
+    ════════════════════════════════════════════════ */
     .bookx-download {
-        display: inline-flex;
-        /* bukan full width */
-        width: auto;
+        display: flex;
+        width: 100%;
         justify-content: center;
         align-items: center;
         gap: 0.5rem;
@@ -384,28 +388,14 @@ $abstractHtml = filled($abstract) ? str($abstract)->sanitizeHtml() : null;
         background: var(--accent-gradient);
         color: white;
         font-weight: 800;
-        font-size: clamp(0.75rem, 2vw, 0.85rem);
+        font-size: clamp(0.8rem, 2vw, 0.875rem);
         border-radius: 12px;
-        padding: 0.6rem 1rem;
+        padding: 0.75rem 1rem;
         box-shadow: var(--shadow-accent);
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        touch-action: manipulation;
         border: none;
         white-space: nowrap;
-    }
-
-    .bookx-download-disabled {
-        width: 100%;
-        text-align: center;
-        padding: 0.6rem 0.75rem;
-        border-radius: 12px;
-        background: var(--bg-secondary);
-        border: 2px dashed var(--border-primary);
-        color: var(--text-orange);
-        font-weight: 600;
-        font-size: clamp(0.75rem, 2vw, 0.8rem);
-        line-height: 1.5;
-        margin-top: 0.75rem;
+        box-sizing: border-box;
     }
 
     .bookx-download:hover,
@@ -420,13 +410,27 @@ $abstractHtml = filled($abstract) ? str($abstract)->sanitizeHtml() : null;
     }
 
     .bookx-download-icon {
-        width: 1.25rem;
-        height: 1.25rem;
+        width: 1.1rem;
+        height: 1.1rem;
         flex-shrink: 0;
     }
 
+    .bookx-download-disabled {
+        width: 100%;
+        text-align: center;
+        padding: 0.75rem;
+        border-radius: 12px;
+        background: var(--bg-secondary);
+        border: 2px dashed var(--border-primary);
+        color: var(--text-orange);
+        font-weight: 600;
+        font-size: clamp(0.75rem, 2vw, 0.8rem);
+        line-height: 1.5;
+        box-sizing: border-box;
+    }
+
     /* ════════════════════════════════════════════════
-       BODY
+       BODY (kolom kanan)
     ════════════════════════════════════════════════ */
     .bookx-body {
         background: var(--bg-primary);
@@ -455,7 +459,6 @@ $abstractHtml = filled($abstract) ? str($abstract)->sanitizeHtml() : null;
         hyphens: auto;
     }
 
-    /* Authors */
     .bookx-authors {
         color: var(--text-muted);
         font-size: clamp(0.875rem, 2.5vw, 1rem);
@@ -525,10 +528,6 @@ $abstractHtml = filled($abstract) ? str($abstract)->sanitizeHtml() : null;
         margin-top: clamp(1.25rem, 4vw, 1.75rem);
     }
 
-    .bookx-section:first-child {
-        margin-top: 0;
-    }
-
     .bookx-section-title {
         font-size: clamp(0.8rem, 2.2vw, 0.875rem);
         font-weight: 900;
@@ -586,7 +585,6 @@ $abstractHtml = filled($abstract) ? str($abstract)->sanitizeHtml() : null;
         padding-left: 1rem;
         color: var(--text-secondary);
         font-style: italic;
-        background: color-mix(in srgb, transparent 80%, currentColor);
     }
 
     .bookx-abstract :where(a) {
@@ -596,35 +594,29 @@ $abstractHtml = filled($abstract) ? str($abstract)->sanitizeHtml() : null;
     }
 
     /* ════════════════════════════════════════════════
-       TABLET & DESKTOP - SIDE-BY-SIDE LAYOUT
+       TABLET & DESKTOP
     ════════════════════════════════════════════════ */
     @media (min-width: 768px) {
         .bookx-wrap {
             flex-direction: row;
             align-items: start;
+            gap: clamp(1.5rem, 4vw, 2rem);
         }
 
-        .bookx-cover {
-            flex: 0 0 200px !important;
-            width: 200px !important;
-            max-width: 200px !important;
-            aspect-ratio: 2/3 !important;
-            max-height: unset !important;
+        .bookx-left {
+            flex: 0 0 200px;
+            width: 200px;
         }
 
         .bookx-body {
             flex: 1;
-            margin-left: clamp(1.5rem, 4vw, 2rem);
         }
     }
 
     @media (min-width: 1024px) {
-        .bookx-cover {
-            flex: 0 0 260px !important;
-            width: 260px !important;
-            max-width: 260px !important;
-            aspect-ratio: 2/3 !important;
-            max-height: unset !important;
+        .bookx-left {
+            flex: 0 0 260px;
+            width: 260px;
         }
     }
 
@@ -635,11 +627,10 @@ $abstractHtml = filled($abstract) ? str($abstract)->sanitizeHtml() : null;
     }
 
     /* ════════════════════════════════════════════════
-       PRINT STYLES
+       PRINT
     ════════════════════════════════════════════════ */
     @media print {
         .bookx {
-            box-shadow: none;
             padding: 0;
         }
 
@@ -662,7 +653,6 @@ $abstractHtml = filled($abstract) ? str($abstract)->sanitizeHtml() : null;
     @media (prefers-reduced-motion: reduce) {
         * {
             animation-duration: 0.01ms !important;
-            animation-iteration-count: 1 !important;
             transition-duration: 0.01ms !important;
         }
     }
