@@ -307,68 +307,103 @@ class EditPublication extends EditRecord
                 }),
 
             // ── Review Naskah — reviewer, status submitted ────────
-            // Action::make('reviewManuscript')
-            //     ->label('Review Naskah')
-            //     ->icon('heroicon-o-clipboard-document-list')
-            //     ->color('primary')
-            //     ->visible(fn() => $this->isReviewer() && $this->record->status === 'submitted')
-            //     ->requiresConfirmation()
-            //     ->modalHeading('Mulai Review Naskah?')
-            //     ->modalDescription(new HtmlString(
-            //         '📄 <strong>' . e($this->record->title) . '</strong><br><br>' .
-            //             'Status publikasi akan berubah menjadi <strong>In Review</strong> dan ' .
-            //             'Anda akan diarahkan ke halaman review.'
-            //     ))
-            //     ->modalSubmitActionLabel('Ya, Mulai Review')
-            //     ->modalCancelActionLabel('Batal')
-            //     ->action(function () {
-            //         $this->record->update(['status' => 'in_review']);
+            Action::make('reviewManuscript')
+                ->label('Review Naskah')
+                ->icon('heroicon-o-clipboard-document-list')
+                ->color('primary')
+                ->visible(function () {
+                    if (!$this->isReviewer()) return false;
+                    if ($this->record->status !== 'submitted') return false;
 
-            //         $latestVersion = $this->latestVersion();
-            //         if (!$latestVersion) {
-            //             Notification::make()->title('Versi tidak ditemukan')->danger()->send();
-            //             return;
-            //         }
+                    // Hanya tampil jika reviewer ini BELUM PERNAH punya review
+                    // di publikasi ini sama sekali (berarti ini submission pertama)
+                    $alreadyReviewed = \App\Models\Review::query()
+                        ->whereHas(
+                            'publicationVersion',
+                            fn($q) =>
+                            $q->where('publication_id', $this->record->id)
+                        )
+                        ->where('reviewer_id', auth()->id())
+                        ->exists();
 
-            //         $existingReview = \App\Models\Review::query()
-            //             ->where('publication_version_id', $latestVersion->id)
-            //             ->where('reviewer_id', auth()->id())
-            //             ->first();
+                    return !$alreadyReviewed;
+                })
+                ->requiresConfirmation()
+                ->modalHeading('Mulai Review Naskah?')
+                ->modalDescription(new HtmlString(
+                    '📄 <strong>' . e($this->record->title) . '</strong><br><br>' .
+                        'Status publikasi akan berubah menjadi <strong>In Review</strong> dan ' .
+                        'Anda akan diarahkan ke halaman review.'
+                ))
+                ->modalSubmitActionLabel('Ya, Mulai Review')
+                ->modalCancelActionLabel('Batal')
+                ->action(function () {
+                    $this->record->update(['status' => 'in_review']);
 
-            //         if ($existingReview) {
-            //             $this->redirect(\App\Filament\Resources\Reviews\ReviewResource::getUrl('edit', ['record' => $existingReview->id]));
-            //             return;
-            //         }
+                    $latestVersion = $this->latestVersion();
+                    if (!$latestVersion) {
+                        Notification::make()->title('Versi tidak ditemukan')->danger()->send();
+                        return;
+                    }
 
-            //         $review = \App\Models\Review::create([
-            //             'publication_version_id' => $latestVersion->id,
-            //             'reviewer_id'            => auth()->id(),
-            //         ]);
+                    $existingReview = \App\Models\Review::query()
+                        ->where('publication_version_id', $latestVersion->id)
+                        ->where('reviewer_id', auth()->id())
+                        ->first();
 
-            //         // Notifikasi ke author
-            //         $recipients = $this->authorRecipients();
-            //         if ($recipients->isNotEmpty()) {
-            //             \Illuminate\Support\Facades\Notification::send(
-            //                 $recipients,
-            //                 new \App\Notifications\PublicationInReview($this->record)
-            //             );
-            //         }
+                    if ($existingReview) {
+                        $this->redirect(\App\Filament\Resources\Reviews\ReviewResource::getUrl('edit', ['record' => $existingReview->id]));
+                        return;
+                    }
 
-            //         Notification::make()
-            //             ->success()
-            //             ->title('Review dimulai')
-            //             ->body('Status berubah ke "In Review". Author telah dinotifikasi.')
-            //             ->send();
+                    $review = \App\Models\Review::create([
+                        'publication_version_id' => $latestVersion->id,
+                        'reviewer_id'            => auth()->id(),
+                    ]);
 
-            //         $this->redirect(\App\Filament\Resources\Reviews\ReviewResource::getUrl('edit', ['record' => $review->id]));
-            //     }),
+                    // Notifikasi ke author
+                    $recipients = $this->authorRecipients();
+                    if ($recipients->isNotEmpty()) {
+                        \Illuminate\Support\Facades\Notification::send(
+                            $recipients,
+                            new \App\Notifications\PublicationInReview($this->record)
+                        );
+                    }
+
+                    Notification::make()
+                        ->success()
+                        ->title('Review dimulai')
+                        ->body('Status berubah ke "In Review". Author telah dinotifikasi.')
+                        ->send();
+
+                    $this->redirect(\App\Filament\Resources\Reviews\ReviewResource::getUrl('edit', ['record' => $review->id]));
+                }),
 
             // ── Review Revisi Terbaru — reviewer, ada versi baru ─
             Action::make('reviewRevisiTerbaru')
                 ->label(fn() => 'Review Revisi Terbaru (v' . ($this->latestVersion()?->version_number ?? '-') . ')')
                 ->icon('heroicon-o-arrow-path')
                 ->color('warning')
-                ->visible(fn() => $this->hasNewerVersionToReview())
+                ->visible(function () {
+                    if (!$this->isReviewer()) return false;
+
+                    // hasNewerVersionToReview() sudah cek: ada versi terbaru
+                    // yang belum punya review dari reviewer ini
+                    // Tambah: pastikan reviewer ini PERNAH review sebelumnya
+                    // (artinya ini revisi, bukan submission pertama)
+                    if (!$this->hasNewerVersionToReview()) return false;
+
+                    $everReviewed = \App\Models\Review::query()
+                        ->whereHas(
+                            'publicationVersion',
+                            fn($q) =>
+                            $q->where('publication_id', $this->record->id)
+                        )
+                        ->where('reviewer_id', auth()->id())
+                        ->exists();
+
+                    return $everReviewed;
+                })
                 ->requiresConfirmation()
                 ->modalHeading('Review Revisi Terbaru?')
                 ->modalDescription(function () {
