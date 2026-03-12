@@ -146,10 +146,23 @@ class ReviewForm
                                 ->description('Catatan umum untuk penulis')
                                 ->icon('heroicon-o-chat-bubble-left-right')
                                 ->schema([
-                                    Textarea::make('overall_comment')
+                                    \Filament\Forms\Components\RichEditor::make('overall_comment')
                                         ->label('Overall Comment')
-                                        ->rows(6)
                                         ->required()
+                                        ->toolbarButtons([
+                                            'bold',
+                                            'italic',
+                                            'underline',
+                                            'strike',
+                                            'link',
+                                            'bulletList',
+                                            'orderedList',
+                                            'blockquote',
+                                            'h2',
+                                            'h3',
+                                            'undo',
+                                            'redo',
+                                        ])
                                         ->placeholder('Tuliskan evaluasi, saran, dan catatan reviewer...')
                                         ->columnSpanFull(),
                                 ]),
