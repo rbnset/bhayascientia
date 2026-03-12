@@ -115,6 +115,10 @@ $abstractHtml = filled($abstract) ? str($abstract)->sanitizeHtml() : null;
                     </svg>
                     Download Manuscript
                 </a>
+                @else
+                <div class="bookx-download-disabled">
+                    Manuscript belum ada — upload di Publication Versions.
+                </div>
                 @endif
             </div>
         </div>
