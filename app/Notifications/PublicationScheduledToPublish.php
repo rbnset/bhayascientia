@@ -40,7 +40,7 @@ class PublicationScheduledToPublish extends Notification
             ? $this->publication->published_at->translatedFormat('d M Y H:i')
             : '—';
 
-        $url = PublicationResource::getUrl('edit', [
+        $url = PublicationResource::getUrl('view', [
             'record' => $this->publication,
         ]);
 
