@@ -55,7 +55,6 @@ Route::middleware(['auth'])->group(function () {
                 'Cache-Control'       => 'no-store, no-cache, must-revalidate, max-age=0',
             ]);
         } catch (\Throwable $e) {
-            // FPDI gagal parse PDF modern → fallback serve langsung
             \Illuminate\Support\Facades\Log::warning('PdfStamper fallback: ' . $e->getMessage(), [
                 'version_id' => $version->id,
             ]);

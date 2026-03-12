@@ -4,7 +4,6 @@ namespace App\Support;
 
 use App\Models\Publication;
 use App\Models\PublicationVersion;
-use SimpleSoftwareIO\QrCode\Generator as QrGenerator;
 
 class PdfStamper
 {
@@ -23,33 +22,87 @@ class PdfStamper
         'published'         => [16, 185, 129],
     ];
 
+    // ─────────────────────────────────────────────────────────────
+    // Convert PDF modern → PDF 1.4 via GhostScript
+    // ─────────────────────────────────────────────────────────────
+    private static function convertToCompatible(string $absolutePath): string
+    {
+        $tempPath = storage_path('app/temp/converted_' . md5($absolutePath . time()) . '.pdf');
+
+        if (!is_dir(storage_path('app/temp'))) {
+            mkdir(storage_path('app/temp'), 0755, true);
+        }
+
+        $gs  = '/usr/bin/gs';
+        $cmd = escapeshellcmd($gs)
+            . ' -dBATCH'
+            . ' -dNOPAUSE'
+            . ' -dQUIET'
+            . ' -dSAFER'
+            . ' -sDEVICE=pdfwrite'
+            . ' -dCompatibilityLevel=1.4'
+            . ' -sOutputFile=' . escapeshellarg($tempPath)
+            . ' ' . escapeshellarg($absolutePath)
+            . ' 2>/dev/null';
+
+        exec($cmd, $output, $returnCode);
+
+        if ($returnCode !== 0 || !file_exists($tempPath)) {
+            throw new \RuntimeException('GhostScript conversion failed with code: ' . $returnCode);
+        }
+
+        return $tempPath;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Main stamp entry point
+    // ─────────────────────────────────────────────────────────────
     public static function stamp(string $absolutePath, PublicationVersion $version): string
     {
         $version->loadMissing('publication');
         $publication = $version->publication;
 
-        $pdf       = new PdfWithRotation();
-        $pageCount = $pdf->setSourceFile($absolutePath);
+        // Convert ke PDF 1.4 agar FPDI free bisa baca
+        $convertedPath = null;
+        try {
+            $convertedPath = self::convertToCompatible($absolutePath);
+            $pathToUse     = $convertedPath;
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('GS convert failed, using original: ' . $e->getMessage());
+            $pathToUse = $absolutePath;
+        }
 
-        for ($pageNo = 1; $pageNo <= $pageCount; $pageNo++) {
-            $tplId = $pdf->importPage($pageNo);
-            $size  = $pdf->getTemplateSize($tplId);
+        try {
+            $pdf       = new PdfWithRotation();
+            $pageCount = $pdf->setSourceFile($pathToUse);
 
-            $pdf->AddPage($size['orientation'], [$size['width'], $size['height']]);
-            $pdf->useTemplate($tplId);
+            for ($pageNo = 1; $pageNo <= $pageCount; $pageNo++) {
+                $tplId = $pdf->importPage($pageNo);
+                $size  = $pdf->getTemplateSize($tplId);
 
-            self::drawHeaderStamp($pdf, $size, $publication, $version, $pageNo, $pageCount);
+                $pdf->AddPage($size['orientation'], [$size['width'], $size['height']]);
+                $pdf->useTemplate($tplId);
 
-            if (in_array($publication->status, self::SIDE_WATERMARK_STATUSES)) {
-                self::drawSideWatermark($pdf, $size, $publication->status);
+                self::drawHeaderStamp($pdf, $size, $publication, $version, $pageNo, $pageCount);
+
+                if (in_array($publication->status, self::SIDE_WATERMARK_STATUSES)) {
+                    self::drawSideWatermark($pdf, $size, $publication->status);
+                }
+            }
+
+            $result = $pdf->Output('S');
+        } finally {
+            // Hapus file temporary converted
+            if ($convertedPath && file_exists($convertedPath)) {
+                @unlink($convertedPath);
             }
         }
 
-        return $pdf->Output('S');
+        return $result;
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Header stamp — sekarang lebih lebar untuk muat QR Code
+    // Header stamp
     // ─────────────────────────────────────────────────────────────
     private static function drawHeaderStamp(
         PdfWithRotation $pdf,
@@ -60,35 +113,34 @@ class PdfStamper
         int $pageCount,
     ): void {
         $margin      = 6;
-        $stampWidth  = 75;   // diperlebar dari 58 → 75 untuk muat QR
+        $stampWidth  = 75;
         $stampHeight = 22;
         $x           = $size['width'] - $stampWidth - $margin;
         $y           = $margin;
 
-        $uniqueCode  = self::generateCode($publication, $version);
-        $verifyUrl   = route('document.verify', $uniqueCode);
+        $uniqueCode = self::generateCode($publication, $version);
+        $verifyUrl  = route('document.verify', $uniqueCode);
 
-        // ── Background ──────────────────────────────────────────
+        // Background
         $pdf->SetFillColor(255, 255, 255);
         $pdf->SetDrawColor(220, 220, 220);
         $pdf->SetLineWidth(0.2);
         $pdf->RoundedRect($x, $y, $stampWidth, $stampHeight, 2, 'DF');
 
-        // ── QR Code (kanan dalam stamp) ──────────────────────────
-        $qrSize    = 18;  // mm — seukuran tinggi stamp
+        // QR Code
+        $qrSize    = 18;
         $qrX       = $x + $stampWidth - $qrSize - 2;
         $qrY       = $y + 2;
         $qrPngPath = self::generateQrPng($verifyUrl);
 
         if ($qrPngPath) {
             $pdf->Image($qrPngPath, $qrX, $qrY, $qrSize, $qrSize, 'PNG');
-            @unlink($qrPngPath); // hapus tmp file setelah dipakai
+            @unlink($qrPngPath);
         }
 
-        // Lebar area teks (kiri QR)
         $textAreaW = $stampWidth - $qrSize - 6;
 
-        // ── Logo ─────────────────────────────────────────────────
+        // Logo
         $logoPath = public_path('images/logos/logo.png');
         $logoX    = $x + 2;
         $logoY    = $y + 2;
@@ -101,7 +153,7 @@ class PdfStamper
             $textX = $logoX;
         }
 
-        // ── Nama platform ─────────────────────────────────────────
+        // Nama platform
         $pdf->SetFont('Helvetica', 'B', 5.5);
         $pdf->SetTextColor(30, 30, 30);
         $pdf->SetXY($textX, $logoY + 0.3);
@@ -112,13 +164,13 @@ class PdfStamper
         $pdf->SetXY($textX, $logoY + 3.2);
         $pdf->Cell($textAreaW - ($textX - $x), 2.5, 'Darma Brata Buana Cendekia', 0, 1, 'L');
 
-        // ── Divider ───────────────────────────────────────────────
+        // Divider
         $divY = $y + 9;
         $pdf->SetDrawColor(230, 230, 230);
         $pdf->SetLineWidth(0.15);
         $pdf->Line($x + 2, $divY, $x + $textAreaW, $divY);
 
-        // ── Metadata ──────────────────────────────────────────────
+        // Metadata
         $metaY   = $divY + 1.5;
         $colLeft = $x + 2;
         $colW    = $textAreaW - 4;
@@ -139,7 +191,7 @@ class PdfStamper
         $pdf->SetTextColor(80, 80, 80);
         $pdf->Cell($colW, 2.5, 'Kode: ' . $uniqueCode, 0, 0, 'L');
 
-        // ── Status badge ──────────────────────────────────────────
+        // Status badge
         $statusText  = strtoupper(str_replace('_', ' ', $publication->status));
         $statusColor = self::STATUS_COLORS[$publication->status] ?? [100, 100, 100];
         $badgeY      = $metaY + 8;
@@ -150,13 +202,13 @@ class PdfStamper
         $pdf->SetXY($colLeft, $badgeY);
         $pdf->Cell($colW, 3, $statusText, 0, 1, 'C', true);
 
-        // ── Label scan di bawah QR ────────────────────────────────
+        // Label scan di bawah QR
         $pdf->SetFont('Helvetica', '', 3.2);
         $pdf->SetTextColor(150, 150, 150);
         $pdf->SetXY($qrX, $qrY + $qrSize + 0.5);
         $pdf->Cell($qrSize, 2.5, 'Scan untuk verifikasi', 0, 0, 'C');
 
-        // ── Reset ─────────────────────────────────────────────────
+        // Reset
         $pdf->SetTextColor(0, 0, 0);
         $pdf->SetFillColor(255, 255, 255);
         $pdf->SetDrawColor(0, 0, 0);
@@ -170,7 +222,7 @@ class PdfStamper
         array $size,
         string $status,
     ): void {
-        $text  = strtoupper(str_replace('_', ' ', $status));
+        $text = strtoupper(str_replace('_', ' ', $status));
 
         $pdf->SetTextColor(230, 230, 230);
         $pdf->SetFont('Helvetica', 'B', 28);
@@ -184,7 +236,7 @@ class PdfStamper
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Generate QR Code → simpan ke tmp → return path
+    // Generate QR Code
     // ─────────────────────────────────────────────────────────────
     private static function generateQrPng(string $url): ?string
     {
@@ -201,13 +253,11 @@ class PdfStamper
             $filename = 'qr_' . md5($url) . '.png';
             $path     = storage_path('app/temp/' . $filename);
 
-            if (! is_dir(storage_path('app/temp'))) {
+            if (!is_dir(storage_path('app/temp'))) {
                 mkdir(storage_path('app/temp'), 0755, true);
             }
 
             file_put_contents($path, $result->getString());
-
-            \Illuminate\Support\Facades\Log::info('QR path: ' . $path . ' | exists: ' . (file_exists($path) ? 'YES' : 'NO'));
 
             return file_exists($path) ? $path : null;
         } catch (\Throwable $e) {
@@ -217,7 +267,7 @@ class PdfStamper
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Generate kode unik
+    // Generate kode unik verifikasi
     // ─────────────────────────────────────────────────────────────
     private static function generateCode(Publication $publication, PublicationVersion $version): string
     {
