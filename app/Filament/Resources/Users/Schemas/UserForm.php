@@ -186,7 +186,9 @@ class UserForm
                                             ->relationship(
                                                 'roles',
                                                 'name',
-                                                fn($query) => $query->whereIn('name', ['author', 'reviewer'])
+                                                fn($query) => auth()->user()->hasRole('super_admin')
+                                                    ? $query
+                                                    : $query->whereIn('name', ['author', 'reviewer'])
                                             )
                                             ->preload()
                                             ->searchable()
