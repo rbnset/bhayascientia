@@ -300,15 +300,11 @@ $abstractHtml = filled($abstract) ? str($abstract)->sanitizeHtml() : null;
        COVER
     ════════════════════════════════════════════════ */
     .bookx-cover {
-        position: relative;
-        border-radius: 20px;
-        overflow: hidden;
-        background: var(--bg-secondary);
-        border: 2px solid var(--border-primary);
-        box-shadow: var(--shadow-heavy);
-        width: 100%;
-        aspect-ratio: 3/4;
-        max-height: 400px;
+        flex: 0 0 280px !important;
+        width: 280px !important;
+        max-width: 280px !important;
+        aspect-ratio: 2/3 !important;
+        max-height: unset !important;
     }
 
     .bookx-cover-img {
@@ -608,8 +604,11 @@ $abstractHtml = filled($abstract) ? str($abstract)->sanitizeHtml() : null;
         }
 
         .bookx-cover {
-            flex: 0 0 280px;
-            max-height: 420px;
+            flex: 0 0 200px !important;
+            width: 200px !important;
+            max-width: 200px !important;
+            aspect-ratio: 2/3 !important;
+            max-height: unset !important;
         }
 
         .bookx-body {
@@ -620,8 +619,11 @@ $abstractHtml = filled($abstract) ? str($abstract)->sanitizeHtml() : null;
 
     @media (min-width: 1024px) {
         .bookx-cover {
-            flex: 0 0 320px;
-            max-height: 480px;
+            flex: 0 0 260px !important;
+            width: 260px !important;
+            max-width: 260px !important;
+            aspect-ratio: 2/3 !important;
+            max-height: unset !important;
         }
     }
 
