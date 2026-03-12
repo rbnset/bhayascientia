@@ -822,6 +822,7 @@ class PublicationForm
                                 ->description('Status proses publikasi')
                                 ->icon('heroicon-o-clipboard-document-check')
                                 ->columnSpan(1)
+                                ->hidden(fn() => auth()->user()?->hasRole('author'))
                                 ->schema([
                                     Select::make('status')
                                         ->label('Status')
