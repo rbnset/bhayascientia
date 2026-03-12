@@ -307,61 +307,61 @@ class EditPublication extends EditRecord
                 }),
 
             // ── Review Naskah — reviewer, status submitted ────────
-            Action::make('reviewManuscript')
-                ->label('Review Naskah')
-                ->icon('heroicon-o-clipboard-document-list')
-                ->color('primary')
-                ->visible(fn() => $this->isReviewer() && $this->record->status === 'submitted')
-                ->requiresConfirmation()
-                ->modalHeading('Mulai Review Naskah?')
-                ->modalDescription(new HtmlString(
-                    '📄 <strong>' . e($this->record->title) . '</strong><br><br>' .
-                        'Status publikasi akan berubah menjadi <strong>In Review</strong> dan ' .
-                        'Anda akan diarahkan ke halaman review.'
-                ))
-                ->modalSubmitActionLabel('Ya, Mulai Review')
-                ->modalCancelActionLabel('Batal')
-                ->action(function () {
-                    $this->record->update(['status' => 'in_review']);
+            // Action::make('reviewManuscript')
+            //     ->label('Review Naskah')
+            //     ->icon('heroicon-o-clipboard-document-list')
+            //     ->color('primary')
+            //     ->visible(fn() => $this->isReviewer() && $this->record->status === 'submitted')
+            //     ->requiresConfirmation()
+            //     ->modalHeading('Mulai Review Naskah?')
+            //     ->modalDescription(new HtmlString(
+            //         '📄 <strong>' . e($this->record->title) . '</strong><br><br>' .
+            //             'Status publikasi akan berubah menjadi <strong>In Review</strong> dan ' .
+            //             'Anda akan diarahkan ke halaman review.'
+            //     ))
+            //     ->modalSubmitActionLabel('Ya, Mulai Review')
+            //     ->modalCancelActionLabel('Batal')
+            //     ->action(function () {
+            //         $this->record->update(['status' => 'in_review']);
 
-                    $latestVersion = $this->latestVersion();
-                    if (!$latestVersion) {
-                        Notification::make()->title('Versi tidak ditemukan')->danger()->send();
-                        return;
-                    }
+            //         $latestVersion = $this->latestVersion();
+            //         if (!$latestVersion) {
+            //             Notification::make()->title('Versi tidak ditemukan')->danger()->send();
+            //             return;
+            //         }
 
-                    $existingReview = \App\Models\Review::query()
-                        ->where('publication_version_id', $latestVersion->id)
-                        ->where('reviewer_id', auth()->id())
-                        ->first();
+            //         $existingReview = \App\Models\Review::query()
+            //             ->where('publication_version_id', $latestVersion->id)
+            //             ->where('reviewer_id', auth()->id())
+            //             ->first();
 
-                    if ($existingReview) {
-                        $this->redirect(\App\Filament\Resources\Reviews\ReviewResource::getUrl('edit', ['record' => $existingReview->id]));
-                        return;
-                    }
+            //         if ($existingReview) {
+            //             $this->redirect(\App\Filament\Resources\Reviews\ReviewResource::getUrl('edit', ['record' => $existingReview->id]));
+            //             return;
+            //         }
 
-                    $review = \App\Models\Review::create([
-                        'publication_version_id' => $latestVersion->id,
-                        'reviewer_id'            => auth()->id(),
-                    ]);
+            //         $review = \App\Models\Review::create([
+            //             'publication_version_id' => $latestVersion->id,
+            //             'reviewer_id'            => auth()->id(),
+            //         ]);
 
-                    // Notifikasi ke author
-                    $recipients = $this->authorRecipients();
-                    if ($recipients->isNotEmpty()) {
-                        \Illuminate\Support\Facades\Notification::send(
-                            $recipients,
-                            new \App\Notifications\PublicationInReview($this->record)
-                        );
-                    }
+            //         // Notifikasi ke author
+            //         $recipients = $this->authorRecipients();
+            //         if ($recipients->isNotEmpty()) {
+            //             \Illuminate\Support\Facades\Notification::send(
+            //                 $recipients,
+            //                 new \App\Notifications\PublicationInReview($this->record)
+            //             );
+            //         }
 
-                    Notification::make()
-                        ->success()
-                        ->title('Review dimulai')
-                        ->body('Status berubah ke "In Review". Author telah dinotifikasi.')
-                        ->send();
+            //         Notification::make()
+            //             ->success()
+            //             ->title('Review dimulai')
+            //             ->body('Status berubah ke "In Review". Author telah dinotifikasi.')
+            //             ->send();
 
-                    $this->redirect(\App\Filament\Resources\Reviews\ReviewResource::getUrl('edit', ['record' => $review->id]));
-                }),
+            //         $this->redirect(\App\Filament\Resources\Reviews\ReviewResource::getUrl('edit', ['record' => $review->id]));
+            //     }),
 
             // ── Review Revisi Terbaru — reviewer, ada versi baru ─
             Action::make('reviewRevisiTerbaru')
