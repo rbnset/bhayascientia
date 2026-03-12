@@ -269,6 +269,89 @@ class EditPublication extends EditRecord
                 ]))
                 ->openUrlInNewTab(),
 
+            // ── Mulai Review (khusus Reviewer, status submitted) ──
+            Action::make('reviewManuscript')
+                ->label('Review Naskah')
+                ->icon('heroicon-o-clipboard-document-list')
+                ->color('primary')
+                ->visible(fn() => $this->isReviewer() && $this->record->status === 'submitted')
+                ->requiresConfirmation()
+                ->modalHeading('Mulai Review Naskah?')
+                ->modalDescription(new \Illuminate\Support\HtmlString(
+                    '📄 <strong>' . e($this->record->title) . '</strong><br><br>' .
+                        'Status publikasi akan berubah menjadi <strong>In Review</strong> dan ' .
+                        'Anda akan diarahkan ke halaman review. Pastikan Anda siap untuk meninjau naskah ini.'
+                ))
+                ->modalSubmitActionLabel('Ya, Mulai Review')
+                ->modalCancelActionLabel('Batal')
+                ->action(function () {
+                    // 1. Ubah status publikasi menjadi in_review
+                    $this->record->update(['status' => 'in_review']);
+
+                    // 2. Ambil versi terbaru
+                    $latestVersion = $this->record->versions()
+                        ->latest('version_number')
+                        ->first();
+
+                    if (!$latestVersion) {
+                        Notification::make()
+                            ->title('Versi manuskrip tidak ditemukan')
+                            ->body('Tidak ada berkas PDF yang bisa direview.')
+                            ->danger()
+                            ->send();
+                        return;
+                    }
+
+                    // 3. Cek apakah reviewer sudah punya review untuk versi ini
+                    $existingReview = \App\Models\Review::query()
+                        ->where('publication_version_id', $latestVersion->id)
+                        ->where('reviewer_id', auth()->id())
+                        ->first();
+
+                    if ($existingReview) {
+                        // Sudah ada — langsung ke halaman edit review
+                        $this->redirect(
+                            \App\Filament\Resources\Reviews\ReviewResource::getUrl('edit', [
+                                'record' => $existingReview->id,
+                            ])
+                        );
+                        return;
+                    }
+
+                    // 4. Buat review baru dengan version & reviewer terisi otomatis
+                    $review = \App\Models\Review::create([
+                        'publication_version_id' => $latestVersion->id,
+                        'reviewer_id'            => auth()->id(),
+                    ]);
+
+                    // 5. Notifikasi ke author bahwa naskah sedang direview
+                    $authorUserIds = $this->record->authors()
+                        ->pluck('authors.user_id')
+                        ->filter()
+                        ->unique()
+                        ->values();
+
+                    if ($authorUserIds->isNotEmpty()) {
+                        \Illuminate\Support\Facades\Notification::send(
+                            \App\Models\User::whereIn('id', $authorUserIds)->get(),
+                            new \App\Notifications\PublicationInReview($this->record)
+                        );
+                    }
+
+                    Notification::make()
+                        ->success()
+                        ->title('Review dimulai')
+                        ->body('Status naskah diubah ke "In Review". Silakan isi formulir review.')
+                        ->send();
+
+                    // 6. Redirect ke halaman edit review yang baru dibuat
+                    $this->redirect(
+                        \App\Filament\Resources\Reviews\ReviewResource::getUrl('edit', [
+                            'record' => $review->id,
+                        ])
+                    );
+                }),
+
             Action::make('uploadNewVersion')
                 ->label('Upload Revisi')
                 ->icon('heroicon-o-arrow-up-tray')

@@ -104,6 +104,7 @@ class PublicationResource extends Resource
             'index'  => ListPublications::route('/'),
             'create' => CreatePublication::route('/create'),
             'edit'   => EditPublication::route('/{record}/edit'),
+            'view'   => Pages\ViewPublication::route('/{record}'),
         ];
     }
 
