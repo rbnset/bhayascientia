@@ -99,11 +99,23 @@ class PdfStamper
                 $tplId = $pdf->importPage($pageNo);
                 $size  = $pdf->getTemplateSize($tplId);
 
-                $pdf->AddPage($size['orientation'], [$size['width'], $size['height']]);
-                $pdf->useTemplate($tplId);
+                $fh = self::FOOTER_HEIGHT;
 
-                self::drawFooterStamp($pdf, $size, $publication, $version, $pageNo, $pageCount);
+                // ✅ Buat halaman lebih tinggi sebesar footer agar PDF asli
+                // tidak tertimpa — konten PDF dirender di area atas,
+                // footer stamp di area bawah yang kosong.
+                $pageH = $size['height'] + $fh;
+                $pdf->AddPage($size['orientation'], [$size['width'], $pageH]);
 
+                // Render PDF asli di bagian atas (tidak menyentuh area footer)
+                $pdf->useTemplate($tplId, 0, 0, $size['width'], $size['height']);
+
+                // Kirim ukuran halaman total ke drawFooterStamp
+                $fullSize = ['width' => $size['width'], 'height' => $pageH, 'orientation' => $size['orientation']];
+                self::drawFooterStamp($pdf, $fullSize, $publication, $version, $pageNo, $pageCount);
+
+                // Watermark & side stamp pakai $size asli (area konten PDF saja)
+                // agar tidak melebar ke area footer
                 if (in_array($publication->status, self::SIDE_WATERMARK_STATUSES)) {
                     self::drawSideWatermark($pdf, $size, $publication->status);
                 }
@@ -116,6 +128,7 @@ class PdfStamper
             if ($isLimited) {
                 $lastTplId    = $pdf->importPage($pagesToRender);
                 $lastPageSize = $pdf->getTemplateSize($lastTplId);
+                // CTA page pakai ukuran penuh (tanpa tambahan footer height)
                 self::drawLoginCTAPage($pdf, $lastPageSize, $publication, $pagesToRender, $pageCount);
             }
 
