@@ -14,15 +14,14 @@ class PdfStamper
 
     private const STATUS_COLORS = [
         'draft'             => [156, 163, 175],
-        'submitted'         => [245, 158, 11],
+        'submitted'         => [245, 158,  11],
         'in_review'         => [59, 130, 246],
-        'revision_required' => [239, 68, 68],
-        'accepted'          => [34, 197, 94],
-        'rejected'          => [239, 68, 68],
+        'revision_required' => [239,  68,  68],
+        'accepted'          => [34, 197,  94],
+        'rejected'          => [239,  68,  68],
         'published'         => [16, 185, 129],
     ];
 
-    // Batas halaman preview untuk guest per tipe publikasi
     private const GUEST_PAGE_LIMITS = [
         'jurnal' => 3,
         'buku'   => 10,
@@ -30,6 +29,9 @@ class PdfStamper
     ];
 
     private const DEFAULT_GUEST_LIMIT = 3;
+
+    // Tinggi footer stamp dalam mm — cukup kecil agar tidak memakan konten
+    private const FOOTER_HEIGHT = 14;
 
     // ─────────────────────────────────────────────────────────────
     // Convert PDF modern → PDF 1.4 via GhostScript
@@ -71,7 +73,6 @@ class PdfStamper
         $version->loadMissing('publication');
         $publication = $version->publication;
 
-        // Tentukan batas halaman untuk guest
         $pageLimit = null;
         if ($isGuest) {
             $typeSlug  = $publication->publicationType?->slug ?? '';
@@ -91,7 +92,6 @@ class PdfStamper
             $pdf       = new PdfWithRotation();
             $pageCount = $pdf->setSourceFile($pathToUse);
 
-            // Untuk guest: batasi halaman yang dirender
             $pagesToRender = ($pageLimit !== null) ? min($pageLimit, $pageCount) : $pageCount;
             $isLimited     = ($pageLimit !== null) && ($pageCount > $pageLimit);
 
@@ -102,7 +102,7 @@ class PdfStamper
                 $pdf->AddPage($size['orientation'], [$size['width'], $size['height']]);
                 $pdf->useTemplate($tplId);
 
-                self::drawHeaderStamp($pdf, $size, $publication, $version, $pageNo, $pageCount);
+                self::drawFooterStamp($pdf, $size, $publication, $version, $pageNo, $pageCount);
 
                 if (in_array($publication->status, self::SIDE_WATERMARK_STATUSES)) {
                     self::drawSideWatermark($pdf, $size, $publication->status);
@@ -113,10 +113,8 @@ class PdfStamper
                 }
             }
 
-            // Halaman CTA login di akhir jika halaman dipotong
             if ($isLimited) {
-                // Ambil ukuran halaman terakhir yang dirender sebagai referensi
-                $lastTplId   = $pdf->importPage($pagesToRender);
+                $lastTplId    = $pdf->importPage($pagesToRender);
                 $lastPageSize = $pdf->getTemplateSize($lastTplId);
                 self::drawLoginCTAPage($pdf, $lastPageSize, $publication, $pagesToRender, $pageCount);
             }
@@ -132,29 +130,155 @@ class PdfStamper
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Guest watermark — diagonal di tengah setiap halaman
+    // FOOTER STAMP — memanjang full-width di bawah setiap halaman
+    //
+    // Layout:
+    //  [aksen oranye] | [logo + nama] | [kode + tanggal + hint] | [hal + status] | [QR]
+    // ─────────────────────────────────────────────────────────────
+    private static function drawFooterStamp(
+        PdfWithRotation $pdf,
+        array $size,
+        Publication $publication,
+        PublicationVersion $version,
+        int $pageNo,
+        int $pageCount,
+    ): void {
+        $w   = $size['width'];
+        $fh  = self::FOOTER_HEIGHT;
+        $fy  = $size['height'] - $fh;
+        $px  = 3;
+
+        $uniqueCode = self::generateCode($publication, $version);
+        $verifyUrl  = route('document.verify', $uniqueCode);
+
+        // ── Garis pemisah atas ────────────────────────────────────
+        $pdf->SetDrawColor(210, 210, 210);
+        $pdf->SetLineWidth(0.2);
+        $pdf->Line(0, $fy, $w, $fy);
+
+        // ── Background footer ─────────────────────────────────────
+        $pdf->SetFillColor(252, 252, 253);
+        $pdf->Rect(0, $fy, $w, $fh, 'F');
+
+        // ── Aksen oranye kiri (2mm) ───────────────────────────────
+        $pdf->SetFillColor(255, 107, 24);
+        $pdf->Rect(0, $fy, 2, $fh, 'F');
+
+        // ── QR di kanan ───────────────────────────────────────────
+        $qrSize    = $fh - 2;
+        $qrX       = $w - $qrSize - $px;
+        $qrY       = $fy + 1;
+        $qrPngPath = self::generateQrPng($verifyUrl);
+
+        if ($qrPngPath) {
+            $pdf->Image($qrPngPath, $qrX, $qrY, $qrSize, $qrSize, 'PNG');
+            @unlink($qrPngPath);
+        }
+
+        // ── Logo + nama platform ───────────────────────────────────
+        $curX    = $px + 3;
+        $logoY   = $fy + ($fh - 6) / 2;
+        $logoPath = public_path('assets/images/logos/logo.png');
+
+        if (file_exists($logoPath)) {
+            $logoH = 6;
+            $pdf->Image($logoPath, $curX, $logoY, 0, $logoH, 'PNG');
+            $curX += $logoH * 1.5 + 1;
+        }
+
+        $pdf->SetFont('Helvetica', 'B', 5.5);
+        $pdf->SetTextColor(26, 26, 26);
+        $pdf->SetXY($curX, $fy + 2.5);
+        $pdf->Cell(22, 3, 'DABRAKA', 0, 0, 'L');
+
+        $pdf->SetFont('Helvetica', '', 3.8);
+        $pdf->SetTextColor(130, 130, 130);
+        $pdf->SetXY($curX, $fy + 5.8);
+        $pdf->Cell(22, 2.5, 'dabraka.org', 0, 0, 'L');
+
+        // ── Divider vertikal 1 ─────────────────────────────────────
+        $divX1 = $curX + 24;
+        $pdf->SetDrawColor(220, 220, 220);
+        $pdf->SetLineWidth(0.15);
+        $pdf->Line($divX1, $fy + 2, $divX1, $fy + $fh - 2);
+
+        // ── Info kode + tanggal ────────────────────────────────────
+        $infoX = $divX1 + 3;
+
+        $pdf->SetFont('Helvetica', 'B', 4);
+        $pdf->SetTextColor(60, 60, 60);
+        $pdf->SetXY($infoX, $fy + 2.2);
+        $pdf->Cell(58, 2.8, 'Kode Verifikasi: ' . $uniqueCode, 0, 0, 'L');
+
+        $pdf->SetFont('Helvetica', '', 3.8);
+        $pdf->SetTextColor(130, 130, 130);
+        $pdf->SetXY($infoX, $fy + 5.5);
+        $pdf->Cell(58, 2.5, 'Diakses: ' . now()->format('d/m/Y H:i') . '   Versi ' . ($version->version_number ?? '1'), 0, 0, 'L');
+
+        $pdf->SetFont('Helvetica', '', 3.5);
+        $pdf->SetTextColor(160, 160, 160);
+        $pdf->SetXY($infoX, $fy + 8.5);
+        $pdf->Cell(58, 2.5, 'Scan QR untuk verifikasi keaslian dokumen ini', 0, 0, 'L');
+
+        // ── Divider vertikal 2 ─────────────────────────────────────
+        $divX2 = $infoX + 62;
+        $pdf->SetDrawColor(220, 220, 220);
+        $pdf->SetLineWidth(0.15);
+        $pdf->Line($divX2, $fy + 2, $divX2, $fy + $fh - 2);
+
+        // ── Halaman + status badge ─────────────────────────────────
+        $rightColX = $divX2 + 2;
+        $rightColW = $qrX - $rightColX - 2;
+
+        $pdf->SetFont('Helvetica', 'B', 7);
+        $pdf->SetTextColor(26, 26, 26);
+        $pdf->SetXY($rightColX, $fy + 1.8);
+        $pdf->Cell($rightColW, 4.5, $pageNo . ' / ' . $pageCount, 0, 0, 'C');
+
+        $pdf->SetFont('Helvetica', '', 3.3);
+        $pdf->SetTextColor(150, 150, 150);
+        $pdf->SetXY($rightColX, $fy + 6);
+        $pdf->Cell($rightColW, 2.5, 'Halaman', 0, 0, 'C');
+
+        $statusText  = strtoupper(str_replace('_', ' ', $publication->status));
+        $statusColor = self::STATUS_COLORS[$publication->status] ?? [100, 100, 100];
+
+        $pdf->SetFillColor(...$statusColor);
+        $pdf->RoundedRect($rightColX, $fy + 9.2, $rightColW, 3.2, 1, 'F');
+
+        $pdf->SetFont('Helvetica', 'B', 3.2);
+        $pdf->SetTextColor(255, 255, 255);
+        $pdf->SetXY($rightColX, $fy + 9.8);
+        $pdf->Cell($rightColW, 2, $statusText, 0, 0, 'C');
+
+        // Reset
+        $pdf->SetTextColor(0, 0, 0);
+        $pdf->SetFillColor(255, 255, 255);
+        $pdf->SetDrawColor(0, 0, 0);
+        $pdf->SetLineWidth(0.2);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Guest watermark — diagonal di tengah halaman
     // ─────────────────────────────────────────────────────────────
     private static function drawGuestWatermark(PdfWithRotation $pdf, array $size): void
     {
         $centerX = $size['width'] / 2;
         $centerY = $size['height'] / 2;
 
-        // Watermark utama diagonal
         $pdf->SetFont('Helvetica', 'B', 42);
         $pdf->SetTextColor(220, 220, 220);
         $pdf->RotatedText($centerX - 30, $centerY + 15, 'PREVIEW', 45);
 
-        // Teks kecil di bawah watermark
         $pdf->SetFont('Helvetica', '', 12);
         $pdf->SetTextColor(200, 200, 200);
         $pdf->RotatedText($centerX - 38, $centerY + 28, 'Login untuk akses penuh', 45);
 
-        // Reset
         $pdf->SetTextColor(0, 0, 0);
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Halaman CTA login — ditambahkan di akhir untuk guest
+    // Halaman CTA login untuk guest
     // ─────────────────────────────────────────────────────────────
     private static function drawLoginCTAPage(
         PdfWithRotation $pdf,
@@ -168,87 +292,61 @@ class PdfStamper
         $w = $size['width'];
         $h = $size['height'];
 
-        // ── Background putih bersih ──
         $pdf->SetFillColor(255, 255, 255);
         $pdf->Rect(0, 0, $w, $h, 'F');
 
-        // ── Strip oranye atas ──
         $pdf->SetFillColor(255, 107, 24);
         $pdf->Rect(0, 0, $w, 5, 'F');
-
-        // ── Strip oranye bawah ──
-        $pdf->SetFillColor(255, 107, 24);
         $pdf->Rect(0, $h - 5, $w, 5, 'F');
 
-        // ── Lingkaran dekoratif background ──
-        $pdf->SetFillColor(255, 247, 242);
-        $pdf->SetDrawColor(255, 247, 242);
-        $pdf->SetLineWidth(0);
-        $r1 = 30;
-        $pdf->Ellipse($w * 0.1, $h * 0.2, $r1, $r1, 0, 0, 360, 'F');
-        $r2 = 25;
-        $pdf->Ellipse($w * 0.9, $h * 0.8, $r2, $r2, 0, 0, 360, 'F');
-        $r3 = 18;
-        $pdf->Ellipse($w * 0.85, $h * 0.15, $r3, $r3, 0, 0, 360, 'F');
-
-        // ── Konten tengah — posisi vertikal ──
         $centerX = $w / 2;
         $startY  = $h * 0.22;
+        $iconCY  = $startY + 14;
 
-        // ── Ikon gembok dalam lingkaran oranye ──
-        $iconCY = $startY + 14;
-
-        // Lingkaran background ikon
+        // Lingkaran ikon
         $pdf->SetFillColor(255, 237, 213);
         $pdf->SetDrawColor(255, 107, 24);
         $pdf->SetLineWidth(0.8);
-        $pdf->Ellipse($centerX, $iconCY, 16, 16, 0, 0, 360, 'DF');
+        $pdf->Circle($centerX, $iconCY, 16);
 
-        // Body gembok
-        $lockBodyW = 12;
-        $lockBodyH = 9;
-        $lockBodyX = $centerX - $lockBodyW / 2;
-        $lockBodyY = $iconCY + 2;
+        // Gembok
+        $lbW = 12;
+        $lbH = 9;
+        $lbX = $centerX - $lbW / 2;
+        $lbY = $iconCY + 2;
         $pdf->SetFillColor(255, 107, 24);
         $pdf->SetDrawColor(255, 107, 24);
         $pdf->SetLineWidth(0);
-        $pdf->RoundedRect($lockBodyX, $lockBodyY, $lockBodyW, $lockBodyH, 1.5, 'F');
-
-        // Shackle (busur atas gembok)
+        $pdf->RoundedRect($lbX, $lbY, $lbW, $lbH, 1.5, 'F');
         $pdf->SetDrawColor(255, 107, 24);
         $pdf->SetLineWidth(2.2);
-        $pdf->Arc($centerX, $lockBodyY + 0.5, 4.5, 190, 350);
-
-        // Lubang kunci
+        $pdf->Arc($centerX, $lbY + 0.5, 4.5, 190, 350);
         $pdf->SetFillColor(255, 237, 213);
         $pdf->SetLineWidth(0);
-        $pdf->Ellipse($centerX, $lockBodyY + 4.5, 1.8, 1.8, 0, 0, 360, 'F');
+        $pdf->Circle($centerX, $lbY + 4.5, 1.8);
 
-        // ── Judul utama ──
+        // Teks
         $titleY = $iconCY + 22;
         $pdf->SetFont('Helvetica', 'B', 18);
         $pdf->SetTextColor(26, 26, 26);
         $pdf->SetXY(0, $titleY);
         $pdf->Cell($w, 9, 'Pratinjau Berakhir', 0, 1, 'C');
 
-        // ── Subjudul — info halaman ──
         $pdf->SetFont('Helvetica', '', 9.5);
         $pdf->SetTextColor(100, 100, 100);
         $pdf->SetXY($w * 0.15, $titleY + 11);
         $pdf->Cell($w * 0.7, 5.5, 'Kamu telah membaca ' . $shownPages . ' dari ' . $totalPages . ' halaman.', 0, 1, 'C');
-
         $pdf->SetXY($w * 0.15, $titleY + 17);
         $pdf->Cell($w * 0.7, 5.5, 'Login untuk melanjutkan membaca secara gratis.', 0, 1, 'C');
 
-        // ── Stats bar ──
-        $statsY = $titleY + 28;
-        $statW  = $w * 0.22;
+        // Stats
+        $statsY  = $titleY + 28;
+        $statW   = $w * 0.22;
         $statGap = ($w - $statW * 3) / 4;
-
-        $stats = [
-            ['Dibaca', $shownPages . ' hal'],
+        $stats   = [
+            ['Dibaca',  $shownPages . ' hal'],
             ['Tersisa', ($totalPages - $shownPages) . ' hal'],
-            ['Total', $totalPages . ' hal'],
+            ['Total',   $totalPages . ' hal'],
         ];
 
         foreach ($stats as $i => $stat) {
@@ -257,79 +355,65 @@ class PdfStamper
             $pdf->SetDrawColor(238, 240, 247);
             $pdf->SetLineWidth(0.3);
             $pdf->RoundedRect($sx, $statsY, $statW, 14, 2, 'DF');
-
             $pdf->SetFont('Helvetica', 'B', 9);
             $pdf->SetTextColor(26, 26, 26);
             $pdf->SetXY($sx, $statsY + 2);
             $pdf->Cell($statW, 5, $stat[1], 0, 1, 'C');
-
             $pdf->SetFont('Helvetica', '', 6.5);
             $pdf->SetTextColor(115, 115, 115);
             $pdf->SetXY($sx, $statsY + 7);
             $pdf->Cell($statW, 4, $stat[0], 0, 1, 'C');
         }
 
-        // ── Garis pemisah ──
+        // Divider
         $divY = $statsY + 20;
         $pdf->SetDrawColor(238, 240, 247);
         $pdf->SetLineWidth(0.3);
         $pdf->Line($w * 0.15, $divY, $w * 0.85, $divY);
 
-        // ── Tombol "Masuk Sekarang" ──
-        $btnW  = 65;
-        $btnH  = 11;
-        $btnX  = ($w - $btnW) / 2;
+        // Tombol
+        $btnW = 65;
+        $btnH = 11;
+        $btnX = ($w - $btnW) / 2;
         $btn1Y = $divY + 8;
 
         $pdf->SetFillColor(255, 107, 24);
         $pdf->SetDrawColor(255, 107, 24);
         $pdf->SetLineWidth(0);
         $pdf->RoundedRect($btnX, $btn1Y, $btnW, $btnH, 2.5, 'F');
-
-        $loginUrl = config('app.url') . '/login';
-        $pdf->Link($btnX, $btn1Y, $btnW, $btnH, $loginUrl);
-
+        $pdf->Link($btnX, $btn1Y, $btnW, $btnH, config('app.url') . '/login');
         $pdf->SetFont('Helvetica', 'B', 9.5);
         $pdf->SetTextColor(255, 255, 255);
         $pdf->SetXY($btnX, $btn1Y + 3.5);
-        $pdf->Cell($btnW, 4, 'Masuk Sekarang  →', 0, 0, 'C');
+        $pdf->Cell($btnW, 4, 'Masuk Sekarang  ->', 0, 0, 'C');
 
-        // ── Tombol "Daftar Gratis" ──
         $btn2Y = $btn1Y + $btnH + 5;
-
         $pdf->SetFillColor(255, 255, 255);
         $pdf->SetDrawColor(255, 107, 24);
         $pdf->SetLineWidth(0.6);
         $pdf->RoundedRect($btnX, $btn2Y, $btnW, $btnH, 2.5, 'DF');
-
-        $registerUrl = config('app.url') . '/register';
-        $pdf->Link($btnX, $btn2Y, $btnW, $btnH, $registerUrl);
-
+        $pdf->Link($btnX, $btn2Y, $btnW, $btnH, config('app.url') . '/register');
         $pdf->SetFont('Helvetica', 'B', 9.5);
         $pdf->SetTextColor(255, 107, 24);
         $pdf->SetXY($btnX, $btn2Y + 3.5);
         $pdf->Cell($btnW, 4, 'Daftar Gratis', 0, 0, 'C');
 
-        // ── Teks manfaat ──
+        // Manfaat
         $benefitY = $btn2Y + $btnH + 8;
-        $benefits = ['✓  Gratis selamanya', '✓  Ribuan publikasi', '✓  Tanpa kartu kredit'];
+        $benefits = ['Gratis selamanya', 'Ribuan publikasi', 'Tanpa kartu kredit'];
         $benefitW = $w / count($benefits);
-
         $pdf->SetFont('Helvetica', '', 7.5);
         $pdf->SetTextColor(115, 115, 115);
-
-        foreach ($benefits as $i => $benefit) {
+        foreach ($benefits as $i => $b) {
             $pdf->SetXY($benefitW * $i, $benefitY);
-            $pdf->Cell($benefitW, 5, $benefit, 0, 0, 'C');
+            $pdf->Cell($benefitW, 5, '✓  ' . $b, 0, 0, 'C');
         }
 
-        // ── URL hint ──
         $pdf->SetFont('Helvetica', '', 6.5);
         $pdf->SetTextColor(180, 180, 180);
         $pdf->SetXY(0, $benefitY + 9);
         $pdf->Cell($w, 4, config('app.url'), 0, 1, 'C');
 
-        // Reset
         $pdf->SetTextColor(0, 0, 0);
         $pdf->SetFillColor(255, 255, 255);
         $pdf->SetDrawColor(0, 0, 0);
@@ -337,163 +421,33 @@ class PdfStamper
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Header stamp
+    // Side watermark (status draft/revision)
     // ─────────────────────────────────────────────────────────────
-    private static function drawHeaderStamp(
-        PdfWithRotation $pdf,
-        array $size,
-        Publication $publication,
-        PublicationVersion $version,
-        int $pageNo,
-        int $pageCount,
-    ): void {
-        $margin      = 6;
-        $stampWidth  = 75;
-        $stampHeight = 22;
-        $x           = $size['width'] - $stampWidth - $margin;
-        $y           = $margin;
-
-        $uniqueCode = self::generateCode($publication, $version);
-        $verifyUrl  = route('document.verify', $uniqueCode);
-
-        // Background
-        $pdf->SetFillColor(255, 255, 255);
-        $pdf->SetDrawColor(220, 220, 220);
-        $pdf->SetLineWidth(0.2);
-        $pdf->RoundedRect($x, $y, $stampWidth, $stampHeight, 2, 'DF');
-
-        // QR Code
-        $qrSize    = 18;
-        $qrX       = $x + $stampWidth - $qrSize - 2;
-        $qrY       = $y + 2;
-        $qrPngPath = self::generateQrPng($verifyUrl);
-
-        if ($qrPngPath) {
-            $pdf->Image($qrPngPath, $qrX, $qrY, $qrSize, $qrSize, 'PNG');
-            @unlink($qrPngPath);
-        }
-
-        $textAreaW = $stampWidth - $qrSize - 6;
-
-        // Logo
-        $logoPath = public_path('images/logos/logo.png');
-        $logoX    = $x + 2;
-        $logoY    = $y + 2;
-        $logoH    = 6;
-
-        if (file_exists($logoPath)) {
-            $pdf->Image($logoPath, $logoX, $logoY, 0, $logoH, 'PNG');
-            $textX = $logoX + $logoH * 1.2 + 1;
-        } else {
-            $textX = $logoX;
-        }
-
-        // Nama platform
-        $pdf->SetFont('Helvetica', 'B', 5.5);
-        $pdf->SetTextColor(30, 30, 30);
-        $pdf->SetXY($textX, $logoY + 0.3);
-        $pdf->Cell($textAreaW - ($textX - $x), 3, 'DABRAKA', 0, 1, 'L');
-
-        $pdf->SetFont('Helvetica', '', 4);
-        $pdf->SetTextColor(100, 100, 100);
-        $pdf->SetXY($textX, $logoY + 3.2);
-        $pdf->Cell($textAreaW - ($textX - $x), 2.5, 'Darma Brata Buana Cendekia', 0, 1, 'L');
-
-        // Divider
-        $divY = $y + 9;
-        $pdf->SetDrawColor(230, 230, 230);
-        $pdf->SetLineWidth(0.15);
-        $pdf->Line($x + 2, $divY, $x + $textAreaW, $divY);
-
-        // Metadata
-        $metaY   = $divY + 1.5;
-        $colLeft = $x + 2;
-        $colW    = $textAreaW - 4;
-
-        $pdf->SetFont('Helvetica', '', 3.8);
-        $pdf->SetTextColor(120, 120, 120);
-
-        $pdf->SetXY($colLeft, $metaY);
-        $pdf->Cell($colW, 2.5, 'Diakses: ' . now()->format('d/m/Y H:i'), 0, 0, 'L');
-
-        $pdf->SetXY($colLeft, $metaY + 2.5);
-        $pdf->Cell($colW / 2, 2.5, 'Versi: ' . ($version->version_number ?? '-'), 0, 0, 'L');
-        $pdf->SetXY($colLeft + $colW / 2, $metaY + 2.5);
-        $pdf->Cell($colW / 2, 2.5, 'Hal: ' . $pageNo . '/' . $pageCount, 0, 0, 'L');
-
-        $pdf->SetXY($colLeft, $metaY + 5);
-        $pdf->SetFont('Helvetica', 'B', 3.8);
-        $pdf->SetTextColor(80, 80, 80);
-        $pdf->Cell($colW, 2.5, 'Kode: ' . $uniqueCode, 0, 0, 'L');
-
-        // Status badge
-        $statusText  = strtoupper(str_replace('_', ' ', $publication->status));
-        $statusColor = self::STATUS_COLORS[$publication->status] ?? [100, 100, 100];
-        $badgeY      = $metaY + 8;
-
-        $pdf->SetFillColor(...$statusColor);
-        $pdf->SetTextColor(255, 255, 255);
-        $pdf->SetFont('Helvetica', 'B', 3.8);
-        $pdf->SetXY($colLeft, $badgeY);
-        $pdf->Cell($colW, 3, $statusText, 0, 1, 'C', true);
-
-        // Label scan di bawah QR
-        $pdf->SetFont('Helvetica', '', 3.2);
-        $pdf->SetTextColor(150, 150, 150);
-        $pdf->SetXY($qrX, $qrY + $qrSize + 0.5);
-        $pdf->Cell($qrSize, 2.5, 'Scan untuk verifikasi', 0, 0, 'C');
-
-        // Reset
-        $pdf->SetTextColor(0, 0, 0);
-        $pdf->SetFillColor(255, 255, 255);
-        $pdf->SetDrawColor(0, 0, 0);
-    }
-
-    // ─────────────────────────────────────────────────────────────
-    // Side watermark
-    // ─────────────────────────────────────────────────────────────
-    private static function drawSideWatermark(
-        PdfWithRotation $pdf,
-        array $size,
-        string $status,
-    ): void {
-        $text = strtoupper(str_replace('_', ' ', $status));
-
+    private static function drawSideWatermark(PdfWithRotation $pdf, array $size, string $status): void
+    {
         $pdf->SetTextColor(230, 230, 230);
         $pdf->SetFont('Helvetica', 'B', 28);
-
-        $x = 20;
-        $y = $size['height'] / 2 + 25;
-
-        $pdf->RotatedText($x, $y, $text, 90);
-
+        $pdf->RotatedText(20, $size['height'] / 2 + 25, strtoupper(str_replace('_', ' ', $status)), 90);
         $pdf->SetTextColor(0, 0, 0);
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Generate QR Code
+    // Generate QR Code PNG
     // ─────────────────────────────────────────────────────────────
     private static function generateQrPng(string $url): ?string
     {
         try {
-            $qrCode = new \Endroid\QrCode\QrCode(
-                data: $url,
-                size: 200,
-                margin: 4,
-            );
-
+            $qrCode = new \Endroid\QrCode\QrCode(data: $url, size: 200, margin: 4);
             $writer = new \Endroid\QrCode\Writer\PngWriter();
             $result = $writer->write($qrCode);
 
-            $filename = 'qr_' . md5($url) . '.png';
-            $path     = storage_path('app/temp/' . $filename);
+            $path = storage_path('app/temp/qr_' . md5($url) . '.png');
 
             if (!is_dir(storage_path('app/temp'))) {
                 mkdir(storage_path('app/temp'), 0755, true);
             }
 
             file_put_contents($path, $result->getString());
-
             return file_exists($path) ? $path : null;
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('QR Error: ' . $e->getMessage());
