@@ -723,6 +723,12 @@ class PublicationController extends Controller
      */
     public function servePdf($slug)
     {
+        \Illuminate\Support\Facades\Log::info('=== servePdf called ===', [
+            'slug'    => $slug,
+            'isGuest' => !auth()->check(),
+            'user'    => auth()->id(),
+        ]);
+
         $publication = Publication::where('slug', $slug)
             ->where('status', 'published')
             ->firstOrFail();
