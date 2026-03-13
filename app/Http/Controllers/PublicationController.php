@@ -57,7 +57,7 @@ class PublicationController extends Controller
                 'filterSort'          => 'latest',
                 'filterKeyword'       => [],
                 'searchQuery'         => null,
-                'showTour'            => $showTour, // ✅ tambahkan di empty state juga
+                'showTour'            => $showTour,
             ]);
         }
 
@@ -231,7 +231,7 @@ class PublicationController extends Controller
             'topKeywords',
             'filterSort',
             'searchQuery',
-            'showTour', // ✅
+            'showTour',
         ));
     }
 
@@ -535,14 +535,10 @@ class PublicationController extends Controller
                 'short_bio'        => $author->short_bio,
                 'email'            => $author->email,
                 'is_corresponding' => $author->pivot->is_corresponding ?? false,
-
-                // ✅ FIXED: selalu pakai author->id agar route menuju AuthorController
-                // AuthorController::show() sudah bisa handle author yang linked ke user
                 'profile_type'     => $author->user_id ? 'user' : 'author',
-                'profile_id'       => $author->id, // ✅ Selalu author->id
+                'profile_id'       => $author->id,
             ];
         });
-
 
         return view('pages.publication.show', [
             'publication'       => $publication,
@@ -660,9 +656,7 @@ class PublicationController extends Controller
      */
     public function read($slug)
     {
-        $pdfUrl = route('publikasi.pdf', $publication->slug)
-            . '?t=' . ($latestVersion->updated_at?->timestamp ?? time());
-
+        // ✅ FIX: query $publication & $latestVersion dulu, BARU buat $pdfUrl
         $publication = Publication::with([
             'authors.user',
             'publicationType',
@@ -704,8 +698,9 @@ class PublicationController extends Controller
             ]);
         }
 
-        // ✅ Pakai route servePdf → header application/pdf benar, no 204
-        $pdfUrl = route('publikasi.pdf', $publication->slug);
+        // ✅ Sekarang $publication & $latestVersion sudah tersedia
+        $pdfUrl = route('publikasi.pdf', $publication->slug)
+            . '?t=' . ($latestVersion->updated_at?->timestamp ?? time());
 
         return view('pages.publication.read', [
             'publication'      => $publication,
