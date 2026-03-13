@@ -57,12 +57,11 @@ class PdfStamper
     // ─────────────────────────────────────────────────────────────
     // Main stamp entry point
     // ─────────────────────────────────────────────────────────────
-    public static function stamp(string $absolutePath, PublicationVersion $version): string
+    public static function stamp(string $absolutePath, PublicationVersion $version, bool $isGuest = false): string
     {
         $version->loadMissing('publication');
         $publication = $version->publication;
 
-        // Convert ke PDF 1.4 agar FPDI free bisa baca
         $convertedPath = null;
         try {
             $convertedPath = self::convertToCompatible($absolutePath);
@@ -88,17 +87,43 @@ class PdfStamper
                 if (in_array($publication->status, self::SIDE_WATERMARK_STATUSES)) {
                     self::drawSideWatermark($pdf, $size, $publication->status);
                 }
+
+                // Watermark diagonal untuk guest
+                if ($isGuest) {
+                    self::drawGuestWatermark($pdf, $size);
+                }
             }
 
             $result = $pdf->Output('S');
         } finally {
-            // Hapus file temporary converted
             if ($convertedPath && file_exists($convertedPath)) {
                 @unlink($convertedPath);
             }
         }
 
         return $result;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Guest watermark — diagonal di tengah halaman
+    // ─────────────────────────────────────────────────────────────
+    private static function drawGuestWatermark(PdfWithRotation $pdf, array $size): void
+    {
+        $centerX = $size['width'] / 2;
+        $centerY = $size['height'] / 2;
+
+        // Watermark utama diagonal
+        $pdf->SetFont('Helvetica', 'B', 42);
+        $pdf->SetTextColor(220, 220, 220);
+        $pdf->RotatedText($centerX - 30, $centerY + 15, 'PREVIEW', 45);
+
+        // Teks kecil di bawah
+        $pdf->SetFont('Helvetica', '', 12);
+        $pdf->SetTextColor(200, 200, 200);
+        $pdf->RotatedText($centerX - 38, $centerY + 28, 'Login untuk akses penuh', 45);
+
+        // Reset
+        $pdf->SetTextColor(0, 0, 0);
     }
 
     // ─────────────────────────────────────────────────────────────

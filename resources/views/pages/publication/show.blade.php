@@ -610,7 +610,11 @@
                 @endphp
 
                 {{-- Action Buttons --}}
+                {{-- Action Buttons --}}
                 <div class="action-buttons-container">
+
+                    {{-- Baca Sekarang --}}
+                    @auth
                     <a href="{{ route('publikasi.read', $publication->slug) }}"
                         class="btn-ripple w-full px-5 py-3.5 bg-gradient-to-r from-[#FF6B18] to-[#E64627] text-white font-bold text-base rounded-xl hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 flex items-center justify-center gap-3 group">
                         <svg class="w-5 h-5 transition-transform duration-300 group-hover:rotate-12" fill="none"
@@ -622,8 +626,37 @@
                         </svg>
                         <span>Baca Sekarang</span>
                     </a>
+                    @else
+                    {{-- Guest: bisa baca tapi dengan watermark preview --}}
+                    <a href="{{ route('publikasi.read', $publication->slug) }}"
+                        class="btn-ripple w-full px-5 py-3.5 bg-gradient-to-r from-[#FF6B18] to-[#E64627] text-white font-bold text-base rounded-xl hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 flex items-center justify-center gap-3 group">
+                        <svg class="w-5 h-5 transition-transform duration-300 group-hover:rotate-12" fill="none"
+                            stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        <span>Preview Gratis</span>
+                    </a>
+                    {{-- Badge info watermark --}}
+                    <div class="flex items-center gap-2 px-3 py-2 bg-[#FFF7F2] rounded-lg border border-[#FFD6B8]">
+                        <svg class="w-4 h-4 text-[#FF6B18] flex-shrink-0" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <p class="text-xs text-[#FF6B18] font-medium">
+                            Preview dengan watermark.
+                            <a href="{{ route('login') }}" class="font-bold underline hover:text-[#E64627]">Login</a>
+                            untuk akses penuh.
+                        </p>
+                    </div>
+                    @endauth
 
+                    {{-- Download PDF --}}
                     @if($hasFile)
+                    @auth
                     <a href="{{ route('publikasi.download', $publication->slug) }}"
                         class="btn-ripple w-full px-5 py-3.5 bg-white border-2 border-[#FF6B18] text-[#FF6B18] font-bold text-base rounded-xl hover:bg-[#FF6B18] hover:text-white hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 flex items-center justify-center gap-3 group">
                         <svg class="w-5 h-5 download-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -632,6 +665,21 @@
                         </svg>
                         <span>Download PDF</span>
                     </a>
+                    @else
+                    {{-- Guest: perlu login untuk download --}}
+                    <button type="button" onclick="showLoginModal('download')"
+                        class="btn-ripple w-full px-5 py-3.5 bg-white border-2 border-[#FF6B18] text-[#FF6B18] font-bold text-base rounded-xl hover:bg-[#FFF7F2] hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-3 group">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        <span>Download PDF</span>
+                        <svg class="w-4 h-4 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                    </button>
+                    @endauth
                     @else
                     <button type="button" disabled
                         class="w-full px-5 py-3.5 bg-gray-100 border-2 border-gray-300 text-gray-400 font-bold text-base rounded-xl cursor-not-allowed flex items-center justify-center gap-3 opacity-60">
@@ -642,6 +690,7 @@
                         <span>PDF Not Available</span>
                     </button>
                     @endif
+
                 </div>
 
                 {{-- Version Badge --}}
@@ -898,6 +947,10 @@ const loginMessages = {
     save: {
         title: 'Simpan untuk Dibaca Nanti? 📚',
         desc:  'Login dulu agar publikasi ini tersimpan di koleksimu dan bisa kamu baca kapan pun.',
+    },
+    download: {
+        title: 'Download PDF? 📥',
+        desc:  'Login dulu untuk mengunduh PDF publikasi ini secara gratis. Daftar hanya butuh 1 menit!',
     },
 };
 

@@ -45,8 +45,10 @@ Route::middleware(['auth'])->group(function () {
         $absolutePath = Storage::disk('public')->path($version->pdf_file_path);
         abort_unless(is_file($absolutePath), 404);
 
+        $isGuest = !auth()->check();
+
         try {
-            $content = PdfStamper::stamp($absolutePath, $version);
+            $content = PdfStamper::stamp($absolutePath, $version, $isGuest);
 
             return response($content, 200, [
                 'Content-Type'        => 'application/pdf',
@@ -69,6 +71,7 @@ Route::middleware(['auth'])->group(function () {
 
     // ── Download manuscript (tanpa stamp, file asli) ───────────
     Route::get('/manuscripts/{version}/download', function (PublicationVersion $version) {
+        abort_unless(auth()->check(), 401);
         abort_unless(filled($version->pdf_file_path), 404);
 
         return Storage::disk('public')->download(
