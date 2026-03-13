@@ -22,6 +22,15 @@ class PdfStamper
         'published'         => [16, 185, 129],
     ];
 
+    // Batas halaman preview untuk guest per tipe publikasi
+    private const GUEST_PAGE_LIMITS = [
+        'jurnal' => 3,
+        'buku'   => 10,
+        'opini'  => 1,
+    ];
+
+    private const DEFAULT_GUEST_LIMIT = 3;
+
     // ─────────────────────────────────────────────────────────────
     // Convert PDF modern → PDF 1.4 via GhostScript
     // ─────────────────────────────────────────────────────────────
@@ -62,6 +71,13 @@ class PdfStamper
         $version->loadMissing('publication');
         $publication = $version->publication;
 
+        // Tentukan batas halaman untuk guest
+        $pageLimit = null;
+        if ($isGuest) {
+            $typeSlug  = $publication->publicationType?->slug ?? '';
+            $pageLimit = self::GUEST_PAGE_LIMITS[$typeSlug] ?? self::DEFAULT_GUEST_LIMIT;
+        }
+
         $convertedPath = null;
         try {
             $convertedPath = self::convertToCompatible($absolutePath);
@@ -75,7 +91,11 @@ class PdfStamper
             $pdf       = new PdfWithRotation();
             $pageCount = $pdf->setSourceFile($pathToUse);
 
-            for ($pageNo = 1; $pageNo <= $pageCount; $pageNo++) {
+            // Untuk guest: batasi halaman yang dirender
+            $pagesToRender = ($pageLimit !== null) ? min($pageLimit, $pageCount) : $pageCount;
+            $isLimited     = ($pageLimit !== null) && ($pageCount > $pageLimit);
+
+            for ($pageNo = 1; $pageNo <= $pagesToRender; $pageNo++) {
                 $tplId = $pdf->importPage($pageNo);
                 $size  = $pdf->getTemplateSize($tplId);
 
@@ -88,10 +108,17 @@ class PdfStamper
                     self::drawSideWatermark($pdf, $size, $publication->status);
                 }
 
-                // Watermark diagonal untuk guest
                 if ($isGuest) {
                     self::drawGuestWatermark($pdf, $size);
                 }
+            }
+
+            // Halaman CTA login di akhir jika halaman dipotong
+            if ($isLimited) {
+                // Ambil ukuran halaman terakhir yang dirender sebagai referensi
+                $lastTplId   = $pdf->importPage($pagesToRender);
+                $lastPageSize = $pdf->getTemplateSize($lastTplId);
+                self::drawLoginCTAPage($pdf, $lastPageSize, $publication, $pagesToRender, $pageCount);
             }
 
             $result = $pdf->Output('S');
@@ -105,7 +132,7 @@ class PdfStamper
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Guest watermark — diagonal di tengah halaman
+    // Guest watermark — diagonal di tengah setiap halaman
     // ─────────────────────────────────────────────────────────────
     private static function drawGuestWatermark(PdfWithRotation $pdf, array $size): void
     {
@@ -117,13 +144,193 @@ class PdfStamper
         $pdf->SetTextColor(220, 220, 220);
         $pdf->RotatedText($centerX - 30, $centerY + 15, 'PREVIEW', 45);
 
-        // Teks kecil di bawah
+        // Teks kecil di bawah watermark
         $pdf->SetFont('Helvetica', '', 12);
         $pdf->SetTextColor(200, 200, 200);
         $pdf->RotatedText($centerX - 38, $centerY + 28, 'Login untuk akses penuh', 45);
 
         // Reset
         $pdf->SetTextColor(0, 0, 0);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Halaman CTA login — ditambahkan di akhir untuk guest
+    // ─────────────────────────────────────────────────────────────
+    private static function drawLoginCTAPage(
+        PdfWithRotation $pdf,
+        array $size,
+        Publication $publication,
+        int $shownPages,
+        int $totalPages,
+    ): void {
+        $pdf->AddPage($size['orientation'], [$size['width'], $size['height']]);
+
+        $w = $size['width'];
+        $h = $size['height'];
+
+        // ── Background putih bersih ──
+        $pdf->SetFillColor(255, 255, 255);
+        $pdf->Rect(0, 0, $w, $h, 'F');
+
+        // ── Strip oranye atas ──
+        $pdf->SetFillColor(255, 107, 24);
+        $pdf->Rect(0, 0, $w, 5, 'F');
+
+        // ── Strip oranye bawah ──
+        $pdf->SetFillColor(255, 107, 24);
+        $pdf->Rect(0, $h - 5, $w, 5, 'F');
+
+        // ── Lingkaran dekoratif background ──
+        $pdf->SetFillColor(255, 247, 242);
+        $pdf->SetDrawColor(255, 247, 242);
+        $pdf->SetLineWidth(0);
+        $pdf->Circle($w * 0.1, $h * 0.2, 30, 0, 360, 'F');
+        $pdf->Circle($w * 0.9, $h * 0.8, 25, 0, 360, 'F');
+        $pdf->Circle($w * 0.85, $h * 0.15, 18, 0, 360, 'F');
+
+        // ── Konten tengah — posisi vertikal ──
+        $centerX = $w / 2;
+        $startY  = $h * 0.22;
+
+        // ── Ikon gembok dalam lingkaran oranye ──
+        $iconCY = $startY + 14;
+
+        // Lingkaran background ikon
+        $pdf->SetFillColor(255, 237, 213);
+        $pdf->SetDrawColor(255, 107, 24);
+        $pdf->SetLineWidth(0.8);
+        $pdf->Circle($centerX, $iconCY, 16, 0, 360, 'DF');
+
+        // Body gembok
+        $lockBodyW = 12;
+        $lockBodyH = 9;
+        $lockBodyX = $centerX - $lockBodyW / 2;
+        $lockBodyY = $iconCY + 2;
+        $pdf->SetFillColor(255, 107, 24);
+        $pdf->SetDrawColor(255, 107, 24);
+        $pdf->SetLineWidth(0);
+        $pdf->RoundedRect($lockBodyX, $lockBodyY, $lockBodyW, $lockBodyH, 1.5, 'F');
+
+        // Shackle (busur atas gembok)
+        $pdf->SetDrawColor(255, 107, 24);
+        $pdf->SetLineWidth(2.2);
+        $pdf->Arc($centerX, $lockBodyY + 0.5, 4.5, 190, 350);
+
+        // Lubang kunci
+        $pdf->SetFillColor(255, 237, 213);
+        $pdf->SetLineWidth(0);
+        $pdf->Circle($centerX, $lockBodyY + 4.5, 1.8, 0, 360, 'F');
+
+        // ── Judul utama ──
+        $titleY = $iconCY + 22;
+        $pdf->SetFont('Helvetica', 'B', 18);
+        $pdf->SetTextColor(26, 26, 26);
+        $pdf->SetXY(0, $titleY);
+        $pdf->Cell($w, 9, 'Pratinjau Berakhir', 0, 1, 'C');
+
+        // ── Subjudul — info halaman ──
+        $pdf->SetFont('Helvetica', '', 9.5);
+        $pdf->SetTextColor(100, 100, 100);
+        $pdf->SetXY($w * 0.15, $titleY + 11);
+        $pdf->Cell($w * 0.7, 5.5, 'Kamu telah membaca ' . $shownPages . ' dari ' . $totalPages . ' halaman.', 0, 1, 'C');
+
+        $pdf->SetXY($w * 0.15, $titleY + 17);
+        $pdf->Cell($w * 0.7, 5.5, 'Login untuk melanjutkan membaca secara gratis.', 0, 1, 'C');
+
+        // ── Stats bar ──
+        $statsY = $titleY + 28;
+        $statW  = $w * 0.22;
+        $statGap = ($w - $statW * 3) / 4;
+
+        $stats = [
+            ['Dibaca', $shownPages . ' hal'],
+            ['Tersisa', ($totalPages - $shownPages) . ' hal'],
+            ['Total', $totalPages . ' hal'],
+        ];
+
+        foreach ($stats as $i => $stat) {
+            $sx = $statGap + $i * ($statW + $statGap);
+            $pdf->SetFillColor(249, 250, 252);
+            $pdf->SetDrawColor(238, 240, 247);
+            $pdf->SetLineWidth(0.3);
+            $pdf->RoundedRect($sx, $statsY, $statW, 14, 2, 'DF');
+
+            $pdf->SetFont('Helvetica', 'B', 9);
+            $pdf->SetTextColor(26, 26, 26);
+            $pdf->SetXY($sx, $statsY + 2);
+            $pdf->Cell($statW, 5, $stat[1], 0, 1, 'C');
+
+            $pdf->SetFont('Helvetica', '', 6.5);
+            $pdf->SetTextColor(115, 115, 115);
+            $pdf->SetXY($sx, $statsY + 7);
+            $pdf->Cell($statW, 4, $stat[0], 0, 1, 'C');
+        }
+
+        // ── Garis pemisah ──
+        $divY = $statsY + 20;
+        $pdf->SetDrawColor(238, 240, 247);
+        $pdf->SetLineWidth(0.3);
+        $pdf->Line($w * 0.15, $divY, $w * 0.85, $divY);
+
+        // ── Tombol "Masuk Sekarang" ──
+        $btnW  = 65;
+        $btnH  = 11;
+        $btnX  = ($w - $btnW) / 2;
+        $btn1Y = $divY + 8;
+
+        $pdf->SetFillColor(255, 107, 24);
+        $pdf->SetDrawColor(255, 107, 24);
+        $pdf->SetLineWidth(0);
+        $pdf->RoundedRect($btnX, $btn1Y, $btnW, $btnH, 2.5, 'F');
+
+        $loginUrl = config('app.url') . '/login';
+        $pdf->Link($btnX, $btn1Y, $btnW, $btnH, $loginUrl);
+
+        $pdf->SetFont('Helvetica', 'B', 9.5);
+        $pdf->SetTextColor(255, 255, 255);
+        $pdf->SetXY($btnX, $btn1Y + 3.5);
+        $pdf->Cell($btnW, 4, 'Masuk Sekarang  →', 0, 0, 'C');
+
+        // ── Tombol "Daftar Gratis" ──
+        $btn2Y = $btn1Y + $btnH + 5;
+
+        $pdf->SetFillColor(255, 255, 255);
+        $pdf->SetDrawColor(255, 107, 24);
+        $pdf->SetLineWidth(0.6);
+        $pdf->RoundedRect($btnX, $btn2Y, $btnW, $btnH, 2.5, 'DF');
+
+        $registerUrl = config('app.url') . '/register';
+        $pdf->Link($btnX, $btn2Y, $btnW, $btnH, $registerUrl);
+
+        $pdf->SetFont('Helvetica', 'B', 9.5);
+        $pdf->SetTextColor(255, 107, 24);
+        $pdf->SetXY($btnX, $btn2Y + 3.5);
+        $pdf->Cell($btnW, 4, 'Daftar Gratis', 0, 0, 'C');
+
+        // ── Teks manfaat ──
+        $benefitY = $btn2Y + $btnH + 8;
+        $benefits = ['✓  Gratis selamanya', '✓  Ribuan publikasi', '✓  Tanpa kartu kredit'];
+        $benefitW = $w / count($benefits);
+
+        $pdf->SetFont('Helvetica', '', 7.5);
+        $pdf->SetTextColor(115, 115, 115);
+
+        foreach ($benefits as $i => $benefit) {
+            $pdf->SetXY($benefitW * $i, $benefitY);
+            $pdf->Cell($benefitW, 5, $benefit, 0, 0, 'C');
+        }
+
+        // ── URL hint ──
+        $pdf->SetFont('Helvetica', '', 6.5);
+        $pdf->SetTextColor(180, 180, 180);
+        $pdf->SetXY(0, $benefitY + 9);
+        $pdf->Cell($w, 4, config('app.url'), 0, 1, 'C');
+
+        // Reset
+        $pdf->SetTextColor(0, 0, 0);
+        $pdf->SetFillColor(255, 255, 255);
+        $pdf->SetDrawColor(0, 0, 0);
+        $pdf->SetLineWidth(0.2);
     }
 
     // ─────────────────────────────────────────────────────────────

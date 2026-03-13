@@ -1484,6 +1484,8 @@
                             d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
                     </svg></button>
             </div>
+            {{-- Jadi ini: --}}
+            @auth
             <a href="{{ route('publikasi.download', $publication->slug) }}"
                 class="pcb p-2 sm:px-3 bg-[#FF6B18] hover:!bg-[#E64627] text-white flex items-center gap-1.5 flex-shrink-0">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1492,12 +1494,110 @@
                 </svg>
                 <span class="hidden text-xs font-semibold sm:inline">Download</span>
             </a>
+            @else
+            <button type="button" onclick="showGuestDownloadModal()"
+                class="pcb p-2 sm:px-3 bg-[#FF6B18] hover:!bg-[#E64627] text-white flex items-center gap-1.5 flex-shrink-0">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                <span class="hidden text-xs font-semibold sm:inline">Download</span>
+            </button>
+            @endauth
         </div>
     </div>
     <div class="progress-track">
         <div id="reading-progress-bar" class="progress-fill" style="width:0%"></div>
     </div>
 </div>
+{{-- ══════════ GUEST BANNER ══════════ --}}
+@guest
+@php
+$typeSlug = $publication->publicationType?->slug ?? '';
+$previewLimit = match($typeSlug) { 'buku' => '10 halaman', 'opini' => '1 halaman', default => '3 halaman' };
+@endphp
+<div id="guest-banner"
+    class="w-full bg-gradient-to-r from-[#FF6B18] to-[#E64627] text-white px-4 py-2.5 flex items-center justify-between gap-3 text-sm z-40 relative flex-shrink-0">
+    <div class="flex items-center min-w-0 gap-2">
+        <svg class="flex-shrink-0 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+        </svg>
+        <span class="text-xs font-medium truncate sm:text-sm">
+            Mode pratinjau — hanya <strong>{{ $previewLimit }} pertama</strong> yang ditampilkan.
+        </span>
+    </div>
+    <div class="flex items-center flex-shrink-0 gap-2">
+        <a href="{{ route('login') }}"
+            class="px-3 py-1 bg-white text-[#FF6B18] font-bold rounded-lg text-xs hover:bg-orange-50 transition-colors whitespace-nowrap">
+            Login
+        </a>
+        <a href="{{ route('register') }}"
+            class="hidden px-3 py-1 text-xs font-bold text-white transition-colors border rounded-lg bg-white/20 border-white/50 hover:bg-white/30 whitespace-nowrap sm:block">
+            Daftar Gratis
+        </a>
+    </div>
+</div>
+
+{{-- Modal download untuk guest --}}
+<div id="guestDownloadModal" style="display:none;" class="fixed inset-0 z-[99999]">
+    <div id="guestModalBackdrop"
+        class="absolute inset-0 transition-opacity duration-300 opacity-0 bg-black/60 backdrop-blur-sm"
+        onclick="hideGuestDownloadModal()"></div>
+    <div id="guestModalContainer"
+        class="absolute inset-0 flex items-center justify-center p-4 transition-all duration-300 scale-95 opacity-0">
+        <div class="relative w-full max-w-sm overflow-hidden text-center bg-white shadow-2xl rounded-2xl"
+            onclick="event.stopPropagation()">
+            {{-- Strip oranye atas --}}
+            <div class="h-1.5 bg-gradient-to-r from-[#FF6B18] to-[#E64627]"></div>
+            <div class="p-8">
+                {{-- Tombol close --}}
+                <button onclick="hideGuestDownloadModal()"
+                    class="absolute top-4 right-4 p-1.5 rounded-full hover:bg-gray-100 transition-colors">
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+                {{-- Ikon --}}
+                <div class="w-16 h-16 bg-[#FFF7F2] rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                </div>
+                <h3 class="text-lg font-bold text-[#1A1A1A] mb-2">Download PDF?</h3>
+                <p class="text-sm text-[#737373] mb-6 leading-relaxed">
+                    Login dulu untuk mengunduh PDF ini secara gratis.<br>
+                    Daftar hanya butuh 1 menit!
+                </p>
+                <div class="flex flex-col gap-3">
+                    <a href="{{ route('login') }}"
+                        class="w-full py-3 bg-gradient-to-r from-[#FF6B18] to-[#E64627] text-white font-bold rounded-xl hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                        </svg>
+                        Masuk Sekarang
+                    </a>
+                    <a href="{{ route('register') }}"
+                        class="w-full py-3 border-2 border-[#FF6B18] text-[#FF6B18] font-bold rounded-xl hover:bg-[#FFF7F2] transition-all duration-200 flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                        </svg>
+                        Daftar Gratis
+                    </a>
+                    <button onclick="hideGuestDownloadModal()"
+                        class="text-sm text-[#737373] hover:text-[#1A1A1A] py-1 transition-colors">
+                        Nanti saja
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@endguest
 
 {{-- ══════════ PDF VIEWER ══════════ --}}
 <div id="pdf-viewer-container">
@@ -1701,6 +1801,8 @@
                 </svg>
                 <span>Cari Kata</span>
             </button>
+            {{-- Jadi ini: --}}
+            @auth
             <a href="{{ route('publikasi.download', $publication->slug) }}" class="sheet-act-btn">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1708,6 +1810,15 @@
                 </svg>
                 <span>Download</span>
             </a>
+            @else
+            <button type="button" onclick="showGuestDownloadModal(); closeSheet();" class="sheet-act-btn">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                <span>Download</span>
+            </button>
+            @endauth
         </div>
     </div>
     <button id="sheet-close" class="sheet-close">Tutup</button>
@@ -2525,5 +2636,40 @@ viewerEl.addEventListener('touchend',e=>{
         dx>0?nextPage():prevPage();
     }
 },{passive:true});
+
+// ══════════════════════════════════════════════════════════════════
+//  GUEST DOWNLOAD MODAL
+// ══════════════════════════════════════════════════════════════════
+function showGuestDownloadModal() {
+    const modal     = document.getElementById('guestDownloadModal');
+    const backdrop  = document.getElementById('guestModalBackdrop');
+    const container = document.getElementById('guestModalContainer');
+    if (!modal) return;
+    modal.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+    requestAnimationFrame(() => {
+        backdrop.classList.add('opacity-100');
+        backdrop.classList.remove('opacity-0');
+        container.classList.add('opacity-100', 'scale-100');
+        container.classList.remove('opacity-0', 'scale-95');
+    });
+}
+function hideGuestDownloadModal() {
+    const modal     = document.getElementById('guestDownloadModal');
+    const backdrop  = document.getElementById('guestModalBackdrop');
+    const container = document.getElementById('guestModalContainer');
+    if (!modal) return;
+    backdrop.classList.remove('opacity-100');
+    backdrop.classList.add('opacity-0');
+    container.classList.remove('opacity-100', 'scale-100');
+    container.classList.add('opacity-0', 'scale-95');
+    setTimeout(() => {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }, 300);
+}
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') hideGuestDownloadModal();
+});
 </script>
 @endpush

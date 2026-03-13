@@ -43,21 +43,38 @@ Route::get('/manuscripts/{version}', function (PublicationVersion $version) {
     $absolutePath = Storage::disk('public')->path($version->pdf_file_path);
     abort_unless(is_file($absolutePath), 404);
 
-    $isGuest = !auth()->check(); // guest = true → watermark aktif
+    $isGuest   = !auth()->check();
+    $typeSlug  = $version->publication->publicationType?->slug ?? '';
+    $pageLimit = match ($typeSlug) {
+        'buku'  => 10,
+        'opini' => 1,
+        default => 3,
+    };
+    $pageCount = 0;
 
     try {
-        $content = PdfStamper::stamp($absolutePath, $version, $isGuest);
+        // Hitung total halaman untuk header info
+        $pdfInfo   = new \setasign\Fpdi\Fpdi();
+        $pageCount = @$pdfInfo->setSourceFile($absolutePath);
+    } catch (\Throwable) {
+    }
 
-        return response($content, 200, [
+    $isLimited = $isGuest && $pageCount > $pageLimit;
+
+    try {
+        $content = \App\Support\PdfStamper::stamp($absolutePath, $version, $isGuest);
+
+        $headers = [
             'Content-Type'        => 'application/pdf',
             'Content-Disposition' => 'inline; filename="manuscript.pdf"',
             'Content-Length'      => strlen($content),
             'Cache-Control'       => 'no-store, no-cache, must-revalidate, max-age=0',
-        ]);
+            'X-Guest-Limited'     => $isLimited ? 'true' : 'false',
+        ];
+
+        return response($content, 200, $headers);
     } catch (\Throwable $e) {
-        \Illuminate\Support\Facades\Log::warning('PdfStamper fallback: ' . $e->getMessage(), [
-            'version_id' => $version->id,
-        ]);
+        \Illuminate\Support\Facades\Log::warning('PdfStamper fallback: ' . $e->getMessage());
 
         return response()->file($absolutePath, [
             'Content-Type'        => 'application/pdf',
