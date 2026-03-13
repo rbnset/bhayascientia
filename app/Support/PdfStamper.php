@@ -184,9 +184,12 @@ class PdfStamper
         $pdf->SetFillColor(255, 247, 242);
         $pdf->SetDrawColor(255, 247, 242);
         $pdf->SetLineWidth(0);
-        $pdf->Circle($w * 0.1, $h * 0.2, 30, 0, 360, 'F');
-        $pdf->Circle($w * 0.9, $h * 0.8, 25, 0, 360, 'F');
-        $pdf->Circle($w * 0.85, $h * 0.15, 18, 0, 360, 'F');
+        $r1 = 30;
+        $pdf->Ellipse($w * 0.1, $h * 0.2, $r1, $r1, 0, 0, 360, 'F');
+        $r2 = 25;
+        $pdf->Ellipse($w * 0.9, $h * 0.8, $r2, $r2, 0, 0, 360, 'F');
+        $r3 = 18;
+        $pdf->Ellipse($w * 0.85, $h * 0.15, $r3, $r3, 0, 0, 360, 'F');
 
         // ── Konten tengah — posisi vertikal ──
         $centerX = $w / 2;
@@ -199,7 +202,7 @@ class PdfStamper
         $pdf->SetFillColor(255, 237, 213);
         $pdf->SetDrawColor(255, 107, 24);
         $pdf->SetLineWidth(0.8);
-        $pdf->Circle($centerX, $iconCY, 16, 0, 360, 'DF');
+        $pdf->Ellipse($centerX, $iconCY, 16, 16, 0, 0, 360, 'DF');
 
         // Body gembok
         $lockBodyW = 12;
@@ -219,7 +222,7 @@ class PdfStamper
         // Lubang kunci
         $pdf->SetFillColor(255, 237, 213);
         $pdf->SetLineWidth(0);
-        $pdf->Circle($centerX, $lockBodyY + 4.5, 1.8, 0, 360, 'F');
+        $pdf->Ellipse($centerX, $lockBodyY + 4.5, 1.8, 1.8, 0, 0, 360, 'F');
 
         // ── Judul utama ──
         $titleY = $iconCY + 22;
