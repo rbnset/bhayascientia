@@ -719,7 +719,7 @@ class PublicationController extends Controller
     }
 
     /**
-     * ✅ Serve PDF dengan header benar untuk PDF.js
+     * ✅ Serve PDF dengan header benar untuk PDF.js (+ watermark & page limit untuk guest)
      */
     public function servePdf($slug)
     {
@@ -742,14 +742,31 @@ class PublicationController extends Controller
             abort(404);
         }
 
-        $fullPath = Storage::disk('public')->path($filePath);
+        $absolutePath = Storage::disk('public')->path($filePath);
+        $isGuest      = !auth()->check();
 
-        return response()->file($fullPath, [
-            'Content-Type'                => 'application/pdf',
-            'Content-Disposition'         => 'inline; filename="' . basename($filePath) . '"',
-            'Access-Control-Allow-Origin' => '*',
-            'Cache-Control'               => 'public, max-age=3600',
-            'X-Content-Type-Options'      => 'nosniff',
-        ]);
+        // Pastikan relasi publication ter-load untuk PdfStamper
+        $latestVersion->setRelation('publication', $publication);
+
+        try {
+            $content = \App\Support\PdfStamper::stamp($absolutePath, $latestVersion, $isGuest);
+
+            return response($content, 200, [
+                'Content-Type'                => 'application/pdf',
+                'Content-Disposition'         => 'inline; filename="' . basename($filePath) . '"',
+                'Content-Length'              => strlen($content),
+                'Cache-Control'               => 'no-store, no-cache, must-revalidate, max-age=0',
+                'Access-Control-Allow-Origin' => '*',
+                'X-Content-Type-Options'      => 'nosniff',
+            ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('PdfStamper fallback: ' . $e->getMessage());
+
+            return response()->file($absolutePath, [
+                'Content-Type'        => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="' . basename($filePath) . '"',
+                'Cache-Control'       => 'no-store, no-cache, must-revalidate, max-age=0',
+            ]);
+        }
     }
 }
