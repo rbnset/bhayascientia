@@ -2831,16 +2831,54 @@ function showResumeToast(page) {
 }
 
 // ── Load PDF ──────────────────────────────────────────────────────
-// ✅ Guest: timeout lebih panjang (15s) agar canvas selalu dicoba dulu.
-//    Iframe fallback untuk guest akan menampilkan pesan error, bukan PDF asli.
-const FALLBACK_TIMEOUT = IS_GUEST ? 15000 : 8000;
-const fbTimer = setTimeout(() => { if (!pdfDoc) showFallback(); }, FALLBACK_TIMEOUT);
-pdfjsLib.getDocument({ url: pdfUrl, withCredentials: false, verbosity: 0 })
+// ✅ STRATEGI FALLBACK YANG BENAR:
+//    - fbTimer HANYA untuk mendeteksi gagal SEBELUM getDocument() resolve.
+//    - Begitu getDocument() resolve → fbTimer LANGSUNG dibatalkan, tidak peduli
+//      seberapa lama renderPage() butuh waktu.
+//    - Guest: TIDAK PERNAH fallback ke iframe (showFallback() handle ini).
+//    - User login: fallback ke iframe jika getDocument() benar-benar gagal.
+
+// Timer fallback: 30 detik untuk guest (PDF besar butuh waktu),
+// 12 detik untuk user login.
+const FALLBACK_TIMEOUT = IS_GUEST ? 30000 : 12000;
+let fbTimer = setTimeout(() => {
+    if (!pdfDoc) showFallback(); // hanya jika getDocument() belum resolve
+}, FALLBACK_TIMEOUT);
+
+// Loading progress — update teks spinner saat download PDF besar
+const loadingText = document.querySelector('#pdf-loading p:first-of-type');
+const loadingSubtext = document.querySelector('#pdf-loading p:last-of-type');
+
+const pdfLoadingTask = pdfjsLib.getDocument({
+    url: pdfUrl,
+    withCredentials: false,
+    verbosity: 0,
+    rangeChunkSize: 65536,
+    disableAutoFetch: false,
+    disableStream: false,
+});
+
+// ✅ Progress callback — tampilkan % download untuk PDF besar
+pdfLoadingTask.onProgress = function(data) {
+    if (data.total && data.total > 0) {
+        const pct = Math.round((data.loaded / data.total) * 100);
+        if (loadingText) loadingText.textContent = `Mengunduh dokumen... ${pct}%`;
+        if (pct >= 100 && loadingSubtext) loadingSubtext.textContent = 'Merender halaman...';
+    }
+};
+
+pdfLoadingTask
     .promise.then(doc => {
+        // ✅ Batalkan fbTimer SEGERA — render boleh lambat, tidak masalah
         clearTimeout(fbTimer);
+        fbTimer = null;
+
         pdfDoc = doc;
         const total = doc.numPages;
-        ['page-count','fs-page-count','sheet-total','tap-page-total'].forEach(id => { const e = document.getElementById(id); if (e) e.textContent = total; });
+        ['page-count','fs-page-count','sheet-total','tap-page-total'].forEach(id => {
+            const e = document.getElementById(id);
+            if (e) e.textContent = total;
+        });
         document.getElementById('page-num-input').max = total;
         document.getElementById('sheet-jump').max     = total;
 
@@ -2853,7 +2891,12 @@ pdfjsLib.getDocument({ url: pdfUrl, withCredentials: false, verbosity: 0 })
         renderPage(1);
         if (savedPage > 1 && savedPage <= total) setTimeout(() => showResumeToast(savedPage), 900);
     })
-    .catch(() => { clearTimeout(fbTimer); showFallback(); });
+    .catch(err => {
+        clearTimeout(fbTimer);
+        fbTimer = null;
+        console.error('PDF load error:', err);
+        showFallback();
+    });
 
 // ── Resize ────────────────────────────────────────────────────────
 let lastW = viewerEl.clientWidth, rTimer = null;
