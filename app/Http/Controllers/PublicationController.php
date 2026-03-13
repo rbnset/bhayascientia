@@ -660,6 +660,9 @@ class PublicationController extends Controller
      */
     public function read($slug)
     {
+        $pdfUrl = route('publikasi.pdf', $publication->slug)
+            . '?t=' . ($latestVersion->updated_at?->timestamp ?? time());
+
         $publication = Publication::with([
             'authors.user',
             'publicationType',
