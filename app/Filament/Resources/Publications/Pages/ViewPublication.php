@@ -130,13 +130,12 @@ class ViewPublication extends ViewRecord
 
             // ── Lihat Halaman Publikasi — jika sudah published ────
             Action::make('lihatPublikasi')
-                ->label('Publikasi Sudah Terbit 🎉')
-                ->icon('heroicon-o-rocket-launch')
+                ->label('Lihat Halaman Publikasi 🎉')
+                ->icon('heroicon-o-arrow-top-right-on-square')
                 ->color('success')
                 ->visible(fn() => $this->isAuthor() && $this->isPublished())
-                ->url(fn() => PublicationResource::getUrl('view', [
-                    'record' => $this->record,
-                ]))
+                ->url(fn() => route('publikasi.show', ['slug' => $this->record->slug]))
+                ->openUrlInNewTab()
                 ->tooltip(function () {
                     $publishedAt = $this->record->published_at;
                     return $publishedAt
@@ -145,8 +144,7 @@ class ViewPublication extends ViewRecord
                         ->locale('id')
                         ->isoFormat('D MMMM YYYY, HH:mm') . ' WIB'
                         : 'Naskah sudah diterbitkan';
-                })
-                ->disabled(),
+                }),
         ];
     }
 }
