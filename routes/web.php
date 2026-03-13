@@ -34,44 +34,42 @@ use Illuminate\Support\Facades\Storage;
 |--------------------------------------------------------------------------
 */
 
+// ── View manuscript — TANPA auth middleware, guest boleh akses dengan watermark ──
+Route::get('/manuscripts/{version}', function (PublicationVersion $version) {
+    $version->loadMissing('publication');
+
+    abort_unless(filled($version->pdf_file_path), 404);
+
+    $absolutePath = Storage::disk('public')->path($version->pdf_file_path);
+    abort_unless(is_file($absolutePath), 404);
+
+    $isGuest = !auth()->check(); // guest = true → watermark aktif
+
+    try {
+        $content = PdfStamper::stamp($absolutePath, $version, $isGuest);
+
+        return response($content, 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="manuscript.pdf"',
+            'Content-Length'      => strlen($content),
+            'Cache-Control'       => 'no-store, no-cache, must-revalidate, max-age=0',
+        ]);
+    } catch (\Throwable $e) {
+        \Illuminate\Support\Facades\Log::warning('PdfStamper fallback: ' . $e->getMessage(), [
+            'version_id' => $version->id,
+        ]);
+
+        return response()->file($absolutePath, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="manuscript.pdf"',
+            'Cache-Control'       => 'no-store, no-cache, must-revalidate, max-age=0',
+        ]);
+    }
+})->name('manuscripts.view');
+
+// ── Download manuscript — wajib auth ──────────────────────────
 Route::middleware(['auth'])->group(function () {
-
-    // ── View manuscript (dengan stamp & watermark) ─────────────
-    Route::get('/manuscripts/{version}', function (PublicationVersion $version) {
-        $version->loadMissing('publication');
-
-        abort_unless(filled($version->pdf_file_path), 404);
-
-        $absolutePath = Storage::disk('public')->path($version->pdf_file_path);
-        abort_unless(is_file($absolutePath), 404);
-
-        $isGuest = !auth()->check();
-
-        try {
-            $content = PdfStamper::stamp($absolutePath, $version, $isGuest);
-
-            return response($content, 200, [
-                'Content-Type'        => 'application/pdf',
-                'Content-Disposition' => 'inline; filename="manuscript.pdf"',
-                'Content-Length'      => strlen($content),
-                'Cache-Control'       => 'no-store, no-cache, must-revalidate, max-age=0',
-            ]);
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning('PdfStamper fallback: ' . $e->getMessage(), [
-                'version_id' => $version->id,
-            ]);
-
-            return response()->file($absolutePath, [
-                'Content-Type'        => 'application/pdf',
-                'Content-Disposition' => 'inline; filename="manuscript.pdf"',
-                'Cache-Control'       => 'no-store, no-cache, must-revalidate, max-age=0',
-            ]);
-        }
-    })->name('manuscripts.view');
-
-    // ── Download manuscript (tanpa stamp, file asli) ───────────
     Route::get('/manuscripts/{version}/download', function (PublicationVersion $version) {
-        abort_unless(auth()->check(), 401);
         abort_unless(filled($version->pdf_file_path), 404);
 
         return Storage::disk('public')->download(
