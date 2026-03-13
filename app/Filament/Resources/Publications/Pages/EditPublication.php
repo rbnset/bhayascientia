@@ -554,8 +554,8 @@ class EditPublication extends EditRecord
                 ->icon('heroicon-o-arrow-top-right-on-square')
                 ->color('gray')
                 ->visible(fn() => $this->record->status === 'published')
-                ->url(fn() => PublicationResource::getUrl('view', ['record' => $this->record]))
-                ->openUrlInNewTab(false),
+                ->url(fn() => route('publikasi.show', ['slug' => $this->record->slug]))
+                ->openUrlInNewTab(),
 
             // ── Upload Revisi — author, revision_required ─────────
             Action::make('uploadNewVersion')
