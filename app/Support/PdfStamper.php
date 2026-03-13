@@ -90,6 +90,8 @@ class PdfStamper
 
         try {
             $pdf       = new PdfWithRotation();
+            // ✅ Matikan auto page break agar footer tidak memicu halaman baru
+            $pdf->SetAutoPageBreak(false);
             $pageCount = $pdf->setSourceFile($pathToUse);
 
             $pagesToRender = ($pageLimit !== null) ? min($pageLimit, $pageCount) : $pageCount;
