@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Actions\Author\GetBestAuthorsAction;
+use App\Models\Publication;
 use App\Repositories\AuthorRepository;
 use App\Services\AuthorService;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -10,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
+
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -32,6 +34,9 @@ class AppServiceProvider extends ServiceProvider
         if (config('app.env') === 'production') {
             URL::forceScheme('https');
         }
+
+        // ── Observer: auto-generate PDF cache saat publikasi di-publish ───────
+        Publication::observe(PublicationObserver::class);
 
         // ── Library badge count via View Composer ─────────────────────────────
         \Illuminate\Support\Facades\View::composer('*', function ($view) {
