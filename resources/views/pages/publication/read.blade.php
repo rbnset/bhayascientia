@@ -622,6 +622,7 @@
     /* ═══════════════════════════════════════
    IFRAME FALLBACK
 ═══════════════════════════════════════ */
+    /* ✅ iframe fallback — SELALU hidden untuk guest. Hanya muncul jika canvas gagal untuk user login */
     #pdf-iframe {
         position: absolute;
         inset: 0;
@@ -1803,7 +1804,13 @@ default => '3 halaman',
             <div id="annotation-layer"></div>
         </div>
     </div>
-    <iframe id="pdf-iframe" title="PDF Viewer"></iframe>
+    {{-- ✅ iframe fallback: hanya untuk user login. Guest pakai canvas only. --}}
+    @auth
+    <iframe id="pdf-iframe" title="PDF Viewer" sandbox="allow-same-origin allow-scripts"></iframe>
+    @else
+    {{-- Guest: placeholder kosong agar JS getElementById tidak null --}}
+    <div id="pdf-iframe" style="display:none;" aria-hidden="true"></div>
+    @endauth
     <div id="desktop-hint" class="hidden">← → halaman &nbsp;·&nbsp; ↑↓ scroll &nbsp;·&nbsp; +/− zoom &nbsp;·&nbsp; B
         tandai &nbsp;·&nbsp; Ctrl+F cari &nbsp;·&nbsp; Esc keluar</div>
 
@@ -2778,8 +2785,38 @@ viewerEl.addEventListener('click', e => {
     tapOverlayOpen ? closeTapOverlay() : openTapOverlay();
 });
 
-// ── Iframe Fallback ───────────────────────────────────────────────
-function showFallback() { hideLoading(); canvasWrap.style.display = 'none'; iframeEl.style.display = 'block'; iframeEl.src = pdfUrl; }
+// ── Iframe Fallback ─────────────────────────────────────────────────────────
+// ✅ Guest TIDAK boleh pakai iframe — iframe = PDF.js native browser yang
+//    punya sidebar thumbnail, tombol print, download, & navigasi bebas tanpa batas.
+function showFallback() {
+    if (IS_GUEST) {
+        // Untuk guest: tampilkan pesan error + CTA login, JANGAN buka iframe
+        hideLoading();
+        canvasWrap.style.display = 'flex';
+        canvasWrap.classList.remove('hidden');
+        const stageEl = document.getElementById('pdf-stage');
+        if (stageEl) stageEl.style.display = 'none';
+        const errDiv = document.createElement('div');
+        errDiv.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;padding:2rem;text-align:center;max-width:360px;margin:auto;';
+        errDiv.innerHTML = [
+            '<div style="font-size:2.5rem">\u{1F4C4}</div>',
+            '<p style="color:#fff;font-weight:700;font-size:1rem">Gagal memuat dokumen</p>',
+            '<p style="color:#9CA3AF;font-size:.875rem">Login untuk membaca publikasi ini secara penuh.</p>',
+            '<a href="/login" style="padding:.65rem 1.5rem;background:#FF6B18;color:#fff;border-radius:10px;font-weight:700;font-size:.875rem;text-decoration:none;">\u{1F513} Masuk Sekarang</a>',
+        ].join('');
+        canvasWrap.appendChild(errDiv);
+        return;
+    }
+
+    // User login: boleh fallback ke iframe
+    // #toolbar=0   → hilangkan toolbar atas PDF.js browser
+    // #navpanes=0  → hilangkan sidebar/panel thumbnail
+    // #scrollbar=0 → hilangkan scrollbar bawaan
+    hideLoading();
+    canvasWrap.style.display = 'none';
+    iframeEl.style.display   = 'block';
+    iframeEl.src = pdfUrl + '#toolbar=0&navpanes=0&scrollbar=0&view=FitH';
+}
 
 // ── Resume Toast ──────────────────────────────────────────────────
 function showResumeToast(page) {
@@ -2794,7 +2831,10 @@ function showResumeToast(page) {
 }
 
 // ── Load PDF ──────────────────────────────────────────────────────
-const fbTimer = setTimeout(() => { if (!pdfDoc) showFallback(); }, 8000);
+// ✅ Guest: timeout lebih panjang (15s) agar canvas selalu dicoba dulu.
+//    Iframe fallback untuk guest akan menampilkan pesan error, bukan PDF asli.
+const FALLBACK_TIMEOUT = IS_GUEST ? 15000 : 8000;
+const fbTimer = setTimeout(() => { if (!pdfDoc) showFallback(); }, FALLBACK_TIMEOUT);
 pdfjsLib.getDocument({ url: pdfUrl, withCredentials: false, verbosity: 0 })
     .promise.then(doc => {
         clearTimeout(fbTimer);
