@@ -505,6 +505,20 @@
         {{-- LEFT: Abstract + Keywords --}}
         <div class="space-y-6">
 
+            @php
+            $pubTypeSlug = $publication->publicationType?->slug ?? '';
+            $abstractLabel = match($pubTypeSlug) {
+            'buku' => 'Sinopsis',
+            'opini' => 'Isi Opini',
+            default => 'Abstract',
+            };
+            $keywordLabel = match($pubTypeSlug) {
+            'buku' => 'Tags',
+            'opini' => 'Topik',
+            default => 'Keywords',
+            };
+            @endphp
+
             @if($publication->abstract)
             <div
                 class="bg-white rounded-2xl border border-[#EEF0F7] p-6 md:p-8 hover:shadow-lg transition-shadow duration-300">
@@ -513,10 +527,10 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    Abstract
+                    {{ $abstractLabel }}
                 </h2>
                 <div class="prose prose-sm md:prose-base max-w-none text-[#1A1A1A] leading-relaxed text-justify">
-                    {!! nl2br(e($publication->abstract)) !!}
+                    {!! $publication->abstract !!}
                 </div>
             </div>
             @endif
@@ -529,7 +543,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                     </svg>
-                    Keywords
+                    {{ $keywordLabel }}
                 </h2>
                 <div class="flex flex-wrap gap-2">
                     @foreach($keywords as $keyword)
