@@ -114,9 +114,12 @@
         box-shadow: 0 4px 32px rgba(0, 0, 0, 0.6);
     }
 
+    /* ✅ FIX BLUR: canvas menggunakan CSS width/height yg dikontrol JS.
+       Jangan paksa width 100% di sini — bisa menyebabkan scaling blur. */
     #pdf-canvas {
         display: block;
         transition: filter 0.3s ease;
+        /* PENTING: CSS dimensions diatur via JS, bukan CSS */
     }
 
     /* ═══════════════════════════════════════
@@ -209,29 +212,26 @@
     }
 
     /* ═══════════════════════════════════════
-   ✅ GUEST GATE OVERLAY
-   Muncul setelah batas halaman tercapai
+   ✅ GUEST GATE OVERLAY — MOBILE FIRST
 ═══════════════════════════════════════ */
     #guest-gate-overlay {
         position: absolute;
         bottom: 0;
         left: 0;
         right: 0;
-        /* Gradient dari transparan ke gelap — efek "fade out" halaman */
         background: linear-gradient(to bottom,
                 transparent 0%,
-                rgba(26, 26, 26, 0.55) 18%,
-                rgba(26, 26, 26, 0.92) 38%,
-                #1A1A1A 55%);
+                rgba(26, 26, 26, 0.55) 15%,
+                rgba(26, 26, 26, 0.92) 32%,
+                #1A1A1A 48%);
         z-index: 100;
         display: none;
-        /* JS yang show/hide */
         flex-direction: column;
         align-items: center;
         justify-content: flex-end;
-        padding-bottom: 2rem;
-        padding-top: 6rem;
-        /* ruang untuk gradient fade */
+        /* Mobile: padding lebih kecil, konten pas */
+        padding: 0 1rem 1.25rem;
+        padding-top: 5rem;
         pointer-events: auto;
     }
 
@@ -243,7 +243,8 @@
         background: #1A1A1A;
         border: 1.5px solid #FF6B18;
         border-radius: 20px;
-        padding: 1.75rem 1.5rem 1.5rem;
+        /* Mobile: padding kompak */
+        padding: 1.25rem 1rem 1rem;
         width: 100%;
         max-width: 420px;
         text-align: center;
@@ -251,55 +252,56 @@
     }
 
     .gg-lock-icon {
-        width: 56px;
-        height: 56px;
+        width: 48px;
+        height: 48px;
         background: rgba(255, 107, 24, 0.12);
         border: 2px solid #FF6B18;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        margin: 0 auto 1rem;
+        margin: 0 auto 0.75rem;
     }
 
     .gg-title {
-        font-size: 1.125rem;
+        font-size: 1rem;
         font-weight: 800;
         color: #fff;
-        margin-bottom: 0.4rem;
+        margin-bottom: 0.3rem;
     }
 
     .gg-subtitle {
-        font-size: 0.8125rem;
+        font-size: 0.75rem;
         color: #9CA3AF;
         line-height: 1.5;
-        margin-bottom: 1.25rem;
+        margin-bottom: 0.875rem;
     }
 
     .gg-subtitle strong {
         color: #FF6B18;
     }
 
+    /* Stats row — lebih kecil di mobile */
     .gg-stats {
         display: flex;
-        gap: 0.5rem;
+        gap: 0.4rem;
         justify-content: center;
-        margin-bottom: 1.25rem;
+        margin-bottom: 0.875rem;
     }
 
     .gg-stat {
         flex: 1;
-        max-width: 100px;
+        max-width: 90px;
         background: #2D2D2D;
         border: 1px solid #3D3D3D;
         border-radius: 10px;
-        padding: 0.45rem 0.5rem;
-        font-size: 0.75rem;
+        padding: 0.35rem 0.4rem;
+        font-size: 0.6875rem;
     }
 
     .gg-stat strong {
         display: block;
-        font-size: 1rem;
+        font-size: 0.9375rem;
         color: #FF6B18;
         font-weight: 800;
     }
@@ -308,13 +310,15 @@
         color: #6B7280;
     }
 
+    /* Buttons — full width, touch-friendly (min 44px) */
     .gg-btn-primary {
         display: flex;
         align-items: center;
         justify-content: center;
         gap: 0.5rem;
         width: 100%;
-        padding: 0.8rem;
+        min-height: 48px;
+        padding: 0.75rem;
         background: linear-gradient(135deg, #FF6B18, #E64627);
         color: #fff;
         font-size: 0.9375rem;
@@ -324,13 +328,13 @@
         cursor: pointer;
         text-decoration: none;
         transition: transform 0.15s, box-shadow 0.15s;
-        margin-bottom: 0.6rem;
+        margin-bottom: 0.5rem;
         box-shadow: 0 4px 16px rgba(255, 107, 24, 0.4);
     }
 
-    .gg-btn-primary:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 6px 20px rgba(255, 107, 24, 0.5);
+    .gg-btn-primary:active {
+        transform: scale(0.97);
+        box-shadow: 0 2px 8px rgba(255, 107, 24, 0.3);
     }
 
     .gg-btn-secondary {
@@ -339,7 +343,8 @@
         justify-content: center;
         gap: 0.5rem;
         width: 100%;
-        padding: 0.75rem;
+        min-height: 44px;
+        padding: 0.65rem;
         background: transparent;
         color: #FF6B18;
         font-size: 0.875rem;
@@ -352,36 +357,24 @@
         margin-bottom: 0.5rem;
     }
 
-    .gg-btn-secondary:hover {
-        background: rgba(255, 107, 24, 0.08);
-    }
-
-    .gg-dismiss {
-        font-size: 0.75rem;
-        color: #6B7280;
-        background: none;
-        border: none;
-        cursor: pointer;
-        padding: 0.25rem;
-    }
-
-    .gg-dismiss:hover {
-        color: #9CA3AF;
+    .gg-btn-secondary:active {
+        background: rgba(255, 107, 24, 0.1);
     }
 
     .gg-benefits {
         display: flex;
-        gap: 0.75rem;
+        gap: 0.5rem;
         justify-content: center;
-        margin-top: 0.75rem;
+        margin-top: 0.625rem;
+        flex-wrap: wrap;
     }
 
     .gg-benefit {
-        font-size: 0.6875rem;
+        font-size: 0.625rem;
         color: #6B7280;
         display: flex;
         align-items: center;
-        gap: 0.25rem;
+        gap: 0.2rem;
     }
 
     .gg-benefit svg {
@@ -389,26 +382,64 @@
         flex-shrink: 0;
     }
 
+    /* Desktop: lebih besar */
+    @media (min-width: 480px) {
+        .gg-card {
+            padding: 1.75rem 1.5rem 1.5rem;
+        }
+
+        .gg-lock-icon {
+            width: 56px;
+            height: 56px;
+        }
+
+        .gg-title {
+            font-size: 1.125rem;
+        }
+
+        .gg-subtitle {
+            font-size: 0.8125rem;
+        }
+
+        .gg-stat {
+            max-width: 100px;
+            padding: 0.45rem 0.5rem;
+            font-size: 0.75rem;
+        }
+
+        .gg-stat strong {
+            font-size: 1rem;
+        }
+
+        .gg-benefit {
+            font-size: 0.6875rem;
+        }
+    }
+
     /* ═══════════════════════════════════════
-   ✅ PAGE LIMIT WARNING TOAST
-   Muncul 2 halaman sebelum batas
+   ✅ PAGE LIMIT WARNING TOAST — MOBILE FIRST
 ═══════════════════════════════════════ */
     #page-limit-warning {
         position: absolute;
-        top: 0.75rem;
+        top: 0.625rem;
         left: 50%;
         transform: translateX(-50%) translateY(-80px);
         background: #1A1A1A;
         border: 1.5px solid #FF6B18;
         border-radius: 14px;
-        padding: 0.55rem 1rem;
+        /* Mobile: padding lebih kecil, text bisa wrap */
+        padding: 0.5rem 0.875rem;
         display: flex;
         align-items: center;
-        gap: 0.65rem;
-        font-size: 0.8125rem;
+        gap: 0.5rem;
+        font-size: 0.75rem;
         color: #fff;
         z-index: 50;
-        white-space: nowrap;
+        /* Mobile: boleh wrap, beri max-width */
+        white-space: normal;
+        max-width: calc(100vw - 2rem);
+        width: max-content;
+        text-align: center;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
         transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
         pointer-events: none;
@@ -416,6 +447,37 @@
 
     #page-limit-warning.show {
         transform: translateX(-50%) translateY(0);
+    }
+
+    #page-limit-warning .plw-icon {
+        flex-shrink: 0;
+    }
+
+    #page-limit-warning .plw-text {
+        display: flex;
+        flex-direction: column;
+        gap: 0.1rem;
+    }
+
+    #page-limit-warning .plw-text strong {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #FF6B18;
+        line-height: 1.2;
+    }
+
+    #page-limit-warning .plw-text span {
+        font-size: 0.6875rem;
+        color: #9CA3AF;
+        line-height: 1.3;
+    }
+
+    @media (min-width: 480px) {
+        #page-limit-warning {
+            white-space: nowrap;
+            font-size: 0.8125rem;
+        }
     }
 
     /* ═══════════════════════════════════════
@@ -622,7 +684,6 @@
     /* ═══════════════════════════════════════
    IFRAME FALLBACK
 ═══════════════════════════════════════ */
-    /* ✅ iframe fallback — SELALU hidden untuk guest. Hanya muncul jika canvas gagal untuk user login */
     #pdf-iframe {
         position: absolute;
         inset: 0;
@@ -1544,6 +1605,11 @@
         #pdf-viewer-container {
             height: calc(100vh - 52px);
         }
+
+        /* Mobile: canvas wrapper padding lebih kecil agar canvas lebih lebar */
+        #pdf-canvas-wrapper {
+            padding: 0.25rem;
+        }
     }
 
     @media (min-width: 768px) {
@@ -1804,50 +1870,34 @@ default => '3 halaman',
             <div id="annotation-layer"></div>
         </div>
     </div>
-    {{-- ✅ iframe fallback: hanya untuk user login. Guest pakai canvas only. --}}
     @auth
     <iframe id="pdf-iframe" title="PDF Viewer" sandbox="allow-same-origin allow-scripts"></iframe>
     @else
-    {{-- Guest: placeholder kosong agar JS getElementById tidak null --}}
     <div id="pdf-iframe" style="display:none;" aria-hidden="true"></div>
     @endauth
     <div id="desktop-hint" class="hidden">← → halaman &nbsp;·&nbsp; ↑↓ scroll &nbsp;·&nbsp; +/− zoom &nbsp;·&nbsp; B
         tandai &nbsp;·&nbsp; Ctrl+F cari &nbsp;·&nbsp; Esc keluar</div>
 
-    {{-- ✅ GUEST GATE OVERLAY — muncul setelah page limit --}}
+    {{-- ✅ GUEST GATE OVERLAY — Mobile first --}}
     @guest
     <div id="guest-gate-overlay">
         <div class="gg-card">
-            {{-- Icon kunci --}}
             <div class="gg-lock-icon">
-                <svg class="w-7 h-7 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-6 h-6 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
             </div>
-
-            <p class="gg-title">Pratinjau Berakhir</p>
+            <p class="gg-title">Pratinjau Berakhir 🔒</p>
             <p class="gg-subtitle">
-                Kamu sudah membaca <strong id="gg-pages-shown">-</strong> halaman pertama.<br>
-                <strong>Login gratis</strong> untuk membaca semua <strong id="gg-total-pages">-</strong> halaman.
+                Kamu sudah baca <strong id="gg-pages-shown">-</strong> halaman pertama.<br>
+                <strong>Login gratis</strong> untuk baca semua <strong id="gg-total-pages">-</strong> halaman.
             </p>
-
-            {{-- Stats --}}
             <div class="gg-stats">
-                <div class="gg-stat">
-                    <strong id="gg-stat-read">-</strong>
-                    <span>Dibaca</span>
-                </div>
-                <div class="gg-stat">
-                    <strong id="gg-stat-left">-</strong>
-                    <span>Tersisa</span>
-                </div>
-                <div class="gg-stat">
-                    <strong id="gg-stat-total">-</strong>
-                    <span>Total hal.</span>
-                </div>
+                <div class="gg-stat"><strong id="gg-stat-read">-</strong><span>Dibaca</span></div>
+                <div class="gg-stat"><strong id="gg-stat-left">-</strong><span>Tersisa</span></div>
+                <div class="gg-stat"><strong id="gg-stat-total">-</strong><span>Total hal.</span></div>
             </div>
-
             <a href="{{ route('login') }}" class="gg-btn-primary">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1862,10 +1912,9 @@ default => '3 halaman',
                 </svg>
                 Belum punya akun? Daftar Gratis
             </a>
-
             <div class="gg-benefits">
                 <span class="gg-benefit">
-                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd"
                             d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
                             clip-rule="evenodd" />
@@ -1873,7 +1922,7 @@ default => '3 halaman',
                     Gratis selamanya
                 </span>
                 <span class="gg-benefit">
-                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd"
                             d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
                             clip-rule="evenodd" />
@@ -1881,7 +1930,7 @@ default => '3 halaman',
                     Ribuan publikasi
                 </span>
                 <span class="gg-benefit">
-                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd"
                             d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
                             clip-rule="evenodd" />
@@ -1893,14 +1942,18 @@ default => '3 halaman',
     </div>
     @endguest
 
-    {{-- ✅ WARNING TOAST — muncul 2 halaman sebelum limit --}}
+    {{-- ✅ WARNING TOAST — Mobile first, multi-line --}}
     @guest
     <div id="page-limit-warning">
-        <svg class="w-4 h-4 text-[#FF6B18] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="plw-icon w-5 h-5 text-[#FF6B18] flex-shrink-0" fill="none" stroke="currentColor"
+            viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
         </svg>
-        <span id="page-limit-warning-text" class="font-semibold text-white"></span>
+        <div class="plw-text">
+            <strong id="page-limit-warning-title"></strong>
+            <span id="page-limit-warning-text"></span>
+        </div>
     </div>
     @endguest
 
@@ -1963,8 +2016,7 @@ default => '3 halaman',
     </div>
 </div>
 
-{{-- Annotation, Comment, Tooltip, Bottom Sheet, FAB, Search Overlay, Resume Toast --}}
-{{-- (sama persis dengan sebelumnya, tidak berubah) --}}
+{{-- Annotation, Comment, Tooltip, Bottom Sheet, FAB, Search, Resume --}}
 <div id="annot-toolbar">
     <span class="text-[11px] text-gray-400 px-1">Stabilo:</span>
     <button class="annot-tool-btn" data-color="yellow" title="Kuning">
@@ -2147,8 +2199,7 @@ pdfjsLib.verbosity = 0;
 const pdfUrl = @json($pdfUrl);
 const slug   = @json($publication->slug);
 
-// ✅ Guest gate config — dari PHP (null = user login, tidak ada limit)
-const GUEST_PAGE_LIMIT = @json($pageLimit);   // null | integer
+const GUEST_PAGE_LIMIT = @json($pageLimit);
 const IS_GUEST         = @json($isGuest);
 
 const SK = {
@@ -2159,7 +2210,7 @@ const SK = {
     annot: `ba_${slug}`,
 };
 
-// ── State ────────────────────────────────────────────────────────
+// ── State ─────────────────────────────────────────────────────────
 let pdfDoc         = null;
 let pageNum        = 1;
 let pageRendering  = false;
@@ -2183,11 +2234,13 @@ let pendingHighlightColor = null;
 let pendingSelectionRange = null;
 let annotations    = JSON.parse(localStorage.getItem(SK.annot) || '[]');
 let activeAnnotId  = null;
-// ✅ Track apakah gate sudah ditampilkan (hindari flash berulang)
 let gateShown      = false;
 const isMobile     = () => window.innerWidth < 768;
 
-// ── DOM ──────────────────────────────────────────────────────────
+// ✅ devicePixelRatio untuk sharp rendering di Retina / mobile HiDPI
+const DPR = window.devicePixelRatio || 1;
+
+// ── DOM ───────────────────────────────────────────────────────────
 const canvas      = document.getElementById('pdf-canvas');
 const ctx         = canvas.getContext('2d');
 const stage       = document.getElementById('pdf-stage');
@@ -2206,7 +2259,7 @@ const tapOverlay  = document.getElementById('mobile-tap-overlay');
 const guestGate   = document.getElementById('guest-gate-overlay');
 const limitWarning = document.getElementById('page-limit-warning');
 
-// ── Helpers ──────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────
 const hideLoading = () => loadingEl.style.display = 'none';
 const showCanvas  = () => { canvasWrap.style.display='flex'; canvasWrap.classList.remove('hidden'); };
 
@@ -2217,7 +2270,7 @@ function snack(msg, color='#FF6B18') {
     setTimeout(() => { el.style.opacity = 0; setTimeout(() => el.remove(), 400); }, 2200);
 }
 
-// ── Progress ─────────────────────────────────────────────────────
+// ── Progress ──────────────────────────────────────────────────────
 function updateProgress() {
     if (!pdfDoc) return;
     const pct = (pageNum / pdfDoc.numPages) * 100;
@@ -2269,10 +2322,84 @@ applyMode(currentMode);
 
 // ── Scale ─────────────────────────────────────────────────────────
 const getScale = () => baseScale * zoomFactor;
+
 function computeBase(page) {
-    const w = viewerEl.clientWidth || window.innerWidth;
-    baseScale = Math.max(0.6, Math.min((w - 16) / page.getViewport({ scale: 1 }).width, 2.5));
+    const containerWidth = viewerEl.clientWidth || window.innerWidth;
+    // Padding dari #pdf-canvas-wrapper (0.25rem mobile, 0.5rem desktop)
+    const padding = isMobile() ? 4 : 16;
+    const availW  = containerWidth - padding * 2;
+    const nativeW = page.getViewport({ scale: 1 }).width;
+    baseScale = Math.max(0.6, Math.min(availW / nativeW, 2.5));
 }
+
+// ════════════════════════════════════════════════════════════════════
+// ✅ FIX BLUR — renderPage menggunakan devicePixelRatio
+//
+// CARA KERJA:
+//   1. scale CSS   = baseScale * zoomFactor  → menentukan ukuran TAMPIL
+//   2. scale render = scale CSS * DPR         → menentukan ukuran RENDER
+//   3. Canvas attr (width/height) = ukuran render (piksel fisik)
+//   4. Canvas CSS size = ukuran tampil (piksel CSS) via style.width/height
+//   Hasilnya: canvas punya banyak piksel (DPR×), tapi ditampilkan kecil
+//   → SHARP di semua layar termasuk Retina & Android HiDPI
+// ════════════════════════════════════════════════════════════════════
+function renderPage(num) {
+    if (IS_GUEST && GUEST_PAGE_LIMIT !== null && num > GUEST_PAGE_LIMIT) {
+        num = GUEST_PAGE_LIMIT;
+        if (!gateShown) checkGuestGate();
+        return;
+    }
+
+    pageRendering = true;
+    hideLoading(); showCanvas();
+
+    pdfDoc.getPage(num).then(async page => {
+        if (baseScale === 1.0) computeBase(page);
+
+        // Scale untuk tampilan (CSS pixels)
+        const cssScale      = getScale();
+        // Scale untuk rendering (physical pixels = CSS × DPR)
+        const renderScale   = cssScale * DPR;
+
+        const vpCss    = page.getViewport({ scale: cssScale    });
+        const vpRender = page.getViewport({ scale: renderScale });
+
+        // ✅ Canvas internal size = piksel fisik (DPR × ukuran CSS)
+        canvas.width  = Math.floor(vpRender.width);
+        canvas.height = Math.floor(vpRender.height);
+
+        // ✅ Canvas CSS size = ukuran tampil (piksel CSS)
+        canvas.style.width  = Math.floor(vpCss.width)  + 'px';
+        canvas.style.height = Math.floor(vpCss.height) + 'px';
+
+        // ✅ Stage mengikuti CSS size (bukan canvas attribute)
+        stage.style.width  = Math.floor(vpCss.width)  + 'px';
+        stage.style.height = Math.floor(vpCss.height) + 'px';
+
+        // Render ke canvas dengan scale fisik
+        await page.render({ canvasContext: ctx, viewport: vpRender }).promise.catch(e => console.warn(e.message));
+
+        pageRendering = false;
+        if (pageNumPending !== null) { const p = pageNumPending; pageNumPending = null; renderPage(p); return; }
+
+        // Text layer tetap pakai CSS viewport (overlay di atas tampilan)
+        await renderTextLayer(page, vpCss);
+        renderAnnotationsOnLayer();
+
+        localStorage.setItem(SK.page, num);
+        localStorage.setItem(SK.zoom, zoomFactor);
+        document.getElementById('page-num-input').value    = num;
+        document.getElementById('fs-page-num').textContent = num;
+        updateNavButtons(); updateZoomDisplay(); updateProgress(); updateBookmarkUI();
+        canvasWrap.scrollTo({ top: 0, behavior: 'smooth' });
+        if (searchResults.length > 0) applySearchHighlights();
+
+        checkGuestGate();
+
+    }).catch(e => { console.error(e.message); pageRendering = false; hideLoading(); showCanvas(); });
+}
+
+function queueRender(n) { if (pageRendering) pageNumPending = n; else renderPage(n); }
 
 // ── Text Layer ────────────────────────────────────────────────────
 async function renderTextLayer(page, viewport) {
@@ -2286,13 +2413,13 @@ async function renderTextLayer(page, viewport) {
         const tx   = pdfjsLib.Util.transform(viewport.transform, item.transform);
         const span = document.createElement('span');
         const fontHeight = Math.sqrt(tx[2]*tx[2] + tx[3]*tx[3]);
-        const angle = Math.atan2(tx[1], tx[0]);
+        const angle      = Math.atan2(tx[1], tx[0]);
         span.textContent = item.str;
         span.style.fontSize = fontHeight + 'px';
-        span.style.left  = tx[4] + 'px';
-        span.style.top   = (tx[5] - fontHeight) + 'px';
+        span.style.left     = tx[4] + 'px';
+        span.style.top      = (tx[5] - fontHeight) + 'px';
         if (angle !== 0) span.style.transform = `rotate(${-angle}rad)`;
-        const actualWidth  = item.width * scale;
+        const actualWidth   = item.width * scale;
         const measuredWidth = fontHeight * item.str.length * 0.55;
         if (measuredWidth > 0 && actualWidth > 0)
             span.style.transform = (span.style.transform || '') + ` scaleX(${actualWidth / measuredWidth})`;
@@ -2300,30 +2427,30 @@ async function renderTextLayer(page, viewport) {
     });
 }
 
-// ═════════════════════════════════════════════════════════════════
-// ✅ GUEST GATE — logika pembatasan halaman
-// ═════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+// ✅ GUEST GATE
+// ═══════════════════════════════════════════════════════════════════
 function checkGuestGate() {
-    // Jika bukan guest atau tidak ada limit, tidak perlu cek
     if (!IS_GUEST || GUEST_PAGE_LIMIT === null || !pdfDoc) return;
 
     const totalPages = pdfDoc.numPages;
     const limit      = GUEST_PAGE_LIMIT;
 
-    // ── Warning toast 2 halaman sebelum limit ──
+    // ── Warning toast: muncul 2 halaman sebelum limit ──
     if (limitWarning && pageNum === Math.max(1, limit - 1) && !gateShown) {
-        const remaining = limit - pageNum;
-        const warnText  = document.getElementById('page-limit-warning-text');
-        if (warnText) warnText.textContent = `${remaining} halaman lagi sebelum pratinjau berakhir. Login untuk akses penuh.`;
+        const remaining  = limit - pageNum;
+        const titleEl    = document.getElementById('page-limit-warning-title');
+        const textEl     = document.getElementById('page-limit-warning-text');
+        if (titleEl) titleEl.textContent = `⚠️ ${remaining} halaman lagi!`;
+        if (textEl)  textEl.textContent  = `Login untuk baca semua ${totalPages} halaman secara gratis.`;
         limitWarning.classList.add('show');
-        setTimeout(() => limitWarning.classList.remove('show'), 5000);
+        setTimeout(() => limitWarning.classList.remove('show'), 6000);
     }
 
-    // ── Tampilkan gate ketika sudah melewati limit ──
+    // ── Tampilkan gate ketika melewati limit ──
     if (pageNum >= limit && !gateShown) {
         gateShown = true;
 
-        // Update teks di dalam gate card
         const ggPagesShown = document.getElementById('gg-pages-shown');
         const ggTotalPages = document.getElementById('gg-total-pages');
         const ggStatRead   = document.getElementById('gg-stat-read');
@@ -2339,54 +2466,12 @@ function checkGuestGate() {
         if (guestGate) guestGate.classList.add('show');
     }
 
-    // ── Sembunyikan gate jika kembali ke halaman sebelum limit ──
-    // (mis: user swipe back)
+    // ── Sembunyikan gate jika user kembali ke halaman sebelum limit ──
     if (pageNum < limit && gateShown) {
         gateShown = false;
         if (guestGate) guestGate.classList.remove('show');
     }
 }
-
-// ── Render ────────────────────────────────────────────────────────
-function renderPage(num) {
-    // ✅ Blokir navigasi ke halaman melebihi limit untuk guest
-    if (IS_GUEST && GUEST_PAGE_LIMIT !== null && num > GUEST_PAGE_LIMIT) {
-        // Paksa tampilkan halaman terakhir yang diizinkan & tunjukkan gate
-        num = GUEST_PAGE_LIMIT;
-        if (!gateShown) checkGuestGate();
-        return;
-    }
-
-    pageRendering = true;
-    hideLoading(); showCanvas();
-    pdfDoc.getPage(num).then(async page => {
-        if (baseScale === 1.0) computeBase(page);
-        const vp = page.getViewport({ scale: getScale() });
-        canvas.height = vp.height; canvas.width = vp.width;
-        stage.style.width  = vp.width  + 'px';
-        stage.style.height = vp.height + 'px';
-
-        await page.render({ canvasContext: ctx, viewport: vp }).promise.catch(e => console.warn(e.message));
-        pageRendering = false;
-        if (pageNumPending !== null) { const p = pageNumPending; pageNumPending = null; renderPage(p); return; }
-
-        await renderTextLayer(page, vp);
-        renderAnnotationsOnLayer();
-
-        localStorage.setItem(SK.page, num);
-        localStorage.setItem(SK.zoom, zoomFactor);
-        document.getElementById('page-num-input').value    = num;
-        document.getElementById('fs-page-num').textContent = num;
-        updateNavButtons(); updateZoomDisplay(); updateProgress(); updateBookmarkUI();
-        canvasWrap.scrollTo({ top: 0, behavior: 'smooth' });
-        if (searchResults.length > 0) applySearchHighlights();
-
-        // ✅ Cek gate setelah render selesai
-        checkGuestGate();
-
-    }).catch(e => { console.error(e.message); pageRendering = false; hideLoading(); showCanvas(); });
-}
-function queueRender(n) { if (pageRendering) pageNumPending = n; else renderPage(n); }
 
 // ── Navigation ────────────────────────────────────────────────────
 function prevPage() { if (pageNum > 1) { pageNum--; queueRender(pageNum); } }
@@ -2400,30 +2485,24 @@ function nextPage() {
         pageNum++;
         queueRender(pageNum);
     } else if (IS_GUEST && GUEST_PAGE_LIMIT !== null && pageNum >= GUEST_PAGE_LIMIT) {
-        // Sudah di batas — tunjukkan gate
         if (!gateShown) checkGuestGate();
     }
 }
 function goTo(n) {
     if (!pdfDoc) return;
-    // ✅ Batasi jump untuk guest
-    if (IS_GUEST && GUEST_PAGE_LIMIT !== null) {
-        n = Math.min(n, GUEST_PAGE_LIMIT);
-    }
+    if (IS_GUEST && GUEST_PAGE_LIMIT !== null) n = Math.min(n, GUEST_PAGE_LIMIT);
     if (n >= 1 && n <= pdfDoc.numPages) { pageNum = n; queueRender(n); }
 }
 
 function updateNavButtons() {
-    ['prev-page','fs-prev','sheet-prev','tap-prev'].forEach(id => { const e = document.getElementById(id); if (e) e.disabled = pageNum <= 1; });
-
-    // ✅ next button disabled di limit untuk guest
+    ['prev-page','fs-prev','sheet-prev','tap-prev'].forEach(id => {
+        const e = document.getElementById(id); if (e) e.disabled = pageNum <= 1;
+    });
     const maxForGuest = (IS_GUEST && GUEST_PAGE_LIMIT !== null && pdfDoc)
         ? Math.min(GUEST_PAGE_LIMIT, pdfDoc.numPages)
         : (pdfDoc ? pdfDoc.numPages : 1);
-
     ['next-page','fs-next','sheet-next','tap-next'].forEach(id => {
-        const e = document.getElementById(id);
-        if (e) e.disabled = pageNum >= maxForGuest;
+        const e = document.getElementById(id); if (e) e.disabled = pageNum >= maxForGuest;
     });
 }
 
@@ -2431,9 +2510,9 @@ function updateNavButtons() {
 function zoomIn()  { zoomFactor = Math.min(zoomFactor + ZOOM_STEP, ZOOM_MAX); queueRender(pageNum); }
 function zoomOut() { zoomFactor = Math.max(zoomFactor - ZOOM_STEP, ZOOM_MIN); queueRender(pageNum); }
 
-// ══════════════════════════════════════════════════════════════════
-//  ANNOTATION SYSTEM (tidak berubah)
-// ══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+// ANNOTATION SYSTEM
+// ═══════════════════════════════════════════════════════════════════
 function saveAnnotations() { localStorage.setItem(SK.annot, JSON.stringify(annotations)); }
 
 function renderAnnotationsOnLayer() {
@@ -2485,12 +2564,7 @@ function getSelectionRect() {
     const right  = Math.max(...rects.map(r => r.right));
     const bottom = Math.max(...rects.map(r => r.bottom));
     const scale  = getScale();
-    return {
-        x: (left  - stRect.left) / scale,
-        y: (top   - stRect.top)  / scale,
-        w: (right - left)        / scale,
-        h: (bottom - top)        / scale,
-    };
+    return { x:(left-stRect.left)/scale, y:(top-stRect.top)/scale, w:(right-left)/scale, h:(bottom-top)/scale };
 }
 
 function positionAnnotToolbar(x, y) {
@@ -2584,9 +2658,9 @@ document.addEventListener('click', e => {
     }
 });
 
-// ══════════════════════════════════════════════════════════════════
-//  SEARCH (tidak berubah)
-// ══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+// SEARCH
+// ═══════════════════════════════════════════════════════════════════
 let searchDebounce     = null;
 let currentSearchQuery = '';
 
@@ -2618,8 +2692,8 @@ function applySearchHighlights() {
             const charW = sr.width / span.textContent.length;
             const el    = document.createElement('div');
             el.className = 'search-highlight';
-            el.style.left   = ((sr.left - stRect.left + charW * idx) + 'px');
-            el.style.top    = ((sr.top  - stRect.top)  + 'px');
+            el.style.left   = (sr.left - stRect.left + charW * idx) + 'px';
+            el.style.top    = (sr.top  - stRect.top)  + 'px';
             el.style.width  = Math.min(charW * q.length, sr.width) + 'px';
             el.style.height = sr.height + 'px';
             el.dataset.matchIdx = matchIdx;
@@ -2634,7 +2708,7 @@ function applySearchHighlights() {
 
 function highlightActiveMatch() {
     searchHighlightEls.forEach((el, i) => el.classList.toggle('active-match', i === searchIndex));
-    if (searchHighlightEls[searchIndex]) searchHighlightEls[searchIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (searchHighlightEls[searchIndex]) searchHighlightEls[searchIndex].scrollIntoView({ behavior:'smooth', block:'center' });
     document.querySelectorAll('.sri').forEach((el, i) => el.classList.toggle('active-sri', i === searchIndex));
 }
 
@@ -2648,8 +2722,6 @@ async function doSearch(query) {
     document.getElementById('search-status').textContent = 'Mencari di semua halaman...';
     searchResults = []; currentSearchQuery = query;
     const q = query.toLowerCase();
-
-    // ✅ Untuk guest, hanya search di halaman yang diizinkan
     const maxSearchPage = (IS_GUEST && GUEST_PAGE_LIMIT !== null)
         ? Math.min(GUEST_PAGE_LIMIT, pdfDoc.numPages)
         : pdfDoc.numPages;
@@ -2678,7 +2750,12 @@ async function doSearch(query) {
         item.className = 'sri' + (i === 0 ? ' active-sri' : '');
         const hl = r.excerpt.replace(new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), m => `<mark${i===0?' class="active-mark"':''}>${m}</mark>`);
         item.innerHTML = `<span class="pg">Hal.${r.page}</span><span class="ex">${hl}</span>`;
-        item.addEventListener('click', () => { searchIndex = i; document.querySelectorAll('.sri').forEach((el,j) => el.classList.toggle('active-sri', j===i)); if (r.page !== pageNum) goTo(r.page); else { applySearchHighlights(); highlightActiveMatch(); } updateMatchInfo(); });
+        item.addEventListener('click', () => {
+            searchIndex = i;
+            document.querySelectorAll('.sri').forEach((el,j) => el.classList.toggle('active-sri', j===i));
+            if (r.page !== pageNum) goTo(r.page); else { applySearchHighlights(); highlightActiveMatch(); }
+            updateMatchInfo();
+        });
         list.appendChild(item);
     });
     updateMatchInfo();
@@ -2756,7 +2833,7 @@ function enterFullscreen() {
     viewerEl.classList.add('fullscreen-mode');
     document.body.style.overflow = 'hidden';
     if (!isMobile()) {
-        deskHint.classList.remove('hidden', 'fade-out');
+        deskHint.classList.remove('hidden','fade-out');
         clearTimeout(toolbarTimer);
         toolbarTimer = setTimeout(() => deskHint.classList.add('fade-out'), 4500);
     }
@@ -2785,12 +2862,9 @@ viewerEl.addEventListener('click', e => {
     tapOverlayOpen ? closeTapOverlay() : openTapOverlay();
 });
 
-// ── Iframe Fallback ─────────────────────────────────────────────────────────
-// ✅ Guest TIDAK boleh pakai iframe — iframe = PDF.js native browser yang
-//    punya sidebar thumbnail, tombol print, download, & navigasi bebas tanpa batas.
+// ── Iframe Fallback ───────────────────────────────────────────────
 function showFallback() {
     if (IS_GUEST) {
-        // Untuk guest: tampilkan pesan error + CTA login, JANGAN buka iframe
         hideLoading();
         canvasWrap.style.display = 'flex';
         canvasWrap.classList.remove('hidden');
@@ -2799,19 +2873,14 @@ function showFallback() {
         const errDiv = document.createElement('div');
         errDiv.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;padding:2rem;text-align:center;max-width:360px;margin:auto;';
         errDiv.innerHTML = [
-            '<div style="font-size:2.5rem">\u{1F4C4}</div>',
+            '<div style="font-size:2.5rem">📄</div>',
             '<p style="color:#fff;font-weight:700;font-size:1rem">Gagal memuat dokumen</p>',
             '<p style="color:#9CA3AF;font-size:.875rem">Login untuk membaca publikasi ini secara penuh.</p>',
-            '<a href="/login" style="padding:.65rem 1.5rem;background:#FF6B18;color:#fff;border-radius:10px;font-weight:700;font-size:.875rem;text-decoration:none;">\u{1F513} Masuk Sekarang</a>',
+            '<a href="/login" style="padding:.65rem 1.5rem;background:#FF6B18;color:#fff;border-radius:10px;font-weight:700;font-size:.875rem;text-decoration:none;">🔓 Masuk Sekarang</a>',
         ].join('');
         canvasWrap.appendChild(errDiv);
         return;
     }
-
-    // User login: boleh fallback ke iframe
-    // #toolbar=0   → hilangkan toolbar atas PDF.js browser
-    // #navpanes=0  → hilangkan sidebar/panel thumbnail
-    // #scrollbar=0 → hilangkan scrollbar bawaan
     hideLoading();
     canvasWrap.style.display = 'none';
     iframeEl.style.display   = 'block';
@@ -2820,7 +2889,6 @@ function showFallback() {
 
 // ── Resume Toast ──────────────────────────────────────────────────
 function showResumeToast(page) {
-    // ✅ Untuk guest, batasi resume page ke dalam limit
     if (IS_GUEST && GUEST_PAGE_LIMIT !== null) page = Math.min(page, GUEST_PAGE_LIMIT);
     const t = document.getElementById('resume-toast');
     document.getElementById('resume-text').textContent = `Terakhir di halaman ${page}`;
@@ -2831,22 +2899,10 @@ function showResumeToast(page) {
 }
 
 // ── Load PDF ──────────────────────────────────────────────────────
-// ✅ STRATEGI FALLBACK YANG BENAR:
-//    - fbTimer HANYA untuk mendeteksi gagal SEBELUM getDocument() resolve.
-//    - Begitu getDocument() resolve → fbTimer LANGSUNG dibatalkan, tidak peduli
-//      seberapa lama renderPage() butuh waktu.
-//    - Guest: TIDAK PERNAH fallback ke iframe (showFallback() handle ini).
-//    - User login: fallback ke iframe jika getDocument() benar-benar gagal.
-
-// Timer fallback: 30 detik untuk guest (PDF besar butuh waktu),
-// 12 detik untuk user login.
 const FALLBACK_TIMEOUT = IS_GUEST ? 30000 : 12000;
-let fbTimer = setTimeout(() => {
-    if (!pdfDoc) showFallback(); // hanya jika getDocument() belum resolve
-}, FALLBACK_TIMEOUT);
+let fbTimer = setTimeout(() => { if (!pdfDoc) showFallback(); }, FALLBACK_TIMEOUT);
 
-// Loading progress — update teks spinner saat download PDF besar
-const loadingText = document.querySelector('#pdf-loading p:first-of-type');
+const loadingText    = document.querySelector('#pdf-loading p:first-of-type');
 const loadingSubtext = document.querySelector('#pdf-loading p:last-of-type');
 
 const pdfLoadingTask = pdfjsLib.getDocument({
@@ -2858,7 +2914,6 @@ const pdfLoadingTask = pdfjsLib.getDocument({
     disableStream: false,
 });
 
-// ✅ Progress callback — tampilkan % download untuk PDF besar
 pdfLoadingTask.onProgress = function(data) {
     if (data.total && data.total > 0) {
         const pct = Math.round((data.loaded / data.total) * 100);
@@ -2867,36 +2922,31 @@ pdfLoadingTask.onProgress = function(data) {
     }
 };
 
-pdfLoadingTask
-    .promise.then(doc => {
-        // ✅ Batalkan fbTimer SEGERA — render boleh lambat, tidak masalah
-        clearTimeout(fbTimer);
-        fbTimer = null;
+pdfLoadingTask.promise.then(doc => {
+    clearTimeout(fbTimer);
+    fbTimer = null;
+    pdfDoc  = doc;
 
-        pdfDoc = doc;
-        const total = doc.numPages;
-        ['page-count','fs-page-count','sheet-total','tap-page-total'].forEach(id => {
-            const e = document.getElementById(id);
-            if (e) e.textContent = total;
-        });
-        document.getElementById('page-num-input').max = total;
-        document.getElementById('sheet-jump').max     = total;
-
-        // ✅ Untuk guest, tampilkan info halaman aktual vs batas
-        if (IS_GUEST && GUEST_PAGE_LIMIT !== null && total > GUEST_PAGE_LIMIT) {
-            const pc = document.getElementById('page-count');
-            if (pc) pc.textContent = `${GUEST_PAGE_LIMIT}* (dari ${total})`;
-        }
-
-        renderPage(1);
-        if (savedPage > 1 && savedPage <= total) setTimeout(() => showResumeToast(savedPage), 900);
-    })
-    .catch(err => {
-        clearTimeout(fbTimer);
-        fbTimer = null;
-        console.error('PDF load error:', err);
-        showFallback();
+    const total = doc.numPages;
+    ['page-count','fs-page-count','sheet-total','tap-page-total'].forEach(id => {
+        const e = document.getElementById(id); if (e) e.textContent = total;
     });
+    document.getElementById('page-num-input').max = total;
+    document.getElementById('sheet-jump').max     = total;
+
+    if (IS_GUEST && GUEST_PAGE_LIMIT !== null && total > GUEST_PAGE_LIMIT) {
+        const pc = document.getElementById('page-count');
+        if (pc) pc.textContent = `${GUEST_PAGE_LIMIT}* (dari ${total})`;
+    }
+
+    renderPage(1);
+    if (savedPage > 1 && savedPage <= total) setTimeout(() => showResumeToast(savedPage), 900);
+}).catch(err => {
+    clearTimeout(fbTimer);
+    fbTimer = null;
+    console.error('PDF load error:', err);
+    showFallback();
+});
 
 // ── Resize ────────────────────────────────────────────────────────
 let lastW = viewerEl.clientWidth, rTimer = null;
@@ -2939,8 +2989,8 @@ document.addEventListener('keydown', e => {
     switch (e.key) {
         case 'ArrowLeft':  prevPage(); break;
         case 'ArrowRight': nextPage(); break;
-        case 'ArrowUp':    canvasWrap.scrollBy({ top: -120, behavior: 'smooth' }); break;
-        case 'ArrowDown':  canvasWrap.scrollBy({ top: 120,  behavior: 'smooth' }); break;
+        case 'ArrowUp':    canvasWrap.scrollBy({ top:-120, behavior:'smooth' }); break;
+        case 'ArrowDown':  canvasWrap.scrollBy({ top:120,  behavior:'smooth' }); break;
         case '+': case '=': zoomIn();  break;
         case '-':           zoomOut(); break;
         case 'b': case 'B': toggleBookmark(); break;
@@ -2953,7 +3003,7 @@ document.addEventListener('keydown', e => {
     }
 });
 
-// ── Touch: Swipe ─────────────────────────────────────────────────
+// ── Touch: Swipe + Pinch ─────────────────────────────────────────
 let tx = 0, ty = 0, pd = 0, touchMoved = false, pinching = false;
 
 viewerEl.addEventListener('touchstart', e => {
@@ -2980,9 +3030,9 @@ viewerEl.addEventListener('touchend', e => {
     }
 }, { passive: true });
 
-// ══════════════════════════════════════════════════════════════════
-//  GUEST DOWNLOAD MODAL
-// ══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+// GUEST DOWNLOAD MODAL
+// ═══════════════════════════════════════════════════════════════════
 function showGuestDownloadModal() {
     const modal     = document.getElementById('guestDownloadModal');
     const backdrop  = document.getElementById('guestModalBackdrop');
@@ -3001,7 +3051,7 @@ function hideGuestDownloadModal() {
     const container = document.getElementById('guestModalContainer');
     if (!modal) return;
     backdrop.classList.remove('opacity-100');  backdrop.classList.add('opacity-0');
-    container.classList.remove('opacity-100', 'scale-100'); container.classList.add('opacity-0', 'scale-95');
+    container.classList.remove('opacity-100','scale-100'); container.classList.add('opacity-0','scale-95');
     setTimeout(() => { modal.style.display = 'none'; document.body.style.overflow = ''; }, 300);
 }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') hideGuestDownloadModal(); });
