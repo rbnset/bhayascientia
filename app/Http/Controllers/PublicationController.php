@@ -656,6 +656,7 @@ class PublicationController extends Controller
      */
     public function read($slug)
     {
+        // ✅ FIX: query $publication & $latestVersion dulu, BARU buat $pdfUrl
         $publication = Publication::with([
             'authors.user',
             'publicationType',
@@ -697,39 +698,21 @@ class PublicationController extends Controller
             ]);
         }
 
-        // ── Guest page limit (harus konsisten dengan PdfStamper) ──
-        $isGuest         = !auth()->check();
-        $typeSlug        = $publication->publicationType?->slug ?? '';
-
-        // ✅ Map tipe → batas halaman (sama persis dengan PdfStamper::GUEST_PAGE_LIMITS)
-        $pageLimits = [
-            'jurnal' => 3,
-            'buku'   => 10,
-            'opini'  => 1,
-        ];
-        $defaultLimit = 3;
-        $pageLimit = $isGuest
-            ? ($pageLimits[$typeSlug] ?? $defaultLimit)
-            : null; // null = tidak dibatasi (user login)
-
+        // ✅ Sekarang $publication & $latestVersion sudah tersedia
         $pdfUrl = route('publikasi.pdf', $publication->slug)
             . '?t=' . ($latestVersion->updated_at?->timestamp ?? time());
 
         return view('pages.publication.read', [
-            'publication'         => $publication,
-            'pdfUrl'              => $pdfUrl,
-            'category'            => $publication->categories->first()?->name ?? 'Umum',
-            'publication_type'    => $publication->publicationType->name ?? 'Publikasi',
-            'authors'             => $publication->authors->take(6)->map(fn($author) => [
+            'publication'      => $publication,
+            'pdfUrl'           => $pdfUrl,
+            'category'         => $publication->categories->first()?->name ?? 'Umum',
+            'publication_type' => $publication->publicationType->name ?? 'Publikasi',
+            'authors'          => $publication->authors->take(6)->map(fn($author) => [
                 'id'       => $author->id,
                 'name'     => $author->name,
                 'initials' => $author->initials,
                 'photo'    => $author->photo_url,
             ]),
-            // ✅ Tambahan untuk guest gate di JS
-            'isGuest'             => $isGuest,
-            'pageLimit'           => $pageLimit,       // null jika sudah login
-            'publicationTypeSlug' => $typeSlug,
         ]);
     }
 
@@ -738,12 +721,6 @@ class PublicationController extends Controller
      */
     public function servePdf($slug)
     {
-        \Illuminate\Support\Facades\Log::info('=== servePdf called ===', [
-            'slug'    => $slug,
-            'isGuest' => !auth()->check(),
-            'user'    => auth()->id(),
-        ]);
-
         $publication = Publication::where('slug', $slug)
             ->where('status', 'published')
             ->firstOrFail();
@@ -766,28 +743,84 @@ class PublicationController extends Controller
         $absolutePath = Storage::disk('public')->path($filePath);
         $isGuest      = !auth()->check();
 
+        // ── Cache key unik per publikasi + versi + tipe user ──────────────────
+        // Guest dan logged-in user mendapat file berbeda (watermark berbeda)
+        $cacheKey  = 'stamped_' . $latestVersion->id
+            . '_' . ($isGuest ? 'guest' : 'user')
+            . '_' . ($latestVersion->updated_at?->timestamp ?? 0);
+        $cacheDir  = storage_path('app/pdf_cache');
+        $cachePath = $cacheDir . '/' . $cacheKey . '.pdf';
+
+        // Buat direktori cache jika belum ada
+        if (!is_dir($cacheDir)) {
+            mkdir($cacheDir, 0755, true);
+        }
+
+        // ── Serve dari cache jika ada ──────────────────────────────────────────
+        if (file_exists($cachePath)) {
+            Log::info('servePdf: serving from cache', ['key' => $cacheKey]);
+            return response()->file($cachePath, [
+                'Content-Type'                => 'application/pdf',
+                'Content-Disposition'         => 'inline; filename="' . basename($filePath) . '"',
+                'Cache-Control'               => 'public, max-age=3600',
+                'Access-Control-Allow-Origin' => '*',
+            ]);
+        }
+
+        // ── Proses stamp (GhostScript + watermark) ─────────────────────────────
+        Log::info('servePdf: processing stamp', [
+            'slug'    => $slug,
+            'isGuest' => $isGuest,
+            'version' => $latestVersion->id,
+        ]);
+
         // Pastikan relasi publication ter-load untuk PdfStamper
         $latestVersion->setRelation('publication', $publication);
 
         try {
             $content = \App\Support\PdfStamper::stamp($absolutePath, $latestVersion, $isGuest);
 
+            // ── Simpan ke cache ────────────────────────────────────────────────
+            file_put_contents($cachePath, $content);
+
+            // ── Bersihkan cache lama untuk publikasi yang sama ─────────────────
+            // Hapus file cache versi/tipe lain agar tidak memenuhi disk
+            $this->cleanOldPdfCache($cacheDir, $latestVersion->id, $isGuest ? 'guest' : 'user', $cacheKey);
+
             return response($content, 200, [
                 'Content-Type'                => 'application/pdf',
                 'Content-Disposition'         => 'inline; filename="' . basename($filePath) . '"',
                 'Content-Length'              => strlen($content),
-                'Cache-Control'               => 'no-store, no-cache, must-revalidate, max-age=0',
+                'Cache-Control'               => 'public, max-age=3600',
                 'Access-Control-Allow-Origin' => '*',
                 'X-Content-Type-Options'      => 'nosniff',
             ]);
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning('PdfStamper fallback: ' . $e->getMessage());
+            Log::warning('PdfStamper fallback: ' . $e->getMessage());
 
             return response()->file($absolutePath, [
                 'Content-Type'        => 'application/pdf',
                 'Content-Disposition' => 'inline; filename="' . basename($filePath) . '"',
                 'Cache-Control'       => 'no-store, no-cache, must-revalidate, max-age=0',
             ]);
+        }
+    }
+
+    /**
+     * Hapus file cache PDF lama untuk versi/tipe yang sama.
+     * Mencegah cache menumpuk di disk.
+     */
+    private function cleanOldPdfCache(string $dir, int $versionId, string $type, string $currentKey): void
+    {
+        try {
+            $prefix = 'stamped_' . $versionId . '_' . $type . '_';
+            foreach (glob($dir . '/' . $prefix . '*.pdf') as $file) {
+                if (basename($file, '.pdf') !== $currentKey) {
+                    @unlink($file);
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning('cleanOldPdfCache error: ' . $e->getMessage());
         }
     }
 }
