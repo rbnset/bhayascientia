@@ -656,7 +656,6 @@ class PublicationController extends Controller
      */
     public function read($slug)
     {
-        // ✅ FIX: query $publication & $latestVersion dulu, BARU buat $pdfUrl
         $publication = Publication::with([
             'authors.user',
             'publicationType',
@@ -698,21 +697,29 @@ class PublicationController extends Controller
             ]);
         }
 
-        // ✅ Sekarang $publication & $latestVersion sudah tersedia
         $pdfUrl = route('publikasi.pdf', $publication->slug)
             . '?t=' . ($latestVersion->updated_at?->timestamp ?? time());
 
+        // ✅ Guest page limit
+        $isGuest    = !auth()->check();
+        $typeSlug   = $publication->publicationType?->slug ?? '';
+        $pageLimits = ['jurnal' => 3, 'buku' => 10, 'opini' => 1];
+        $pageLimit  = $isGuest ? ($pageLimits[$typeSlug] ?? 3) : null;
+
         return view('pages.publication.read', [
-            'publication'      => $publication,
-            'pdfUrl'           => $pdfUrl,
-            'category'         => $publication->categories->first()?->name ?? 'Umum',
-            'publication_type' => $publication->publicationType->name ?? 'Publikasi',
-            'authors'          => $publication->authors->take(6)->map(fn($author) => [
+            'publication'         => $publication,
+            'pdfUrl'              => $pdfUrl,
+            'category'            => $publication->categories->first()?->name ?? 'Umum',
+            'publication_type'    => $publication->publicationType->name ?? 'Publikasi',
+            'authors'             => $publication->authors->take(6)->map(fn($author) => [
                 'id'       => $author->id,
                 'name'     => $author->name,
                 'initials' => $author->initials,
                 'photo'    => $author->photo_url,
             ]),
+            'isGuest'             => $isGuest,
+            'pageLimit'           => $pageLimit,
+            'publicationTypeSlug' => $typeSlug,
         ]);
     }
 
