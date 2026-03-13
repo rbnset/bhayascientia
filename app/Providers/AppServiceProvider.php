@@ -33,6 +33,19 @@ class AppServiceProvider extends ServiceProvider
             URL::forceScheme('https');
         }
 
+        // ── Library badge count via View Composer ─────────────────────────────
+        \Illuminate\Support\Facades\View::composer('*', function ($view) {
+            if (auth()->check()) {
+                $navItems = config('publication.navigation');
+                foreach ($navItems as &$item) {
+                    if (($item['href'] ?? '') === 'publikasi.library') {
+                        $item['badge'] = auth()->user()->savedPublications()->count();
+                    }
+                }
+                $view->with('publicationNav', $navItems);
+            }
+        });
+
         $this->configureRateLimiting();
     }
 

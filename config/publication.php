@@ -5,7 +5,7 @@ return [
     'navigation' => [
         [
             'label'     => 'Browse',
-            'href'      => 'publikasi.index',   // ✅ klik Browse → halaman index
+            'href'      => 'publikasi.index',
             'active'    => ['publikasi.index', 'publikasi.show', 'publikasi.browse'],
             'icon'      => 'assets/images/icons/browse-dark.svg',
             'iconWhite' => 'assets/images/icons/browse-white.svg',
@@ -36,9 +36,7 @@ return [
             'active'    => ['publikasi.library'],
             'icon'      => 'assets/images/icons/library-dark.svg',
             'iconWhite' => 'assets/images/icons/library-white.svg',
-            'badge'     => fn() => auth()->check()
-                ? auth()->user()->savedPublications()->count()
-                : 0,
+            'badge'     => null, // ← dihitung dinamis via View Composer
             'new'       => false,
             'auth'      => false,
         ],
