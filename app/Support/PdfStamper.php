@@ -196,16 +196,13 @@ class PdfStamper
         $logoPath = public_path('assets/images/logos/logo.png');
 
         if (file_exists($logoPath)) {
-            $logoH = 6;
+            $logoH = 10;  // cukup besar untuk terbaca tapi tidak dominan
+            $logoY = $fy + ($fh - $logoH) / 2;
             $pdf->Image($logoPath, $curX, $logoY, 0, $logoH, 'PNG');
-            $curX += $logoH * 1.5 + 1;
+            $curX += $logoH * 1.2 + 2;
         }
 
-        // Hanya tampilkan dabraka.org tanpa teks "DABRAKA" besar
-        $pdf->SetFont('Helvetica', 'B', 4.5);
-        $pdf->SetTextColor(80, 80, 80);
-        $pdf->SetXY($curX, $fy + ($fh - 3) / 2);
-        $pdf->Cell(22, 3, 'dabraka.org', 0, 0, 'L');
+        // Teks nama sudah ada di dalam logo PNG — tidak perlu tulis ulang
 
         // ── Divider vertikal 1 ─────────────────────────────────────
         $divX1 = $curX + 24;
@@ -224,7 +221,7 @@ class PdfStamper
         $pdf->SetFont('Helvetica', '', 3.8);
         $pdf->SetTextColor(130, 130, 130);
         $pdf->SetXY($infoX, $fy + 5.5);
-        $pdf->Cell(58, 2.5, 'Diakses: ' . now()->format('d/m/Y H:i') . '   Versi ' . ($version->version_number ?? '1') . '   dabraka.org', 0, 0, 'L');
+        $pdf->Cell(58, 2.5, 'Diakses: ' . now()->format('d/m/Y H:i') . '   ·   Versi ' . ($version->version_number ?? '1'), 0, 0, 'L');
 
         $pdf->SetFont('Helvetica', '', 3.5);
         $pdf->SetTextColor(160, 160, 160);
