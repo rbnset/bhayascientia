@@ -656,7 +656,6 @@ class PublicationController extends Controller
      */
     public function read($slug)
     {
-        // ✅ FIX: query $publication & $latestVersion dulu, BARU buat $pdfUrl
         $publication = Publication::with([
             'authors.user',
             'publicationType',
@@ -698,21 +697,39 @@ class PublicationController extends Controller
             ]);
         }
 
-        // ✅ Sekarang $publication & $latestVersion sudah tersedia
+        // ── Guest page limit (harus konsisten dengan PdfStamper) ──
+        $isGuest         = !auth()->check();
+        $typeSlug        = $publication->publicationType?->slug ?? '';
+
+        // ✅ Map tipe → batas halaman (sama persis dengan PdfStamper::GUEST_PAGE_LIMITS)
+        $pageLimits = [
+            'jurnal' => 3,
+            'buku'   => 10,
+            'opini'  => 1,
+        ];
+        $defaultLimit = 3;
+        $pageLimit = $isGuest
+            ? ($pageLimits[$typeSlug] ?? $defaultLimit)
+            : null; // null = tidak dibatasi (user login)
+
         $pdfUrl = route('publikasi.pdf', $publication->slug)
             . '?t=' . ($latestVersion->updated_at?->timestamp ?? time());
 
         return view('pages.publication.read', [
-            'publication'      => $publication,
-            'pdfUrl'           => $pdfUrl,
-            'category'         => $publication->categories->first()?->name ?? 'Umum',
-            'publication_type' => $publication->publicationType->name ?? 'Publikasi',
-            'authors'          => $publication->authors->take(6)->map(fn($author) => [
+            'publication'         => $publication,
+            'pdfUrl'              => $pdfUrl,
+            'category'            => $publication->categories->first()?->name ?? 'Umum',
+            'publication_type'    => $publication->publicationType->name ?? 'Publikasi',
+            'authors'             => $publication->authors->take(6)->map(fn($author) => [
                 'id'       => $author->id,
                 'name'     => $author->name,
                 'initials' => $author->initials,
                 'photo'    => $author->photo_url,
             ]),
+            // ✅ Tambahan untuk guest gate di JS
+            'isGuest'             => $isGuest,
+            'pageLimit'           => $pageLimit,       // null jika sudah login
+            'publicationTypeSlug' => $typeSlug,
         ]);
     }
 

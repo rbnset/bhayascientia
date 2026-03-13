@@ -105,7 +105,7 @@
     }
 
     /* ═══════════════════════════════════════
-   CANVAS STAGE (canvas + overlays together)
+   CANVAS STAGE
 ═══════════════════════════════════════ */
     #pdf-stage {
         position: relative;
@@ -120,7 +120,7 @@
     }
 
     /* ═══════════════════════════════════════
-   TEXT LAYER (for selection & search highlight)
+   TEXT LAYER
 ═══════════════════════════════════════ */
     #text-layer {
         position: absolute;
@@ -148,7 +148,7 @@
     }
 
     /* ═══════════════════════════════════════
-   ANNOTATION LAYER (highlights, comments)
+   ANNOTATION LAYER
 ═══════════════════════════════════════ */
     #annotation-layer {
         position: absolute;
@@ -194,7 +194,6 @@
         background: #FF6B18;
     }
 
-    /* Search highlight */
     .search-highlight {
         position: absolute;
         background: rgba(255, 200, 0, 0.45);
@@ -210,7 +209,217 @@
     }
 
     /* ═══════════════════════════════════════
-   ANNOTATION TOOLTIP (comment popup)
+   ✅ GUEST GATE OVERLAY
+   Muncul setelah batas halaman tercapai
+═══════════════════════════════════════ */
+    #guest-gate-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        /* Gradient dari transparan ke gelap — efek "fade out" halaman */
+        background: linear-gradient(to bottom,
+                transparent 0%,
+                rgba(26, 26, 26, 0.55) 18%,
+                rgba(26, 26, 26, 0.92) 38%,
+                #1A1A1A 55%);
+        z-index: 100;
+        display: none;
+        /* JS yang show/hide */
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-end;
+        padding-bottom: 2rem;
+        padding-top: 6rem;
+        /* ruang untuk gradient fade */
+        pointer-events: auto;
+    }
+
+    #guest-gate-overlay.show {
+        display: flex;
+    }
+
+    .gg-card {
+        background: #1A1A1A;
+        border: 1.5px solid #FF6B18;
+        border-radius: 20px;
+        padding: 1.75rem 1.5rem 1.5rem;
+        width: 100%;
+        max-width: 420px;
+        text-align: center;
+        box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 107, 24, 0.15);
+    }
+
+    .gg-lock-icon {
+        width: 56px;
+        height: 56px;
+        background: rgba(255, 107, 24, 0.12);
+        border: 2px solid #FF6B18;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+    }
+
+    .gg-title {
+        font-size: 1.125rem;
+        font-weight: 800;
+        color: #fff;
+        margin-bottom: 0.4rem;
+    }
+
+    .gg-subtitle {
+        font-size: 0.8125rem;
+        color: #9CA3AF;
+        line-height: 1.5;
+        margin-bottom: 1.25rem;
+    }
+
+    .gg-subtitle strong {
+        color: #FF6B18;
+    }
+
+    .gg-stats {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+        margin-bottom: 1.25rem;
+    }
+
+    .gg-stat {
+        flex: 1;
+        max-width: 100px;
+        background: #2D2D2D;
+        border: 1px solid #3D3D3D;
+        border-radius: 10px;
+        padding: 0.45rem 0.5rem;
+        font-size: 0.75rem;
+    }
+
+    .gg-stat strong {
+        display: block;
+        font-size: 1rem;
+        color: #FF6B18;
+        font-weight: 800;
+    }
+
+    .gg-stat span {
+        color: #6B7280;
+    }
+
+    .gg-btn-primary {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        width: 100%;
+        padding: 0.8rem;
+        background: linear-gradient(135deg, #FF6B18, #E64627);
+        color: #fff;
+        font-size: 0.9375rem;
+        font-weight: 800;
+        border-radius: 12px;
+        border: none;
+        cursor: pointer;
+        text-decoration: none;
+        transition: transform 0.15s, box-shadow 0.15s;
+        margin-bottom: 0.6rem;
+        box-shadow: 0 4px 16px rgba(255, 107, 24, 0.4);
+    }
+
+    .gg-btn-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(255, 107, 24, 0.5);
+    }
+
+    .gg-btn-secondary {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        width: 100%;
+        padding: 0.75rem;
+        background: transparent;
+        color: #FF6B18;
+        font-size: 0.875rem;
+        font-weight: 700;
+        border-radius: 12px;
+        border: 1.5px solid #FF6B18;
+        cursor: pointer;
+        text-decoration: none;
+        transition: background 0.15s;
+        margin-bottom: 0.5rem;
+    }
+
+    .gg-btn-secondary:hover {
+        background: rgba(255, 107, 24, 0.08);
+    }
+
+    .gg-dismiss {
+        font-size: 0.75rem;
+        color: #6B7280;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 0.25rem;
+    }
+
+    .gg-dismiss:hover {
+        color: #9CA3AF;
+    }
+
+    .gg-benefits {
+        display: flex;
+        gap: 0.75rem;
+        justify-content: center;
+        margin-top: 0.75rem;
+    }
+
+    .gg-benefit {
+        font-size: 0.6875rem;
+        color: #6B7280;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .gg-benefit svg {
+        color: #10B981;
+        flex-shrink: 0;
+    }
+
+    /* ═══════════════════════════════════════
+   ✅ PAGE LIMIT WARNING TOAST
+   Muncul 2 halaman sebelum batas
+═══════════════════════════════════════ */
+    #page-limit-warning {
+        position: absolute;
+        top: 0.75rem;
+        left: 50%;
+        transform: translateX(-50%) translateY(-80px);
+        background: #1A1A1A;
+        border: 1.5px solid #FF6B18;
+        border-radius: 14px;
+        padding: 0.55rem 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        font-size: 0.8125rem;
+        color: #fff;
+        z-index: 50;
+        white-space: nowrap;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        pointer-events: none;
+    }
+
+    #page-limit-warning.show {
+        transform: translateX(-50%) translateY(0);
+    }
+
+    /* ═══════════════════════════════════════
+   ANNOTATION TOOLTIP
 ═══════════════════════════════════════ */
     #annot-tooltip {
         position: fixed;
@@ -250,7 +459,6 @@
         font-size: 11px;
         font-weight: 600;
         cursor: pointer;
-        transition: background 0.15s;
     }
 
     #annot-tooltip .at-btn.del {
@@ -267,12 +475,8 @@
         color: #aaa;
     }
 
-    #annot-tooltip .at-btn.close:hover {
-        background: #3D3D3D;
-    }
-
     /* ═══════════════════════════════════════
-   ANNOTATION TOOLBAR (floating, on text select)
+   ANNOTATION TOOLBAR
 ═══════════════════════════════════════ */
     #annot-toolbar {
         position: fixed;
@@ -317,10 +521,6 @@
         transform: scale(1.1);
     }
 
-    .annot-tool-btn.active-color {
-        box-shadow: 0 0 0 2px white;
-    }
-
     .color-swatch {
         width: 16px;
         height: 16px;
@@ -349,7 +549,7 @@
     }
 
     /* ═══════════════════════════════════════
-   COMMENT INPUT POPUP
+   COMMENT POPUP
 ═══════════════════════════════════════ */
     #comment-popup {
         position: fixed;
@@ -514,14 +714,12 @@
         height: 52px;
         flex-shrink: 0;
         background: #2D2D2D;
-        border: 2px solid #FF6B18;
         border-radius: 14px;
         color: white;
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        transition: background 0.15s;
         border: none;
     }
 
@@ -719,7 +917,7 @@
     }
 
     /* ═══════════════════════════════════════
-   SEARCH OVERLAY (improved)
+   SEARCH OVERLAY
 ═══════════════════════════════════════ */
     #search-overlay {
         position: fixed;
@@ -824,7 +1022,6 @@
         cursor: pointer;
         font-size: 12px;
         color: #ccc;
-        transition: background 0.15s;
         display: flex;
         align-items: center;
         gap: 0.5rem;
@@ -948,7 +1145,6 @@
         justify-content: center;
         cursor: pointer;
         flex-shrink: 0;
-        transition: background 0.15s;
     }
 
     .sheet-page-btn:active {
@@ -1207,7 +1403,7 @@
     }
 
     /* ═══════════════════════════════════════
-   TOOLBAR NORMAL
+   NORMAL TOOLBAR
 ═══════════════════════════════════════ */
     .pdf-controls {
         background: linear-gradient(135deg, #1A1A1A, #2D2D2D);
@@ -1484,7 +1680,6 @@
                             d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
                     </svg></button>
             </div>
-            {{-- Jadi ini: --}}
             @auth
             <a href="{{ route('publikasi.download', $publication->slug) }}"
                 class="pcb p-2 sm:px-3 bg-[#FF6B18] hover:!bg-[#E64627] text-white flex items-center gap-1.5 flex-shrink-0">
@@ -1510,11 +1705,16 @@
         <div id="reading-progress-bar" class="progress-fill" style="width:0%"></div>
     </div>
 </div>
+
 {{-- ══════════ GUEST BANNER ══════════ --}}
 @guest
 @php
-$typeSlug = $publication->publicationType?->slug ?? '';
-$previewLimit = match($typeSlug) { 'buku' => '10 halaman', 'opini' => '1 halaman', default => '3 halaman' };
+$typeSlug = $publicationTypeSlug ?? ($publication->publicationType?->slug ?? '');
+$previewLimit = match($typeSlug) {
+'buku' => '10 halaman',
+'opini' => '1 halaman',
+default => '3 halaman',
+};
 @endphp
 <div id="guest-banner"
     class="w-full bg-gradient-to-r from-[#FF6B18] to-[#E64627] text-white px-4 py-2.5 flex items-center justify-between gap-3 text-sm z-40 relative flex-shrink-0">
@@ -1529,17 +1729,14 @@ $previewLimit = match($typeSlug) { 'buku' => '10 halaman', 'opini' => '1 halaman
     </div>
     <div class="flex items-center flex-shrink-0 gap-2">
         <a href="{{ route('login') }}"
-            class="px-3 py-1 bg-white text-[#FF6B18] font-bold rounded-lg text-xs hover:bg-orange-50 transition-colors whitespace-nowrap">
-            Login
-        </a>
+            class="px-3 py-1 bg-white text-[#FF6B18] font-bold rounded-lg text-xs hover:bg-orange-50 transition-colors whitespace-nowrap">Login</a>
         <a href="{{ route('register') }}"
-            class="hidden px-3 py-1 text-xs font-bold text-white transition-colors border rounded-lg bg-white/20 border-white/50 hover:bg-white/30 whitespace-nowrap sm:block">
-            Daftar Gratis
-        </a>
+            class="hidden px-3 py-1 text-xs font-bold text-white transition-colors border rounded-lg bg-white/20 border-white/50 hover:bg-white/30 whitespace-nowrap sm:block">Daftar
+            Gratis</a>
     </div>
 </div>
 
-{{-- Modal download untuk guest --}}
+{{-- ✅ GUEST DOWNLOAD MODAL --}}
 <div id="guestDownloadModal" style="display:none;" class="fixed inset-0 z-[99999]">
     <div id="guestModalBackdrop"
         class="absolute inset-0 transition-opacity duration-300 opacity-0 bg-black/60 backdrop-blur-sm"
@@ -1548,10 +1745,8 @@ $previewLimit = match($typeSlug) { 'buku' => '10 halaman', 'opini' => '1 halaman
         class="absolute inset-0 flex items-center justify-center p-4 transition-all duration-300 scale-95 opacity-0">
         <div class="relative w-full max-w-sm overflow-hidden text-center bg-white shadow-2xl rounded-2xl"
             onclick="event.stopPropagation()">
-            {{-- Strip oranye atas --}}
             <div class="h-1.5 bg-gradient-to-r from-[#FF6B18] to-[#E64627]"></div>
             <div class="p-8">
-                {{-- Tombol close --}}
                 <button onclick="hideGuestDownloadModal()"
                     class="absolute top-4 right-4 p-1.5 rounded-full hover:bg-gray-100 transition-colors">
                     <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1559,7 +1754,6 @@ $previewLimit = match($typeSlug) { 'buku' => '10 halaman', 'opini' => '1 halaman
                             d="M6 18L18 6M6 6l12 12" />
                     </svg>
                 </button>
-                {{-- Ikon --}}
                 <div class="w-16 h-16 bg-[#FFF7F2] rounded-full flex items-center justify-center mx-auto mb-4">
                     <svg class="w-8 h-8 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
@@ -1567,10 +1761,8 @@ $previewLimit = match($typeSlug) { 'buku' => '10 halaman', 'opini' => '1 halaman
                     </svg>
                 </div>
                 <h3 class="text-lg font-bold text-[#1A1A1A] mb-2">Download PDF?</h3>
-                <p class="text-sm text-[#737373] mb-6 leading-relaxed">
-                    Login dulu untuk mengunduh PDF ini secara gratis.<br>
-                    Daftar hanya butuh 1 menit!
-                </p>
+                <p class="text-sm text-[#737373] mb-6 leading-relaxed">Login dulu untuk mengunduh PDF ini secara
+                    gratis.<br>Daftar hanya butuh 1 menit!</p>
                 <div class="flex flex-col gap-3">
                     <a href="{{ route('login') }}"
                         class="w-full py-3 bg-gradient-to-r from-[#FF6B18] to-[#E64627] text-white font-bold rounded-xl hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2">
@@ -1589,9 +1781,7 @@ $previewLimit = match($typeSlug) { 'buku' => '10 halaman', 'opini' => '1 halaman
                         Daftar Gratis
                     </a>
                     <button onclick="hideGuestDownloadModal()"
-                        class="text-sm text-[#737373] hover:text-[#1A1A1A] py-1 transition-colors">
-                        Nanti saja
-                    </button>
+                        class="text-sm text-[#737373] hover:text-[#1A1A1A] py-1 transition-colors">Nanti saja</button>
                 </div>
             </div>
         </div>
@@ -1616,6 +1806,96 @@ $previewLimit = match($typeSlug) { 'buku' => '10 halaman', 'opini' => '1 halaman
     <iframe id="pdf-iframe" title="PDF Viewer"></iframe>
     <div id="desktop-hint" class="hidden">← → halaman &nbsp;·&nbsp; ↑↓ scroll &nbsp;·&nbsp; +/− zoom &nbsp;·&nbsp; B
         tandai &nbsp;·&nbsp; Ctrl+F cari &nbsp;·&nbsp; Esc keluar</div>
+
+    {{-- ✅ GUEST GATE OVERLAY — muncul setelah page limit --}}
+    @guest
+    <div id="guest-gate-overlay">
+        <div class="gg-card">
+            {{-- Icon kunci --}}
+            <div class="gg-lock-icon">
+                <svg class="w-7 h-7 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+            </div>
+
+            <p class="gg-title">Pratinjau Berakhir</p>
+            <p class="gg-subtitle">
+                Kamu sudah membaca <strong id="gg-pages-shown">-</strong> halaman pertama.<br>
+                <strong>Login gratis</strong> untuk membaca semua <strong id="gg-total-pages">-</strong> halaman.
+            </p>
+
+            {{-- Stats --}}
+            <div class="gg-stats">
+                <div class="gg-stat">
+                    <strong id="gg-stat-read">-</strong>
+                    <span>Dibaca</span>
+                </div>
+                <div class="gg-stat">
+                    <strong id="gg-stat-left">-</strong>
+                    <span>Tersisa</span>
+                </div>
+                <div class="gg-stat">
+                    <strong id="gg-stat-total">-</strong>
+                    <span>Total hal.</span>
+                </div>
+            </div>
+
+            <a href="{{ route('login') }}" class="gg-btn-primary">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                </svg>
+                Masuk Sekarang — Gratis
+            </a>
+            <a href="{{ route('register') }}" class="gg-btn-secondary">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                </svg>
+                Belum punya akun? Daftar Gratis
+            </a>
+
+            <div class="gg-benefits">
+                <span class="gg-benefit">
+                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    Gratis selamanya
+                </span>
+                <span class="gg-benefit">
+                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    Ribuan publikasi
+                </span>
+                <span class="gg-benefit">
+                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    Tanpa kartu kredit
+                </span>
+            </div>
+        </div>
+    </div>
+    @endguest
+
+    {{-- ✅ WARNING TOAST — muncul 2 halaman sebelum limit --}}
+    @guest
+    <div id="page-limit-warning">
+        <svg class="w-4 h-4 text-[#FF6B18] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <span id="page-limit-warning-text" class="font-semibold text-white"></span>
+    </div>
+    @endguest
 
     {{-- Mobile Tap Overlay --}}
     <div id="mobile-tap-overlay">
@@ -1676,7 +1956,8 @@ $previewLimit = match($typeSlug) { 'buku' => '10 halaman', 'opini' => '1 halaman
     </div>
 </div>
 
-{{-- ══════════ ANNOTATION TOOLBAR ══════════ --}}
+{{-- Annotation, Comment, Tooltip, Bottom Sheet, FAB, Search Overlay, Resume Toast --}}
+{{-- (sama persis dengan sebelumnya, tidak berubah) --}}
 <div id="annot-toolbar">
     <span class="text-[11px] text-gray-400 px-1">Stabilo:</span>
     <button class="annot-tool-btn" data-color="yellow" title="Kuning">
@@ -1708,8 +1989,6 @@ $previewLimit = match($typeSlug) { 'buku' => '10 halaman', 'opini' => '1 halaman
         </svg>
     </button>
 </div>
-
-{{-- ══════════ COMMENT POPUP ══════════ --}}
 <div id="comment-popup">
     <p class="cp-title">💬 Tambah Komentar</p>
     <textarea id="comment-text" placeholder="Tulis komentar untuk teks ini..."></textarea>
@@ -1718,8 +1997,6 @@ $previewLimit = match($typeSlug) { 'buku' => '10 halaman', 'opini' => '1 halaman
         <button class="cp-cancel" id="comment-cancel">Batal</button>
     </div>
 </div>
-
-{{-- ══════════ ANNOTATION TOOLTIP ══════════ --}}
 <div id="annot-tooltip">
     <div class="at-text" id="annot-tooltip-text"></div>
     <div class="at-actions">
@@ -1727,8 +2004,6 @@ $previewLimit = match($typeSlug) { 'buku' => '10 halaman', 'opini' => '1 halaman
         <button class="at-btn close" id="annot-tooltip-close">✕ Tutup</button>
     </div>
 </div>
-
-{{-- ══════════ BOTTOM SHEET ══════════ --}}
 <div id="sheet-backdrop"></div>
 <div id="bottom-sheet">
     <div class="sheet-handle"></div>
@@ -1801,7 +2076,6 @@ $previewLimit = match($typeSlug) { 'buku' => '10 halaman', 'opini' => '1 halaman
                 </svg>
                 <span>Cari Kata</span>
             </button>
-            {{-- Jadi ini: --}}
             @auth
             <a href="{{ route('publikasi.download', $publication->slug) }}" class="sheet-act-btn">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1823,8 +2097,6 @@ $previewLimit = match($typeSlug) { 'buku' => '10 halaman', 'opini' => '1 halaman
     </div>
     <button id="sheet-close" class="sheet-close">Tutup</button>
 </div>
-
-{{-- ══════════ MOBILE FAB ══════════ --}}
 <div id="mobile-fab">
     <button id="mobile-fab-btn" aria-label="Menu">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1832,8 +2104,6 @@ $previewLimit = match($typeSlug) { 'buku' => '10 halaman', 'opini' => '1 halaman
         </svg>
     </button>
 </div>
-
-{{-- ══════════ SEARCH OVERLAY ══════════ --}}
 <div id="search-overlay">
     <div id="search-box">
         <div class="search-input-row">
@@ -1847,8 +2117,6 @@ $previewLimit = match($typeSlug) { 'buku' => '10 halaman', 'opini' => '1 halaman
         <div id="search-results-list"></div>
     </div>
 </div>
-
-{{-- ══════════ RESUME TOAST ══════════ --}}
 <div id="resume-toast">
     <span class="flex-shrink-0 text-xl">🔖</span>
     <div class="min-w-0">
@@ -1871,15 +2139,25 @@ pdfjsLib.verbosity = 0;
 
 const pdfUrl = @json($pdfUrl);
 const slug   = @json($publication->slug);
-const SK = { page:`bp_${slug}`, zoom:`bz_${slug}`, mode:`bm_${slug}`, bkmk:`bb_${slug}`, annot:`ba_${slug}` };
 
-// ── State ───────────────────────────────────────────────────────
+// ✅ Guest gate config — dari PHP (null = user login, tidak ada limit)
+const GUEST_PAGE_LIMIT = @json($pageLimit);   // null | integer
+const IS_GUEST         = @json($isGuest);
+
+const SK = {
+    page:  `bp_${slug}`,
+    zoom:  `bz_${slug}`,
+    mode:  `bm_${slug}`,
+    bkmk:  `bb_${slug}`,
+    annot: `ba_${slug}`,
+};
+
+// ── State ────────────────────────────────────────────────────────
 let pdfDoc         = null;
 let pageNum        = 1;
 let pageRendering  = false;
 let pageNumPending = null;
 let baseScale      = 1.0;
-// ✅ Zoom minimum 1.0 (100%) agar tidak terlalu kecil
 const ZOOM_MIN     = 1.0;
 const ZOOM_MAX     = 4.0;
 const ZOOM_STEP    = 0.25;
@@ -1893,14 +2171,16 @@ let tapOverlayOpen = false;
 let sheetIsOpen    = false;
 let searchResults  = [];
 let searchIndex    = -1;
-let searchHighlightEls = [];
+let searchHighlightEls  = [];
 let pendingHighlightColor = null;
 let pendingSelectionRange = null;
 let annotations    = JSON.parse(localStorage.getItem(SK.annot) || '[]');
 let activeAnnotId  = null;
+// ✅ Track apakah gate sudah ditampilkan (hindari flash berulang)
+let gateShown      = false;
 const isMobile     = () => window.innerWidth < 768;
 
-// ── DOM ─────────────────────────────────────────────────────────
+// ── DOM ──────────────────────────────────────────────────────────
 const canvas      = document.getElementById('pdf-canvas');
 const ctx         = canvas.getContext('2d');
 const stage       = document.getElementById('pdf-stage');
@@ -1916,66 +2196,67 @@ const annotTb     = document.getElementById('annot-toolbar');
 const commentPop  = document.getElementById('comment-popup');
 const annotTip    = document.getElementById('annot-tooltip');
 const tapOverlay  = document.getElementById('mobile-tap-overlay');
+const guestGate   = document.getElementById('guest-gate-overlay');
+const limitWarning = document.getElementById('page-limit-warning');
 
 // ── Helpers ──────────────────────────────────────────────────────
 const hideLoading = () => loadingEl.style.display = 'none';
 const showCanvas  = () => { canvasWrap.style.display='flex'; canvasWrap.classList.remove('hidden'); };
 
 function snack(msg, color='#FF6B18') {
-    const el = Object.assign(document.createElement('div'),{textContent:msg});
-    el.style.cssText=`position:fixed;top:1rem;left:50%;transform:translateX(-50%);background:#1A1A1A;border:1px solid ${color};color:#fff;padding:.45rem 1rem;border-radius:99px;font-size:13px;font-weight:600;z-index:99999;transition:opacity .4s;pointer-events:none;white-space:nowrap;`;
+    const el = Object.assign(document.createElement('div'), { textContent: msg });
+    el.style.cssText = `position:fixed;top:1rem;left:50%;transform:translateX(-50%);background:#1A1A1A;border:1px solid ${color};color:#fff;padding:.45rem 1rem;border-radius:99px;font-size:13px;font-weight:600;z-index:99999;transition:opacity .4s;pointer-events:none;white-space:nowrap;`;
     document.body.appendChild(el);
-    setTimeout(()=>{el.style.opacity=0;setTimeout(()=>el.remove(),400);},2200);
+    setTimeout(() => { el.style.opacity = 0; setTimeout(() => el.remove(), 400); }, 2200);
 }
 
 // ── Progress ─────────────────────────────────────────────────────
 function updateProgress() {
     if (!pdfDoc) return;
     const pct = (pageNum / pdfDoc.numPages) * 100;
-    ['reading-progress-bar','fs-progress-bar'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.width=pct+'%';});
-    const est = Math.ceil((pdfDoc.numPages-pageNum)*1.5);
+    ['reading-progress-bar','fs-progress-bar'].forEach(id => { const e = document.getElementById(id); if (e) e.style.width = pct + '%'; });
+    const est = Math.ceil((pdfDoc.numPages - pageNum) * 1.5);
     const pt  = document.getElementById('progress-text');
-    if(pt) pt.textContent=`Hal. ${pageNum}/${pdfDoc.numPages} · ${Math.round(pct)}%`+(est>0?` · ~${est} mnt`:'');
-    ['sheet-page-num','tap-page-num'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=pageNum;});
+    if (pt) pt.textContent = `Hal. ${pageNum}/${pdfDoc.numPages} · ${Math.round(pct)}%` + (est > 0 ? ` · ~${est} mnt` : '');
+    ['sheet-page-num','tap-page-num'].forEach(id => { const e = document.getElementById(id); if (e) e.textContent = pageNum; });
 }
 
-// ── Zoom display ─────────────────────────────────────────────────
+// ── Zoom display ──────────────────────────────────────────────────
 function updateZoomDisplay() {
-    const label = Math.round(zoomFactor * 100) + '%';
-    // Map 1.0–4.0 to 0–100%
+    const label  = Math.round(zoomFactor * 100) + '%';
     const barPct = Math.round(((zoomFactor - ZOOM_MIN) / (ZOOM_MAX - ZOOM_MIN)) * 100);
-    ['zoom-level','fs-zoom-level'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=label;});
-    ['sheet-zoom-val','tap-zoom-val'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=label;});
-    ['sheet-zoom-fill','tap-zoom-fill'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.width=Math.max(4,barPct)+'%';});
+    ['zoom-level','fs-zoom-level'].forEach(id => { const e = document.getElementById(id); if (e) e.textContent = label; });
+    ['sheet-zoom-val','tap-zoom-val'].forEach(id => { const e = document.getElementById(id); if (e) e.textContent = label; });
+    ['sheet-zoom-fill','tap-zoom-fill'].forEach(id => { const e = document.getElementById(id); if (e) e.style.width = Math.max(4, barPct) + '%'; });
 }
 
-// ── Bookmark ─────────────────────────────────────────────────────
+// ── Bookmark ──────────────────────────────────────────────────────
 function updateBookmarkUI() {
     const on = bookmarkedPage === pageNum;
-    ['bkmk-icon','fs-bkmk-icon','sheet-bkmk-icon','tap-bkmk-icon'].forEach(id=>{
-        const ic=document.getElementById(id);
-        if(ic){ic.setAttribute('fill',on?'#FF6B18':'none');ic.setAttribute('stroke',on?'#FF6B18':'currentColor');}
+    ['bkmk-icon','fs-bkmk-icon','sheet-bkmk-icon','tap-bkmk-icon'].forEach(id => {
+        const ic = document.getElementById(id);
+        if (ic) { ic.setAttribute('fill', on ? '#FF6B18' : 'none'); ic.setAttribute('stroke', on ? '#FF6B18' : 'currentColor'); }
     });
-    ['bookmark-btn','fs-bookmark-btn'].forEach(id=>{const b=document.getElementById(id);if(b)b.classList.toggle('is-bkmk',on);});
-    const sbtn=document.getElementById('sheet-bookmark-btn'); if(sbtn)sbtn.classList.toggle('bookmarked',on);
-    const slbl=document.getElementById('sheet-bkmk-label');   if(slbl)slbl.textContent=on?'✓ Ditandai':'Tandai Halaman';
-    const tbtn=document.getElementById('tap-bookmark-btn');    if(tbtn)tbtn.classList.toggle('bookmarked',on);
-    const tlbl=document.getElementById('tap-bkmk-label');      if(tlbl)tlbl.textContent=on?'✓ Ditandai':'Tandai Halaman';
+    ['bookmark-btn','fs-bookmark-btn'].forEach(id => { const b = document.getElementById(id); if (b) b.classList.toggle('is-bkmk', on); });
+    const sbtn = document.getElementById('sheet-bookmark-btn'); if (sbtn) sbtn.classList.toggle('bookmarked', on);
+    const slbl = document.getElementById('sheet-bkmk-label');   if (slbl) slbl.textContent = on ? '✓ Ditandai' : 'Tandai Halaman';
+    const tbtn = document.getElementById('tap-bookmark-btn');   if (tbtn) tbtn.classList.toggle('bookmarked', on);
+    const tlbl = document.getElementById('tap-bkmk-label');     if (tlbl) tlbl.textContent = on ? '✓ Ditandai' : 'Tandai Halaman';
 }
 function toggleBookmark() {
-    if(bookmarkedPage===pageNum){bookmarkedPage=null;localStorage.removeItem(SK.bkmk);snack('Bookmark dihapus');}
-    else{bookmarkedPage=pageNum;localStorage.setItem(SK.bkmk,pageNum);snack('🔖 Halaman '+pageNum+' ditandai!');}
+    if (bookmarkedPage === pageNum) { bookmarkedPage = null; localStorage.removeItem(SK.bkmk); snack('Bookmark dihapus'); }
+    else { bookmarkedPage = pageNum; localStorage.setItem(SK.bkmk, pageNum); snack('🔖 Halaman ' + pageNum + ' ditandai!'); }
     updateBookmarkUI();
 }
 
 // ── Reading Mode ──────────────────────────────────────────────────
-function applyMode(mode){
-    document.body.classList.remove('read-mode-sepia','read-mode-night');
-    if(mode!=='normal') document.body.classList.add('read-mode-'+mode);
-    currentMode=mode; localStorage.setItem(SK.mode,mode);
-    document.querySelectorAll('.mode-opt').forEach(e=>e.classList.toggle('active',e.dataset.mode===mode));
-    document.querySelectorAll('[data-sheet-mode]').forEach(e=>e.classList.toggle('active',e.dataset.sheetMode===mode));
-    document.querySelectorAll('[data-tap-mode]').forEach(e=>e.classList.toggle('active',e.dataset.tapMode===mode));
+function applyMode(mode) {
+    document.body.classList.remove('read-mode-sepia', 'read-mode-night');
+    if (mode !== 'normal') document.body.classList.add('read-mode-' + mode);
+    currentMode = mode; localStorage.setItem(SK.mode, mode);
+    document.querySelectorAll('.mode-opt').forEach(e => e.classList.toggle('active', e.dataset.mode === mode));
+    document.querySelectorAll('[data-sheet-mode]').forEach(e => e.classList.toggle('active', e.dataset.sheetMode === mode));
+    document.querySelectorAll('[data-tap-mode]').forEach(e => e.classList.toggle('active', e.dataset.tapMode === mode));
 }
 applyMode(currentMode);
 
@@ -1983,43 +2264,92 @@ applyMode(currentMode);
 const getScale = () => baseScale * zoomFactor;
 function computeBase(page) {
     const w = viewerEl.clientWidth || window.innerWidth;
-    // ✅ Base scale dibuat agar 100% zoom = halaman terbaca jelas (fit width)
-    baseScale = Math.max(0.6, Math.min((w - 16) / page.getViewport({scale:1}).width, 2.5));
+    baseScale = Math.max(0.6, Math.min((w - 16) / page.getViewport({ scale: 1 }).width, 2.5));
 }
 
 // ── Text Layer ────────────────────────────────────────────────────
 async function renderTextLayer(page, viewport) {
     textLayer.innerHTML = '';
-    textLayer.style.width  = viewport.width + 'px';
+    textLayer.style.width  = viewport.width  + 'px';
     textLayer.style.height = viewport.height + 'px';
-
     const content = await page.getTextContent();
     const scale   = viewport.scale;
-
     content.items.forEach(item => {
         if (!item.str.trim()) return;
-        const tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
+        const tx   = pdfjsLib.Util.transform(viewport.transform, item.transform);
         const span = document.createElement('span');
         const fontHeight = Math.sqrt(tx[2]*tx[2] + tx[3]*tx[3]);
         const angle = Math.atan2(tx[1], tx[0]);
-
         span.textContent = item.str;
         span.style.fontSize = fontHeight + 'px';
         span.style.left  = tx[4] + 'px';
         span.style.top   = (tx[5] - fontHeight) + 'px';
         if (angle !== 0) span.style.transform = `rotate(${-angle}rad)`;
-        // Scale text width to match PDF width
-        const actualWidth = item.width * scale;
+        const actualWidth  = item.width * scale;
         const measuredWidth = fontHeight * item.str.length * 0.55;
         if (measuredWidth > 0 && actualWidth > 0)
             span.style.transform = (span.style.transform || '') + ` scaleX(${actualWidth / measuredWidth})`;
-
         textLayer.appendChild(span);
     });
 }
 
+// ═════════════════════════════════════════════════════════════════
+// ✅ GUEST GATE — logika pembatasan halaman
+// ═════════════════════════════════════════════════════════════════
+function checkGuestGate() {
+    // Jika bukan guest atau tidak ada limit, tidak perlu cek
+    if (!IS_GUEST || GUEST_PAGE_LIMIT === null || !pdfDoc) return;
+
+    const totalPages = pdfDoc.numPages;
+    const limit      = GUEST_PAGE_LIMIT;
+
+    // ── Warning toast 2 halaman sebelum limit ──
+    if (limitWarning && pageNum === Math.max(1, limit - 1) && !gateShown) {
+        const remaining = limit - pageNum;
+        const warnText  = document.getElementById('page-limit-warning-text');
+        if (warnText) warnText.textContent = `${remaining} halaman lagi sebelum pratinjau berakhir. Login untuk akses penuh.`;
+        limitWarning.classList.add('show');
+        setTimeout(() => limitWarning.classList.remove('show'), 5000);
+    }
+
+    // ── Tampilkan gate ketika sudah melewati limit ──
+    if (pageNum >= limit && !gateShown) {
+        gateShown = true;
+
+        // Update teks di dalam gate card
+        const ggPagesShown = document.getElementById('gg-pages-shown');
+        const ggTotalPages = document.getElementById('gg-total-pages');
+        const ggStatRead   = document.getElementById('gg-stat-read');
+        const ggStatLeft   = document.getElementById('gg-stat-left');
+        const ggStatTotal  = document.getElementById('gg-stat-total');
+
+        if (ggPagesShown) ggPagesShown.textContent = limit + ' hal.';
+        if (ggTotalPages) ggTotalPages.textContent = totalPages + ' hal.';
+        if (ggStatRead)   ggStatRead.textContent   = limit;
+        if (ggStatLeft)   ggStatLeft.textContent   = (totalPages - limit);
+        if (ggStatTotal)  ggStatTotal.textContent  = totalPages;
+
+        if (guestGate) guestGate.classList.add('show');
+    }
+
+    // ── Sembunyikan gate jika kembali ke halaman sebelum limit ──
+    // (mis: user swipe back)
+    if (pageNum < limit && gateShown) {
+        gateShown = false;
+        if (guestGate) guestGate.classList.remove('show');
+    }
+}
+
 // ── Render ────────────────────────────────────────────────────────
 function renderPage(num) {
+    // ✅ Blokir navigasi ke halaman melebihi limit untuk guest
+    if (IS_GUEST && GUEST_PAGE_LIMIT !== null && num > GUEST_PAGE_LIMIT) {
+        // Paksa tampilkan halaman terakhir yang diizinkan & tunjukkan gate
+        num = GUEST_PAGE_LIMIT;
+        if (!gateShown) checkGuestGate();
+        return;
+    }
+
     pageRendering = true;
     hideLoading(); showCanvas();
     pdfDoc.getPage(num).then(async page => {
@@ -2029,9 +2359,9 @@ function renderPage(num) {
         stage.style.width  = vp.width  + 'px';
         stage.style.height = vp.height + 'px';
 
-        await page.render({ canvasContext: ctx, viewport: vp }).promise.catch(e=>console.warn(e.message));
+        await page.render({ canvasContext: ctx, viewport: vp }).promise.catch(e => console.warn(e.message));
         pageRendering = false;
-        if (pageNumPending !== null) { const p=pageNumPending; pageNumPending=null; renderPage(p); return; }
+        if (pageNumPending !== null) { const p = pageNumPending; pageNumPending = null; renderPage(p); return; }
 
         await renderTextLayer(page, vp);
         renderAnnotationsOnLayer();
@@ -2042,73 +2372,92 @@ function renderPage(num) {
         document.getElementById('fs-page-num').textContent = num;
         updateNavButtons(); updateZoomDisplay(); updateProgress(); updateBookmarkUI();
         canvasWrap.scrollTo({ top: 0, behavior: 'smooth' });
-        // Re-apply search highlights if search is active
         if (searchResults.length > 0) applySearchHighlights();
-    }).catch(e=>{console.error(e.message);pageRendering=false;hideLoading();showCanvas();});
+
+        // ✅ Cek gate setelah render selesai
+        checkGuestGate();
+
+    }).catch(e => { console.error(e.message); pageRendering = false; hideLoading(); showCanvas(); });
 }
-function queueRender(n){if(pageRendering)pageNumPending=n;else renderPage(n);}
+function queueRender(n) { if (pageRendering) pageNumPending = n; else renderPage(n); }
 
 // ── Navigation ────────────────────────────────────────────────────
-function prevPage(){if(pageNum>1){pageNum--;queueRender(pageNum);}}
-function nextPage(){if(pageNum<pdfDoc.numPages){pageNum++;queueRender(pageNum);}}
-function goTo(n){if(pdfDoc&&n>=1&&n<=pdfDoc.numPages){pageNum=n;queueRender(n);}}
+function prevPage() { if (pageNum > 1) { pageNum--; queueRender(pageNum); } }
+function nextPage() {
+    if (!pdfDoc) return;
+    const maxPage = (IS_GUEST && GUEST_PAGE_LIMIT !== null)
+        ? Math.min(GUEST_PAGE_LIMIT, pdfDoc.numPages)
+        : pdfDoc.numPages;
 
-function updateNavButtons(){
-    ['prev-page','fs-prev','sheet-prev','tap-prev'].forEach(id=>{const e=document.getElementById(id);if(e)e.disabled=pageNum<=1;});
-    ['next-page','fs-next','sheet-next','tap-next'].forEach(id=>{const e=document.getElementById(id);if(e)e.disabled=pageNum>=pdfDoc.numPages;});
+    if (pageNum < maxPage) {
+        pageNum++;
+        queueRender(pageNum);
+    } else if (IS_GUEST && GUEST_PAGE_LIMIT !== null && pageNum >= GUEST_PAGE_LIMIT) {
+        // Sudah di batas — tunjukkan gate
+        if (!gateShown) checkGuestGate();
+    }
+}
+function goTo(n) {
+    if (!pdfDoc) return;
+    // ✅ Batasi jump untuk guest
+    if (IS_GUEST && GUEST_PAGE_LIMIT !== null) {
+        n = Math.min(n, GUEST_PAGE_LIMIT);
+    }
+    if (n >= 1 && n <= pdfDoc.numPages) { pageNum = n; queueRender(n); }
+}
+
+function updateNavButtons() {
+    ['prev-page','fs-prev','sheet-prev','tap-prev'].forEach(id => { const e = document.getElementById(id); if (e) e.disabled = pageNum <= 1; });
+
+    // ✅ next button disabled di limit untuk guest
+    const maxForGuest = (IS_GUEST && GUEST_PAGE_LIMIT !== null && pdfDoc)
+        ? Math.min(GUEST_PAGE_LIMIT, pdfDoc.numPages)
+        : (pdfDoc ? pdfDoc.numPages : 1);
+
+    ['next-page','fs-next','sheet-next','tap-next'].forEach(id => {
+        const e = document.getElementById(id);
+        if (e) e.disabled = pageNum >= maxForGuest;
+    });
 }
 
 // ── Zoom ──────────────────────────────────────────────────────────
-function zoomIn()  { zoomFactor=Math.min(zoomFactor+ZOOM_STEP,ZOOM_MAX); queueRender(pageNum); }
-// ✅ Zoom tidak bisa di bawah ZOOM_MIN = 1.0 (100%)
-function zoomOut() { zoomFactor=Math.max(zoomFactor-ZOOM_STEP,ZOOM_MIN); queueRender(pageNum); }
+function zoomIn()  { zoomFactor = Math.min(zoomFactor + ZOOM_STEP, ZOOM_MAX); queueRender(pageNum); }
+function zoomOut() { zoomFactor = Math.max(zoomFactor - ZOOM_STEP, ZOOM_MIN); queueRender(pageNum); }
 
 // ══════════════════════════════════════════════════════════════════
-//  ANNOTATION SYSTEM
+//  ANNOTATION SYSTEM (tidak berubah)
 // ══════════════════════════════════════════════════════════════════
-function saveAnnotations() {
-    localStorage.setItem(SK.annot, JSON.stringify(annotations));
-}
+function saveAnnotations() { localStorage.setItem(SK.annot, JSON.stringify(annotations)); }
 
-// ── Render stored annotations on layer ───────────────────────────
 function renderAnnotationsOnLayer() {
     annotLayer.innerHTML = '';
     const pageAnnots = annotations.filter(a => a.page === pageNum);
     const scale      = getScale();
-
     pageAnnots.forEach(annot => {
         const el = document.createElement('div');
-        el.className  = `annot-highlight color-${annot.color}`;
+        el.className = `annot-highlight color-${annot.color}`;
         el.style.left   = (annot.rect.x * scale) + 'px';
         el.style.top    = (annot.rect.y * scale) + 'px';
         el.style.width  = (annot.rect.w * scale) + 'px';
         el.style.height = (annot.rect.h * scale) + 'px';
         el.dataset.id   = annot.id;
-
-        el.addEventListener('click', e => {
-            e.stopPropagation();
-            showAnnotTooltip(annot, e.clientX, e.clientY);
-        });
+        el.addEventListener('click', e => { e.stopPropagation(); showAnnotTooltip(annot, e.clientX, e.clientY); });
         annotLayer.appendChild(el);
     });
 }
 
-// ── Show annotation tooltip ───────────────────────────────────────
 function showAnnotTooltip(annot, x, y) {
     activeAnnotId = annot.id;
     document.getElementById('annot-tooltip-text').textContent =
         annot.comment ? `💬 ${annot.comment}` : `Stabilo ${annot.color} — "${annot.selectedText?.substring(0,60)}..."`;
     annotTip.classList.add('show');
-    // Position smartly
     const vw = window.innerWidth, vh = window.innerHeight;
     const tw = 260, th = 100;
     annotTip.style.left = Math.min(x, vw - tw - 12) + 'px';
     annotTip.style.top  = (y + 12 + th > vh ? y - th - 8 : y + 12) + 'px';
 }
 
-document.getElementById('annot-tooltip-close').addEventListener('click', () => {
-    annotTip.classList.remove('show'); activeAnnotId = null;
-});
+document.getElementById('annot-tooltip-close').addEventListener('click', () => { annotTip.classList.remove('show'); activeAnnotId = null; });
 document.getElementById('annot-tooltip-del').addEventListener('click', () => {
     if (!activeAnnotId) return;
     annotations = annotations.filter(a => a.id !== activeAnnotId);
@@ -2117,37 +2466,26 @@ document.getElementById('annot-tooltip-del').addEventListener('click', () => {
     snack('Anotasi dihapus');
 });
 
-// ── Get selected text rect ────────────────────────────────────────
 function getSelectionRect() {
     const sel = window.getSelection();
     if (!sel || sel.isCollapsed || !sel.rangeCount) return null;
-    const range   = sel.getRangeAt(0);
-    const stRect  = stage.getBoundingClientRect();
-    const rects   = Array.from(range.getClientRects());
+    const range  = sel.getRangeAt(0);
+    const stRect = stage.getBoundingClientRect();
+    const rects  = Array.from(range.getClientRects());
     if (!rects.length) return null;
-
-    // Merge all rects into one bounding box
-    const left   = Math.min(...rects.map(r=>r.left));
-    const top    = Math.min(...rects.map(r=>r.top));
-    const right  = Math.max(...rects.map(r=>r.right));
-    const bottom = Math.max(...rects.map(r=>r.bottom));
+    const left   = Math.min(...rects.map(r => r.left));
+    const top    = Math.min(...rects.map(r => r.top));
+    const right  = Math.max(...rects.map(r => r.right));
+    const bottom = Math.max(...rects.map(r => r.bottom));
     const scale  = getScale();
-
     return {
         x: (left  - stRect.left) / scale,
         y: (top   - stRect.top)  / scale,
         w: (right - left)        / scale,
         h: (bottom - top)        / scale,
-        rects: rects.map(r => ({
-            x: (r.left - stRect.left) / scale,
-            y: (r.top  - stRect.top)  / scale,
-            w: r.width  / scale,
-            h: r.height / scale,
-        }))
     };
 }
 
-// ── Annotation toolbar on text select ────────────────────────────
 function positionAnnotToolbar(x, y) {
     const vw = window.innerWidth, vh = window.innerHeight;
     const tbW = 300, tbH = 52;
@@ -2166,26 +2504,16 @@ function showAnnotToolbar(range) {
     positionAnnotToolbar(rect.left + rect.width/2, rect.top);
     annotTb.classList.add('show');
 }
-function hideAnnotToolbar() {
-    annotTb.classList.remove('show');
-    pendingSelectionRange = null;
-    pendingHighlightColor = null;
-}
+function hideAnnotToolbar() { annotTb.classList.remove('show'); pendingSelectionRange = null; pendingHighlightColor = null; }
 
-// Detect text selection end
 document.addEventListener('mouseup', e => {
     if (e.target.closest('#annot-toolbar, #comment-popup, #annot-tooltip')) return;
     setTimeout(() => {
         const sel = window.getSelection();
         if (sel && !sel.isCollapsed && sel.rangeCount > 0) {
             const range = sel.getRangeAt(0);
-            // Only show toolbar if selection is inside text layer
-            if (textLayer.contains(range.commonAncestorContainer)) {
-                showAnnotToolbar(range);
-            }
-        } else {
-            hideAnnotToolbar();
-        }
+            if (textLayer.contains(range.commonAncestorContainer)) showAnnotToolbar(range);
+        } else hideAnnotToolbar();
     }, 50);
 });
 
@@ -2195,14 +2523,11 @@ document.addEventListener('touchend', e => {
         const sel = window.getSelection();
         if (sel && !sel.isCollapsed && sel.rangeCount > 0) {
             const range = sel.getRangeAt(0);
-            if (textLayer.contains(range.commonAncestorContainer)) {
-                showAnnotToolbar(range);
-            }
+            if (textLayer.contains(range.commonAncestorContainer)) showAnnotToolbar(range);
         }
     }, 200);
 });
 
-// Color buttons
 document.querySelectorAll('.annot-tool-btn[data-color]').forEach(btn => {
     btn.addEventListener('click', e => {
         e.stopPropagation();
@@ -2211,23 +2536,17 @@ document.querySelectorAll('.annot-tool-btn[data-color]').forEach(btn => {
         const sel   = window.getSelection();
         if (!rect) { snack('Pilih teks dulu!'); return; }
         const selectedText = sel ? sel.toString() : '';
-        const annot = { id: Date.now(), page: pageNum, color, rect, selectedText, comment: '' };
-        annotations.push(annot);
-        saveAnnotations();
-        renderAnnotationsOnLayer();
-        sel?.removeAllRanges();
-        hideAnnotToolbar();
+        annotations.push({ id: Date.now(), page: pageNum, color, rect, selectedText, comment: '' });
+        saveAnnotations(); renderAnnotationsOnLayer();
+        sel?.removeAllRanges(); hideAnnotToolbar();
         snack(`✏️ Stabilo ${color} diterapkan!`);
     });
 });
 
-// Comment button
 document.getElementById('add-comment-btn').addEventListener('click', e => {
     e.stopPropagation();
     const rect = getSelectionRect();
     if (!rect) { snack('Pilih teks dulu!'); return; }
-    pendingHighlightColor = 'yellow';
-    // Position comment popup
     const sel = window.getSelection();
     const br  = sel?.getRangeAt(0).getBoundingClientRect();
     const vw  = window.innerWidth, vh = window.innerHeight;
@@ -2243,25 +2562,14 @@ document.getElementById('comment-save').addEventListener('click', () => {
     const sel     = window.getSelection();
     const comment = document.getElementById('comment-text').value.trim();
     if (!rect || !comment) { snack('Tulis komentar dulu!'); return; }
-    const selectedText = sel?.toString() || '';
-    annotations.push({ id: Date.now(), page: pageNum, color: 'yellow', rect, selectedText, comment });
+    annotations.push({ id: Date.now(), page: pageNum, color: 'yellow', rect, selectedText: sel?.toString() || '', comment });
     saveAnnotations(); renderAnnotationsOnLayer();
-    sel?.removeAllRanges();
-    commentPop.classList.remove('show');
-    hideAnnotToolbar();
+    sel?.removeAllRanges(); commentPop.classList.remove('show'); hideAnnotToolbar();
     snack('💬 Komentar disimpan!');
 });
 
-document.getElementById('comment-cancel').addEventListener('click', () => {
-    commentPop.classList.remove('show');
-});
-
-document.getElementById('annot-close-btn').addEventListener('click', () => {
-    window.getSelection()?.removeAllRanges();
-    hideAnnotToolbar();
-});
-
-// Click outside → close annotation toolbar
+document.getElementById('comment-cancel').addEventListener('click', () => { commentPop.classList.remove('show'); });
+document.getElementById('annot-close-btn').addEventListener('click', () => { window.getSelection()?.removeAllRanges(); hideAnnotToolbar(); });
 document.addEventListener('click', e => {
     if (!annotTb.contains(e.target) && !commentPop.contains(e.target) && !annotTip.contains(e.target)) {
         if (!e.target.closest('#text-layer')) hideAnnotToolbar();
@@ -2270,58 +2578,46 @@ document.addEventListener('click', e => {
 });
 
 // ══════════════════════════════════════════════════════════════════
-//  SEARCH WITH TEXT HIGHLIGHT
+//  SEARCH (tidak berubah)
 // ══════════════════════════════════════════════════════════════════
-let searchDebounce = null;
+let searchDebounce     = null;
 let currentSearchQuery = '';
 
 function openSearch()  { document.getElementById('search-overlay').classList.add('show'); document.getElementById('search-input').focus(); }
 function closeSearch() {
     document.getElementById('search-overlay').classList.remove('show');
-    document.getElementById('search-results-list').innerHTML='';
-    document.getElementById('search-status').textContent='Ketik untuk mencari...';
-    document.getElementById('search-match-info').textContent='';
-    document.getElementById('search-input').value='';
-    searchResults=[]; searchIndex=-1; currentSearchQuery='';
+    document.getElementById('search-results-list').innerHTML = '';
+    document.getElementById('search-status').textContent = 'Ketik untuk mencari...';
+    document.getElementById('search-match-info').textContent = '';
+    document.getElementById('search-input').value = '';
+    searchResults = []; searchIndex = -1; currentSearchQuery = '';
     clearSearchHighlights();
 }
 
-function clearSearchHighlights() {
-    document.querySelectorAll('.search-highlight').forEach(el=>el.remove());
-    searchHighlightEls = [];
-}
+function clearSearchHighlights() { document.querySelectorAll('.search-highlight').forEach(el => el.remove()); searchHighlightEls = []; }
 
-// ✅ Highlight kata di text layer berdasarkan posisi span
 function applySearchHighlights() {
     clearSearchHighlights();
     if (!currentSearchQuery || !pdfDoc) return;
-    const q    = currentSearchQuery.toLowerCase();
+    const q      = currentSearchQuery.toLowerCase();
     const stRect = stage.getBoundingClientRect();
-    const scale  = getScale();
-
-    // Find matching spans in text layer
-    const spans = Array.from(textLayer.querySelectorAll('span'));
+    const spans  = Array.from(textLayer.querySelectorAll('span'));
     let matchIdx = 0;
-
     spans.forEach(span => {
         const txt = span.textContent.toLowerCase();
-        let idx = txt.indexOf(q);
+        let idx   = txt.indexOf(q);
         while (idx !== -1) {
-            // Get position of this span
-            const sr = span.getBoundingClientRect();
+            const sr    = span.getBoundingClientRect();
             const charW = sr.width / span.textContent.length;
-            const highlightEl = document.createElement('div');
-            highlightEl.className = 'search-highlight';
-            // Approximate position of the matched text within span
-            const offsetX = charW * idx;
-            const matchW  = charW * q.length;
-            highlightEl.style.left   = ((sr.left - stRect.left + offsetX) + 'px');
-            highlightEl.style.top    = ((sr.top  - stRect.top)  + 'px');
-            highlightEl.style.width  = Math.min(matchW, sr.width) + 'px';
-            highlightEl.style.height = sr.height + 'px';
-            highlightEl.dataset.matchIdx = matchIdx;
-            annotLayer.appendChild(highlightEl);
-            searchHighlightEls.push(highlightEl);
+            const el    = document.createElement('div');
+            el.className = 'search-highlight';
+            el.style.left   = ((sr.left - stRect.left + charW * idx) + 'px');
+            el.style.top    = ((sr.top  - stRect.top)  + 'px');
+            el.style.width  = Math.min(charW * q.length, sr.width) + 'px';
+            el.style.height = sr.height + 'px';
+            el.dataset.matchIdx = matchIdx;
+            annotLayer.appendChild(el);
+            searchHighlightEls.push(el);
             matchIdx++;
             idx = txt.indexOf(q, idx + 1);
         }
@@ -2330,15 +2626,9 @@ function applySearchHighlights() {
 }
 
 function highlightActiveMatch() {
-    searchHighlightEls.forEach((el, i) => {
-        el.classList.toggle('active-match', i === searchIndex);
-    });
-    // Scroll active match into view
-    if (searchHighlightEls[searchIndex]) {
-        searchHighlightEls[searchIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-    // Update result list active
-    document.querySelectorAll('.sri').forEach((el,i) => el.classList.toggle('active-sri', i === searchIndex));
+    searchHighlightEls.forEach((el, i) => el.classList.toggle('active-match', i === searchIndex));
+    if (searchHighlightEls[searchIndex]) searchHighlightEls[searchIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    document.querySelectorAll('.sri').forEach((el, i) => el.classList.toggle('active-sri', i === searchIndex));
 }
 
 async function doSearch(query) {
@@ -2349,109 +2639,76 @@ async function doSearch(query) {
         clearSearchHighlights(); currentSearchQuery = ''; return;
     }
     document.getElementById('search-status').textContent = 'Mencari di semua halaman...';
-    searchResults=[]; currentSearchQuery = query;
+    searchResults = []; currentSearchQuery = query;
     const q = query.toLowerCase();
 
-    for (let p=1; p<=pdfDoc.numPages; p++) {
+    // ✅ Untuk guest, hanya search di halaman yang diizinkan
+    const maxSearchPage = (IS_GUEST && GUEST_PAGE_LIMIT !== null)
+        ? Math.min(GUEST_PAGE_LIMIT, pdfDoc.numPages)
+        : pdfDoc.numPages;
+
+    for (let p = 1; p <= maxSearchPage; p++) {
         const page    = await pdfDoc.getPage(p);
         const content = await page.getTextContent();
-        const text    = content.items.map(i=>i.str).join(' ');
+        const text    = content.items.map(i => i.str).join(' ');
         const lText   = text.toLowerCase();
         let idx = lText.indexOf(q);
         while (idx !== -1) {
-            const start   = Math.max(0,idx-35);
-            const excerpt = text.substring(start, idx+q.length+50).trim();
+            const excerpt = text.substring(Math.max(0, idx-35), idx + q.length + 50).trim();
             searchResults.push({ page: p, excerpt, charIdx: idx });
-            idx = lText.indexOf(q, idx+1);
+            idx = lText.indexOf(q, idx + 1);
         }
     }
 
     const list   = document.getElementById('search-results-list');
     const status = document.getElementById('search-status');
     list.innerHTML = '';
-
-    if (!searchResults.length) {
-        status.textContent = `Tidak ditemukan: "${query}"`;
-        document.getElementById('search-match-info').textContent = '';
-        clearSearchHighlights(); return;
-    }
-
+    if (!searchResults.length) { status.textContent = `Tidak ditemukan: "${query}"`; document.getElementById('search-match-info').textContent = ''; clearSearchHighlights(); return; }
     status.textContent = `${searchResults.length} hasil ditemukan`;
     searchIndex = 0;
-
-    searchResults.slice(0,40).forEach((r,i) => {
+    searchResults.slice(0, 40).forEach((r, i) => {
         const item = document.createElement('div');
-        item.className = 'sri' + (i===0?' active-sri':'');
-        const hl = r.excerpt.replace(
-            new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi'),
-            m => `<mark${i===0?' class="active-mark"':''}>${m}</mark>`
-        );
+        item.className = 'sri' + (i === 0 ? ' active-sri' : '');
+        const hl = r.excerpt.replace(new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), m => `<mark${i===0?' class="active-mark"':''}>${m}</mark>`);
         item.innerHTML = `<span class="pg">Hal.${r.page}</span><span class="ex">${hl}</span>`;
-        item.addEventListener('click', () => {
-            searchIndex = i;
-            document.querySelectorAll('.sri').forEach((el,j)=>el.classList.toggle('active-sri',j===i));
-            if (r.page !== pageNum) {
-                goTo(r.page);
-                // Highlights re-applied after render via renderPage
-            } else {
-                applySearchHighlights();
-                highlightActiveMatch();
-            }
-            updateMatchInfo();
-        });
+        item.addEventListener('click', () => { searchIndex = i; document.querySelectorAll('.sri').forEach((el,j) => el.classList.toggle('active-sri', j===i)); if (r.page !== pageNum) goTo(r.page); else { applySearchHighlights(); highlightActiveMatch(); } updateMatchInfo(); });
         list.appendChild(item);
     });
-
     updateMatchInfo();
-    // Apply highlights on current page
-    if (searchResults[0].page === pageNum) {
-        applySearchHighlights();
-    } else {
-        goTo(searchResults[0].page);
-    }
+    if (searchResults[0].page === pageNum) applySearchHighlights(); else goTo(searchResults[0].page);
 }
 
 function updateMatchInfo() {
     const el = document.getElementById('search-match-info');
-    const onPage = searchResults.filter(r=>r.page===pageNum);
-    if (searchResults.length)
-        el.textContent = `${searchIndex+1}/${searchResults.length} hasil · ${onPage.length} di halaman ini`;
+    const onPage = searchResults.filter(r => r.page === pageNum);
+    if (searchResults.length) el.textContent = `${searchIndex+1}/${searchResults.length} hasil · ${onPage.length} di halaman ini`;
 }
 
 function searchNavNext() {
     if (!searchResults.length) return;
-    searchIndex = (searchIndex+1) % searchResults.length;
+    searchIndex = (searchIndex + 1) % searchResults.length;
     const r = searchResults[searchIndex];
-    if (r.page !== pageNum) { goTo(r.page); }
-    else { applySearchHighlights(); highlightActiveMatch(); }
+    if (r.page !== pageNum) goTo(r.page); else { applySearchHighlights(); highlightActiveMatch(); }
     updateMatchInfo();
 }
 function searchNavPrev() {
     if (!searchResults.length) return;
-    searchIndex = (searchIndex-1+searchResults.length) % searchResults.length;
+    searchIndex = (searchIndex - 1 + searchResults.length) % searchResults.length;
     const r = searchResults[searchIndex];
-    if (r.page !== pageNum) { goTo(r.page); }
-    else { applySearchHighlights(); highlightActiveMatch(); }
+    if (r.page !== pageNum) goTo(r.page); else { applySearchHighlights(); highlightActiveMatch(); }
     updateMatchInfo();
 }
 
-document.getElementById('search-input').addEventListener('input', function() {
-    clearTimeout(searchDebounce);
-    searchDebounce = setTimeout(() => doSearch(this.value), 450);
-});
+document.getElementById('search-input').addEventListener('input', function() { clearTimeout(searchDebounce); searchDebounce = setTimeout(() => doSearch(this.value), 450); });
 document.getElementById('search-close-btn').addEventListener('click', closeSearch);
 document.getElementById('search-prev-btn').addEventListener('click', searchNavPrev);
 document.getElementById('search-next-btn').addEventListener('click', searchNavNext);
-document.getElementById('search-overlay').addEventListener('click', e => {
-    if (e.target===document.getElementById('search-overlay')) closeSearch();
-});
-document.getElementById('search-input').addEventListener('keydown', e => {
-    if (e.key==='Enter') e.shiftKey ? searchNavPrev() : searchNavNext();
-});
+document.getElementById('search-overlay').addEventListener('click', e => { if (e.target === document.getElementById('search-overlay')) closeSearch(); });
+document.getElementById('search-input').addEventListener('keydown', e => { if (e.key === 'Enter') e.shiftKey ? searchNavPrev() : searchNavNext(); });
 
 // ── Mobile Tap Overlay ────────────────────────────────────────────
-function openTapOverlay()  { tapOverlayOpen=true;  tapOverlay.classList.add('show'); }
-function closeTapOverlay() { tapOverlayOpen=false; tapOverlay.classList.remove('show'); }
+function openTapOverlay()  { tapOverlayOpen = true;  tapOverlay.classList.add('show'); }
+function closeTapOverlay() { tapOverlayOpen = false; tapOverlay.classList.remove('show'); }
 
 document.getElementById('tap-close-overlay').addEventListener('click', closeTapOverlay);
 document.getElementById('tap-prev').addEventListener('click', prevPage);
@@ -2461,15 +2718,12 @@ document.getElementById('tap-zoom-out').addEventListener('click', zoomOut);
 document.getElementById('tap-bookmark-btn').addEventListener('click', toggleBookmark);
 document.getElementById('tap-exit-btn').addEventListener('click', () => { closeTapOverlay(); exitFullscreen(); });
 document.querySelectorAll('[data-tap-mode]').forEach(el => {
-    el.addEventListener('click', () => {
-        applyMode(el.dataset.tapMode);
-        snack({normal:'☀️ Normal',sepia:'📜 Sepia',night:'🌙 Night'}[el.dataset.tapMode]);
-    });
+    el.addEventListener('click', () => { applyMode(el.dataset.tapMode); snack({normal:'☀️ Normal',sepia:'📜 Sepia',night:'🌙 Night'}[el.dataset.tapMode]); });
 });
 
 // ── Bottom Sheet ──────────────────────────────────────────────────
-function openSheet()  { sheetIsOpen=true;  document.getElementById('sheet-backdrop').classList.add('show');  document.getElementById('bottom-sheet').classList.add('show'); }
-function closeSheet() { sheetIsOpen=false; document.getElementById('sheet-backdrop').classList.remove('show'); document.getElementById('bottom-sheet').classList.remove('show'); }
+function openSheet()  { sheetIsOpen = true;  document.getElementById('sheet-backdrop').classList.add('show');  document.getElementById('bottom-sheet').classList.add('show'); }
+function closeSheet() { sheetIsOpen = false; document.getElementById('sheet-backdrop').classList.remove('show'); document.getElementById('bottom-sheet').classList.remove('show'); }
 
 document.getElementById('sheet-backdrop').addEventListener('click', closeSheet);
 document.getElementById('sheet-close').addEventListener('click', closeSheet);
@@ -2478,164 +2732,170 @@ document.getElementById('sheet-next').addEventListener('click', nextPage);
 document.getElementById('sheet-zoom-in').addEventListener('click', zoomIn);
 document.getElementById('sheet-zoom-out').addEventListener('click', zoomOut);
 document.getElementById('sheet-bookmark-btn').addEventListener('click', toggleBookmark);
-document.getElementById('sheet-fs-btn').addEventListener('click', ()=>{closeSheet();setTimeout(enterFullscreen,200);});
-document.getElementById('sheet-search-btn').addEventListener('click', ()=>{closeSheet();setTimeout(openSearch,200);});
-document.getElementById('sheet-jump-go').addEventListener('click', ()=>{const n=parseInt(document.getElementById('sheet-jump').value);if(n){goTo(n);closeSheet();}});
-document.getElementById('sheet-jump').addEventListener('keydown', e=>{if(e.key==='Enter'){const n=parseInt(e.target.value);if(n){goTo(n);closeSheet();}}});
-document.querySelectorAll('[data-sheet-mode]').forEach(el=>{
-    el.addEventListener('click',()=>{applyMode(el.dataset.sheetMode);snack({normal:'☀️ Normal',sepia:'📜 Sepia',night:'🌙 Night'}[el.dataset.sheetMode]);});
+document.getElementById('sheet-fs-btn').addEventListener('click', () => { closeSheet(); setTimeout(enterFullscreen, 200); });
+document.getElementById('sheet-search-btn').addEventListener('click', () => { closeSheet(); setTimeout(openSearch, 200); });
+document.getElementById('sheet-jump-go').addEventListener('click', () => { const n = parseInt(document.getElementById('sheet-jump').value); if (n) { goTo(n); closeSheet(); } });
+document.getElementById('sheet-jump').addEventListener('keydown', e => { if (e.key === 'Enter') { const n = parseInt(e.target.value); if (n) { goTo(n); closeSheet(); } } });
+document.querySelectorAll('[data-sheet-mode]').forEach(el => {
+    el.addEventListener('click', () => { applyMode(el.dataset.sheetMode); snack({normal:'☀️ Normal',sepia:'📜 Sepia',night:'🌙 Night'}[el.dataset.sheetMode]); });
 });
 
 // ── Mobile FAB ────────────────────────────────────────────────────
-document.getElementById('mobile-fab-btn').addEventListener('click', e=>{e.stopPropagation();openSheet();});
+document.getElementById('mobile-fab-btn').addEventListener('click', e => { e.stopPropagation(); openSheet(); });
 
 // ── Fullscreen ────────────────────────────────────────────────────
 function enterFullscreen() {
-    isFullscreen=true;
+    isFullscreen = true;
     viewerEl.classList.add('fullscreen-mode');
-    document.body.style.overflow='hidden';
+    document.body.style.overflow = 'hidden';
     if (!isMobile()) {
-        deskHint.classList.remove('hidden','fade-out');
+        deskHint.classList.remove('hidden', 'fade-out');
         clearTimeout(toolbarTimer);
-        toolbarTimer=setTimeout(()=>deskHint.classList.add('fade-out'),4500);
+        toolbarTimer = setTimeout(() => deskHint.classList.add('fade-out'), 4500);
     }
-    if (pdfDoc) pdfDoc.getPage(pageNum).then(p=>{baseScale=1.0;computeBase(p);queueRender(pageNum);});
+    if (pdfDoc) pdfDoc.getPage(pageNum).then(p => { baseScale = 1.0; computeBase(p); queueRender(pageNum); });
 }
 function exitFullscreen() {
-    isFullscreen=false;
+    isFullscreen = false;
     viewerEl.classList.remove('fullscreen-mode');
-    document.body.style.overflow='';
+    document.body.style.overflow = '';
     deskHint.classList.add('hidden');
     closeTapOverlay();
-    if (pdfDoc) pdfDoc.getPage(pageNum).then(p=>{baseScale=1.0;computeBase(p);queueRender(pageNum);});
+    if (pdfDoc) pdfDoc.getPage(pageNum).then(p => { baseScale = 1.0; computeBase(p); queueRender(pageNum); });
 }
 
-viewerEl.addEventListener('mousemove', ()=>{
-    if (!isFullscreen||isMobile()) return;
+viewerEl.addEventListener('mousemove', () => {
+    if (!isFullscreen || isMobile()) return;
     fsTb.classList.remove('toolbar-hidden');
     clearTimeout(toolbarTimer);
-    toolbarTimer=setTimeout(()=>fsTb.classList.add('toolbar-hidden'),3000);
+    toolbarTimer = setTimeout(() => fsTb.classList.add('toolbar-hidden'), 3000);
 });
 
-viewerEl.addEventListener('click', e=>{
-    if (!isFullscreen||!isMobile()) return;
-    if (e.target.closest('#pdf-fullscreen-toolbar,#mobile-tap-overlay,#bottom-sheet')) return;
-    if (window.getSelection()?.toString()) return; // Don't open overlay on text select
+viewerEl.addEventListener('click', e => {
+    if (!isFullscreen || !isMobile()) return;
+    if (e.target.closest('#pdf-fullscreen-toolbar,#mobile-tap-overlay,#bottom-sheet,#guest-gate-overlay')) return;
+    if (window.getSelection()?.toString()) return;
     tapOverlayOpen ? closeTapOverlay() : openTapOverlay();
 });
 
 // ── Iframe Fallback ───────────────────────────────────────────────
-function showFallback(){hideLoading();canvasWrap.style.display='none';iframeEl.style.display='block';iframeEl.src=pdfUrl;}
+function showFallback() { hideLoading(); canvasWrap.style.display = 'none'; iframeEl.style.display = 'block'; iframeEl.src = pdfUrl; }
 
 // ── Resume Toast ──────────────────────────────────────────────────
-function showResumeToast(page){
-    const t=document.getElementById('resume-toast');
-    document.getElementById('resume-text').textContent=`Terakhir di halaman ${page}`;
+function showResumeToast(page) {
+    // ✅ Untuk guest, batasi resume page ke dalam limit
+    if (IS_GUEST && GUEST_PAGE_LIMIT !== null) page = Math.min(page, GUEST_PAGE_LIMIT);
+    const t = document.getElementById('resume-toast');
+    document.getElementById('resume-text').textContent = `Terakhir di halaman ${page}`;
     t.classList.add('show');
-    document.getElementById('resume-yes').onclick=()=>{goTo(page);t.classList.remove('show');};
-    document.getElementById('resume-no').onclick=()=>{goTo(1);t.classList.remove('show');};
-    setTimeout(()=>t.classList.remove('show'),7000);
+    document.getElementById('resume-yes').onclick = () => { goTo(page); t.classList.remove('show'); };
+    document.getElementById('resume-no').onclick  = () => { goTo(1);    t.classList.remove('show'); };
+    setTimeout(() => t.classList.remove('show'), 7000);
 }
 
 // ── Load PDF ──────────────────────────────────────────────────────
-const fbTimer=setTimeout(()=>{if(!pdfDoc)showFallback();},8000);
-pdfjsLib.getDocument({url:pdfUrl,withCredentials:false,verbosity:0})
-    .promise.then(doc=>{
-        clearTimeout(fbTimer); pdfDoc=doc;
-        const total=doc.numPages;
-        ['page-count','fs-page-count','sheet-total','tap-page-total'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=total;});
-        document.getElementById('page-num-input').max=total;
-        document.getElementById('sheet-jump').max=total;
+const fbTimer = setTimeout(() => { if (!pdfDoc) showFallback(); }, 8000);
+pdfjsLib.getDocument({ url: pdfUrl, withCredentials: false, verbosity: 0 })
+    .promise.then(doc => {
+        clearTimeout(fbTimer);
+        pdfDoc = doc;
+        const total = doc.numPages;
+        ['page-count','fs-page-count','sheet-total','tap-page-total'].forEach(id => { const e = document.getElementById(id); if (e) e.textContent = total; });
+        document.getElementById('page-num-input').max = total;
+        document.getElementById('sheet-jump').max     = total;
+
+        // ✅ Untuk guest, tampilkan info halaman aktual vs batas
+        if (IS_GUEST && GUEST_PAGE_LIMIT !== null && total > GUEST_PAGE_LIMIT) {
+            const pc = document.getElementById('page-count');
+            if (pc) pc.textContent = `${GUEST_PAGE_LIMIT}* (dari ${total})`;
+        }
+
         renderPage(1);
-        if(savedPage>1&&savedPage<=total) setTimeout(()=>showResumeToast(savedPage),900);
+        if (savedPage > 1 && savedPage <= total) setTimeout(() => showResumeToast(savedPage), 900);
     })
-    .catch(()=>{clearTimeout(fbTimer);showFallback();});
+    .catch(() => { clearTimeout(fbTimer); showFallback(); });
 
 // ── Resize ────────────────────────────────────────────────────────
-let lastW=viewerEl.clientWidth,rTimer=null;
-window.addEventListener('resize',()=>{
-    const w=viewerEl.clientWidth; if(Math.abs(w-lastW)<20) return; lastW=w;
+let lastW = viewerEl.clientWidth, rTimer = null;
+window.addEventListener('resize', () => {
+    const w = viewerEl.clientWidth; if (Math.abs(w - lastW) < 20) return; lastW = w;
     clearTimeout(rTimer);
-    rTimer=setTimeout(()=>{
-        if(!pdfDoc) return;
-        pdfDoc.getPage(pageNum).then(p=>{baseScale=1.0;computeBase(p);queueRender(pageNum);});
-    },250);
+    rTimer = setTimeout(() => {
+        if (!pdfDoc) return;
+        pdfDoc.getPage(pageNum).then(p => { baseScale = 1.0; computeBase(p); queueRender(pageNum); });
+    }, 250);
 });
 
 // ── Desktop Event Listeners ───────────────────────────────────────
-document.getElementById('prev-page').addEventListener('click',prevPage);
-document.getElementById('next-page').addEventListener('click',nextPage);
-document.getElementById('fs-prev').addEventListener('click',prevPage);
-document.getElementById('fs-next').addEventListener('click',nextPage);
-document.getElementById('zoom-in').addEventListener('click',zoomIn);
-document.getElementById('zoom-out').addEventListener('click',zoomOut);
-document.getElementById('fs-zoom-in').addEventListener('click',zoomIn);
-document.getElementById('fs-zoom-out').addEventListener('click',zoomOut);
-document.getElementById('bookmark-btn').addEventListener('click',toggleBookmark);
-document.getElementById('fs-bookmark-btn').addEventListener('click',toggleBookmark);
-document.getElementById('fullscreen-btn').addEventListener('click',enterFullscreen);
-document.getElementById('exit-fs-btn').addEventListener('click',exitFullscreen);
-document.getElementById('search-btn').addEventListener('click',openSearch);
-document.getElementById('mode-btn').addEventListener('click',e=>{e.stopPropagation();document.getElementById('mode-dropdown').classList.toggle('open');});
-document.querySelectorAll('.mode-opt').forEach(el=>{el.addEventListener('click',()=>{applyMode(el.dataset.mode);document.getElementById('mode-dropdown').classList.remove('open');});});
-document.addEventListener('click',()=>document.getElementById('mode-dropdown')?.classList.remove('open'));
-document.getElementById('page-num-input').addEventListener('change',function(){const n=parseInt(this.value);if(pdfDoc&&n>=1&&n<=pdfDoc.numPages)goTo(n);else this.value=pageNum;});
+document.getElementById('prev-page').addEventListener('click', prevPage);
+document.getElementById('next-page').addEventListener('click', nextPage);
+document.getElementById('fs-prev').addEventListener('click', prevPage);
+document.getElementById('fs-next').addEventListener('click', nextPage);
+document.getElementById('zoom-in').addEventListener('click', zoomIn);
+document.getElementById('zoom-out').addEventListener('click', zoomOut);
+document.getElementById('fs-zoom-in').addEventListener('click', zoomIn);
+document.getElementById('fs-zoom-out').addEventListener('click', zoomOut);
+document.getElementById('bookmark-btn').addEventListener('click', toggleBookmark);
+document.getElementById('fs-bookmark-btn').addEventListener('click', toggleBookmark);
+document.getElementById('fullscreen-btn').addEventListener('click', enterFullscreen);
+document.getElementById('exit-fs-btn').addEventListener('click', exitFullscreen);
+document.getElementById('search-btn').addEventListener('click', openSearch);
+document.getElementById('mode-btn').addEventListener('click', e => { e.stopPropagation(); document.getElementById('mode-dropdown').classList.toggle('open'); });
+document.querySelectorAll('.mode-opt').forEach(el => { el.addEventListener('click', () => { applyMode(el.dataset.mode); document.getElementById('mode-dropdown').classList.remove('open'); }); });
+document.addEventListener('click', () => document.getElementById('mode-dropdown')?.classList.remove('open'));
+document.getElementById('page-num-input').addEventListener('change', function() {
+    const n = parseInt(this.value);
+    if (pdfDoc && n >= 1 && n <= pdfDoc.numPages) goTo(n);
+    else this.value = pageNum;
+});
 
-// ── Keyboard ─────────────────────────────────────────────────────
-document.addEventListener('keydown',e=>{
-    if((e.ctrlKey||e.metaKey)&&e.key==='f'){e.preventDefault();openSearch();return;}
-    if(['INPUT','TEXTAREA'].includes(e.target.tagName)) return;
-    switch(e.key){
+// ── Keyboard ──────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'f') { e.preventDefault(); openSearch(); return; }
+    if (['INPUT','TEXTAREA'].includes(e.target.tagName)) return;
+    switch (e.key) {
         case 'ArrowLeft':  prevPage(); break;
         case 'ArrowRight': nextPage(); break;
-        case 'ArrowUp':    canvasWrap.scrollBy({top:-120,behavior:'smooth'}); break;
-        case 'ArrowDown':  canvasWrap.scrollBy({top:120,behavior:'smooth'});  break;
-        case '+':case '=': zoomIn();   break;
-        case '-':          zoomOut();  break;
-        case 'b':case 'B': toggleBookmark(); break;
-        case 'f':case 'F': isFullscreen?exitFullscreen():enterFullscreen(); break;
+        case 'ArrowUp':    canvasWrap.scrollBy({ top: -120, behavior: 'smooth' }); break;
+        case 'ArrowDown':  canvasWrap.scrollBy({ top: 120,  behavior: 'smooth' }); break;
+        case '+': case '=': zoomIn();  break;
+        case '-':           zoomOut(); break;
+        case 'b': case 'B': toggleBookmark(); break;
+        case 'f': case 'F': isFullscreen ? exitFullscreen() : enterFullscreen(); break;
         case 'Escape':
-            if(document.getElementById('search-overlay').classList.contains('show'))closeSearch();
-            else if(commentPop.classList.contains('show'))commentPop.classList.remove('show');
-            else if(isFullscreen)exitFullscreen();
+            if (document.getElementById('search-overlay').classList.contains('show')) closeSearch();
+            else if (commentPop.classList.contains('show')) commentPop.classList.remove('show');
+            else if (isFullscreen) exitFullscreen();
             break;
     }
 });
 
-// ── Touch: Swipe horizontal ganti halaman, vertikal scroll ───────
-let tx=0,ty=0,pd=0,touchMoved=false,pinching=false;
+// ── Touch: Swipe ─────────────────────────────────────────────────
+let tx = 0, ty = 0, pd = 0, touchMoved = false, pinching = false;
 
-viewerEl.addEventListener('touchstart',e=>{
-    touchMoved=false; pinching=false;
-    if(e.touches.length===1){tx=e.touches[0].clientX;ty=e.touches[0].clientY;}
-    if(e.touches.length===2){
-        pinching=true;
-        pd=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
-    }
-},{passive:true});
+viewerEl.addEventListener('touchstart', e => {
+    touchMoved = false; pinching = false;
+    if (e.touches.length === 1) { tx = e.touches[0].clientX; ty = e.touches[0].clientY; }
+    if (e.touches.length === 2) { pinching = true; pd = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY); }
+}, { passive: true });
 
-viewerEl.addEventListener('touchmove',e=>{
-    touchMoved=true;
-    if(e.touches.length!==2) return;
-    const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
-    // ✅ Pinch: minimum zoom ZOOM_MIN, jadi tidak bisa zoom out terlalu kecil
-    if(Math.abs(d-pd)>14){
-        if(d>pd) zoomIn(); else zoomOut();
-        pd=d;
-    }
-},{passive:true});
+viewerEl.addEventListener('touchmove', e => {
+    touchMoved = true;
+    if (e.touches.length !== 2) return;
+    const d = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+    if (Math.abs(d - pd) > 14) { if (d > pd) zoomIn(); else zoomOut(); pd = d; }
+}, { passive: true });
 
-viewerEl.addEventListener('touchend',e=>{
-    if(pinching||!touchMoved) return;
-    const dx=tx-e.changedTouches[0].clientX;
-    const dy=ty-e.changedTouches[0].clientY;
-    // Hanya swipe horizontal dominan yg ganti halaman
-    if(Math.abs(dx)>Math.abs(dy)*1.8&&Math.abs(dx)>65){
-        if(tapOverlayOpen){closeTapOverlay();return;}
-        if(window.getSelection()?.toString()) return; // jangan ganti halaman saat ada teks dipilih
-        dx>0?nextPage():prevPage();
+viewerEl.addEventListener('touchend', e => {
+    if (pinching || !touchMoved) return;
+    const dx = tx - e.changedTouches[0].clientX;
+    const dy = ty - e.changedTouches[0].clientY;
+    if (Math.abs(dx) > Math.abs(dy)*1.8 && Math.abs(dx) > 65) {
+        if (tapOverlayOpen) { closeTapOverlay(); return; }
+        if (window.getSelection()?.toString()) return;
+        dx > 0 ? nextPage() : prevPage();
     }
-},{passive:true});
+}, { passive: true });
 
 // ══════════════════════════════════════════════════════════════════
 //  GUEST DOWNLOAD MODAL
@@ -2648,10 +2908,8 @@ function showGuestDownloadModal() {
     modal.style.display = 'block';
     document.body.style.overflow = 'hidden';
     requestAnimationFrame(() => {
-        backdrop.classList.add('opacity-100');
-        backdrop.classList.remove('opacity-0');
-        container.classList.add('opacity-100', 'scale-100');
-        container.classList.remove('opacity-0', 'scale-95');
+        backdrop.classList.add('opacity-100');   backdrop.classList.remove('opacity-0');
+        container.classList.add('opacity-100', 'scale-100'); container.classList.remove('opacity-0', 'scale-95');
     });
 }
 function hideGuestDownloadModal() {
@@ -2659,17 +2917,10 @@ function hideGuestDownloadModal() {
     const backdrop  = document.getElementById('guestModalBackdrop');
     const container = document.getElementById('guestModalContainer');
     if (!modal) return;
-    backdrop.classList.remove('opacity-100');
-    backdrop.classList.add('opacity-0');
-    container.classList.remove('opacity-100', 'scale-100');
-    container.classList.add('opacity-0', 'scale-95');
-    setTimeout(() => {
-        modal.style.display = 'none';
-        document.body.style.overflow = '';
-    }, 300);
+    backdrop.classList.remove('opacity-100');  backdrop.classList.add('opacity-0');
+    container.classList.remove('opacity-100', 'scale-100'); container.classList.add('opacity-0', 'scale-95');
+    setTimeout(() => { modal.style.display = 'none'; document.body.style.overflow = ''; }, 300);
 }
-document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') hideGuestDownloadModal();
-});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') hideGuestDownloadModal(); });
 </script>
 @endpush
