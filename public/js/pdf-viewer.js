@@ -5,12 +5,12 @@
  *
  * PENTING: File ini butuh variabel global yang di-inject dari Blade:
  *   window.PDF_CONFIG = {
- *     pdfUrl       : "...",
- *     slug         : "...",
+ *     pdfUrl         : "...",
+ *     slug           : "...",
  *     guestPageLimit : null | number,
- *     isGuest      : true | false,
- *     loginUrl     : "...",
- *     registerUrl  : "...",
+ *     isGuest        : true | false,
+ *     loginUrl       : "...",
+ *     registerUrl    : "...",
  *   };
  */
 (function () {
@@ -26,20 +26,12 @@
 
     // ═══════════════════════════════════════════════════════════════
     // ✅ FIX: AUTH-STATE CHANGE DETECTION
-    //
-    // Masalah: setelah logout, halaman tidak otomatis refresh →
-    // watermark tidak muncul karena JS state masih dari sesi login.
-    //
-    // Solusi: simpan flag auth state di sessionStorage saat halaman
-    // pertama kali load. Bandingkan dengan nilai sebelumnya.
-    // Jika berbeda (mis. login → logout) → force reload halaman.
     // ═══════════════════════════════════════════════════════════════
     const AUTH_KEY = 'pdf_auth_state';
     const currentAuthState = IS_GUEST ? 'guest' : 'auth';
     const prevAuthState = sessionStorage.getItem(AUTH_KEY);
 
     if (prevAuthState !== null && prevAuthState !== currentAuthState) {
-        // Auth state berubah (logout atau login di tab lain) → reload
         sessionStorage.setItem(AUTH_KEY, currentAuthState);
         window.location.reload();
         return;
@@ -118,22 +110,17 @@
         if (!IS_GUEST) return;
         const wm = document.getElementById('pdf-watermark');
         if (!wm) return;
-
-        // Teks watermark
-        const lines = ['PRATINJAU', 'Login untuk akses penuh', window.location.hostname];
         const rows = Math.ceil(cssH / 160);
         const cols = Math.ceil(cssW / 260);
-
         let rects = '';
         for (let r = 0; r < rows; r++) {
             for (let c = 0; c < cols; c++) {
                 const x = c * 260 + 30;
                 const y = r * 160 + 80;
-                rects += `<text x="${x}" y="${y}" fill="#FF6B18" font-size="22" font-family="Arial" font-weight="bold" transform="rotate(-35,${x},${y})">${lines[0]}</text>`;
-                rects += `<text x="${x - 10}" y="${y + 30}" fill="#FF6B18" font-size="11" font-family="Arial" transform="rotate(-35,${x - 10},${y + 30})">${lines[1]}</text>`;
+                rects += `<text x="${x}" y="${y}" fill="#FF6B18" font-size="22" font-family="Arial" font-weight="bold" transform="rotate(-35,${x},${y})">PRATINJAU</text>`;
+                rects += `<text x="${x - 10}" y="${y + 30}" fill="#FF6B18" font-size="11" font-family="Arial" transform="rotate(-35,${x - 10},${y + 30})">Login untuk akses penuh</text>`;
             }
         }
-
         wm.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="${cssW}" height="${cssH}">${rects}</svg>`;
     }
 
@@ -200,7 +187,7 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════
-    // ✅ renderPage — DPR-aware untuk tampilan tajam di semua layar
+    // renderPage — DPR-aware untuk tampilan tajam di semua layar
     // ═══════════════════════════════════════════════════════════════════
     function renderPage(num) {
         if (IS_GUEST && GUEST_PAGE_LIMIT !== null && num > GUEST_PAGE_LIMIT) {
@@ -251,29 +238,70 @@
 
     function queueRender(n) { if (pageRendering) pageNumPending = n; else renderPage(n); }
 
-    // ── Text Layer ────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════
+    // ✅ FIX TEXT LAYER — pakai official pdfjsLib.renderTextLayer
+    //    agar posisi span EXACT match dengan canvas (tidak meleset)
+    // ═══════════════════════════════════════════════════════════════════
     async function renderTextLayer(page, viewport) {
         textLayer.innerHTML = '';
-        textLayer.style.width = viewport.width + 'px';
-        textLayer.style.height = viewport.height + 'px';
-        const content = await page.getTextContent();
-        const scale = viewport.scale;
-        content.items.forEach(item => {
-            if (!item.str.trim()) return;
+        textLayer.style.width = Math.floor(viewport.width) + 'px';
+        textLayer.style.height = Math.floor(viewport.height) + 'px';
+
+        const textContent = await page.getTextContent();
+
+        // ── Coba official API dulu (pdf.js >= 2.x) ───────────────────
+        try {
+            const renderTask = pdfjsLib.renderTextLayer({
+                textContentSource: textContent,
+                container: textLayer,
+                viewport: viewport,
+                textDivs: [],
+            });
+            // Normalkan: beberapa versi return object {promise}, beberapa return Promise langsung
+            await (renderTask.promise || renderTask);
+            return;
+        } catch (e) {
+            // Fallback ke manual jika API tidak tersedia / error
+        }
+
+        // ── Fallback manual — lebih akurat dari versi sebelumnya ──────
+        textContent.items.forEach(item => {
+            if (!item.str || !item.str.trim()) return;
+
             const tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
-            const span = document.createElement('span');
             const fontHeight = Math.sqrt(tx[2] * tx[2] + tx[3] * tx[3]);
             const angle = Math.atan2(tx[1], tx[0]);
+
+            const span = document.createElement('span');
             span.textContent = item.str;
+            span.style.position = 'absolute';
             span.style.fontSize = fontHeight + 'px';
+            span.style.fontFamily = 'sans-serif';
             span.style.left = tx[4] + 'px';
             span.style.top = (tx[5] - fontHeight) + 'px';
-            if (angle !== 0) span.style.transform = `rotate(${-angle}rad)`;
-            const actualWidth = item.width * scale;
-            const measuredWidth = fontHeight * item.str.length * 0.55;
-            if (measuredWidth > 0 && actualWidth > 0)
-                span.style.transform = (span.style.transform || '') + ` scaleX(${actualWidth / measuredWidth})`;
+            span.style.lineHeight = '1';
+            span.style.whiteSpace = 'pre';
+            span.style.color = 'transparent';
+            span.style.cursor = 'text';
+            span.style.transformOrigin = '0% 0%';
+            span.style.userSelect = 'text';
+            span.style.webkitUserSelect = 'text';
+
+            // Append dulu agar bisa diukur getBoundingClientRect
             textLayer.appendChild(span);
+
+            // ✅ scaleX: ukur lebar NYATA di DOM, bukan estimasi 0.55
+            if (item.width > 0) {
+                const measuredWidth = span.getBoundingClientRect().width;
+                const targetWidth = item.width * viewport.scale;
+                let transform = angle !== 0 ? `rotate(${-angle}rad)` : '';
+                if (measuredWidth > 0 && targetWidth > 0) {
+                    transform += ` scaleX(${targetWidth / measuredWidth})`;
+                }
+                if (transform.trim()) span.style.transform = transform.trim();
+            } else if (angle !== 0) {
+                span.style.transform = `rotate(${-angle}rad)`;
+            }
         });
     }
 
@@ -285,7 +313,6 @@
         const totalPages = pdfDoc.numPages;
         const limit = GUEST_PAGE_LIMIT;
 
-        // Warning toast 2 halaman sebelum limit
         if (limitWarn && pageNum === Math.max(1, limit - 1) && !gateShown) {
             const remaining = limit - pageNum;
             const titleEl = document.getElementById('page-limit-warning-title');
@@ -298,7 +325,13 @@
 
         if (pageNum >= limit && !gateShown) {
             gateShown = true;
-            const ids = { 'gg-pages-shown': limit + ' hal.', 'gg-total-pages': totalPages + ' hal.', 'gg-stat-read': limit, 'gg-stat-left': (totalPages - limit), 'gg-stat-total': totalPages };
+            const ids = {
+                'gg-pages-shown': limit + ' hal.',
+                'gg-total-pages': totalPages + ' hal.',
+                'gg-stat-read': limit,
+                'gg-stat-left': (totalPages - limit),
+                'gg-stat-total': totalPages,
+            };
             Object.entries(ids).forEach(([id, val]) => { const e = document.getElementById(id); if (e) e.textContent = val; });
             if (guestGate) guestGate.classList.add('show');
         }
@@ -492,40 +525,75 @@
         clearSearchHighlights();
     }
 
-    function clearSearchHighlights() { document.querySelectorAll('.search-highlight').forEach(el => el.remove()); searchHighlightEls = []; }
+    // ✅ FIX clearSearchHighlights — hapus dari annotLayer juga
+    function clearSearchHighlights() {
+        annotLayer.querySelectorAll('.search-highlight').forEach(el => el.remove());
+        searchHighlightEls = [];
+    }
 
+    // ═══════════════════════════════════════════════════════════════════
+    // ✅ FIX applySearchHighlights — pakai Range API
+    //    Lebih akurat karena mengukur posisi karakter yang NYATA di DOM,
+    //    bukan estimasi charWidth rata-rata yang sering meleset
+    // ═══════════════════════════════════════════════════════════════════
     function applySearchHighlights() {
         clearSearchHighlights();
         if (!currentSearchQuery || !pdfDoc) return;
+
         const q = currentSearchQuery.toLowerCase();
         const stRect = stage.getBoundingClientRect();
         const spans = Array.from(textLayer.querySelectorAll('span'));
-        let matchIdx = 0;
+
+        let globalIdx = 0;
+
         spans.forEach(span => {
-            const txt = span.textContent.toLowerCase();
-            let idx = txt.indexOf(q);
+            if (!span.firstChild) return;
+            const text = span.textContent;
+            const lower = text.toLowerCase();
+            let idx = lower.indexOf(q);
+
             while (idx !== -1) {
-                const sr = span.getBoundingClientRect();
-                const charW = sr.width / span.textContent.length;
-                const el = document.createElement('div');
-                el.className = 'search-highlight';
-                el.style.left = (sr.left - stRect.left + charW * idx) + 'px';
-                el.style.top = (sr.top - stRect.top) + 'px';
-                el.style.width = Math.min(charW * q.length, sr.width) + 'px';
-                el.style.height = sr.height + 'px';
-                el.dataset.matchIdx = matchIdx;
-                annotLayer.appendChild(el);
-                searchHighlightEls.push(el);
-                matchIdx++;
-                idx = txt.indexOf(q, idx + 1);
+                try {
+                    // ✅ Range API: dapatkan rect TEPAT untuk substring yang match
+                    const range = document.createRange();
+                    range.setStart(span.firstChild, idx);
+                    range.setEnd(span.firstChild, Math.min(idx + q.length, text.length));
+
+                    const rects = Array.from(range.getClientRects());
+
+                    rects.forEach(rect => {
+                        if (rect.width < 1 || rect.height < 1) return;
+
+                        const el = document.createElement('div');
+                        el.className = 'search-highlight';
+
+                        // Posisi relatif terhadap stage
+                        el.style.left = (rect.left - stRect.left) + 'px';
+                        el.style.top = (rect.top - stRect.top) + 'px';
+                        el.style.width = rect.width + 'px';
+                        el.style.height = rect.height + 'px';
+                        el.dataset.matchIdx = globalIdx;
+
+                        annotLayer.appendChild(el);
+                        searchHighlightEls.push(el);
+                    });
+                } catch (e) {
+                    // Abaikan error Range (span kosong, dll)
+                }
+
+                globalIdx++;
+                idx = lower.indexOf(q, idx + 1);
             }
         });
+
         highlightActiveMatch();
     }
 
     function highlightActiveMatch() {
         searchHighlightEls.forEach((el, i) => el.classList.toggle('active-match', i === searchIndex));
-        if (searchHighlightEls[searchIndex]) searchHighlightEls[searchIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (searchHighlightEls[searchIndex]) {
+            searchHighlightEls[searchIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
         document.querySelectorAll('.sri').forEach((el, i) => el.classList.toggle('active-sri', i === searchIndex));
     }
 
@@ -540,6 +608,7 @@
         searchResults = []; currentSearchQuery = query;
         const q = query.toLowerCase();
         const maxSearchPage = (IS_GUEST && GUEST_PAGE_LIMIT !== null) ? Math.min(GUEST_PAGE_LIMIT, pdfDoc.numPages) : pdfDoc.numPages;
+
         for (let p = 1; p <= maxSearchPage; p++) {
             const page = await pdfDoc.getPage(p);
             const content = await page.getTextContent();
@@ -551,16 +620,28 @@
                 idx = lText.indexOf(q, idx + 1);
             }
         }
+
         const list = document.getElementById('search-results-list');
         const status = document.getElementById('search-status');
         list.innerHTML = '';
-        if (!searchResults.length) { status.textContent = `Tidak ditemukan: "${query}"`; document.getElementById('search-match-info').textContent = ''; clearSearchHighlights(); return; }
+
+        if (!searchResults.length) {
+            status.textContent = `Tidak ditemukan: "${query}"`;
+            document.getElementById('search-match-info').textContent = '';
+            clearSearchHighlights();
+            return;
+        }
+
         status.textContent = `${searchResults.length} hasil ditemukan`;
         searchIndex = 0;
+
         searchResults.slice(0, 40).forEach((r, i) => {
             const item = document.createElement('div');
             item.className = 'sri' + (i === 0 ? ' active-sri' : '');
-            const hl = r.excerpt.replace(new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), m => `<mark${i === 0 ? ' class="active-mark"' : ''}>${m}</mark>`);
+            const hl = r.excerpt.replace(
+                new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'),
+                m => `<mark${i === 0 ? ' class="active-mark"' : ''}>${m}</mark>`
+            );
             item.innerHTML = `<span class="pg">Hal.${r.page}</span><span class="ex">${hl}</span>`;
             item.addEventListener('click', () => {
                 searchIndex = i;
@@ -570,6 +651,7 @@
             });
             list.appendChild(item);
         });
+
         updateMatchInfo();
         if (searchResults[0].page === pageNum) applySearchHighlights(); else goTo(searchResults[0].page);
     }
@@ -789,6 +871,7 @@
 
     // ── Touch: Swipe + Pinch ─────────────────────────────────────────
     let tx = 0, ty = 0, pd = 0, touchMoved = false, pinching = false;
+
     viewerEl.addEventListener('touchstart', e => {
         touchMoved = false; pinching = false;
         if (e.touches.length === 1) { tx = e.touches[0].clientX; ty = e.touches[0].clientY; }
