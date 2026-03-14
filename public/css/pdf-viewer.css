@@ -1,7 +1,6 @@
 /* ═══════════════════════════════════════
-   pdf-viewer.css
+   pdf-viewer.css  — PERBAIKAN LENGKAP
    Simpan di: public/css/pdf-viewer.css
-   Load via: <link rel="stylesheet" href="{{ asset('css/pdf-viewer.css') }}">
 ═══════════════════════════════════════ */
 
 /* BASE RESET */
@@ -80,6 +79,8 @@ body.read-mode-night .pdf-controls {
     align-items: flex-start;
     justify-content: center;
     padding: 0.5rem;
+    /* Beri ruang bawah agar bar anotasi tidak menutupi konten */
+    padding-bottom: 80px;
 }
 #pdf-canvas-wrapper.hidden {
     display: none !important;
@@ -432,66 +433,6 @@ body.read-mode-night .pdf-controls {
 #annot-tooltip .at-btn.close {
     background: #2d2d2d;
     color: #aaa;
-}
-
-/* ─── ANNOTATION TOOLBAR ──────────────────── */
-#annot-toolbar {
-    position: fixed;
-    background: #1a1a1a;
-    border: 1.5px solid #3d3d3d;
-    border-radius: 12px;
-    padding: 0.4rem 0.5rem;
-    z-index: 19000;
-    display: none;
-    align-items: center;
-    gap: 0.35rem;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-}
-#annot-toolbar.show {
-    display: flex;
-}
-#annot-toolbar .at-sep {
-    width: 1px;
-    height: 20px;
-    background: #3d3d3d;
-}
-.annot-tool-btn {
-    width: 30px;
-    height: 30px;
-    border-radius: 7px;
-    border: none;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    transition: all 0.15s;
-    background: transparent;
-}
-.annot-tool-btn:hover {
-    background: rgba(255, 107, 24, 0.2);
-    transform: scale(1.1);
-}
-.color-swatch {
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-}
-.cs-yellow {
-    background: #ffd700;
-}
-.cs-green {
-    background: #4ade80;
-}
-.cs-pink {
-    background: #f472b6;
-}
-.cs-blue {
-    background: #60a5fa;
-}
-.cs-orange {
-    background: #ff6b18;
 }
 
 /* ─── COMMENT POPUP ───────────────────────── */
@@ -1185,13 +1126,21 @@ mark.active-mark {
     margin-top: 0.25rem;
 }
 
-/* ─── MOBILE FAB ──────────────────────────── */
+/* ─── MOBILE FAB ─────────────────────────────
+   PERBAIKAN: z-index lebih tinggi dari annotation bar,
+   dan bottom disesuaikan agar tidak tertutup bar anotasi
+──────────────────────────────────────────── */
 #mobile-fab {
     position: fixed;
-    bottom: 1.25rem;
+    bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
     right: 1.25rem;
-    z-index: 900;
+    z-index: 19100; /* lebih tinggi dari annot-bottom-bar (18000) */
     display: none;
+    transition: bottom 0.25s ease;
+}
+/* Saat annotation bar terlihat, naikkan FAB */
+body.annot-bar-visible #mobile-fab {
+    bottom: calc(64px + 1rem + env(safe-area-inset-bottom, 0px));
 }
 #mobile-fab-btn {
     width: 52px;
@@ -1349,6 +1298,359 @@ mark.active-mark {
     opacity: 0;
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   ANNOTATION BOTTOM BAR
+   PERBAIKAN:
+   - z-index 18000 (di bawah FAB 19100)
+   - padding-bottom memperhitungkan safe-area
+   - Desktop: posisi lebih ke atas agar tidak menutupi footer dokumen
+═══════════════════════════════════════════════════════════════════ */
+#annot-bottom-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 18000;
+    background: #111;
+    border-top: 1px solid #2d2d2d;
+    display: none;
+    flex-direction: column;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    transition:
+        transform 0.25s ease,
+        bottom 0.25s ease;
+    /* Anti-flicker: will-change hanya transform */
+    will-change: transform;
+}
+#annot-bottom-bar.visible {
+    display: flex;
+}
+
+/* Handle row */
+.ab-handle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 12px 3px;
+    cursor: pointer;
+    user-select: none;
+    gap: 8px;
+}
+.ab-handle-pip {
+    width: 32px;
+    height: 3px;
+    background: #3d3d3d;
+    border-radius: 99px;
+    flex-shrink: 0;
+}
+.ab-handle-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #ff6b18;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    flex: 1;
+    text-align: center;
+}
+.ab-collapse {
+    width: 22px;
+    height: 22px;
+    background: #2d2d2d;
+    border: none;
+    border-radius: 6px;
+    color: #777;
+    font-size: 11px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Collapsed pill */
+.ab-expand {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 12px;
+    padding-bottom: max(6px, env(safe-area-inset-bottom, 6px));
+    cursor: pointer;
+}
+.ab-expand-pill {
+    background: #1a1a1a;
+    border: 1px solid #3d3d3d;
+    border-radius: 99px;
+    padding: 5px 16px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #888;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.ab-expand-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #ff6b18;
+}
+
+/* Tools scrollable row */
+.ab-tools {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 4px 8px;
+    padding-bottom: max(8px, env(safe-area-inset-bottom, 8px));
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.ab-tools::-webkit-scrollbar {
+    display: none;
+}
+.ab-sep {
+    width: 1px;
+    height: 20px;
+    background: #2d2d2d;
+    margin: 0 2px;
+    flex-shrink: 0;
+}
+
+/* Tool btn */
+.ab-tool {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    border: 1.5px solid transparent;
+    background: transparent;
+    color: #888;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    flex-shrink: 0;
+    transition: all 0.15s;
+    position: relative;
+}
+.ab-tool:active {
+    transform: scale(0.88);
+}
+.ab-tool.active {
+    background: rgba(255, 107, 24, 0.15);
+    border-color: #ff6b18;
+    color: #ff6b18;
+}
+.ab-tool[data-tool="eraser"].active {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: #ef4444;
+    color: #f87171;
+}
+
+/* badge */
+.ab-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: #ff6b18;
+    color: #fff;
+    font-size: 8px;
+    font-weight: 700;
+    min-width: 14px;
+    height: 14px;
+    border-radius: 99px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 0 3px;
+}
+.ab-badge.show {
+    display: flex;
+}
+
+/* Action (undo/redo) */
+.ab-action {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    border: none;
+    background: #1f1f1f;
+    color: #888;
+    cursor: pointer;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    transition: all 0.15s;
+}
+.ab-action:hover {
+    background: #2d2d2d;
+    color: #fff;
+}
+.ab-action:active {
+    transform: scale(0.88);
+}
+.ab-action:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+/* Colors */
+.ab-colors {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+.ab-color {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition:
+        transform 0.15s,
+        border-color 0.15s;
+}
+.ab-color:active {
+    transform: scale(0.8);
+}
+.ab-color.selected {
+    border-color: #fff;
+    transform: scale(1.15);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25);
+}
+.ab-color[data-color="yellow"] {
+    background: #ffd700;
+}
+.ab-color[data-color="green"] {
+    background: #4ade80;
+}
+.ab-color[data-color="red"] {
+    background: #ef4444;
+}
+.ab-color[data-color="blue"] {
+    background: #60a5fa;
+}
+.ab-color[data-color="orange"] {
+    background: #ff6b18;
+}
+.ab-color[data-color="black"] {
+    background: #222;
+    border-color: #555;
+}
+.ab-color[data-color="white"] {
+    background: #fff;
+    border-color: #555;
+}
+
+/* Sizes */
+.ab-sizes {
+    display: none;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+}
+.ab-sizes.show {
+    display: flex;
+}
+.ab-size {
+    border-radius: 50%;
+    background: #555;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition:
+        background 0.15s,
+        transform 0.15s;
+}
+.ab-size:active {
+    transform: scale(0.8);
+}
+.ab-size.selected {
+    background: #ff6b18;
+}
+.ab-size[data-size="2"] {
+    width: 6px;
+    height: 6px;
+}
+.ab-size[data-size="4"] {
+    width: 9px;
+    height: 9px;
+}
+.ab-size[data-size="8"] {
+    width: 13px;
+    height: 13px;
+}
+.ab-size[data-size="14"] {
+    width: 17px;
+    height: 17px;
+}
+
+/* Shape sub-picker */
+.ab-shapes {
+    display: none;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+}
+.ab-shapes.show {
+    display: flex;
+}
+.ab-shape {
+    width: 30px;
+    height: 30px;
+    border-radius: 7px;
+    border: 1.5px solid transparent;
+    background: #1f1f1f;
+    color: #888;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+    transition: all 0.15s;
+}
+.ab-shape.active {
+    border-color: #ff6b18;
+    color: #ff6b18;
+    background: rgba(255, 107, 24, 0.12);
+}
+
+/* Desktop: bar floats centred above bottom — tidak menghalangi footer dokumen */
+@media (min-width: 768px) {
+    #annot-bottom-bar {
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+        width: auto;
+        min-width: 560px;
+        max-width: 88vw;
+        border-radius: 14px 14px 0 0;
+        border: 1px solid #2d2d2d;
+        border-bottom: none;
+        /* Geser ke atas 8px agar tidak pas di tepi layar */
+        bottom: 0;
+    }
+}
+
+/* ─── RECOVERY OVERLAY ────────────────────── */
+#pdf-recovery-overlay {
+    position: absolute;
+    inset: 0;
+    background: #1a1a1a;
+    z-index: 20;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+}
+#pdf-recovery-overlay.show {
+    display: flex;
+}
+
 /* ─── RESPONSIVE ──────────────────────────── */
 @media (max-width: 767px) {
     #mobile-fab {
@@ -1362,6 +1664,7 @@ mark.active-mark {
     }
     #pdf-canvas-wrapper {
         padding: 0.25rem;
+        padding-bottom: 80px;
     }
 }
 @media (min-width: 768px) {
@@ -1370,6 +1673,10 @@ mark.active-mark {
     }
     .mobile-only {
         display: none !important;
+    }
+    /* Canvas wrapper beri ruang untuk bar anotasi desktop */
+    #pdf-canvas-wrapper {
+        padding-bottom: 72px;
     }
 }
 @media (min-width: 480px) {
@@ -1403,11 +1710,11 @@ mark.active-mark {
     }
 }
 
-/* ─── FLOATING ANNOTATION TOOLBAR ────────────────────────────────── */
+/* ─── FLOATING ANNOTATION TOOLBAR (hidden legacy) ────────────────── */
 #annot-floating-toolbar {
     position: fixed;
     left: 50%;
-    top: 72px; /* di bawah toolbar utama */
+    top: 72px;
     transform: translateX(-50%);
     background: #1a1a1a;
     border: 1.5px solid #3d3d3d;
@@ -1421,195 +1728,12 @@ mark.active-mark {
         0 8px 32px rgba(0, 0, 0, 0.55),
         0 0 0 1px rgba(255, 107, 24, 0.08);
     backdrop-filter: blur(8px);
-    transition:
-        opacity 0.2s,
-        transform 0.2s;
-    user-select: none;
 }
 #annot-floating-toolbar.visible {
     display: flex;
 }
-/* fullscreen: naikkan posisi agar tidak tertutup toolbar FS */
 #pdf-viewer-container.fullscreen-mode #annot-floating-toolbar {
     top: 60px;
-}
-
-.aft-sep {
-    width: 1px;
-    height: 22px;
-    background: #3d3d3d;
-    margin: 0 2px;
-    flex-shrink: 0;
-}
-
-/* Tool button base */
-.aft-tool {
-    width: 34px;
-    height: 34px;
-    border-radius: 9px;
-    border: 1.5px solid transparent;
-    background: transparent;
-    color: #ccc;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 15px;
-    transition: all 0.15s;
-    flex-shrink: 0;
-    position: relative;
-}
-.aft-tool:hover {
-    background: rgba(255, 107, 24, 0.18);
-    color: #fff;
-    border-color: rgba(255, 107, 24, 0.35);
-}
-.aft-tool.active {
-    background: rgba(255, 107, 24, 0.22);
-    border-color: #ff6b18;
-    color: #ff6b18;
-    box-shadow: 0 0 0 3px rgba(255, 107, 24, 0.12);
-}
-.aft-tool[data-tool="eraser"].active {
-    background: rgba(239, 68, 68, 0.18);
-    border-color: #ef4444;
-    color: #f87171;
-}
-
-/* Color palette inside toolbar */
-.aft-color-wrap {
-    display: flex;
-    align-items: center;
-    gap: 3px;
-}
-.aft-color {
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    border: 2px solid transparent;
-    cursor: pointer;
-    transition:
-        transform 0.15s,
-        border-color 0.15s;
-    flex-shrink: 0;
-}
-.aft-color:hover {
-    transform: scale(1.25);
-}
-.aft-color.selected {
-    border-color: #fff;
-    transform: scale(1.2);
-    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35);
-}
-.aft-color[data-color="yellow"] {
-    background: #ffd700;
-}
-.aft-color[data-color="green"] {
-    background: #4ade80;
-}
-.aft-color[data-color="red"] {
-    background: #ef4444;
-}
-.aft-color[data-color="blue"] {
-    background: #60a5fa;
-}
-.aft-color[data-color="orange"] {
-    background: #ff6b18;
-}
-.aft-color[data-color="black"] {
-    background: #1a1a1a;
-    border-color: #555;
-}
-.aft-color[data-color="white"] {
-    background: #fff;
-    border-color: #555;
-}
-
-/* Stroke size picker */
-.aft-size-wrap {
-    display: flex;
-    align-items: center;
-    gap: 3px;
-}
-.aft-size {
-    border-radius: 50%;
-    background: #ccc;
-    cursor: pointer;
-    transition:
-        transform 0.15s,
-        background 0.15s;
-    flex-shrink: 0;
-}
-.aft-size:hover {
-    background: #ff6b18;
-    transform: scale(1.2);
-}
-.aft-size.selected {
-    background: #ff6b18;
-}
-.aft-size[data-size="2"] {
-    width: 6px;
-    height: 6px;
-}
-.aft-size[data-size="4"] {
-    width: 9px;
-    height: 9px;
-}
-.aft-size[data-size="8"] {
-    width: 13px;
-    height: 13px;
-}
-.aft-size[data-size="14"] {
-    width: 17px;
-    height: 17px;
-}
-
-/* Undo/redo */
-.aft-action {
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
-    border: none;
-    background: #2d2d2d;
-    color: #aaa;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 13px;
-    transition: all 0.15s;
-}
-.aft-action:hover {
-    background: #3d3d3d;
-    color: #fff;
-}
-.aft-action:disabled {
-    opacity: 0.3;
-    cursor: not-allowed;
-}
-
-/* Tooltip on hover */
-.aft-tool::after,
-.aft-action::after {
-    content: attr(data-tip);
-    position: absolute;
-    top: calc(100% + 6px);
-    left: 50%;
-    transform: translateX(-50%);
-    background: #000;
-    color: #fff;
-    font-size: 10px;
-    white-space: nowrap;
-    padding: 3px 7px;
-    border-radius: 5px;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.15s;
-    z-index: 9;
-}
-.aft-tool:hover::after,
-.aft-action:hover::after {
-    opacity: 1;
 }
 
 /* ─── FREEHAND CANVAS ─────────────────────────────────────────────── */
@@ -1620,8 +1744,10 @@ mark.active-mark {
     pointer-events: none;
     z-index: 7;
     touch-action: none;
+    /* Cegah flicker saat zoom dengan isolation */
+    isolation: isolate;
+    will-change: contents;
 }
-/* when freehand tool active → receive pointer events */
 #pdf-stage.freehand-mode #freehand-canvas {
     pointer-events: auto;
     cursor: crosshair;
@@ -1691,11 +1817,11 @@ mark.active-mark {
     border: none;
     border-radius: 50%;
     cursor: pointer;
-    font-size: 10px;
+    font-size: 12px;
+    line-height: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    line-height: 1;
     transition: background 0.15s;
 }
 .sticky-note .sn-del:hover {
@@ -1707,7 +1833,6 @@ mark.active-mark {
     word-break: break-word;
     pointer-events: none;
 }
-/* Color variants */
 .sticky-note[data-color="yellow"] {
     background: #fef9c3;
     border-color: #fde047;
@@ -1744,7 +1869,7 @@ mark.active-mark {
     color: #9ca3af;
 }
 
-/* ─── STICKY NOTE CREATION POPUP ─────────────────────────────────── */
+/* ─── STICKY NOTE POPUP ───────────────────────────────────────────── */
 #sticky-popup {
     position: fixed;
     background: #1a1a1a;
@@ -1806,7 +1931,7 @@ mark.active-mark {
     cursor: pointer;
 }
 
-/* ─── ANNOTATION PANEL (sidebar ringkasan) ────────────────────────── */
+/* ─── ANNOTATION PANEL ────────────────────────────────────────────── */
 #annot-panel {
     position: fixed;
     top: 0;
@@ -1815,7 +1940,7 @@ mark.active-mark {
     height: 100vh;
     background: #1a1a1a;
     border-left: 2px solid #ff6b18;
-    z-index: 17000;
+    z-index: 20010;
     display: flex;
     flex-direction: column;
     transition: right 0.3s cubic-bezier(0.34, 1.1, 0.64, 1);
@@ -1861,6 +1986,8 @@ mark.active-mark {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+    /* Beri ruang untuk footer tombol hapus */
+    padding-bottom: 0.5rem;
 }
 .ap-empty {
     text-align: center;
@@ -1937,10 +2064,15 @@ mark.active-mark {
     color: #f87171;
     background: rgba(239, 68, 68, 0.15);
 }
+
+/* PERBAIKAN: Footer panel selalu terlihat, tidak tertutup */
 .ap-footer {
     padding: 0.75rem;
     border-top: 1px solid #2d2d2d;
     flex-shrink: 0;
+    background: #1a1a1a; /* Pastikan background solid */
+    position: sticky;
+    bottom: 0;
 }
 .ap-clear-btn {
     width: 100%;
@@ -1958,7 +2090,7 @@ mark.active-mark {
     background: rgba(239, 68, 68, 0.2);
 }
 
-/* ─── LOADING INDICATOR FOR DB SYNC ──────────────────────────────── */
+/* ─── SYNC INDICATOR ──────────────────────────────────────────────── */
 #annot-sync-indicator {
     position: fixed;
     bottom: 5.5rem;

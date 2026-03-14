@@ -1115,8 +1115,17 @@ $previewLimit = match($typeSlug) { 'buku'=>'10 halaman','opini'=>'1 halaman',def
 <script src="{{ asset('js/pdf-annotations.js') }}?v={{ filemtime(public_path('js/pdf-annotations.js')) }}"></script>
 @endauth
 
+{{--
+══════════════════════════════════════════════════════════════════
+GANTI seluruh blok <script>
+    terakhir di @push('scripts') pada
+  resources/views/pages/publication/read.blade.php
+  (dari "(function () {" hingga akhir script tag)
+  dengan kode di bawah ini.
+  ══════════════════════════════════════════════════════════════════
+--}}
 <script>
-    (function () {
+(function () {
     'use strict';
 
     /* ── Auto-recovery: reload 1x jika PDF gagal load ── */
@@ -1149,42 +1158,59 @@ $previewLimit = match($typeSlug) { 'buku'=>'10 halaman','opini'=>'1 halaman',def
     const colBtn    = document.getElementById('ab-collapse');
     let collapsed   = false;
 
-    const LABELS = { highlight:'✏️ Highlight', freehand:'🖊 Pen Bebas', shape:'⬛ Shape', comment:'💬 Komentar', sticky:'📌 Sticky Note', eraser:'🧹 Hapus' };
+    const LABELS = {
+        highlight : '✏️ Highlight',
+        freehand  : '🖊 Pen Bebas',
+        shape     : '⬛ Shape',
+        comment   : '💬 Komentar',
+        sticky    : '📌 Sticky Note',
+        eraser    : '🧹 Hapus'
+    };
 
     function collapse() {
         collapsed = true;
-        toolsRow.style.display = 'none';
-        handle.style.display   = 'none';
-        expandRow.style.display= 'flex';
+        toolsRow.style.display    = 'none';
+        handle.style.display      = 'none';
+        expandRow.style.display   = 'flex';
+        document.body.classList.remove('annot-bar-visible');
     }
     function expand() {
         collapsed = false;
-        toolsRow.style.display = '';
-        handle.style.display   = '';
-        expandRow.style.display= 'none';
+        toolsRow.style.display    = '';
+        handle.style.display      = '';
+        expandRow.style.display   = 'none';
+        document.body.classList.add('annot-bar-visible');
     }
 
     colBtn.addEventListener('click', e => { e.stopPropagation(); collapsed ? expand() : collapse(); });
     expandRow.addEventListener('click', expand);
 
     /* Show bar when PDF ready */
-    function showBar() { bar.classList.add('visible'); }
+    function showBar() {
+        bar.classList.add('visible');
+        document.body.classList.add('annot-bar-visible');
+    }
     const waitV = setInterval(() => {
-        if (window._pdfViewer) { clearInterval(waitV); window._pdfViewer.onReady(showBar); }
+        if (window._pdfViewer) {
+            clearInterval(waitV);
+            window._pdfViewer.onReady(showBar);
+        }
     }, 80);
 
-    /* Tool selection — forward to pdf-annotations.js */
+    /* Tool selection — forward events ke pdf-annotations.js */
     document.querySelectorAll('.ab-tool[data-tool]').forEach(btn => {
         btn.addEventListener('click', () => {
             const tool = btn.dataset.tool;
             document.querySelectorAll('.ab-tool[data-tool]').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            label.textContent = LABELS[tool] || tool;
+            if (label) label.textContent = LABELS[tool] || tool;
 
-            document.getElementById('ab-sizes').classList.toggle('show',  ['freehand','shape'].includes(tool));
-            document.getElementById('ab-shapes').classList.toggle('show', tool === 'shape');
+            const sizeBox  = document.getElementById('ab-sizes');
+            const shapeBox = document.getElementById('ab-shapes');
+            if (sizeBox)  sizeBox.classList.toggle('show',  ['freehand','shape'].includes(tool));
+            if (shapeBox) shapeBox.classList.toggle('show', tool === 'shape');
 
-            /* Forward to hidden aft-toolbar that pdf-annotations.js listens to */
+            /* Forward ke hidden toolbar — pdf-annotations.js juga mendengarkan event ini */
             const hidden = document.querySelector(`#annot-floating-toolbar [data-tool="${tool}"]`);
             if (hidden) hidden.click();
             window.dispatchEvent(new CustomEvent('annot-tool-change', { detail: { tool } }));
@@ -1224,13 +1250,30 @@ $previewLimit = match($typeSlug) { 'buku'=>'10 halaman','opini'=>'1 halaman',def
         });
     });
 
-    /* Badge counter from annotations */
+    /* Badge counter dari annotation events */
     window.addEventListener('annot-count-change', e => {
         const badge = document.getElementById('ab-panel-badge');
         if (!badge) return;
         const n = e.detail?.count || 0;
         badge.textContent = n;
         badge.classList.toggle('show', n > 0);
+    });
+
+    /* ── ZOOM ANTI-FLICKER
+       Cegah canvas redraw yang menyebabkan kedip dengan
+       menonaktifkan transisi sementara saat zoom ── */
+    let zoomFlickerTimer = null;
+    window.addEventListener('annot-size-change', () => {});  // placeholder
+    window.addEventListener('pdf-zoom-start', () => {
+        const fc = document.getElementById('freehand-canvas');
+        if (fc) fc.style.opacity = '0';
+    });
+    window.addEventListener('pdf-zoom-end', () => {
+        clearTimeout(zoomFlickerTimer);
+        zoomFlickerTimer = setTimeout(() => {
+            const fc = document.getElementById('freehand-canvas');
+            if (fc) fc.style.opacity = '1';
+        }, 120);
     });
 
 })();
