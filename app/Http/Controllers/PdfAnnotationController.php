@@ -10,30 +10,19 @@ use Illuminate\Support\Facades\Auth;
 
 class PdfAnnotationController extends Controller
 {
-    /**
-     * GET /api/annotations/{slug}
-     */
     public function index(string $slug): JsonResponse
     {
         $publication = Publication::where('slug', $slug)->firstOrFail();
-
         $annotations = PdfAnnotation::where('user_id', Auth::id())
             ->where('publication_id', $publication->id)
-            ->orderBy('page')
-            ->orderBy('created_at')
-            ->get()
-            ->map(fn($a) => $this->serialize($a));
-
+            ->orderBy('page')->orderBy('created_at')
+            ->get()->map(fn($a) => $this->serialize($a));
         return response()->json(['data' => $annotations]);
     }
 
-    /**
-     * POST /api/annotations/{slug}
-     */
     public function store(Request $request, string $slug): JsonResponse
     {
         $publication = Publication::where('slug', $slug)->firstOrFail();
-
         $validated = $request->validate([
             'page'          => 'required|integer|min:1',
             'type'          => 'required|in:' . implode(',', PdfAnnotation::VALID_TYPES),
@@ -50,18 +39,17 @@ class PdfAnnotationController extends Controller
             'stroke_width'  => 'nullable|numeric|min:0.5|max:50',
             'fill_opacity'  => 'nullable|numeric|min:0|max:1',
         ]);
-
         $annotation = PdfAnnotation::create([
             'user_id'        => Auth::id(),
             'publication_id' => $publication->id,
             ...$validated,
         ]);
-
         return response()->json(['data' => $this->serialize($annotation)], 201);
     }
 
     /**
      * PUT /api/annotations/{slug}/{id}
+     * Digunakan untuk update comment/color DAN update posisi (rect_x, rect_y) sticky note setelah drag.
      */
     public function update(Request $request, string $slug, int $id): JsonResponse
     {
@@ -74,47 +62,42 @@ class PdfAnnotationController extends Controller
             'color'        => 'nullable|in:' . implode(',', PdfAnnotation::VALID_COLORS),
             'stroke_width' => 'nullable|numeric|min:0.5|max:50',
             'fill_opacity' => 'nullable|numeric|min:0|max:1',
+            /* Posisi baru untuk sticky drag */
+            'rect_x'       => 'nullable|numeric',
+            'rect_y'       => 'nullable|numeric',
+            'rect_w'       => 'nullable|numeric',
+            'rect_h'       => 'nullable|numeric',
         ]);
 
         $annotation->update($validated);
-
         return response()->json(['data' => $this->serialize($annotation)]);
     }
 
-    /**
-     * DELETE /api/annotations/{slug}/{id}
-     */
     public function destroy(string $slug, int $id): JsonResponse
     {
         $annotation = PdfAnnotation::where('id', $id)
             ->where('user_id', Auth::id())
             ->firstOrFail();
-
         $annotation->delete();
-
         return response()->json(['message' => 'Deleted']);
     }
 
     /**
      * DELETE /api/annotations/{slug}/page/{page}
-     * PENTING: Route ini harus didaftarkan SEBELUM route {id} di routes/api.php
-     * Contoh urutan:
-     *   Route::delete('annotations/{slug}/page/{page}', [...'destroyPage']);
-     *   Route::delete('annotations/{slug}/{id}', [...'destroy']);
+     * PASTIKAN route ini didaftarkan SEBELUM route {id} di routes/api.php:
+     *
+     *   Route::delete('annotations/{slug}/page/{page}', [PdfAnnotationController::class, 'destroyPage']);
+     *   Route::delete('annotations/{slug}/{id}',        [PdfAnnotationController::class, 'destroy']);
      */
     public function destroyPage(string $slug, int $page): JsonResponse
     {
         $publication = Publication::where('slug', $slug)->firstOrFail();
-
         PdfAnnotation::where('user_id', Auth::id())
             ->where('publication_id', $publication->id)
             ->where('page', $page)
             ->delete();
-
-        return response()->json(['message' => 'Page annotations cleared']);
+        return response()->json(['message' => 'Page cleared']);
     }
-
-    // ── Helpers ───────────────────────────────────────────────────────
 
     private function serialize(PdfAnnotation $a): array
     {

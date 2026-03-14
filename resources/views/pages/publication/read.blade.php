@@ -1179,18 +1179,20 @@ $previewLimit = match($typeSlug) { 'buku'=>'10 halaman','opini'=>'1 halaman',def
 @endauth
 
 {{--
-══════════════════════════════════════════════════════════════════
+════════════════════════════════════════════════════════════════
 GANTI blok <script>
-    (function(){ ... })();
-</script> TERAKHIR
-di @push('scripts') pada read.blade.php dengan ini.
-══════════════════════════════════════════════════════════════════
+    (function(){...})();
+</script> PALING BAWAH
+di @push('scripts') pada read.blade.php dengan script ini.
+════════════════════════════════════════════════════════════════
 --}}
 <script>
     (function () {
     'use strict';
 
-    /* ── Auto-recovery ── */
+    /* ────────────────────────────────────────────────────────────
+       AUTO-RECOVERY
+    ──────────────────────────────────────────────────────────── */
     const RKEY = 'pdf_reload_' + (window.PDF_CONFIG?.slug || 'x');
     const att  = parseInt(sessionStorage.getItem(RKEY) || '0');
     if (att < 1) {
@@ -1203,10 +1205,124 @@ di @push('scripts') pada read.blade.php dengan ini.
                 setTimeout(() => location.reload(), 700);
             }
         }, 9000);
-        window.addEventListener('pdf-viewer-ready', () => { clearTimeout(t); sessionStorage.removeItem(RKEY); });
+        window.addEventListener('pdf-viewer-ready', () => {
+            clearTimeout(t);
+            sessionStorage.removeItem(RKEY);
+        });
     }
 
-    /* ── Annotation Bottom Bar ── */
+    /* ────────────────────────────────────────────────────────────
+       FAB (hamburger) — PERBAIKAN: attach langsung ke tombol
+       setelah DOM ready, tidak bergantung pada pdf-viewer.js.
+       pdf-viewer.js sudah attach openSheet/closeSheet ke FAB,
+       tapi kita OVERRIDE dengan yang lebih reliable di sini.
+    ──────────────────────────────────────────────────────────── */
+    function initFAB() {
+        const fabBtn   = document.getElementById('mobile-fab-btn');
+        const sheet    = document.getElementById('bottom-sheet');
+        const backdrop = document.getElementById('sheet-backdrop');
+        const closeBtn = document.getElementById('sheet-close');
+
+        if (!fabBtn || !sheet) return;
+
+        /* Bersihkan listener lama dengan clone trick */
+        const newFab = fabBtn.cloneNode(true);
+        fabBtn.parentNode.replaceChild(newFab, fabBtn);
+
+        let sheetOpen = false;
+
+        function openSheet() {
+            sheetOpen = true;
+            sheet.classList.add('show');
+            backdrop?.classList.add('show');
+            newFab.setAttribute('aria-expanded', 'true');
+        }
+        function closeSheet() {
+            sheetOpen = false;
+            sheet.classList.remove('show');
+            backdrop?.classList.remove('show');
+            newFab.setAttribute('aria-expanded', 'false');
+        }
+
+        /* FAB: klik → toggle */
+        newFab.addEventListener('click', e => {
+            e.stopPropagation();
+            sheetOpen ? closeSheet() : openSheet();
+        });
+
+        /* Tombol tutup di sheet */
+        if (closeBtn) {
+            const newClose = closeBtn.cloneNode(true);
+            closeBtn.parentNode.replaceChild(newClose, closeBtn);
+            newClose.addEventListener('click', closeSheet);
+        }
+
+        /* Backdrop click */
+        if (backdrop) {
+            backdrop.addEventListener('click', closeSheet);
+        }
+
+        /* Expose ke global agar pdf-viewer.js bisa pakai */
+        window.openBottomSheet  = openSheet;
+        window.closeBottomSheet = closeSheet;
+
+        /* Sheet actions */
+        document.getElementById('sheet-prev')?.addEventListener('click', () => {
+            if (window._pdfViewer) { const v=window._pdfViewer; if(v.pageNum>1){window._pdfViewer.queueRender(v.pageNum-1);} }
+        });
+        document.getElementById('sheet-next')?.addEventListener('click', () => {
+            if (window._pdfViewer) { const v=window._pdfViewer; if(v.pageNum<v.pdfDoc?.numPages){window._pdfViewer.queueRender(v.pageNum+1);} }
+        });
+        document.getElementById('sheet-zoom-in')?.addEventListener('click', () => {
+            document.getElementById('zoom-in')?.click();
+        });
+        document.getElementById('sheet-zoom-out')?.addEventListener('click', () => {
+            document.getElementById('zoom-out')?.click();
+        });
+        document.getElementById('sheet-fs-btn')?.addEventListener('click', () => {
+            closeSheet();
+            setTimeout(() => document.getElementById('fullscreen-btn')?.click(), 200);
+        });
+        document.getElementById('sheet-search-btn')?.addEventListener('click', () => {
+            closeSheet();
+            setTimeout(() => document.getElementById('search-btn')?.click(), 200);
+        });
+        document.getElementById('sheet-bookmark-btn')?.addEventListener('click', () => {
+            document.getElementById('bookmark-btn')?.click();
+        });
+        document.getElementById('sheet-jump-go')?.addEventListener('click', () => {
+            const n = parseInt(document.getElementById('sheet-jump')?.value);
+            if (n && window._pdfViewer) { window._pdfViewer.queueRender(n); closeSheet(); }
+        });
+        document.getElementById('sheet-jump')?.addEventListener('keydown', e => {
+            if (e.key === 'Enter') document.getElementById('sheet-jump-go')?.click();
+        });
+
+        /* Sheet mode cards */
+        document.querySelectorAll('[data-sheet-mode]').forEach(el => {
+            el.addEventListener('click', () => {
+                document.querySelectorAll('[data-sheet-mode]').forEach(x => x.classList.remove('active'));
+                el.classList.add('active');
+                const mode = el.dataset.sheetMode;
+                document.body.classList.remove('read-mode-sepia', 'read-mode-night');
+                if (mode !== 'normal') document.body.classList.add('read-mode-' + mode);
+                /* Sync mode-opt di toolbar */
+                document.querySelectorAll('.mode-opt').forEach(o => o.classList.toggle('active', o.dataset.mode === mode));
+                localStorage.setItem('bm_' + (window.PDF_CONFIG?.slug || 'x'), mode);
+            });
+        });
+    }
+
+    /* Jalankan setelah DOM siap */
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initFAB);
+    } else {
+        initFAB();
+    }
+
+    /* ────────────────────────────────────────────────────────────
+       ANNOTATION BOTTOM BAR
+    ──────────────────────────────────────────────────────────── */
     const bar = document.getElementById('annot-bottom-bar');
     if (!bar) return;
 
@@ -1217,51 +1333,41 @@ di @push('scripts') pada read.blade.php dengan ini.
     const colBtn    = document.getElementById('ab-collapse');
     let collapsed   = false;
 
-    const TOOL_LABELS = {
-        pan          : '🖐 Hand — Geser',
-        select       : '↖ Pilih Anotasi',
-        highlight    : '✏️ Highlight',
-        underline    : '__ Underline',
-        strikethrough: '~~ Strikethrough',
-        comment      : '💬 Komentar',
-        freehand     : '🖊 Pen Bebas',
-        shape        : '⬛ Shape',
-        text         : '🔤 Teks Bebas',
-        sticky       : '📌 Sticky Note',
-        eraser       : '🧹 Hapus',
+    const LABELS = {
+        pan:'🖐 Hand — Geser', select:'↖ Pilih Anotasi',
+        highlight:'✏️ Highlight', underline:'__ Underline', strikethrough:'~~ Strikethrough',
+        comment:'💬 Komentar', freehand:'🖊 Pen Bebas', shape:'⬛ Shape',
+        text:'🔤 Teks Bebas', sticky:'📌 Sticky Note', eraser:'🧹 Hapus',
     };
 
     function collapseBar() {
         collapsed = true;
-        toolsRow.style.display   = 'none';
-        handle.style.display     = 'none';
-        expandRow.style.display  = 'flex';
+        if (toolsRow) toolsRow.style.display = 'none';
+        if (handle)   handle.style.display   = 'none';
+        if (expandRow)expandRow.style.display = 'flex';
         document.body.classList.remove('annot-bar-visible');
-        updateFabPos();
+        updateFabBottom();
     }
     function expandBar() {
         collapsed = false;
-        toolsRow.style.display   = '';
-        handle.style.display     = '';
-        expandRow.style.display  = 'none';
+        if (toolsRow) toolsRow.style.display = '';
+        if (handle)   handle.style.display   = '';
+        if (expandRow)expandRow.style.display = 'none';
         document.body.classList.add('annot-bar-visible');
-        updateFabPos();
+        updateFabBottom();
     }
 
-    colBtn.addEventListener('click', e => {
-        e.stopPropagation();
-        collapsed ? expandBar() : collapseBar();
-    });
-    expandRow.addEventListener('click', expandBar);
+    colBtn?.addEventListener('click', e => { e.stopPropagation(); collapsed ? expandBar() : collapseBar(); });
+    expandRow?.addEventListener('click', expandBar);
 
-    /* Show bar when PDF ready */
+    /* Show bar ketika PDF siap */
     const waitV = setInterval(() => {
         if (window._pdfViewer) {
             clearInterval(waitV);
             window._pdfViewer.onReady(() => {
                 bar.classList.add('visible');
                 document.body.classList.add('annot-bar-visible');
-                updateFabPos();
+                updateFabBottom();
             });
         }
     }, 80);
@@ -1272,16 +1378,14 @@ di @push('scripts') pada read.blade.php dengan ini.
             const tool = btn.dataset.tool;
             document.querySelectorAll('.ab-tool[data-tool]').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            if (labelEl) labelEl.textContent = TOOL_LABELS[tool] || tool;
-
+            if (labelEl) labelEl.textContent = LABELS[tool] || tool;
             document.getElementById('ab-sizes')?.classList.toggle('show',  ['freehand','shape','text'].includes(tool));
             document.getElementById('ab-shapes')?.classList.toggle('show', tool === 'shape');
-
             window.dispatchEvent(new CustomEvent('annot-tool-change', { detail: { tool } }));
         });
     });
 
-    /* Color */
+    /* Color swatches */
     document.querySelectorAll('.ab-color').forEach(sw => {
         sw.addEventListener('click', () => {
             document.querySelectorAll('.ab-color').forEach(s => s.classList.remove('selected'));
@@ -1290,7 +1394,7 @@ di @push('scripts') pada read.blade.php dengan ini.
         });
     });
 
-    /* Size */
+    /* Size dots */
     document.querySelectorAll('.ab-size').forEach(d => {
         d.addEventListener('click', () => {
             document.querySelectorAll('.ab-size').forEach(x => x.classList.remove('selected'));
@@ -1299,7 +1403,7 @@ di @push('scripts') pada read.blade.php dengan ini.
         });
     });
 
-    /* Shape type */
+    /* Shape sub-picker */
     document.querySelectorAll('.ab-shape').forEach(b => {
         b.addEventListener('click', () => {
             document.querySelectorAll('.ab-shape').forEach(x => x.classList.remove('active'));
@@ -1308,7 +1412,7 @@ di @push('scripts') pada read.blade.php dengan ini.
         });
     });
 
-    /* Badge update */
+    /* Badge */
     window.addEventListener('annot-count-change', e => {
         const badge = document.getElementById('ab-panel-badge');
         if (!badge) return;
@@ -1317,94 +1421,21 @@ di @push('scripts') pada read.blade.php dengan ini.
         badge.classList.toggle('show', n > 0);
     });
 
-    /* ── FAB (hamburger) ─────────────────────────────────────────
-       PERBAIKAN: pisahkan FAB dari bottom sheet.
-       FAB hanya trigger bottom sheet.
-       Bottom sheet punya close button sendiri.
-    ───────────────────────────────────────────────────────────── */
-    const fab    = document.getElementById('mobile-fab');
-    const fabBtn = document.getElementById('mobile-fab-btn');
-    const sheet  = document.getElementById('bottom-sheet');
-    const backdrop = document.getElementById('sheet-backdrop');
-
-    function openSheet() {
-        sheet?.classList.add('show');
-        backdrop?.classList.add('show');
-    }
-    function closeSheet() {
-        sheet?.classList.remove('show');
-        backdrop?.classList.remove('show');
-    }
-    function isSheetOpen() { return sheet?.classList.contains('show'); }
-
-    /* FAB: TOGGLE bottom sheet */
-    if (fabBtn) {
-        fabBtn.addEventListener('click', e => {
-            e.stopPropagation();
-            isSheetOpen() ? closeSheet() : openSheet();
-        });
-    }
-
-    /* Sheet close button */
-    document.getElementById('sheet-close')?.addEventListener('click', closeSheet);
-    backdrop?.addEventListener('click', closeSheet);
-
-    /* Pindahkan handler sheet ke sini agar tidak duplikat dengan pdf-viewer.js */
-    /* Cek apakah pdf-viewer.js sudah attach (guard) */
-    if (!window._sheetHandlerAttached) {
-        window._sheetHandlerAttached = true;
-
-        document.getElementById('sheet-prev')?.addEventListener('click', () => window._pdfViewer && (window._pdfViewer.onPageChange, window._pdfViewer.queueRender(window._pdfViewer.pageNum - 1)));
-        document.getElementById('sheet-next')?.addEventListener('click', () => window._pdfViewer && window._pdfViewer.queueRender(window._pdfViewer.pageNum + 1));
-
-        document.getElementById('sheet-zoom-in')?.addEventListener('click', () => {
-            if (!window._pdfViewer) return;
-            window._pdfViewer.zoomIn?.();
-        });
-        document.getElementById('sheet-zoom-out')?.addEventListener('click', () => {
-            if (!window._pdfViewer) return;
-            window._pdfViewer.zoomOut?.();
-        });
-
-        document.getElementById('sheet-fs-btn')?.addEventListener('click', () => { closeSheet(); setTimeout(() => document.getElementById('fullscreen-btn')?.click(), 200); });
-        document.getElementById('sheet-search-btn')?.addEventListener('click', () => { closeSheet(); setTimeout(() => document.getElementById('search-btn')?.click(), 200); });
-        document.getElementById('sheet-bookmark-btn')?.addEventListener('click', () => document.getElementById('bookmark-btn')?.click());
-
-        document.getElementById('sheet-jump-go')?.addEventListener('click', () => {
-            const n = parseInt(document.getElementById('sheet-jump')?.value);
-            if (n && window._pdfViewer) { window._pdfViewer.queueRender(n); closeSheet(); }
-        });
-        document.getElementById('sheet-jump')?.addEventListener('keydown', e => {
-            if (e.key === 'Enter') { document.getElementById('sheet-jump-go')?.click(); }
-        });
-
-        document.querySelectorAll('[data-sheet-mode]').forEach(el => {
-            el.addEventListener('click', () => {
-                document.querySelectorAll('[data-sheet-mode]').forEach(x => x.classList.remove('active'));
-                el.classList.add('active');
-                document.querySelectorAll('.mode-opt').forEach(o => o.classList.toggle('active', o.dataset.mode === el.dataset.sheetMode));
-                document.body.classList.remove('read-mode-sepia','read-mode-night');
-                if (el.dataset.sheetMode !== 'normal') document.body.classList.add('read-mode-' + el.dataset.sheetMode);
-                localStorage.setItem('bm_' + (window.PDF_CONFIG?.slug||'x'), el.dataset.sheetMode);
-            });
-        });
-    }
-
-    /* ── FAB position: naik saat bar terlihat ── */
-    function updateFabPos() {
+    /* ── FAB bottom position ── */
+    function updateFabBottom() {
+        const fab = document.getElementById('mobile-fab');
         if (!fab) return;
-        if (!bar.classList.contains('visible') || collapsed) {
-            fab.style.bottom = '1.25rem';
+        if (bar.classList.contains('visible') && !collapsed) {
+            const h = bar.offsetHeight || 56;
+            fab.style.bottom = (h + 12) + 'px';
         } else {
-            const barH = bar.offsetHeight || 56;
-            fab.style.bottom = (barH + 12) + 'px';
+            fab.style.bottom = '1.25rem';
         }
     }
 
-    /* Observe bar height changes */
-    new ResizeObserver(updateFabPos).observe(bar);
-    new MutationObserver(updateFabPos).observe(bar, { attributes:true, attributeFilter:['class'] });
-    updateFabPos();
+    new ResizeObserver(updateFabBottom).observe(bar);
+    new MutationObserver(updateFabBottom).observe(bar, { attributes:true, attributeFilter:['class'] });
+    updateFabBottom();
 
 })();
 </script>
