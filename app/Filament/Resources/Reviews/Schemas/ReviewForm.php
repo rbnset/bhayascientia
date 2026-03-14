@@ -2,19 +2,22 @@
 
 namespace App\Filament\Resources\Reviews\Schemas;
 
+use Filament\Forms\Components\Actions;
+use Filament\Forms\Components\Actions\Action;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Get;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Wizard;
 use Filament\Schemas\Components\Wizard\Step;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Storage;
-use Filament\Forms\Components\Actions;
-use Filament\Forms\Components\Actions\Action;
-use Filament\Forms\Components\Placeholder;
+use Illuminate\Support\HtmlString;
 
 class ReviewForm
 {
@@ -92,15 +95,39 @@ class ReviewForm
                                 ]),
 
                             /*
-                             * PERUBAHAN: Preview metadata publikasi tetap ada di Step 1
-                             * agar reviewer tahu dulu apa yang akan di-review.
+                             * Preview metadata publikasi di Step 1
+                             * Menggunakan Placeholder agar $get() bisa diakses dengan benar.
                              */
                             Section::make('Preview publikasi')
                                 ->description('Ringkasan metadata sebelum review')
                                 ->icon('heroicon-o-eye')
                                 ->schema([
-                                    View::make('filament.reviews.publication-preview')
-                                        ->columnSpanFull(),
+                                    Placeholder::make('publication_preview')
+                                        ->label('')
+                                        ->live()
+                                        ->columnSpanFull()
+                                        ->content(function (Get $get): HtmlString {
+                                            $pvId = $get('publication_version_id');
+
+                                            if (! $pvId) {
+                                                return new HtmlString(
+                                                    '<div class="p-4 text-sm italic text-gray-400">Pilih Publication Version terlebih dahulu.</div>'
+                                                );
+                                            }
+
+                                            $version = \App\Models\PublicationVersion::with('publication')->find($pvId);
+
+                                            if (! $version) {
+                                                return new HtmlString('');
+                                            }
+
+                                            return new HtmlString(
+                                                view('filament.reviews.publication-preview', [
+                                                    'version'     => $version,
+                                                    'publication' => $version->publication,
+                                                ])->render()
+                                            );
+                                        }),
                                 ]),
                         ]),
 
@@ -114,17 +141,57 @@ class ReviewForm
 
                             /*
                              * PDF VIEWER + ANNOTATION TOOL
-                             * Reviewer membaca naskah dan memberi anotasi langsung.
+                             * Menggunakan Placeholder agar $get() bisa diakses dengan benar.
                              * Anotasi tersimpan ke DB (pdf_annotations) via REST API.
-                             * Tombol "Export PDF + Anotasi" akan mengunduh PDF yang sudah
-                             * diberi markup — file ini bisa langsung di-upload di Step 3.
                              */
                             Section::make('Baca & Anotasi Naskah')
                                 ->description('Beri highlight, komentar, dan tanda pada naskah. Anotasi tersimpan otomatis. Gunakan tombol "Export PDF + Anotasi" untuk mengunduh hasil markup.')
                                 ->icon('heroicon-o-document-text')
                                 ->schema([
-                                    View::make('filament.reviews.pdf-viewer')
-                                        ->columnSpanFull(),
+                                    Placeholder::make('pdf_viewer')
+                                        ->label('')
+                                        ->live()
+                                        ->columnSpanFull()
+                                        ->content(function (Get $get): HtmlString {
+                                            $pvId = $get('publication_version_id');
+
+                                            if (! $pvId) {
+                                                return new HtmlString(
+                                                    '<div class="p-8 text-center border-2 border-orange-200 border-dashed rounded-xl bg-orange-50 dark:border-orange-800 dark:bg-orange-950">
+                                                        <div class="mb-3 text-4xl">📄</div>
+                                                        <p class="text-sm font-semibold text-orange-700 dark:text-orange-300">
+                                                            Pilih Publication Version di Step 1 untuk membaca naskah.
+                                                        </p>
+                                                    </div>'
+                                                );
+                                            }
+
+                                            $version = \App\Models\PublicationVersion::with('publication')->find($pvId);
+
+                                            if (! $version || ! $version->pdf_file_path) {
+                                                return new HtmlString(
+                                                    '<div class="p-8 text-center border-2 border-red-200 border-dashed rounded-xl bg-red-50 dark:border-red-800 dark:bg-red-950">
+                                                        <div class="mb-3 text-4xl">⚠️</div>
+                                                        <p class="text-sm font-semibold text-red-700 dark:text-red-300">
+                                                            File PDF tidak ditemukan untuk versi ini.
+                                                        </p>
+                                                    </div>'
+                                                );
+                                            }
+
+                                            $publication = $version->publication;
+                                            $slug        = $publication?->slug;
+                                            $pdfUrl      = route('manuscripts.stream', $version);
+
+                                            return new HtmlString(
+                                                view('filament.reviews.pdf-viewer', [
+                                                    'version'     => $version,
+                                                    'publication' => $publication,
+                                                    'slug'        => $slug,
+                                                    'pdfUrl'      => $pdfUrl,
+                                                ])->render()
+                                            );
+                                        }),
                                 ]),
 
                             Section::make('Detailed Review Notes')
@@ -165,7 +232,7 @@ class ReviewForm
                                 ->description('Catatan umum untuk penulis')
                                 ->icon('heroicon-o-chat-bubble-left-right')
                                 ->schema([
-                                    \Filament\Forms\Components\RichEditor::make('overall_comment')
+                                    RichEditor::make('overall_comment')
                                         ->label('Overall Comment')
                                         ->required()
                                         ->toolbarButtons([
@@ -215,7 +282,7 @@ class ReviewForm
                                                 ->visibility('private')
                                                 ->directory('review-attachments')
                                                 ->preserveFilenames()
-                                                ->maxSize(20480) // 20MB — anotasi menambah ukuran
+                                                ->maxSize(20480)
                                                 ->openable(false)
                                                 ->downloadable(false)
                                                 ->required()
@@ -230,6 +297,7 @@ class ReviewForm
                                             ->action(function ($record) {
                                                 $attachment = $record->attachments()->latest()->first();
                                                 abort_unless($attachment && filled($attachment->file_path), 404);
+
                                                 return Storage::disk('local')->download($attachment->file_path);
                                             }),
                                     ])->columnSpanFull(),
