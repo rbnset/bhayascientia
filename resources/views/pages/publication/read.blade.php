@@ -1,9 +1,7 @@
 {{--
 resources/views/pages/publication/read.blade.php
-─────────────────────────────────────────────────
 CSS → public/css/pdf-viewer.css
 JS → public/js/pdf-viewer.js + public/js/pdf-annotations.js
-─────────────────────────────────────────────────
 --}}
 @extends('layouts.app')
 
@@ -14,10 +12,9 @@ JS → public/js/pdf-viewer.js + public/js/pdf-annotations.js
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/pdf-viewer.css') }}?v={{ filemtime(public_path('css/pdf-viewer.css')) }}">
 <style>
-    /* ══════════════════════════════════════════════
-   ANNOTATION BOTTOM BAR — mobile-first, tidak
-   menghalangi area baca PDF
-══════════════════════════════════════════════ */
+    /* ══════════════════════════════════════════════════════════════
+   ANNOTATION BOTTOM BAR
+══════════════════════════════════════════════════════════════ */
     #annot-bottom-bar {
         position: fixed;
         bottom: 0;
@@ -30,13 +27,13 @@ JS → public/js/pdf-viewer.js + public/js/pdf-annotations.js
         flex-direction: column;
         padding-bottom: env(safe-area-inset-bottom, 0px);
         transition: transform .25s ease;
+        will-change: transform;
     }
 
     #annot-bottom-bar.visible {
         display: flex;
     }
 
-    /* Handle row */
     .ab-handle {
         display: flex;
         align-items: center;
@@ -79,7 +76,6 @@ JS → public/js/pdf-viewer.js + public/js/pdf-annotations.js
         justify-content: center;
     }
 
-    /* Collapsed pill */
     .ab-expand {
         display: none;
         align-items: center;
@@ -109,7 +105,6 @@ JS → public/js/pdf-viewer.js + public/js/pdf-annotations.js
         background: #ff6b18;
     }
 
-    /* Tools scrollable row */
     .ab-tools {
         display: flex;
         align-items: center;
@@ -132,7 +127,6 @@ JS → public/js/pdf-viewer.js + public/js/pdf-annotations.js
         flex-shrink: 0;
     }
 
-    /* Tool btn */
     .ab-tool {
         width: 38px;
         height: 38px;
@@ -166,7 +160,18 @@ JS → public/js/pdf-viewer.js + public/js/pdf-annotations.js
         color: #f87171;
     }
 
-    /* badge */
+    .ab-tool[data-tool="select"].active {
+        background: rgba(96, 165, 250, .15);
+        border-color: #60a5fa;
+        color: #60a5fa;
+    }
+
+    .ab-tool[data-tool="pan"].active {
+        background: rgba(74, 222, 128, .15);
+        border-color: #4ade80;
+        color: #4ade80;
+    }
+
     .ab-badge {
         position: absolute;
         top: 2px;
@@ -188,7 +193,6 @@ JS → public/js/pdf-viewer.js + public/js/pdf-annotations.js
         display: flex;
     }
 
-    /* Action (undo/redo) */
     .ab-action {
         width: 34px;
         height: 34px;
@@ -205,6 +209,11 @@ JS → public/js/pdf-viewer.js + public/js/pdf-annotations.js
         transition: all .15s;
     }
 
+    .ab-action:hover {
+        background: #2d2d2d;
+        color: #fff;
+    }
+
     .ab-action:active {
         transform: scale(.88);
     }
@@ -214,7 +223,6 @@ JS → public/js/pdf-viewer.js + public/js/pdf-annotations.js
         cursor: not-allowed;
     }
 
-    /* Colors */
     .ab-colors {
         display: flex;
         align-items: center;
@@ -243,23 +251,23 @@ JS → public/js/pdf-viewer.js + public/js/pdf-annotations.js
     }
 
     .ab-color[data-color="yellow"] {
-        background: #ffd700;
+        background: #FFD700;
     }
 
     .ab-color[data-color="green"] {
-        background: #4ade80;
+        background: #4ADE80;
     }
 
     .ab-color[data-color="red"] {
-        background: #ef4444;
+        background: #EF4444;
     }
 
     .ab-color[data-color="blue"] {
-        background: #60a5fa;
+        background: #60A5FA;
     }
 
     .ab-color[data-color="orange"] {
-        background: #ff6b18;
+        background: #FF6B18;
     }
 
     .ab-color[data-color="black"] {
@@ -272,7 +280,18 @@ JS → public/js/pdf-viewer.js + public/js/pdf-annotations.js
         border-color: #555;
     }
 
-    /* Sizes */
+    .ab-color[data-color="pink"] {
+        background: #F472B6;
+    }
+
+    .ab-color[data-color="purple"] {
+        background: #A78BFA;
+    }
+
+    .ab-color[data-color="cyan"] {
+        background: #22D3EE;
+    }
+
     .ab-sizes {
         display: none;
         align-items: center;
@@ -320,7 +339,6 @@ JS → public/js/pdf-viewer.js + public/js/pdf-annotations.js
         height: 17px;
     }
 
-    /* Shape sub-picker */
     .ab-shapes {
         display: none;
         align-items: center;
@@ -343,7 +361,7 @@ JS → public/js/pdf-viewer.js + public/js/pdf-annotations.js
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 13px;
+        font-size: 12px;
         flex-shrink: 0;
         transition: all .15s;
     }
@@ -354,15 +372,15 @@ JS → public/js/pdf-viewer.js + public/js/pdf-annotations.js
         background: rgba(255, 107, 24, .12);
     }
 
-    /* Desktop: bar floats centred above bottom */
+    /* Desktop float */
     @media (min-width:768px) {
         #annot-bottom-bar {
             left: 50%;
             right: auto;
             transform: translateX(-50%);
             width: auto;
-            min-width: 560px;
-            max-width: 88vw;
+            min-width: 580px;
+            max-width: 92vw;
             border-radius: 14px 14px 0 0;
             border: 1px solid #2d2d2d;
             border-bottom: none;
@@ -384,6 +402,23 @@ JS → public/js/pdf-viewer.js + public/js/pdf-annotations.js
 
     #pdf-recovery-overlay.show {
         display: flex;
+    }
+
+    /* Stage modes */
+    #pdf-stage.pan-mode {
+        cursor: grab !important;
+    }
+
+    #pdf-stage.pan-mode:active {
+        cursor: grabbing !important;
+    }
+
+    #pdf-stage.select-mode {
+        cursor: default !important;
+    }
+
+    #pdf-stage.text-tool-mode {
+        cursor: text !important;
     }
 </style>
 @endpush
@@ -613,13 +648,11 @@ $previewLimit = match($typeSlug) { 'buku'=>'10 halaman','opini'=>'1 halaman',def
         <p class="text-sm font-semibold text-white">Memuat dokumen...</p>
         <p class="text-xs text-gray-400">Harap tunggu sebentar</p>
     </div>
-
     <div id="pdf-recovery-overlay">
         <div class="spinner"></div>
         <p class="text-sm font-semibold text-white">Memuat ulang...</p>
         <p class="text-xs text-gray-400">Sebentar lagi siap</p>
     </div>
-
     <div id="pdf-canvas-wrapper" class="hidden">
         <div id="pdf-stage">
             <canvas id="pdf-canvas"></canvas>
@@ -629,15 +662,13 @@ $previewLimit = match($typeSlug) { 'buku'=>'10 halaman','opini'=>'1 halaman',def
             @guest<div id="pdf-watermark"></div>@endguest
         </div>
     </div>
-
     @auth
     <iframe id="pdf-iframe" title="PDF Viewer" sandbox="allow-same-origin allow-scripts"></iframe>
     @else
     <div id="pdf-iframe" style="display:none;" aria-hidden="true"></div>
     @endauth
-
     <div id="desktop-hint" class="hidden">← → halaman &nbsp;·&nbsp; +/− zoom &nbsp;·&nbsp; B tandai &nbsp;·&nbsp; Ctrl+F
-        cari &nbsp;·&nbsp; Esc keluar</div>
+        cari</div>
 
     @guest
     <div id="guest-gate-overlay">
@@ -753,11 +784,9 @@ $previewLimit = match($typeSlug) { 'buku'=>'10 halaman','opini'=>'1 halaman',def
         </div>
         <button class="tap-close-btn" id="tap-close-overlay">Tutup & Lanjut Baca</button>
     </div>
-</div>{{-- /pdf-viewer-container --}}
+</div>
 
 {{-- ══════ OVERLAYS ══════ --}}
-
-{{-- Annotation Tooltip --}}
 <div id="annot-tooltip">
     <div class="at-text" id="annot-tooltip-text"></div>
     <div class="at-actions">
@@ -765,8 +794,6 @@ $previewLimit = match($typeSlug) { 'buku'=>'10 halaman','opini'=>'1 halaman',def
         <button class="at-btn close" id="annot-tooltip-close">✕ Tutup</button>
     </div>
 </div>
-
-{{-- Comment Popup --}}
 <div id="comment-popup">
     <p class="cp-title">💬 Tambah Komentar</p>
     <textarea id="comment-text" placeholder="Tulis komentar untuk teks ini..."></textarea>
@@ -776,29 +803,41 @@ $previewLimit = match($typeSlug) { 'buku'=>'10 halaman','opini'=>'1 halaman',def
     </div>
 </div>
 
-{{-- Legacy annot-toolbar: hidden, kept for JS compat --}}
+{{-- Hidden legacy aliases --}}
 <div id="annot-toolbar" style="display:none!important">
     <button class="annot-tool-btn" data-color="yellow"></button>
-    <button class="annot-tool-btn" data-color="green"></button>
-    <button class="annot-tool-btn" data-color="pink"></button>
-    <button class="annot-tool-btn" data-color="blue"></button>
-    <button class="annot-tool-btn" data-color="orange"></button>
     <button id="add-comment-btn"></button>
     <button id="annot-close-btn"></button>
 </div>
+<div id="annot-floating-toolbar" style="display:none!important">
+    <div id="aft-colors">
+        <div data-color="yellow"></div>
+        <div data-color="green"></div>
+        <div data-color="red"></div>
+        <div data-color="blue"></div>
+        <div data-color="orange"></div>
+        <div data-color="black"></div>
+        <div data-color="white"></div>
+    </div>
+    <div id="aft-sizes">
+        <div data-size="2"></div>
+        <div data-size="4"></div>
+        <div data-size="8"></div>
+        <div data-size="14"></div>
+    </div>
+    <div id="aft-shape-types">
+        <button data-shape="rect"></button><button data-shape="ellipse"></button><button data-shape="arrow"></button>
+    </div>
+</div>
 
-{{-- ══════ ANNOTATION BOTTOM BAR (login only) ══════ --}}
+{{-- ══════ ANNOTATION BOTTOM BAR ══════ --}}
 @auth
 <div id="annot-bottom-bar">
-
-    {{-- Handle --}}
     <div class="ab-handle" id="ab-handle">
         <div class="ab-handle-pip"></div>
         <span class="ab-handle-label" id="ab-active-label">✏️ Highlight</span>
         <button class="ab-collapse" id="ab-collapse" title="Sembunyikan">▾</button>
     </div>
-
-    {{-- Collapsed pill --}}
     <div class="ab-expand" id="ab-expand">
         <div class="ab-expand-pill">
             <div class="ab-expand-dot"></div>
@@ -806,11 +845,25 @@ $previewLimit = match($typeSlug) { 'buku'=>'10 halaman','opini'=>'1 halaman',def
             <span style="color:#ff6b18">▴</span>
         </div>
     </div>
-
-    {{-- Tools --}}
     <div class="ab-tools" id="ab-tools">
 
-        {{-- Tool buttons --}}
+        {{-- ── GROUP 1: Navigation Tools ── --}}
+        <button class="ab-tool" data-tool="pan" title="Hand — Geser dokumen">
+            <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path
+                    d="M18 11V6.5a1.5 1.5 0 00-3 0V11m0 0V8.5a1.5 1.5 0 00-3 0V11m0 0V10a1.5 1.5 0 00-3 0v6c0 2.21 1.79 4 4 4h2a4 4 0 004-4v-5a1.5 1.5 0 00-3 0"
+                    stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+        </button>
+        <button class="ab-tool" data-tool="select" title="Pilih — Klik anotasi untuk memilih/hapus">
+            <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 3l14 9-7 1-3 7L5 3z" stroke-linejoin="round" />
+            </svg>
+        </button>
+
+        <div class="ab-sep"></div>
+
+        {{-- ── GROUP 2: Text Markup ── --}}
         <button class="ab-tool active" data-tool="highlight" title="Highlight teks">
             <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M9 19l-2 2H5l1-2L15 9l2 2L9 19z" stroke-linejoin="round" />
@@ -818,22 +871,46 @@ $previewLimit = match($typeSlug) { 'buku'=>'10 halaman','opini'=>'1 halaman',def
                 <line x1="5" y1="21" x2="19" y2="21" />
             </svg>
         </button>
+        <button class="ab-tool" data-tool="underline" title="Underline teks">
+            <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M6 3v7a6 6 0 006 6 6 6 0 006-6V3" stroke-linecap="round" />
+                <line x1="4" y1="21" x2="20" y2="21" />
+            </svg>
+        </button>
+        <button class="ab-tool" data-tool="strikethrough" title="Strikethrough teks">
+            <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17.3 12H6.7M10 7.2C10 7.2 9 6 11.5 6c2.1 0 3 1 3 2.2 0 2-2 2.8-3.5 3"
+                    stroke-linecap="round" />
+                <path d="M14 17c0 0 1 1-1.5 1-2.1 0-3.5-1-3.5-2.5" stroke-linecap="round" />
+            </svg>
+        </button>
+        <button class="ab-tool" data-tool="comment" title="Komentar teks">
+            <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+            </svg>
+        </button>
+
+        <div class="ab-sep"></div>
+
+        {{-- ── GROUP 3: Drawing ── --}}
         <button class="ab-tool" data-tool="freehand" title="Pen bebas">
             <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 20h9" />
                 <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
             </svg>
         </button>
-        <button class="ab-tool" data-tool="shape" title="Kotak/Lingkaran/Panah">
+        <button class="ab-tool" data-tool="shape" title="Bentuk (Kotak/Lingkaran/Panah/Garis)">
             <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="3" y="3" width="7" height="7" rx="1" />
                 <circle cx="17.5" cy="6.5" r="3.5" />
                 <path d="M3 20h4M5 18v4M14 15l5 5m0-5l-5 5" />
             </svg>
         </button>
-        <button class="ab-tool" data-tool="comment" title="Komentar teks">
+        <button class="ab-tool" data-tool="text" title="Teks bebas">
             <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                <polyline points="4 7 4 4 20 4 20 7" />
+                <line x1="9" y1="20" x2="15" y2="20" />
+                <line x1="12" y1="4" x2="12" y2="20" />
             </svg>
         </button>
         <button class="ab-tool" data-tool="sticky" title="Sticky note">
@@ -844,7 +921,11 @@ $previewLimit = match($typeSlug) { 'buku'=>'10 halaman','opini'=>'1 halaman',def
                 <line x1="9" y1="17" x2="13" y2="17" />
             </svg>
         </button>
-        <button class="ab-tool" data-tool="eraser" title="Hapus anotasi">
+
+        <div class="ab-sep"></div>
+
+        {{-- ── GROUP 4: Eraser ── --}}
+        <button class="ab-tool" data-tool="eraser" title="Hapus anotasi (klik/sentuh)">
             <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M20 20H7L3 16l10-10 7 7-3 3" />
                 <path d="M6.5 17.5l5-5" />
@@ -858,6 +939,7 @@ $previewLimit = match($typeSlug) { 'buku'=>'10 halaman','opini'=>'1 halaman',def
             <button class="ab-shape active" data-shape="rect" title="Kotak">⬛</button>
             <button class="ab-shape" data-shape="ellipse" title="Lingkaran">⭕</button>
             <button class="ab-shape" data-shape="arrow" title="Panah">➡</button>
+            <button class="ab-shape" data-shape="line" title="Garis">—</button>
             <div class="ab-sep"></div>
         </div>
 
@@ -870,13 +952,16 @@ $previewLimit = match($typeSlug) { 'buku'=>'10 halaman','opini'=>'1 halaman',def
             <div class="ab-sep"></div>
         </div>
 
-        {{-- Colors --}}
+        {{-- Colors — 10 warna --}}
         <div class="ab-colors">
             <div class="ab-color selected" data-color="yellow" title="Kuning"></div>
             <div class="ab-color" data-color="green" title="Hijau"></div>
             <div class="ab-color" data-color="red" title="Merah"></div>
             <div class="ab-color" data-color="blue" title="Biru"></div>
             <div class="ab-color" data-color="orange" title="Oranye"></div>
+            <div class="ab-color" data-color="pink" title="Pink"></div>
+            <div class="ab-color" data-color="purple" title="Ungu"></div>
+            <div class="ab-color" data-color="cyan" title="Cyan"></div>
             <div class="ab-color" data-color="black" title="Hitam"></div>
             <div class="ab-color" data-color="white" title="Putih"></div>
         </div>
@@ -885,12 +970,12 @@ $previewLimit = match($typeSlug) { 'buku'=>'10 halaman','opini'=>'1 halaman',def
 
         {{-- Undo / Redo --}}
         <button class="ab-action" id="aft-undo" title="Undo (Ctrl+Z)" disabled>↩</button>
-        <button class="ab-action" id="aft-redo" title="Redo" disabled>↪</button>
+        <button class="ab-action" id="aft-redo" title="Redo (Ctrl+Y)" disabled>↪</button>
 
         <div class="ab-sep"></div>
 
-        {{-- Panel --}}
-        <button class="ab-tool" id="aft-panel-btn" title="Daftar anotasi">
+        {{-- Annotation Panel --}}
+        <button class="ab-tool" id="aft-panel-btn" title="Daftar semua anotasi">
             <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="8" y1="6" x2="21" y2="6" />
                 <line x1="8" y1="12" x2="21" y2="12" />
@@ -936,28 +1021,6 @@ $previewLimit = match($typeSlug) { 'buku'=>'10 halaman','opini'=>'1 halaman',def
 
 {{-- Eraser cursor --}}
 <div id="eraser-cursor"></div>
-
-{{-- Hidden aliases for pdf-annotations.js compatibility --}}
-<div id="annot-floating-toolbar" style="display:none!important">
-    <div id="aft-colors">
-        <div data-color="yellow"></div>
-        <div data-color="green"></div>
-        <div data-color="red"></div>
-        <div data-color="blue"></div>
-        <div data-color="orange"></div>
-        <div data-color="black"></div>
-        <div data-color="white"></div>
-    </div>
-    <div id="aft-sizes">
-        <div data-size="2"></div>
-        <div data-size="4"></div>
-        <div data-size="8"></div>
-        <div data-size="14"></div>
-    </div>
-    <div id="aft-shape-types"><button data-shape="rect"></button><button data-shape="ellipse"></button><button
-            data-shape="arrow"></button></div>
-</div>
-
 @endauth
 
 {{-- ══════ BOTTOM SHEET ══════ --}}
@@ -1115,20 +1178,11 @@ $previewLimit = match($typeSlug) { 'buku'=>'10 halaman','opini'=>'1 halaman',def
 <script src="{{ asset('js/pdf-annotations.js') }}?v={{ filemtime(public_path('js/pdf-annotations.js')) }}"></script>
 @endauth
 
-{{--
-══════════════════════════════════════════════════════════════════
-GANTI seluruh blok <script>
-    terakhir di @push('scripts') pada
-  resources/views/pages/publication/read.blade.php
-  (dari "(function () {" hingga akhir script tag)
-  dengan kode di bawah ini.
-  ══════════════════════════════════════════════════════════════════
---}}
 <script>
-(function () {
+    (function () {
     'use strict';
 
-    /* ── Auto-recovery: reload 1x jika PDF gagal load ── */
+    /* ── Auto-recovery ── */
     const RKEY = 'pdf_reload_' + (window.PDF_CONFIG?.slug || 'x');
     const att  = parseInt(sessionStorage.getItem(RKEY) || '0');
     if (att < 1) {
@@ -1141,44 +1195,46 @@ GANTI seluruh blok <script>
                 setTimeout(() => location.reload(), 700);
             }
         }, 9000);
-        window.addEventListener('pdf-viewer-ready', () => {
-            clearTimeout(t);
-            sessionStorage.removeItem(RKEY);
-        });
+        window.addEventListener('pdf-viewer-ready', () => { clearTimeout(t); sessionStorage.removeItem(RKEY); });
     }
 
-    /* ── Bottom annotation bar ── */
-    const bar       = document.getElementById('annot-bottom-bar');
+    /* ── Annotation Bottom Bar ── */
+    const bar = document.getElementById('annot-bottom-bar');
     if (!bar) return;
 
     const toolsRow  = document.getElementById('ab-tools');
     const expandRow = document.getElementById('ab-expand');
-    const label     = document.getElementById('ab-active-label');
+    const labelEl   = document.getElementById('ab-active-label');
     const handle    = document.getElementById('ab-handle');
     const colBtn    = document.getElementById('ab-collapse');
     let collapsed   = false;
 
-    const LABELS = {
-        highlight : '✏️ Highlight',
-        freehand  : '🖊 Pen Bebas',
-        shape     : '⬛ Shape',
-        comment   : '💬 Komentar',
-        sticky    : '📌 Sticky Note',
-        eraser    : '🧹 Hapus'
+    const TOOL_LABELS = {
+        pan          : '🖐 Hand — Geser',
+        select       : '↖ Pilih Anotasi',
+        highlight    : '✏️ Highlight',
+        underline    : '__ Underline',
+        strikethrough: '~~ Strikethrough',
+        comment      : '💬 Komentar',
+        freehand     : '🖊 Pen Bebas',
+        shape        : '⬛ Shape',
+        text         : '🔤 Teks Bebas',
+        sticky       : '📌 Sticky Note',
+        eraser       : '🧹 Hapus',
     };
 
     function collapse() {
         collapsed = true;
-        toolsRow.style.display    = 'none';
-        handle.style.display      = 'none';
-        expandRow.style.display   = 'flex';
+        toolsRow.style.display   = 'none';
+        handle.style.display     = 'none';
+        expandRow.style.display  = 'flex';
         document.body.classList.remove('annot-bar-visible');
     }
     function expand() {
         collapsed = false;
-        toolsRow.style.display    = '';
-        handle.style.display      = '';
-        expandRow.style.display   = 'none';
+        toolsRow.style.display   = '';
+        handle.style.display     = '';
+        expandRow.style.display  = 'none';
         document.body.classList.add('annot-bar-visible');
     }
 
@@ -1186,33 +1242,30 @@ GANTI seluruh blok <script>
     expandRow.addEventListener('click', expand);
 
     /* Show bar when PDF ready */
-    function showBar() {
-        bar.classList.add('visible');
-        document.body.classList.add('annot-bar-visible');
-    }
     const waitV = setInterval(() => {
         if (window._pdfViewer) {
             clearInterval(waitV);
-            window._pdfViewer.onReady(showBar);
+            window._pdfViewer.onReady(() => {
+                bar.classList.add('visible');
+                document.body.classList.add('annot-bar-visible');
+            });
         }
     }, 80);
 
-    /* Tool selection — forward events ke pdf-annotations.js */
+    /* Tool buttons */
     document.querySelectorAll('.ab-tool[data-tool]').forEach(btn => {
         btn.addEventListener('click', () => {
             const tool = btn.dataset.tool;
             document.querySelectorAll('.ab-tool[data-tool]').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            if (label) label.textContent = LABELS[tool] || tool;
+            if (labelEl) labelEl.textContent = TOOL_LABELS[tool] || tool;
 
-            const sizeBox  = document.getElementById('ab-sizes');
-            const shapeBox = document.getElementById('ab-shapes');
-            if (sizeBox)  sizeBox.classList.toggle('show',  ['freehand','shape'].includes(tool));
-            if (shapeBox) shapeBox.classList.toggle('show', tool === 'shape');
+            /* Show/hide sub-pickers */
+            const sizes  = document.getElementById('ab-sizes');
+            const shapes = document.getElementById('ab-shapes');
+            if (sizes)  sizes.classList.toggle('show',  ['freehand','shape','text'].includes(tool));
+            if (shapes) shapes.classList.toggle('show', tool === 'shape');
 
-            /* Forward ke hidden toolbar — pdf-annotations.js juga mendengarkan event ini */
-            const hidden = document.querySelector(`#annot-floating-toolbar [data-tool="${tool}"]`);
-            if (hidden) hidden.click();
             window.dispatchEvent(new CustomEvent('annot-tool-change', { detail: { tool } }));
         });
     });
@@ -1222,8 +1275,6 @@ GANTI seluruh blok <script>
         sw.addEventListener('click', () => {
             document.querySelectorAll('.ab-color').forEach(s => s.classList.remove('selected'));
             sw.classList.add('selected');
-            const hidden = document.querySelector(`#aft-colors [data-color="${sw.dataset.color}"]`);
-            if (hidden) hidden.click();
             window.dispatchEvent(new CustomEvent('annot-color-change', { detail: { color: sw.dataset.color } }));
         });
     });
@@ -1233,8 +1284,6 @@ GANTI seluruh blok <script>
         d.addEventListener('click', () => {
             document.querySelectorAll('.ab-size').forEach(x => x.classList.remove('selected'));
             d.classList.add('selected');
-            const hidden = document.querySelector(`#aft-sizes [data-size="${d.dataset.size}"]`);
-            if (hidden) hidden.click();
             window.dispatchEvent(new CustomEvent('annot-size-change', { detail: { size: +d.dataset.size } }));
         });
     });
@@ -1244,37 +1293,29 @@ GANTI seluruh blok <script>
         b.addEventListener('click', () => {
             document.querySelectorAll('.ab-shape').forEach(x => x.classList.remove('active'));
             b.classList.add('active');
-            const hidden = document.querySelector(`#aft-shape-types [data-shape="${b.dataset.shape}"]`);
-            if (hidden) hidden.click();
             window.dispatchEvent(new CustomEvent('annot-shape-change', { detail: { shape: b.dataset.shape } }));
         });
     });
 
-    /* Badge counter dari annotation events */
+    /* Badge update */
     window.addEventListener('annot-count-change', e => {
         const badge = document.getElementById('ab-panel-badge');
         if (!badge) return;
         const n = e.detail?.count || 0;
-        badge.textContent = n;
+        badge.textContent = n > 99 ? '99+' : String(n);
         badge.classList.toggle('show', n > 0);
     });
 
-    /* ── ZOOM ANTI-FLICKER
-       Cegah canvas redraw yang menyebabkan kedip dengan
-       menonaktifkan transisi sementara saat zoom ── */
-    let zoomFlickerTimer = null;
-    window.addEventListener('annot-size-change', () => {});  // placeholder
-    window.addEventListener('pdf-zoom-start', () => {
-        const fc = document.getElementById('freehand-canvas');
-        if (fc) fc.style.opacity = '0';
-    });
-    window.addEventListener('pdf-zoom-end', () => {
-        clearTimeout(zoomFlickerTimer);
-        zoomFlickerTimer = setTimeout(() => {
-            const fc = document.getElementById('freehand-canvas');
-            if (fc) fc.style.opacity = '1';
-        }, 120);
-    });
+    /* FAB position — naik saat bar terlihat */
+    const fab = document.getElementById('mobile-fab');
+    function updateFabPos() {
+        if (!fab) return;
+        const barH = bar.classList.contains('visible') && !collapsed ? (bar.offsetHeight || 56) : 0;
+        fab.style.bottom = (barH + 16) + 'px';
+    }
+    new MutationObserver(updateFabPos).observe(bar, { attributes:true, attributeFilter:['class'] });
+    new ResizeObserver(updateFabPos).observe(bar);
+    updateFabPos();
 
 })();
 </script>
