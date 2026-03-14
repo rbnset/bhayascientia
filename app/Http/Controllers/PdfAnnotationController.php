@@ -10,10 +10,8 @@ use Illuminate\Support\Facades\Auth;
 
 class PdfAnnotationController extends Controller
 {
-
     /**
      * GET /api/annotations/{slug}
-     * Fetch all annotations for a publication (current user only).
      */
     public function index(string $slug): JsonResponse
     {
@@ -31,7 +29,6 @@ class PdfAnnotationController extends Controller
 
     /**
      * POST /api/annotations/{slug}
-     * Create a new annotation.
      */
     public function store(Request $request, string $slug): JsonResponse
     {
@@ -39,8 +36,8 @@ class PdfAnnotationController extends Controller
 
         $validated = $request->validate([
             'page'          => 'required|integer|min:1',
-            'type'          => 'required|in:highlight,freehand,comment,sticky,shape',
-            'color'         => 'required|in:yellow,green,red,blue,orange,black,white',
+            'type'          => 'required|in:' . implode(',', PdfAnnotation::VALID_TYPES),
+            'color'         => 'required|in:' . implode(',', PdfAnnotation::VALID_COLORS),
             'rect_x'        => 'nullable|numeric',
             'rect_y'        => 'nullable|numeric',
             'rect_w'        => 'nullable|numeric',
@@ -49,8 +46,8 @@ class PdfAnnotationController extends Controller
             'comment'       => 'nullable|string|max:2000',
             'path_points'   => 'nullable|array',
             'path_points.*' => 'array',
-            'shape_type'    => 'nullable|in:arrow,rect,ellipse',
-            'stroke_width'  => 'nullable|numeric|min:0.5|max:20',
+            'shape_type'    => 'nullable|in:' . implode(',', PdfAnnotation::VALID_SHAPE_TYPES),
+            'stroke_width'  => 'nullable|numeric|min:0.5|max:50',
             'fill_opacity'  => 'nullable|numeric|min:0|max:1',
         ]);
 
@@ -65,7 +62,6 @@ class PdfAnnotationController extends Controller
 
     /**
      * PUT /api/annotations/{slug}/{id}
-     * Update comment / color of existing annotation.
      */
     public function update(Request $request, string $slug, int $id): JsonResponse
     {
@@ -75,8 +71,8 @@ class PdfAnnotationController extends Controller
 
         $validated = $request->validate([
             'comment'      => 'nullable|string|max:2000',
-            'color'        => 'nullable|in:yellow,green,red,blue,orange,black,white',
-            'stroke_width' => 'nullable|numeric|min:0.5|max:20',
+            'color'        => 'nullable|in:' . implode(',', PdfAnnotation::VALID_COLORS),
+            'stroke_width' => 'nullable|numeric|min:0.5|max:50',
             'fill_opacity' => 'nullable|numeric|min:0|max:1',
         ]);
 
@@ -101,7 +97,10 @@ class PdfAnnotationController extends Controller
 
     /**
      * DELETE /api/annotations/{slug}/page/{page}
-     * Clear all annotations on a specific page for current user.
+     * PENTING: Route ini harus didaftarkan SEBELUM route {id} di routes/api.php
+     * Contoh urutan:
+     *   Route::delete('annotations/{slug}/page/{page}', [...'destroyPage']);
+     *   Route::delete('annotations/{slug}/{id}', [...'destroy']);
      */
     public function destroyPage(string $slug, int $page): JsonResponse
     {

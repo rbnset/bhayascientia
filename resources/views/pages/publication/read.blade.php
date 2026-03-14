@@ -1178,6 +1178,14 @@ $previewLimit = match($typeSlug) { 'buku'=>'10 halaman','opini'=>'1 halaman',def
 <script src="{{ asset('js/pdf-annotations.js') }}?v={{ filemtime(public_path('js/pdf-annotations.js')) }}"></script>
 @endauth
 
+{{--
+══════════════════════════════════════════════════════════════════
+GANTI blok <script>
+    (function(){ ... })();
+</script> TERAKHIR
+di @push('scripts') pada read.blade.php dengan ini.
+══════════════════════════════════════════════════════════════════
+--}}
 <script>
     (function () {
     'use strict';
@@ -1223,23 +1231,28 @@ $previewLimit = match($typeSlug) { 'buku'=>'10 halaman','opini'=>'1 halaman',def
         eraser       : '🧹 Hapus',
     };
 
-    function collapse() {
+    function collapseBar() {
         collapsed = true;
         toolsRow.style.display   = 'none';
         handle.style.display     = 'none';
         expandRow.style.display  = 'flex';
         document.body.classList.remove('annot-bar-visible');
+        updateFabPos();
     }
-    function expand() {
+    function expandBar() {
         collapsed = false;
         toolsRow.style.display   = '';
         handle.style.display     = '';
         expandRow.style.display  = 'none';
         document.body.classList.add('annot-bar-visible');
+        updateFabPos();
     }
 
-    colBtn.addEventListener('click', e => { e.stopPropagation(); collapsed ? expand() : collapse(); });
-    expandRow.addEventListener('click', expand);
+    colBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        collapsed ? expandBar() : collapseBar();
+    });
+    expandRow.addEventListener('click', expandBar);
 
     /* Show bar when PDF ready */
     const waitV = setInterval(() => {
@@ -1248,6 +1261,7 @@ $previewLimit = match($typeSlug) { 'buku'=>'10 halaman','opini'=>'1 halaman',def
             window._pdfViewer.onReady(() => {
                 bar.classList.add('visible');
                 document.body.classList.add('annot-bar-visible');
+                updateFabPos();
             });
         }
     }, 80);
@@ -1260,11 +1274,8 @@ $previewLimit = match($typeSlug) { 'buku'=>'10 halaman','opini'=>'1 halaman',def
             btn.classList.add('active');
             if (labelEl) labelEl.textContent = TOOL_LABELS[tool] || tool;
 
-            /* Show/hide sub-pickers */
-            const sizes  = document.getElementById('ab-sizes');
-            const shapes = document.getElementById('ab-shapes');
-            if (sizes)  sizes.classList.toggle('show',  ['freehand','shape','text'].includes(tool));
-            if (shapes) shapes.classList.toggle('show', tool === 'shape');
+            document.getElementById('ab-sizes')?.classList.toggle('show',  ['freehand','shape','text'].includes(tool));
+            document.getElementById('ab-shapes')?.classList.toggle('show', tool === 'shape');
 
             window.dispatchEvent(new CustomEvent('annot-tool-change', { detail: { tool } }));
         });
@@ -1306,15 +1317,93 @@ $previewLimit = match($typeSlug) { 'buku'=>'10 halaman','opini'=>'1 halaman',def
         badge.classList.toggle('show', n > 0);
     });
 
-    /* FAB position — naik saat bar terlihat */
-    const fab = document.getElementById('mobile-fab');
+    /* ── FAB (hamburger) ─────────────────────────────────────────
+       PERBAIKAN: pisahkan FAB dari bottom sheet.
+       FAB hanya trigger bottom sheet.
+       Bottom sheet punya close button sendiri.
+    ───────────────────────────────────────────────────────────── */
+    const fab    = document.getElementById('mobile-fab');
+    const fabBtn = document.getElementById('mobile-fab-btn');
+    const sheet  = document.getElementById('bottom-sheet');
+    const backdrop = document.getElementById('sheet-backdrop');
+
+    function openSheet() {
+        sheet?.classList.add('show');
+        backdrop?.classList.add('show');
+    }
+    function closeSheet() {
+        sheet?.classList.remove('show');
+        backdrop?.classList.remove('show');
+    }
+    function isSheetOpen() { return sheet?.classList.contains('show'); }
+
+    /* FAB: TOGGLE bottom sheet */
+    if (fabBtn) {
+        fabBtn.addEventListener('click', e => {
+            e.stopPropagation();
+            isSheetOpen() ? closeSheet() : openSheet();
+        });
+    }
+
+    /* Sheet close button */
+    document.getElementById('sheet-close')?.addEventListener('click', closeSheet);
+    backdrop?.addEventListener('click', closeSheet);
+
+    /* Pindahkan handler sheet ke sini agar tidak duplikat dengan pdf-viewer.js */
+    /* Cek apakah pdf-viewer.js sudah attach (guard) */
+    if (!window._sheetHandlerAttached) {
+        window._sheetHandlerAttached = true;
+
+        document.getElementById('sheet-prev')?.addEventListener('click', () => window._pdfViewer && (window._pdfViewer.onPageChange, window._pdfViewer.queueRender(window._pdfViewer.pageNum - 1)));
+        document.getElementById('sheet-next')?.addEventListener('click', () => window._pdfViewer && window._pdfViewer.queueRender(window._pdfViewer.pageNum + 1));
+
+        document.getElementById('sheet-zoom-in')?.addEventListener('click', () => {
+            if (!window._pdfViewer) return;
+            window._pdfViewer.zoomIn?.();
+        });
+        document.getElementById('sheet-zoom-out')?.addEventListener('click', () => {
+            if (!window._pdfViewer) return;
+            window._pdfViewer.zoomOut?.();
+        });
+
+        document.getElementById('sheet-fs-btn')?.addEventListener('click', () => { closeSheet(); setTimeout(() => document.getElementById('fullscreen-btn')?.click(), 200); });
+        document.getElementById('sheet-search-btn')?.addEventListener('click', () => { closeSheet(); setTimeout(() => document.getElementById('search-btn')?.click(), 200); });
+        document.getElementById('sheet-bookmark-btn')?.addEventListener('click', () => document.getElementById('bookmark-btn')?.click());
+
+        document.getElementById('sheet-jump-go')?.addEventListener('click', () => {
+            const n = parseInt(document.getElementById('sheet-jump')?.value);
+            if (n && window._pdfViewer) { window._pdfViewer.queueRender(n); closeSheet(); }
+        });
+        document.getElementById('sheet-jump')?.addEventListener('keydown', e => {
+            if (e.key === 'Enter') { document.getElementById('sheet-jump-go')?.click(); }
+        });
+
+        document.querySelectorAll('[data-sheet-mode]').forEach(el => {
+            el.addEventListener('click', () => {
+                document.querySelectorAll('[data-sheet-mode]').forEach(x => x.classList.remove('active'));
+                el.classList.add('active');
+                document.querySelectorAll('.mode-opt').forEach(o => o.classList.toggle('active', o.dataset.mode === el.dataset.sheetMode));
+                document.body.classList.remove('read-mode-sepia','read-mode-night');
+                if (el.dataset.sheetMode !== 'normal') document.body.classList.add('read-mode-' + el.dataset.sheetMode);
+                localStorage.setItem('bm_' + (window.PDF_CONFIG?.slug||'x'), el.dataset.sheetMode);
+            });
+        });
+    }
+
+    /* ── FAB position: naik saat bar terlihat ── */
     function updateFabPos() {
         if (!fab) return;
-        const barH = bar.classList.contains('visible') && !collapsed ? (bar.offsetHeight || 56) : 0;
-        fab.style.bottom = (barH + 16) + 'px';
+        if (!bar.classList.contains('visible') || collapsed) {
+            fab.style.bottom = '1.25rem';
+        } else {
+            const barH = bar.offsetHeight || 56;
+            fab.style.bottom = (barH + 12) + 'px';
+        }
     }
-    new MutationObserver(updateFabPos).observe(bar, { attributes:true, attributeFilter:['class'] });
+
+    /* Observe bar height changes */
     new ResizeObserver(updateFabPos).observe(bar);
+    new MutationObserver(updateFabPos).observe(bar, { attributes:true, attributeFilter:['class'] });
     updateFabPos();
 
 })();

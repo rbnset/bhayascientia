@@ -9,6 +9,48 @@ class PdfAnnotation extends Model
 {
     protected $table = 'pdf_annotations';
 
+    /**
+     * Semua type yang valid.
+     * highlight    : stabilo teks
+     * underline    : garis bawah teks
+     * strikethrough: garis tengah teks
+     * freehand     : pen bebas
+     * comment      : highlight + catatan
+     * sticky       : sticky note
+     * shape        : kotak/lingkaran/panah/garis
+     * text         : teks bebas di canvas
+     */
+    public const VALID_TYPES = [
+        'highlight',
+        'underline',
+        'strikethrough',
+        'freehand',
+        'comment',
+        'sticky',
+        'shape',
+        'text',
+    ];
+
+    public const VALID_COLORS = [
+        'yellow',
+        'green',
+        'red',
+        'blue',
+        'orange',
+        'black',
+        'white',
+        'pink',
+        'purple',
+        'cyan',
+    ];
+
+    public const VALID_SHAPE_TYPES = [
+        'rect',
+        'ellipse',
+        'arrow',
+        'line',
+    ];
+
     protected $fillable = [
         'user_id',
         'publication_id',
