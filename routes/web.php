@@ -28,39 +28,6 @@ use App\Support\PdfStamper;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 
-/*
-|--------------------------------------------------------------------------
-| PDF Annotations API — pakai session auth biasa (web middleware)
-| CSRF otomatis ditangani karena pakai web.php
-|--------------------------------------------------------------------------
-*/
-
-Route::middleware(['auth'])->prefix('api/annotations')->name('api.annotations.')->group(function () {
-
-    // Ambil semua anotasi satu publikasi
-    Route::get('/{slug}', [PdfAnnotationController::class, 'index'])
-        ->name('index');
-
-    // Buat anotasi baru
-    Route::post('/{slug}', [PdfAnnotationController::class, 'store'])
-        ->name('store');
-
-    // Update anotasi (ubah warna/komentar/posisi sticky)
-    Route::put('/{slug}/{id}', [PdfAnnotationController::class, 'update'])
-        ->name('update')
-        ->whereNumber('id');
-
-    // Hapus satu anotasi
-    Route::delete('/{slug}/{id}', [PdfAnnotationController::class, 'destroy'])
-        ->name('destroy')
-        ->whereNumber('id');
-
-    // Hapus semua anotasi pada satu halaman
-    Route::delete('/{slug}/page/{page}', [PdfAnnotationController::class, 'destroyPage'])
-        ->name('destroyPage')
-        ->whereNumber('page');
-});
-
 
 /*
 |--------------------------------------------------------------------------
@@ -316,3 +283,17 @@ Route::post('/tour/complete/{page}', [TourController::class, 'complete'])
 
 Route::get('/placeholder-image', [PlaceholderImageController::class, 'generate'])->name('placeholder.image');
 Route::get('/placeholder-cover', [PlaceholderCoverController::class, 'generate'])->name('placeholder.cover');
+
+
+/*
+|--------------------------------------------------------------------------
+| PDF Annotations API
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth'])->prefix('api/annotations')->group(function () {
+    Route::get('/{slug}',                [PdfAnnotationController::class, 'index']);
+    Route::post('/{slug}',               [PdfAnnotationController::class, 'store']);
+    Route::put('/{slug}/{id}',           [PdfAnnotationController::class, 'update'])->whereNumber('id');
+    Route::delete('/{slug}/page/{page}', [PdfAnnotationController::class, 'destroyPage'])->whereNumber('page');
+    Route::delete('/{slug}/{id}',        [PdfAnnotationController::class, 'destroy'])->whereNumber('id');
+});
