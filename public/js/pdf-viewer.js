@@ -16,7 +16,6 @@
 (function () {
     'use strict';
 
-    // ── Guard: pastikan config tersedia ──────────────────────────────
     if (!window.PDF_CONFIG) {
         console.error('[pdf-viewer] window.PDF_CONFIG tidak ditemukan!');
         return;
@@ -24,13 +23,10 @@
 
     const { pdfUrl, slug, guestPageLimit: GUEST_PAGE_LIMIT, isGuest: IS_GUEST } = window.PDF_CONFIG;
 
-    // ═══════════════════════════════════════════════════════════════
-    // ✅ FIX: AUTH-STATE CHANGE DETECTION
-    // ═══════════════════════════════════════════════════════════════
+    // ── Auth-state change detection ───────────────────────────────────
     const AUTH_KEY = 'pdf_auth_state';
     const currentAuthState = IS_GUEST ? 'guest' : 'auth';
     const prevAuthState = sessionStorage.getItem(AUTH_KEY);
-
     if (prevAuthState !== null && prevAuthState !== currentAuthState) {
         sessionStorage.setItem(AUTH_KEY, currentAuthState);
         window.location.reload();
@@ -38,7 +34,7 @@
     }
     sessionStorage.setItem(AUTH_KEY, currentAuthState);
 
-    // ── Storage Keys ─────────────────────────────────────────────────
+    // ── Storage Keys ──────────────────────────────────────────────────
     const SK = {
         page: `bp_${slug}`,
         zoom: `bz_${slug}`,
@@ -71,7 +67,6 @@
     let activeAnnotId = null;
     let gateShown = false;
 
-    // ✅ devicePixelRatio untuk sharp rendering di Retina / HiDPI
     const DPR = window.devicePixelRatio || 1;
     const isMobile = () => window.innerWidth < 768;
 
@@ -105,7 +100,7 @@
         setTimeout(() => { el.style.opacity = 0; setTimeout(() => el.remove(), 400); }, 2200);
     }
 
-    // ── Watermark (hanya untuk guest) ─────────────────────────────────
+    // ── Watermark (guest only) ────────────────────────────────────────
     function renderWatermark(cssW, cssH) {
         if (!IS_GUEST) return;
         const wm = document.getElementById('pdf-watermark');
@@ -186,16 +181,13 @@
         baseScale = Math.max(0.6, Math.min(availW / nativeW, 2.5));
     }
 
-    // ═══════════════════════════════════════════════════════════════════
-    // renderPage — DPR-aware untuk tampilan tajam di semua layar
-    // ═══════════════════════════════════════════════════════════════════
+    // ── renderPage ────────────────────────────────────────────────────
     function renderPage(num) {
         if (IS_GUEST && GUEST_PAGE_LIMIT !== null && num > GUEST_PAGE_LIMIT) {
             num = GUEST_PAGE_LIMIT;
             if (!gateShown) checkGuestGate();
             return;
         }
-
         pageRendering = true;
         hideLoading(); showCanvas();
 
@@ -230,7 +222,6 @@
             updateNavButtons(); updateZoomDisplay(); updateProgress(); updateBookmarkUI();
             canvasWrap.scrollTo({ top: 0, behavior: 'smooth' });
             if (searchResults.length > 0) applySearchHighlights();
-
             checkGuestGate();
 
         }).catch(e => { console.error(e.message); pageRendering = false; hideLoading(); showCanvas(); });
@@ -239,33 +230,20 @@
     function queueRender(n) { if (pageRendering) pageNumPending = n; else renderPage(n); }
 
     // ═══════════════════════════════════════════════════════════════════
-    // ✅ FIX TEXT LAYER — pakai official pdfjsLib.renderTextLayer
-    //    agar posisi span EXACT match dengan canvas (tidak meleset)
+    // ✅ TEXT LAYER — manual (sama seperti versi awal yang bagus)
+    //    Perbedaan dari versi asli:
+    //    - scaleX pakai item.width dari data PDF (bukan estimasi 0.55)
+    //    - append ke DOM dulu sebelum ukur getBoundingClientRect
+    //    Hasilnya: posisi span lebih akurat → highlight lebih pas
     // ═══════════════════════════════════════════════════════════════════
     async function renderTextLayer(page, viewport) {
         textLayer.innerHTML = '';
-        textLayer.style.width = Math.floor(viewport.width) + 'px';
-        textLayer.style.height = Math.floor(viewport.height) + 'px';
+        textLayer.style.width = viewport.width + 'px';
+        textLayer.style.height = viewport.height + 'px';
 
-        const textContent = await page.getTextContent();
+        const content = await page.getTextContent();
 
-        // ── Coba official API dulu (pdf.js >= 2.x) ───────────────────
-        try {
-            const renderTask = pdfjsLib.renderTextLayer({
-                textContentSource: textContent,
-                container: textLayer,
-                viewport: viewport,
-                textDivs: [],
-            });
-            // Normalkan: beberapa versi return object {promise}, beberapa return Promise langsung
-            await (renderTask.promise || renderTask);
-            return;
-        } catch (e) {
-            // Fallback ke manual jika API tidak tersedia / error
-        }
-
-        // ── Fallback manual — lebih akurat dari versi sebelumnya ──────
-        textContent.items.forEach(item => {
+        content.items.forEach(item => {
             if (!item.str || !item.str.trim()) return;
 
             const tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
@@ -274,40 +252,87 @@
 
             const span = document.createElement('span');
             span.textContent = item.str;
-            span.style.position = 'absolute';
             span.style.fontSize = fontHeight + 'px';
-            span.style.fontFamily = 'sans-serif';
             span.style.left = tx[4] + 'px';
             span.style.top = (tx[5] - fontHeight) + 'px';
-            span.style.lineHeight = '1';
-            span.style.whiteSpace = 'pre';
-            span.style.color = 'transparent';
-            span.style.cursor = 'text';
             span.style.transformOrigin = '0% 0%';
-            span.style.userSelect = 'text';
-            span.style.webkitUserSelect = 'text';
 
-            // Append dulu agar bisa diukur getBoundingClientRect
+            // Append dulu agar bisa diukur getBoundingClientRect secara akurat
             textLayer.appendChild(span);
 
-            // ✅ scaleX: ukur lebar NYATA di DOM, bukan estimasi 0.55
-            if (item.width > 0) {
-                const measuredWidth = span.getBoundingClientRect().width;
-                const targetWidth = item.width * viewport.scale;
-                let transform = angle !== 0 ? `rotate(${-angle}rad)` : '';
-                if (measuredWidth > 0 && targetWidth > 0) {
-                    transform += ` scaleX(${targetWidth / measuredWidth})`;
-                }
-                if (transform.trim()) span.style.transform = transform.trim();
-            } else if (angle !== 0) {
-                span.style.transform = `rotate(${-angle}rad)`;
+            // ✅ scaleX: pakai item.width dari PDF, bukan estimasi 0.55
+            const targetWidth = item.width * viewport.scale;
+            const measuredWidth = span.getBoundingClientRect().width;
+            let transform = angle !== 0 ? `rotate(${-angle}rad)` : '';
+            if (measuredWidth > 1 && targetWidth > 0) {
+                transform += ` scaleX(${targetWidth / measuredWidth})`;
             }
+            if (transform.trim()) span.style.transform = transform.trim();
         });
     }
 
     // ═══════════════════════════════════════════════════════════════════
-    // ✅ GUEST GATE
+    // ✅ SEARCH HIGHLIGHT — Range API
+    //    Lebih akurat karena pakai rect NYATA dari DOM per karakter,
+    //    bukan estimasi lebar rata-rata (charWidth = totalWidth/length)
     // ═══════════════════════════════════════════════════════════════════
+    function clearSearchHighlights() {
+        annotLayer.querySelectorAll('.search-highlight').forEach(el => el.remove());
+        searchHighlightEls = [];
+    }
+
+    function applySearchHighlights() {
+        clearSearchHighlights();
+        if (!currentSearchQuery || !pdfDoc) return;
+
+        const q = currentSearchQuery.toLowerCase();
+        const stRect = stage.getBoundingClientRect();
+        const spans = Array.from(textLayer.querySelectorAll('span'));
+        let globalIdx = 0;
+
+        spans.forEach(span => {
+            if (!span.firstChild) return;
+            const text = span.textContent;
+            const lower = text.toLowerCase();
+            let idx = lower.indexOf(q);
+
+            while (idx !== -1) {
+                try {
+                    const range = document.createRange();
+                    range.setStart(span.firstChild, idx);
+                    range.setEnd(span.firstChild, Math.min(idx + q.length, text.length));
+
+                    Array.from(range.getClientRects()).forEach(rect => {
+                        if (rect.width < 1 || rect.height < 1) return;
+                        const el = document.createElement('div');
+                        el.className = 'search-highlight';
+                        el.style.left = (rect.left - stRect.left) + 'px';
+                        el.style.top = (rect.top - stRect.top) + 'px';
+                        el.style.width = rect.width + 'px';
+                        el.style.height = rect.height + 'px';
+                        el.dataset.matchIdx = globalIdx;
+                        annotLayer.appendChild(el);
+                        searchHighlightEls.push(el);
+                    });
+                } catch (_) { /* abaikan range error */ }
+
+                globalIdx++;
+                idx = lower.indexOf(q, idx + 1);
+            }
+        });
+
+        highlightActiveMatch();
+    }
+
+    function highlightActiveMatch() {
+        searchHighlightEls.forEach((el, i) => el.classList.toggle('active-match', i === searchIndex));
+        if (searchHighlightEls[searchIndex]) {
+            searchHighlightEls[searchIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        document.querySelectorAll('.sri').forEach((el, i) => el.classList.toggle('active-sri', i === searchIndex));
+    }
+
+    // ── Guest Gate ────────────────────────────────────────────────────
     function checkGuestGate() {
         if (!IS_GUEST || GUEST_PAGE_LIMIT === null || !pdfDoc) return;
         const totalPages = pdfDoc.numPages;
@@ -366,9 +391,7 @@
     function zoomIn() { zoomFactor = Math.min(zoomFactor + ZOOM_STEP, ZOOM_MAX); queueRender(pageNum); }
     function zoomOut() { zoomFactor = Math.max(zoomFactor - ZOOM_STEP, ZOOM_MIN); queueRender(pageNum); }
 
-    // ═══════════════════════════════════════════════════════════════════
-    // ANNOTATION SYSTEM
-    // ═══════════════════════════════════════════════════════════════════
+    // ── Annotations ───────────────────────────────────────────────────
     function saveAnnotations() { localStorage.setItem(SK.annot, JSON.stringify(annotations)); }
 
     function renderAnnotationsOnLayer() {
@@ -394,9 +417,8 @@
             annot.comment ? `💬 ${annot.comment}` : `Stabilo ${annot.color} — "${annot.selectedText?.substring(0, 60)}..."`;
         annotTip.classList.add('show');
         const vw = window.innerWidth, vh = window.innerHeight;
-        const tw = 260, th = 100;
-        annotTip.style.left = Math.min(x, vw - tw - 12) + 'px';
-        annotTip.style.top = (y + 12 + th > vh ? y - th - 8 : y + 12) + 'px';
+        annotTip.style.left = Math.min(x, vw - 272) + 'px';
+        annotTip.style.top = (y + 112 > vh ? y - 108 : y + 12) + 'px';
     }
 
     document.getElementById('annot-tooltip-close').addEventListener('click', () => { annotTip.classList.remove('show'); activeAnnotId = null; });
@@ -508,9 +530,7 @@
         }
     });
 
-    // ═══════════════════════════════════════════════════════════════════
-    // SEARCH
-    // ═══════════════════════════════════════════════════════════════════
+    // ── Search ────────────────────────────────────────────────────────
     let searchDebounce = null;
     let currentSearchQuery = '';
 
@@ -523,78 +543,6 @@
         document.getElementById('search-input').value = '';
         searchResults = []; searchIndex = -1; currentSearchQuery = '';
         clearSearchHighlights();
-    }
-
-    // ✅ FIX clearSearchHighlights — hapus dari annotLayer juga
-    function clearSearchHighlights() {
-        annotLayer.querySelectorAll('.search-highlight').forEach(el => el.remove());
-        searchHighlightEls = [];
-    }
-
-    // ═══════════════════════════════════════════════════════════════════
-    // ✅ FIX applySearchHighlights — pakai Range API
-    //    Lebih akurat karena mengukur posisi karakter yang NYATA di DOM,
-    //    bukan estimasi charWidth rata-rata yang sering meleset
-    // ═══════════════════════════════════════════════════════════════════
-    function applySearchHighlights() {
-        clearSearchHighlights();
-        if (!currentSearchQuery || !pdfDoc) return;
-
-        const q = currentSearchQuery.toLowerCase();
-        const stRect = stage.getBoundingClientRect();
-        const spans = Array.from(textLayer.querySelectorAll('span'));
-
-        let globalIdx = 0;
-
-        spans.forEach(span => {
-            if (!span.firstChild) return;
-            const text = span.textContent;
-            const lower = text.toLowerCase();
-            let idx = lower.indexOf(q);
-
-            while (idx !== -1) {
-                try {
-                    // ✅ Range API: dapatkan rect TEPAT untuk substring yang match
-                    const range = document.createRange();
-                    range.setStart(span.firstChild, idx);
-                    range.setEnd(span.firstChild, Math.min(idx + q.length, text.length));
-
-                    const rects = Array.from(range.getClientRects());
-
-                    rects.forEach(rect => {
-                        if (rect.width < 1 || rect.height < 1) return;
-
-                        const el = document.createElement('div');
-                        el.className = 'search-highlight';
-
-                        // Posisi relatif terhadap stage
-                        el.style.left = (rect.left - stRect.left) + 'px';
-                        el.style.top = (rect.top - stRect.top) + 'px';
-                        el.style.width = rect.width + 'px';
-                        el.style.height = rect.height + 'px';
-                        el.dataset.matchIdx = globalIdx;
-
-                        annotLayer.appendChild(el);
-                        searchHighlightEls.push(el);
-                    });
-                } catch (e) {
-                    // Abaikan error Range (span kosong, dll)
-                }
-
-                globalIdx++;
-                idx = lower.indexOf(q, idx + 1);
-            }
-        });
-
-        highlightActiveMatch();
-    }
-
-    function highlightActiveMatch() {
-        searchHighlightEls.forEach((el, i) => el.classList.toggle('active-match', i === searchIndex));
-        if (searchHighlightEls[searchIndex]) {
-            searchHighlightEls[searchIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-        document.querySelectorAll('.sri').forEach((el, i) => el.classList.toggle('active-sri', i === searchIndex));
     }
 
     async function doSearch(query) {
@@ -628,8 +576,7 @@
         if (!searchResults.length) {
             status.textContent = `Tidak ditemukan: "${query}"`;
             document.getElementById('search-match-info').textContent = '';
-            clearSearchHighlights();
-            return;
+            clearSearchHighlights(); return;
         }
 
         status.textContent = `${searchResults.length} hasil ditemukan`;
@@ -756,7 +703,7 @@
         tapOverlayOpen ? closeTapOverlay() : openTapOverlay();
     });
 
-    // ── Iframe Fallback ───────────────────────────────────────────────
+    // ── Fallback ──────────────────────────────────────────────────────
     function showFallback() {
         if (IS_GUEST) {
             hideLoading(); canvasWrap.style.display = 'flex'; canvasWrap.classList.remove('hidden');
@@ -826,7 +773,7 @@
         rTimer = setTimeout(() => { if (!pdfDoc) return; pdfDoc.getPage(pageNum).then(p => { baseScale = 1.0; computeBase(p); queueRender(pageNum); }); }, 250);
     });
 
-    // ── Desktop Event Listeners ───────────────────────────────────────
+    // ── Desktop Events ────────────────────────────────────────────────
     document.getElementById('prev-page').addEventListener('click', prevPage);
     document.getElementById('next-page').addEventListener('click', nextPage);
     document.getElementById('fs-prev').addEventListener('click', prevPage);
@@ -869,7 +816,7 @@
         }
     });
 
-    // ── Touch: Swipe + Pinch ─────────────────────────────────────────
+    // ── Touch ─────────────────────────────────────────────────────────
     let tx = 0, ty = 0, pd = 0, touchMoved = false, pinching = false;
 
     viewerEl.addEventListener('touchstart', e => {
