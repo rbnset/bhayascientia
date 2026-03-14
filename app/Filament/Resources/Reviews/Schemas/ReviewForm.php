@@ -24,6 +24,10 @@ class ReviewForm
             ->columns(1)
             ->components([
                 Wizard::make([
+
+                    /* ══════════════════════════════════════════════
+                       STEP 1: Pilih naskah + Preview metadata
+                    ══════════════════════════════════════════════ */
                     Step::make('Pilih naskah')
                         ->description('Pilih versi publikasi & lihat preview')
                         ->icon('heroicon-o-document-magnifying-glass')
@@ -87,6 +91,10 @@ class ReviewForm
                                         ->required(),
                                 ]),
 
+                            /*
+                             * PERUBAHAN: Preview metadata publikasi tetap ada di Step 1
+                             * agar reviewer tahu dulu apa yang akan di-review.
+                             */
                             Section::make('Preview publikasi')
                                 ->description('Ringkasan metadata sebelum review')
                                 ->icon('heroicon-o-eye')
@@ -96,12 +104,23 @@ class ReviewForm
                                 ]),
                         ]),
 
-                    Step::make('Tulis review')
-                        ->description('Baca PDF + isi catatan & komentar')
+                    /* ══════════════════════════════════════════════
+                       STEP 2: Baca PDF + Anotasi + Catatan
+                    ══════════════════════════════════════════════ */
+                    Step::make('Baca & Anotasi')
+                        ->description('Baca PDF, beri anotasi, isi catatan reviewer')
                         ->icon('heroicon-o-pencil-square')
                         ->schema([
-                            Section::make('Manuscript PDF')
-                                ->description('Baca naskah versi yang dipilih')
+
+                            /*
+                             * PDF VIEWER + ANNOTATION TOOL
+                             * Reviewer membaca naskah dan memberi anotasi langsung.
+                             * Anotasi tersimpan ke DB (pdf_annotations) via REST API.
+                             * Tombol "Export PDF + Anotasi" akan mengunduh PDF yang sudah
+                             * diberi markup — file ini bisa langsung di-upload di Step 3.
+                             */
+                            Section::make('Baca & Anotasi Naskah')
+                                ->description('Beri highlight, komentar, dan tanda pada naskah. Anotasi tersimpan otomatis. Gunakan tombol "Export PDF + Anotasi" untuk mengunduh hasil markup.')
                                 ->icon('heroicon-o-document-text')
                                 ->schema([
                                     View::make('filament.reviews.pdf-viewer')
@@ -118,14 +137,14 @@ class ReviewForm
                                             Select::make('section')
                                                 ->label('Section')
                                                 ->options([
-                                                    'title' => 'Title',
-                                                    'abstract' => 'Abstract',
+                                                    'title'        => 'Title',
+                                                    'abstract'     => 'Abstract',
                                                     'introduction' => 'Introduction',
-                                                    'methods' => 'Methods',
-                                                    'results' => 'Results',
-                                                    'discussion' => 'Discussion',
-                                                    'conclusion' => 'Conclusion',
-                                                    'references' => 'References',
+                                                    'methods'      => 'Methods',
+                                                    'results'      => 'Results',
+                                                    'discussion'   => 'Discussion',
+                                                    'conclusion'   => 'Conclusion',
+                                                    'references'   => 'References',
                                                 ])
                                                 ->required()
                                                 ->native(false),
@@ -168,12 +187,16 @@ class ReviewForm
                                 ]),
                         ]),
 
+                    /* ══════════════════════════════════════════════
+                       STEP 3: Finalisasi — Upload PDF & Keputusan
+                    ══════════════════════════════════════════════ */
                     Step::make('Finalisasi')
-                        ->description('Upload anotasi & keputusan')
+                        ->description('Upload PDF beranotasi & keputusan akhir')
                         ->icon('heroicon-o-clipboard-document-check')
                         ->schema([
+
                             Section::make('Annotated Manuscript')
-                                ->description('Unggah PDF yang telah diberi catatan oleh reviewer (maksimal 1 file)')
+                                ->description('Upload PDF yang sudah diberi anotasi (gunakan tombol "Export PDF + Anotasi" di Step 2 untuk mengunduhnya, lalu upload di sini).')
                                 ->icon('heroicon-o-paper-clip')
                                 ->schema([
                                     Repeater::make('attachments')
@@ -181,23 +204,22 @@ class ReviewForm
                                         ->maxItems(1)
                                         ->defaultItems(0)
                                         ->reorderable(false)
-                                        ->addActionLabel('Upload PDF (1x)')
+                                        ->addActionLabel('📎 Upload PDF Beranotasi (1x)')
                                         ->collapsed()
                                         ->columnSpanFull()
                                         ->schema([
                                             FileUpload::make('file_path')
-                                                ->label('Reviewed PDF')
+                                                ->label('Reviewed PDF (dengan anotasi)')
                                                 ->acceptedFileTypes(['application/pdf'])
-                                                // SARAN: simpan private agar hanya bisa diakses lewat tombol/route yang terproteksi
                                                 ->disk('local')
                                                 ->visibility('private')
                                                 ->directory('review-attachments')
                                                 ->preserveFilenames()
-                                                ->maxSize(10240)
-                                                // Jangan mengandalkan openable/downloadable kalau private
+                                                ->maxSize(20480) // 20MB — anotasi menambah ukuran
                                                 ->openable(false)
                                                 ->downloadable(false)
-                                                ->required(),
+                                                ->required()
+                                                ->helperText('Export PDF dari Step 2, lalu upload di sini.'),
                                         ]),
 
                                     Actions::make([
@@ -207,12 +229,7 @@ class ReviewForm
                                             ->visible(fn($record) => filled($record?->attachments?->first()?->file_path))
                                             ->action(function ($record) {
                                                 $attachment = $record->attachments()->latest()->first();
-
                                                 abort_unless($attachment && filled($attachment->file_path), 404);
-
-                                                // TODO: tambahkan policy/authorization di sini:
-                                                // abort_unless(auth()->user()->can('downloadReviewAttachment', $record),
-
                                                 return Storage::disk('local')->download($attachment->file_path);
                                             }),
                                     ])->columnSpanFull(),
@@ -227,13 +244,14 @@ class ReviewForm
                                         ->required()
                                         ->options([
                                             'revision_required' => 'Revision Required',
-                                            'accepted' => 'Accepted',
-                                            'rejected' => 'Rejected',
+                                            'accepted'          => 'Accepted',
+                                            'rejected'          => 'Rejected',
                                         ])
                                         ->native(false)
                                         ->helperText('Keputusan akhir reviewer terhadap versi ini'),
                                 ]),
                         ]),
+
                 ])
                     ->persistStepInQueryString(),
             ]);
