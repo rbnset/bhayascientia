@@ -10,10 +10,6 @@ use Illuminate\Support\Facades\Auth;
 
 class PdfAnnotationController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('auth');
-    }
 
     /**
      * GET /api/annotations/{slug}
