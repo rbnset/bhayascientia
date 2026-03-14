@@ -10,6 +10,7 @@ use App\Http\Controllers\ContactController;
 use App\Http\Controllers\DocumentVerificationController;
 use App\Http\Controllers\LegalController;
 use App\Http\Controllers\OnboardingController;
+use App\Http\Controllers\PdfAnnotationController;
 use App\Http\Controllers\PlaceholderCoverController;
 use App\Http\Controllers\PlaceholderImageController;
 use App\Http\Controllers\ProfileController;
@@ -26,6 +27,40 @@ use App\Models\PublicationVersion;
 use App\Support\PdfStamper;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+
+/*
+|--------------------------------------------------------------------------
+| PDF Annotations API — pakai session auth biasa (web middleware)
+| CSRF otomatis ditangani karena pakai web.php
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['auth'])->prefix('api/annotations')->name('api.annotations.')->group(function () {
+
+    // Ambil semua anotasi satu publikasi
+    Route::get('/{slug}', [PdfAnnotationController::class, 'index'])
+        ->name('index');
+
+    // Buat anotasi baru
+    Route::post('/{slug}', [PdfAnnotationController::class, 'store'])
+        ->name('store');
+
+    // Update anotasi (ubah warna/komentar/posisi sticky)
+    Route::put('/{slug}/{id}', [PdfAnnotationController::class, 'update'])
+        ->name('update')
+        ->whereNumber('id');
+
+    // Hapus satu anotasi
+    Route::delete('/{slug}/{id}', [PdfAnnotationController::class, 'destroy'])
+        ->name('destroy')
+        ->whereNumber('id');
+
+    // Hapus semua anotasi pada satu halaman
+    Route::delete('/{slug}/page/{page}', [PdfAnnotationController::class, 'destroyPage'])
+        ->name('destroyPage')
+        ->whereNumber('page');
+});
+
 
 /*
 |--------------------------------------------------------------------------

@@ -1,9 +1,8 @@
 {{--
 resources/views/publikasi/read.blade.php
 ─────────────────────────────────────────
-File ini hanya berisi HTML struktur + config injection.
-CSS → public/css/pdf-viewer.css
-JS → public/js/pdf-viewer.js
+CSS → public/css/pdf-viewer.css + pdf-viewer-annotations.css (digabung)
+JS → public/js/pdf-viewer.js + public/js/pdf-annotations.js
 ─────────────────────────────────────────
 --}}
 @extends('layouts.app')
@@ -28,8 +27,9 @@ JS → public/js/pdf-viewer.js
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
             </svg>
         </button>
-        <span class="px-1 text-xs font-semibold text-white whitespace-nowrap"><span id="fs-page-num">1</span>/<span
-                id="fs-page-count">-</span></span>
+        <span class="px-1 text-xs font-semibold text-white whitespace-nowrap">
+            <span id="fs-page-num">1</span>/<span id="fs-page-count">-</span>
+        </span>
         <button id="fs-next" class="pcb p-1.5 bg-[#4D4D4D] text-white">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
@@ -37,22 +37,25 @@ JS → public/js/pdf-viewer.js
         </button>
     </div>
     <div class="flex items-center flex-shrink-0 gap-1 desktop-only">
-        <button id="fs-zoom-out" class="pcb p-1.5 bg-[#3D3D3D] text-white"><svg class="w-4 h-4" fill="none"
-                stroke="currentColor" viewBox="0 0 24 24">
+        <button id="fs-zoom-out" class="pcb p-1.5 bg-[#3D3D3D] text-white">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" />
-            </svg></button>
+            </svg>
+        </button>
         <span id="fs-zoom-level" class="text-xs font-semibold text-center text-white w-9">100%</span>
-        <button id="fs-zoom-in" class="pcb p-1.5 bg-[#3D3D3D] text-white"><svg class="w-4 h-4" fill="none"
-                stroke="currentColor" viewBox="0 0 24 24">
+        <button id="fs-zoom-in" class="pcb p-1.5 bg-[#3D3D3D] text-white">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-            </svg></button>
-        <button id="fs-bookmark-btn" class="pcb p-1.5 bg-[#3D3D3D] text-white"><svg id="fs-bkmk-icon" class="w-4 h-4"
-                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            </svg>
+        </button>
+        <button id="fs-bookmark-btn" class="pcb p-1.5 bg-[#3D3D3D] text-white">
+            <svg id="fs-bkmk-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-            </svg></button>
+            </svg>
+        </button>
     </div>
     <span class="mobile-only text-[11px] text-gray-400 flex-shrink-0">Tap layar = menu</span>
     <button id="exit-fs-btn"
@@ -83,10 +86,11 @@ JS → public/js/pdf-viewer.js
                 <p id="progress-text" class="text-gray-400 text-[10px] mt-0.5"></p>
             </div>
             <div class="flex items-center gap-1 bg-[#3D3D3D] rounded-lg px-2 py-1.5 flex-shrink-0">
-                <button id="prev-page" class="pcb p-1 bg-[#4D4D4D] text-white"><svg class="w-3.5 h-3.5" fill="none"
-                        stroke="currentColor" viewBox="0 0 24 24">
+                <button id="prev-page" class="pcb p-1 bg-[#4D4D4D] text-white">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                    </svg></button>
+                    </svg>
+                </button>
                 <div class="flex items-center gap-1">
                     <input type="number" id="page-num-input"
                         class="page-input w-9 sm:w-11 text-center px-0.5 py-0.5 font-semibold text-xs" value="1"
@@ -94,50 +98,57 @@ JS → public/js/pdf-viewer.js
                     <span class="text-xs text-gray-400">/</span>
                     <span id="page-count" class="text-xs font-semibold text-white">-</span>
                 </div>
-                <button id="next-page" class="pcb p-1 bg-[#4D4D4D] text-white"><svg class="w-3.5 h-3.5" fill="none"
-                        stroke="currentColor" viewBox="0 0 24 24">
+                <button id="next-page" class="pcb p-1 bg-[#4D4D4D] text-white">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                    </svg></button>
+                    </svg>
+                </button>
             </div>
             <div class="desktop-only flex items-center gap-1.5">
-                <button id="zoom-out" class="pcb p-2 bg-[#3D3D3D] text-white"><svg class="w-4 h-4" fill="none"
-                        stroke="currentColor" viewBox="0 0 24 24">
+                <button id="zoom-out" class="pcb p-2 bg-[#3D3D3D] text-white">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" />
-                    </svg></button>
+                    </svg>
+                </button>
                 <span id="zoom-level" class="text-xs font-semibold text-center text-white w-9">100%</span>
-                <button id="zoom-in" class="pcb p-2 bg-[#3D3D3D] text-white"><svg class="w-4 h-4" fill="none"
-                        stroke="currentColor" viewBox="0 0 24 24">
+                <button id="zoom-in" class="pcb p-2 bg-[#3D3D3D] text-white">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-                    </svg></button>
-                <button id="bookmark-btn" class="pcb p-2 bg-[#3D3D3D] text-white" title="Tandai (B)"><svg id="bkmk-icon"
-                        class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    </svg>
+                </button>
+                <button id="bookmark-btn" class="pcb p-2 bg-[#3D3D3D] text-white" title="Tandai (B)">
+                    <svg id="bkmk-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                    </svg></button>
-                <button id="search-btn" class="pcb p-2 bg-[#3D3D3D] text-white" title="Cari (Ctrl+F)"><svg
-                        class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    </svg>
+                </button>
+                <button id="search-btn" class="pcb p-2 bg-[#3D3D3D] text-white" title="Cari (Ctrl+F)">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg></button>
+                    </svg>
+                </button>
                 <div class="relative">
-                    <button id="mode-btn" class="pcb p-2 bg-[#3D3D3D] text-white" title="Mode Baca"><svg class="w-4 h-4"
-                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <button id="mode-btn" class="pcb p-2 bg-[#3D3D3D] text-white" title="Mode Baca">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
-                        </svg></button>
+                        </svg>
+                    </button>
                     <div id="mode-dropdown">
                         <div class="mode-opt active" data-mode="normal">☀️ Normal</div>
                         <div class="mode-opt" data-mode="sepia">📜 Sepia</div>
                         <div class="mode-opt" data-mode="night">🌙 Night</div>
                     </div>
                 </div>
-                <button id="fullscreen-btn" class="pcb p-2 bg-[#3D3D3D] text-white" title="Layar Penuh (F)"><svg
-                        class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button id="fullscreen-btn" class="pcb p-2 bg-[#3D3D3D] text-white" title="Layar Penuh (F)">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                    </svg></button>
+                    </svg>
+                </button>
             </div>
             @auth
             <a href="{{ route('publikasi.download', $publication->slug) }}"
@@ -190,7 +201,7 @@ $previewLimit = match($typeSlug) { 'buku' => '10 halaman', 'opini' => '1 halaman
     </div>
 </div>
 
-{{-- ✅ GUEST DOWNLOAD MODAL --}}
+{{-- GUEST DOWNLOAD MODAL --}}
 <div id="guestDownloadModal" style="display:none;" class="fixed inset-0 z-[99999]">
     <div id="guestModalBackdrop"
         class="absolute inset-0 transition-opacity duration-300 opacity-0 bg-black/60 backdrop-blur-sm"
@@ -256,7 +267,11 @@ $previewLimit = match($typeSlug) { 'buku' => '10 halaman', 'opini' => '1 halaman
             <canvas id="pdf-canvas"></canvas>
             <div id="text-layer"></div>
             <div id="annotation-layer"></div>
-            {{-- ✅ Watermark hanya tampil untuk guest (diisi via JS) --}}
+            {{-- ① freehand canvas — WAJIB ada di dalam #pdf-stage --}}
+            @auth
+            <canvas id="freehand-canvas"></canvas>
+            @endauth
+            {{-- Watermark hanya untuk guest --}}
             @guest<div id="pdf-watermark"></div>@endguest
         </div>
     </div>
@@ -270,7 +285,7 @@ $previewLimit = match($typeSlug) { 'buku' => '10 halaman', 'opini' => '1 halaman
     <div id="desktop-hint" class="hidden">← → halaman &nbsp;·&nbsp; ↑↓ scroll &nbsp;·&nbsp; +/− zoom &nbsp;·&nbsp; B
         tandai &nbsp;·&nbsp; Ctrl+F cari &nbsp;·&nbsp; Esc keluar</div>
 
-    {{-- ✅ GUEST GATE OVERLAY --}}
+    {{-- GUEST GATE OVERLAY --}}
     @guest
     <div id="guest-gate-overlay">
         <div class="gg-card">
@@ -341,16 +356,20 @@ $previewLimit = match($typeSlug) { 'buku' => '10 halaman', 'opini' => '1 halaman
         <p class="w-full max-w-xs text-sm font-bold text-center text-white truncate">{{ Str::limit($publication->title,
             34) }}</p>
         <div class="tap-nav-row">
-            <button class="tap-nav-btn" id="tap-prev"><svg class="w-6 h-6" fill="none" stroke="currentColor"
-                    viewBox="0 0 24 24">
+            <button class="tap-nav-btn" id="tap-prev">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
-                </svg></button>
-            <div class="tap-nav-center"><strong id="tap-page-num">1</strong><small>dari <span
-                        id="tap-page-total">-</span></small></div>
-            <button class="tap-nav-btn" id="tap-next"><svg class="w-6 h-6" fill="none" stroke="currentColor"
-                    viewBox="0 0 24 24">
+                </svg>
+            </button>
+            <div class="tap-nav-center">
+                <strong id="tap-page-num">1</strong>
+                <small>dari <span id="tap-page-total">-</span></small>
+            </div>
+            <button class="tap-nav-btn" id="tap-next">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
-                </svg></button>
+                </svg>
+            </button>
         </div>
         <div class="tap-zoom-row">
             <button class="tap-zoom-btn" id="tap-zoom-out">−</button>
@@ -393,11 +412,11 @@ $previewLimit = match($typeSlug) { 'buku' => '10 halaman', 'opini' => '1 halaman
         </div>
         <button class="tap-close-btn" id="tap-close-overlay">Tutup & Lanjut Baca</button>
     </div>
-</div>
+</div>{{-- /pdf-viewer-container --}}
 
 {{-- ══════════ OVERLAYS & PANELS ══════════ --}}
 
-{{-- Annotation Toolbar --}}
+{{-- ── Lama: Annotation Toolbar (popup setelah seleksi teks) ── --}}
 <div id="annot-toolbar">
     <span class="text-[11px] text-gray-400 px-1">Stabilo:</span>
     <button class="annot-tool-btn" data-color="yellow" title="Kuning">
@@ -430,7 +449,7 @@ $previewLimit = match($typeSlug) { 'buku' => '10 halaman', 'opini' => '1 halaman
     </button>
 </div>
 
-{{-- Comment Popup --}}
+{{-- ── Comment Popup ── --}}
 <div id="comment-popup">
     <p class="cp-title">💬 Tambah Komentar</p>
     <textarea id="comment-text" placeholder="Tulis komentar untuk teks ini..."></textarea>
@@ -440,7 +459,7 @@ $previewLimit = match($typeSlug) { 'buku' => '10 halaman', 'opini' => '1 halaman
     </div>
 </div>
 
-{{-- Annotation Tooltip --}}
+{{-- ── Annotation Tooltip ── --}}
 <div id="annot-tooltip">
     <div class="at-text" id="annot-tooltip-text"></div>
     <div class="at-actions">
@@ -449,7 +468,153 @@ $previewLimit = match($typeSlug) { 'buku' => '10 halaman', 'opini' => '1 halaman
     </div>
 </div>
 
-{{-- Bottom Sheet --}}
+{{-- ══════════ ② FLOATING ANNOTATION TOOLBAR (BARU) ══════════ --}}
+{{-- Hanya dirender untuk user yang sudah login --}}
+@auth
+<div id="annot-floating-toolbar">
+
+    {{-- HIGHLIGHT --}}
+    <button class="aft-tool active" data-tool="highlight" data-tip="Highlight teks (pilih dulu)">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 19l-2 2H5l1-2L15 9l2 2L9 19z" stroke-linejoin="round" />
+            <path d="M15 9l2 2-1.5 1.5L13.5 10.5 15 9z" fill="currentColor" stroke="none" />
+            <line x1="5" y1="21" x2="19" y2="21" stroke-width="2" />
+        </svg>
+    </button>
+
+    {{-- FREEHAND PEN --}}
+    <button class="aft-tool" data-tool="freehand" data-tip="Pen bebas (gambar bebas)">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 20h9" />
+            <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+        </svg>
+    </button>
+
+    {{-- SHAPE --}}
+    <button class="aft-tool" data-tool="shape" data-tip="Bentuk (kotak / lingkaran / panah)">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7" rx="1" />
+            <circle cx="17.5" cy="6.5" r="3.5" />
+            <path d="M3 20h4M5 18v4M14 15l5 5m0-5l-5 5" />
+        </svg>
+    </button>
+
+    {{-- COMMENT --}}
+    <button class="aft-tool" data-tool="comment" data-tip="Komentar pada teks (pilih dulu)">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+        </svg>
+    </button>
+
+    {{-- STICKY NOTE --}}
+    <button class="aft-tool" data-tool="sticky" data-tip="Sticky note (klik di posisi mana saja)">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="9" y1="13" x2="15" y2="13" />
+            <line x1="9" y1="17" x2="13" y2="17" />
+        </svg>
+    </button>
+
+    <div class="aft-sep"></div>
+
+    {{-- WARNA --}}
+    <div class="aft-color-wrap" id="aft-colors">
+        <div class="aft-color selected" data-color="yellow" title="Kuning"></div>
+        <div class="aft-color" data-color="green" title="Hijau"></div>
+        <div class="aft-color" data-color="red" title="Merah"></div>
+        <div class="aft-color" data-color="blue" title="Biru"></div>
+        <div class="aft-color" data-color="orange" title="Oranye"></div>
+        <div class="aft-color" data-color="black" title="Hitam"></div>
+        <div class="aft-color" data-color="white" title="Putih"></div>
+    </div>
+
+    <div class="aft-sep"></div>
+
+    {{-- UKURAN STROKE (untuk freehand & shape) --}}
+    <div class="aft-size-wrap" id="aft-sizes" style="display:none;">
+        <div class="aft-size selected" data-size="2" title="Tipis"></div>
+        <div class="aft-size" data-size="4" title="Normal"></div>
+        <div class="aft-size" data-size="8" title="Tebal"></div>
+        <div class="aft-size" data-size="14" title="Sangat tebal"></div>
+    </div>
+
+    {{-- TIPE SHAPE (hanya muncul saat tool=shape) --}}
+    <div id="aft-shape-types" style="display:none; gap:3px;" class="flex items-center">
+        <button class="aft-tool active" data-shape="rect" data-tip="Kotak">⬛</button>
+        <button class="aft-tool" data-shape="ellipse" data-tip="Lingkaran">⭕</button>
+        <button class="aft-tool" data-shape="arrow" data-tip="Panah">➡</button>
+        <div class="aft-sep"></div>
+    </div>
+
+    <div class="aft-sep"></div>
+
+    {{-- ERASER --}}
+    <button class="aft-tool" data-tool="eraser" data-tip="Hapus anotasi (klik/drag)">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 20H7L3 16l10-10 7 7-3 3" />
+            <path d="M6.5 17.5l5-5" />
+        </svg>
+    </button>
+
+    <div class="aft-sep"></div>
+
+    {{-- UNDO / REDO --}}
+    <button class="aft-action" id="aft-undo" data-tip="Undo (Ctrl+Z)" disabled>↩</button>
+    <button class="aft-action" id="aft-redo" data-tip="Redo" disabled>↪</button>
+
+    <div class="aft-sep"></div>
+
+    {{-- PANEL DAFTAR ANOTASI --}}
+    <button class="aft-tool" id="aft-panel-btn" data-tip="Daftar semua anotasi">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="8" y1="6" x2="21" y2="6" />
+            <line x1="8" y1="12" x2="21" y2="12" />
+            <line x1="8" y1="18" x2="21" y2="18" />
+            <circle cx="3" cy="6" r="1" fill="currentColor" />
+            <circle cx="3" cy="12" r="1" fill="currentColor" />
+            <circle cx="3" cy="18" r="1" fill="currentColor" />
+        </svg>
+    </button>
+
+</div>{{-- /annot-floating-toolbar --}}
+
+{{-- ══════════ ③ STICKY NOTE POPUP ══════════ --}}
+<div id="sticky-popup">
+    <p class="sp-title">📌 Tambah Sticky Note</p>
+    <textarea id="sticky-text" placeholder="Tulis catatan di sini..."></textarea>
+    <div class="sp-actions">
+        <button class="sp-save" id="sticky-save">Tempel</button>
+        <button class="sp-cancel" id="sticky-cancel">Batal</button>
+    </div>
+</div>
+
+{{-- ══════════ ④ ANNOTATION PANEL (sidebar kanan) ══════════ --}}
+<div id="annot-panel">
+    <div class="ap-header">
+        <span class="ap-title">📝 Anotasi Saya</span>
+        <button class="ap-close" id="ap-close-btn">✕</button>
+    </div>
+    <div class="ap-list" id="ap-list">
+        <div class="ap-empty">Belum ada anotasi.<br>Pilih tool lalu mulai beri catatan!</div>
+    </div>
+    <div class="ap-footer">
+        <button class="ap-clear-btn" id="ap-clear-btn">🗑 Hapus semua di halaman ini</button>
+    </div>
+</div>
+
+{{-- ══════════ ⑤ SYNC INDICATOR ══════════ --}}
+<div id="annot-sync-indicator">
+    <div class="sync-dot"></div>
+    <span id="annot-sync-text">Menyimpan...</span>
+</div>
+
+{{-- ⑥ Eraser cursor (custom circle) --}}
+<div id="eraser-cursor"></div>
+
+@endauth {{-- /auth guard untuk semua elemen anotasi baru --}}
+
+{{-- ══════════ BOTTOM SHEET ══════════ --}}
 <div id="sheet-backdrop"></div>
 <div id="bottom-sheet">
     <div class="sheet-handle"></div>
@@ -457,16 +622,20 @@ $previewLimit = match($typeSlug) { 'buku' => '10 halaman', 'opini' => '1 halaman
     <div class="sheet-sec">
         <span class="sheet-lbl">Navigasi Halaman</span>
         <div class="sheet-page-row">
-            <button class="sheet-page-btn" id="sheet-prev"><svg class="w-5 h-5" fill="none" stroke="currentColor"
-                    viewBox="0 0 24 24">
+            <button class="sheet-page-btn" id="sheet-prev">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
-                </svg></button>
-            <div class="sheet-page-display"><strong id="sheet-page-num">1</strong><small>dari <span
-                        id="sheet-total">-</span> halaman</small></div>
-            <button class="sheet-page-btn" id="sheet-next"><svg class="w-5 h-5" fill="none" stroke="currentColor"
-                    viewBox="0 0 24 24">
+                </svg>
+            </button>
+            <div class="sheet-page-display">
+                <strong id="sheet-page-num">1</strong>
+                <small>dari <span id="sheet-total">-</span> halaman</small>
+            </div>
+            <button class="sheet-page-btn" id="sheet-next">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
-                </svg></button>
+                </svg>
+            </button>
         </div>
         <div class="sheet-jump-row">
             <input type="number" id="sheet-jump" class="sheet-jump-input" placeholder="Lompat ke halaman..." min="1">
@@ -587,22 +756,26 @@ $previewLimit = match($typeSlug) { 'buku' => '10 halaman', 'opini' => '1 halaman
 {{-- PDF.js CDN --}}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
-{{-- ✅ Inject config dari Blade ke JS (satu-satunya Blade logic di scripts) --}}
+{{-- Config injection --}}
 <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-pdfjsLib.verbosity = 0;
+    pdfjsLib.verbosity = 0;
 
-// ✅ Config object yang dibaca oleh pdf-viewer.js
-window.PDF_CONFIG = {
-    pdfUrl         : @json($pdfUrl),
-    slug           : @json($publication->slug),
-    guestPageLimit : @json($pageLimit),
-    isGuest        : @json($isGuest),
-    loginUrl       : @json(route('login')),
-    registerUrl    : @json(route('register')),
-};
+    window.PDF_CONFIG = {
+        pdfUrl         : @json($pdfUrl),
+        slug           : @json($publication->slug),
+        guestPageLimit : @json($pageLimit),
+        isGuest        : @json($isGuest),
+        loginUrl       : @json(route('login')),
+        registerUrl    : @json(route('register')),
+    };
 </script>
 
-{{-- Load external JS setelah config siap --}}
+{{-- Core viewer --}}
 <script src="{{ asset('js/pdf-viewer.js') }}?v={{ filemtime(public_path('js/pdf-viewer.js')) }}"></script>
+
+{{-- Annotation module — hanya load untuk user login --}}
+@auth
+<script src="{{ asset('js/pdf-annotations.js') }}?v={{ filemtime(public_path('js/pdf-annotations.js')) }}"></script>
+@endauth
 @endpush
