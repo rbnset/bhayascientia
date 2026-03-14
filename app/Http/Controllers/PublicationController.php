@@ -34,7 +34,6 @@ class PublicationController extends Controller
      */
     public function index(Request $request)
     {
-        // ✅ Cek tour — letakkan paling atas agar tersedia di semua return path
         $showTour = ! session()->has('has_seen_index_tour');
 
         $publicationTypes = PublicationType::with('content')
@@ -72,7 +71,6 @@ class PublicationController extends Controller
         $currentType         = $publicationTypes->firstWhere('slug', $selectedType);
         $featuredTypeContent = $currentType?->content;
 
-        // Filter options
         $categories = \App\Models\Category::whereHas('publications', function ($q) use ($selectedType) {
             $q->where('status', 'published')
                 ->whereNotNull('published_at')
@@ -697,11 +695,16 @@ class PublicationController extends Controller
             ]);
         }
 
-        $pdfUrl = route('publikasi.pdf', $publication->slug)
-            . '?t=' . ($latestVersion->updated_at?->timestamp ?? time());
+        // ✅ FIX: Tambahkan auth state di URL agar browser tidak pakai
+        // cache PDF lama saat user login/logout
+        $isGuest   = !auth()->check();
+        $authState = $isGuest ? 'guest' : 'auth';
 
-        // ✅ Guest page limit
-        $isGuest    = !auth()->check();
+        $pdfUrl = route('publikasi.pdf', $publication->slug)
+            . '?t=' . ($latestVersion->updated_at?->timestamp ?? time())
+            . '&s=' . $authState;
+
+        // Guest page limit
         $typeSlug   = $publication->publicationType?->slug ?? '';
         $pageLimits = ['jurnal' => 3, 'buku' => 10, 'opini' => 1];
         $pageLimit  = $isGuest ? ($pageLimits[$typeSlug] ?? 3) : null;
@@ -724,7 +727,8 @@ class PublicationController extends Controller
     }
 
     /**
-     * ✅ Serve PDF dengan header benar untuk PDF.js (+ watermark & page limit untuk guest)
+     * ✅ Serve PDF dengan header benar untuk PDF.js
+     * (+ watermark & page limit untuk guest)
      */
     public function servePdf($slug)
     {
@@ -750,28 +754,36 @@ class PublicationController extends Controller
         $absolutePath = Storage::disk('public')->path($filePath);
         $isGuest      = !auth()->check();
 
-        // ── Cache key unik per publikasi + versi + tipe user ──────────────────
-        // Guest dan logged-in user mendapat file berbeda (watermark berbeda)
+        // ✅ FIX: Header no-cache agar browser TIDAK simpan PDF lama
+        // Ini mencegah watermark guest masih muncul setelah login,
+        // atau PDF tanpa watermark masih muncul setelah logout
+        $noCacheHeaders = [
+            'Content-Type'                => 'application/pdf',
+            'Content-Disposition'         => 'inline; filename="' . basename($filePath) . '"',
+            'Cache-Control'               => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma'                      => 'no-cache',
+            'Expires'                     => '0',
+            'Access-Control-Allow-Origin' => '*',
+            'X-Content-Type-Options'      => 'nosniff',
+        ];
+
+        // ── Cache key server-side (file di disk server, BUKAN browser cache) ──
+        // Tetap pakai server cache agar tidak re-stamp tiap request
         $cacheKey  = 'stamped_' . $latestVersion->id
             . '_' . ($isGuest ? 'guest' : 'user')
             . '_' . ($latestVersion->updated_at?->timestamp ?? 0);
         $cacheDir  = storage_path('app/pdf_cache');
         $cachePath = $cacheDir . '/' . $cacheKey . '.pdf';
 
-        // Buat direktori cache jika belum ada
         if (!is_dir($cacheDir)) {
             mkdir($cacheDir, 0755, true);
         }
 
-        // ── Serve dari cache jika ada ──────────────────────────────────────────
+        // ── Serve dari server cache jika ada ──────────────────────────────────
         if (file_exists($cachePath)) {
-            Log::info('servePdf: serving from cache', ['key' => $cacheKey]);
-            return response()->file($cachePath, [
-                'Content-Type'                => 'application/pdf',
-                'Content-Disposition'         => 'inline; filename="' . basename($filePath) . '"',
-                'Cache-Control'               => 'public, max-age=3600',
-                'Access-Control-Allow-Origin' => '*',
-            ]);
+            Log::info('servePdf: serving from server cache', ['key' => $cacheKey]);
+
+            return response()->file($cachePath, $noCacheHeaders);
         }
 
         // ── Proses stamp (GhostScript + watermark) ─────────────────────────────
@@ -781,41 +793,30 @@ class PublicationController extends Controller
             'version' => $latestVersion->id,
         ]);
 
-        // Pastikan relasi publication ter-load untuk PdfStamper
         $latestVersion->setRelation('publication', $publication);
 
         try {
             $content = \App\Support\PdfStamper::stamp($absolutePath, $latestVersion, $isGuest);
 
-            // ── Simpan ke cache ────────────────────────────────────────────────
+            // Simpan ke server cache
             file_put_contents($cachePath, $content);
 
-            // ── Bersihkan cache lama untuk publikasi yang sama ─────────────────
-            // Hapus file cache versi/tipe lain agar tidak memenuhi disk
+            // Bersihkan cache server lama untuk versi/tipe yang sama
             $this->cleanOldPdfCache($cacheDir, $latestVersion->id, $isGuest ? 'guest' : 'user', $cacheKey);
 
-            return response($content, 200, [
-                'Content-Type'                => 'application/pdf',
-                'Content-Disposition'         => 'inline; filename="' . basename($filePath) . '"',
-                'Content-Length'              => strlen($content),
-                'Cache-Control'               => 'public, max-age=3600',
-                'Access-Control-Allow-Origin' => '*',
-                'X-Content-Type-Options'      => 'nosniff',
-            ]);
+            return response($content, 200, array_merge($noCacheHeaders, [
+                'Content-Length' => strlen($content),
+            ]));
         } catch (\Throwable $e) {
             Log::warning('PdfStamper fallback: ' . $e->getMessage());
 
-            return response()->file($absolutePath, [
-                'Content-Type'        => 'application/pdf',
-                'Content-Disposition' => 'inline; filename="' . basename($filePath) . '"',
-                'Cache-Control'       => 'no-store, no-cache, must-revalidate, max-age=0',
-            ]);
+            // Fallback: serve file asli tanpa stamp, tetap no-cache
+            return response()->file($absolutePath, $noCacheHeaders);
         }
     }
 
     /**
-     * Hapus file cache PDF lama untuk versi/tipe yang sama.
-     * Mencegah cache menumpuk di disk.
+     * Hapus file cache PDF lama di server untuk versi/tipe yang sama.
      */
     private function cleanOldPdfCache(string $dir, int $versionId, string $type, string $currentKey): void
     {
