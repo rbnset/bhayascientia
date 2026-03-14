@@ -2,8 +2,7 @@
 
 namespace App\Filament\Resources\Reviews\Schemas;
 
-use Filament\Forms\Components\Actions;
-use Filament\Forms\Components\Actions\Action;
+use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
@@ -11,6 +10,7 @@ use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Get;
+use Filament\Schemas\Components\Actions;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Wizard;
 use Filament\Schemas\Components\Wizard\Step;
@@ -21,6 +21,28 @@ use Illuminate\Support\HtmlString;
 
 class ReviewForm
 {
+    /**
+     * Ambil PublicationVersion yang benar baik saat create maupun edit.
+     *
+     * Saat CREATE : $record null/baru → pakai $get('publication_version_id')
+     * Saat EDIT   : $record sudah ada → langsung pakai relasi dari record
+     */
+    private static function resolveVersion(Get $get, mixed $record): mixed
+    {
+        // Mode EDIT — record sudah tersimpan di DB
+        if ($record && $record->exists) {
+            return $record->publicationVersion ?? null;
+        }
+
+        // Mode CREATE — ambil dari state form
+        $pvId = $get('publication_version_id');
+        if (! $pvId) {
+            return null;
+        }
+
+        return \App\Models\PublicationVersion::with('publication')->find($pvId);
+    }
+
     public static function configure(Schema $schema): Schema
     {
         return $schema
@@ -94,10 +116,6 @@ class ReviewForm
                                         ->required(),
                                 ]),
 
-                            /*
-                             * Preview metadata publikasi di Step 1
-                             * Menggunakan Placeholder agar $get() bisa diakses dengan benar.
-                             */
                             Section::make('Preview publikasi')
                                 ->description('Ringkasan metadata sebelum review')
                                 ->icon('heroicon-o-eye')
@@ -106,19 +124,13 @@ class ReviewForm
                                         ->label('')
                                         ->live()
                                         ->columnSpanFull()
-                                        ->content(function (Get $get): HtmlString {
-                                            $pvId = $get('publication_version_id');
+                                        ->content(function (Get $get, mixed $record): HtmlString {
+                                            $version = self::resolveVersion($get, $record);
 
-                                            if (! $pvId) {
+                                            if (! $version) {
                                                 return new HtmlString(
                                                     '<div class="p-4 text-sm italic text-gray-400">Pilih Publication Version terlebih dahulu.</div>'
                                                 );
-                                            }
-
-                                            $version = \App\Models\PublicationVersion::with('publication')->find($pvId);
-
-                                            if (! $version) {
-                                                return new HtmlString('');
                                             }
 
                                             return new HtmlString(
@@ -139,11 +151,6 @@ class ReviewForm
                         ->icon('heroicon-o-pencil-square')
                         ->schema([
 
-                            /*
-                             * PDF VIEWER + ANNOTATION TOOL
-                             * Menggunakan Placeholder agar $get() bisa diakses dengan benar.
-                             * Anotasi tersimpan ke DB (pdf_annotations) via REST API.
-                             */
                             Section::make('Baca & Anotasi Naskah')
                                 ->description('Beri highlight, komentar, dan tanda pada naskah. Anotasi tersimpan otomatis. Gunakan tombol "Export PDF + Anotasi" untuk mengunduh hasil markup.')
                                 ->icon('heroicon-o-document-text')
@@ -152,10 +159,10 @@ class ReviewForm
                                         ->label('')
                                         ->live()
                                         ->columnSpanFull()
-                                        ->content(function (Get $get): HtmlString {
-                                            $pvId = $get('publication_version_id');
+                                        ->content(function (Get $get, mixed $record): HtmlString {
+                                            $version = self::resolveVersion($get, $record);
 
-                                            if (! $pvId) {
+                                            if (! $version) {
                                                 return new HtmlString(
                                                     '<div class="p-8 text-center border-2 border-orange-200 border-dashed rounded-xl bg-orange-50 dark:border-orange-800 dark:bg-orange-950">
                                                         <div class="mb-3 text-4xl">📄</div>
@@ -166,9 +173,7 @@ class ReviewForm
                                                 );
                                             }
 
-                                            $version = \App\Models\PublicationVersion::with('publication')->find($pvId);
-
-                                            if (! $version || ! $version->pdf_file_path) {
+                                            if (! $version->pdf_file_path) {
                                                 return new HtmlString(
                                                     '<div class="p-8 text-center border-2 border-red-200 border-dashed rounded-xl bg-red-50 dark:border-red-800 dark:bg-red-950">
                                                         <div class="mb-3 text-4xl">⚠️</div>
