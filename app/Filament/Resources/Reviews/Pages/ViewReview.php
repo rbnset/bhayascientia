@@ -73,13 +73,16 @@ class ViewReview extends ViewRecord
     {
         static $cache = [];
         $id = $this->record->id;
-        if (! isset($cache[$id])) {
+
+        if (!isset($cache[$id])) {
             try {
                 $cache[$id] = \App\Models\PdfAnnotation::where('review_id', $id)->exists();
             } catch (\Throwable $e) {
+                Log::warning('[ViewReview] PdfAnnotation check failed: ' . $e->getMessage());
                 $cache[$id] = false;
             }
         }
+
         return $cache[$id];
     }
 
@@ -109,7 +112,7 @@ class ViewReview extends ViewRecord
 
                 return new HtmlString("
                     <div style='background:#ECFDF5;border:1.5px solid #6EE7B7;border-left:5px solid #059669;
-                                border-radius:10px;padding:16px 20px;margin-bottom:4px;'>
+                                border-radius:10px;padding:16px 20px;margin-bottom:24px;'>
                         <div style='display:flex;align-items:flex-start;gap:12px;'>
                             <span style='font-size:24px;line-height:1;flex-shrink:0;'>🎉</span>
                             <div style='flex:1;'>
@@ -172,7 +175,7 @@ class ViewReview extends ViewRecord
 
             return new HtmlString("
                 <div style='background:{$cfg['bg']};border:1.5px solid {$cfg['border']};
-                            border-left:5px solid {$cfg['color']};border-radius:10px;padding:16px 20px;margin-bottom:4px;'>
+                            border-left:5px solid {$cfg['color']};border-radius:10px;padding:16px 20px;margin-bottom:24px;'>
                     <div style='display:flex;align-items:flex-start;gap:12px;'>
                         <span style='font-size:24px;line-height:1;flex-shrink:0;'>{$cfg['icon']}</span>
                         <div style='flex:1;'>
@@ -199,13 +202,14 @@ class ViewReview extends ViewRecord
 
     protected function buildPdfViewerData(): ?array
     {
-        if (! $this->hasPdf()) {
+        if (!$this->hasPdf()) {
             return null;
         }
 
         $record = $this->record;
 
-        if (! $record->publicationVersion) {
+        if (!$record->publicationVersion) {
+            Log::warning('[ViewReview] publicationVersion missing for review: ' . $record->id);
             return null;
         }
 
@@ -220,19 +224,30 @@ class ViewReview extends ViewRecord
 
         // Resolve PDF URL — route() bisa throw jika route belum terdaftar
         $pdfUrl = null;
+
         try {
-            $pdfUrl = route('manuscripts.view', $record->publicationVersion);
+            if (\Illuminate\Support\Facades\Route::has('manuscripts.view')) {
+                $pdfUrl = route('manuscripts.view', $record->publicationVersion);
+            } else {
+                throw new \Exception('Route manuscripts.view not found');
+            }
         } catch (\Throwable $e) {
             // Fallback ke Storage URL langsung
             try {
-                $pdfUrl = Storage::url($record->publicationVersion->pdf_file_path);
+                $path = $record->publicationVersion->pdf_file_path;
+                if ($path && Storage::exists($path)) {
+                    $pdfUrl = Storage::url($path);
+                } else {
+                    Log::error('[ViewReview] PDF file not found: ' . $path);
+                    return null;
+                }
             } catch (\Throwable $e2) {
                 Log::error('[ViewReview] Cannot resolve PDF URL: ' . $e2->getMessage());
                 return null;
             }
         }
 
-        if (! $pdfUrl) {
+        if (!$pdfUrl) {
             return null;
         }
 
@@ -351,7 +366,7 @@ class ViewReview extends ViewRecord
                             TextEntry::make('notes_empty')
                                 ->label('')
                                 ->default('Reviewer tidak memberikan catatan per bagian.')
-                                ->visible(! $hasNotes)
+                                ->visible(!$hasNotes)
                                 ->extraAttributes(['style' => 'color:#9CA3AF;font-style:italic;']),
                         ]),
 
@@ -369,7 +384,7 @@ class ViewReview extends ViewRecord
                             TextEntry::make('comment_empty')
                                 ->label('')
                                 ->default('Reviewer tidak memberikan komentar umum.')
-                                ->visible(! $hasComment)
+                                ->visible(!$hasComment)
                                 ->extraAttributes(['style' => 'color:#9CA3AF;font-style:italic;']),
                         ]),
                 ]),
@@ -377,7 +392,7 @@ class ViewReview extends ViewRecord
             // ── Belum ada keputusan ─────────────────────────────────
             Section::make('')
                 ->columnSpanFull()
-                ->visible(! $hasDecision)
+                ->visible(!$hasDecision)
                 ->schema([
                     TextEntry::make('waiting_info')
                         ->label('')
