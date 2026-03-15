@@ -11,6 +11,7 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\HtmlString;
@@ -65,6 +66,14 @@ class ViewReview extends ViewRecord
     protected function isPublished(): bool
     {
         return $this->publicationStatus() === 'published';
+    }
+
+    /**
+     * Cek apakah review ini punya anotasi PDF dari reviewer.
+     */
+    protected function hasAnnotations(): bool
+    {
+        return \App\Models\PdfAnnotation::where('review_id', $this->record->id)->exists();
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -258,6 +267,17 @@ class ViewReview extends ViewRecord
                         ->placeholder('Belum ada keputusan'),
                 ]),
 
+            // ── ✅ BARU: Section Anotasi PDF Reviewer ─────────────
+            Section::make('Anotasi PDF Reviewer')
+                ->icon('heroicon-o-pencil-square')
+                ->columnSpanFull()
+                ->visible(fn() => $this->hasAnnotations())
+                ->schema([
+                    View::make('filament.reviews.annotation-summary')
+                        ->columnSpanFull(),
+                ]),
+            // ──────────────────────────────────────────────────────
+
             Section::make('')
                 ->columnSpanFull()
                 ->visible(fn() => !$hasDecision)
@@ -348,6 +368,40 @@ class ViewReview extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            // ── ✅ BARU: Lihat Anotasi PDF Reviewer ──────────────
+            Action::make('lihatAnotasiPdf')
+                ->label(function () {
+                    $count = \App\Models\PdfAnnotation::where('review_id', $this->record->id)->count();
+                    return $count > 0
+                        ? "Lihat Anotasi Reviewer ({$count})"
+                        : 'Lihat Anotasi Reviewer';
+                })
+                ->icon('heroicon-o-pencil-square')
+                ->color('info')
+                ->visible(
+                    fn() => filled($this->record->publicationVersion?->pdf_file_path)
+                )
+                ->modalHeading(function () {
+                    $title = $this->record->publicationVersion?->publication?->title ?? 'Naskah';
+                    $v     = $this->record->publicationVersion?->version_number;
+                    return "Anotasi Reviewer — " . \Illuminate\Support\Str::limit($title, 50) . ($v ? " (v{$v})" : '');
+                })
+                ->modalContent(function () {
+                    $review = $this->record->load([
+                        'publicationVersion.publication.publicationType',
+                        'reviewer',
+                        'notes',
+                    ]);
+
+                    $pdfUrl = route('manuscripts.view', $review->publicationVersion);
+                    $apiUrl = url("/api/review-annotations/{$review->id}/readonly");
+
+                    return view('filament.reviews.pdf-viewer-readonly', compact('review', 'pdfUrl', 'apiUrl'));
+                })
+                ->modalWidth(\Filament\Support\Enums\MaxWidth::SevenXl)
+                ->modalSubmitAction(false)
+                ->modalCancelActionLabel('Tutup'),
+
             // ── Lihat Manuskrip PDF ───────────────────────────────
             Action::make('previewPdf')
                 ->label(function () {

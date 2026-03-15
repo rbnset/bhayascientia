@@ -23,25 +23,16 @@ class Review extends Model
     |--------------------------------------------------------------------------
     */
 
-    // =====================
-    // PUBLICATION VERSION
-    // =====================
     public function publicationVersion()
     {
         return $this->belongsTo(PublicationVersion::class);
     }
 
-    // =====================
-    // REVIEWER (USER)
-    // =====================
     public function reviewer()
     {
         return $this->belongsTo(User::class, 'reviewer_id');
     }
 
-    // =====================
-    // REVIEW NOTES
-    // =====================
     public function notes(): HasMany
     {
         return $this->hasMany(ReviewNote::class);
@@ -50,6 +41,15 @@ class Review extends Model
     public function attachments(): HasMany
     {
         return $this->hasMany(ReviewAttachment::class);
+    }
+
+    /**
+     * Anotasi PDF yang dibuat reviewer saat mereview naskah ini.
+     * Terisolasi per-review (tidak tercampur anotasi pembaca biasa).
+     */
+    public function pdfAnnotations(): HasMany
+    {
+        return $this->hasMany(PdfAnnotation::class);
     }
 
     /*
