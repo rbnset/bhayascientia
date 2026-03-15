@@ -134,7 +134,16 @@ $annotApiBase = $reviewId
     }
 </style>
 
-<div id="rpv-outer-wrap">
+<div id="rpv-outer-wrap" x-data="{ _rpvBooted: false }" x-intersect.once="
+        if (!_rpvBooted) {
+            _rpvBooted = true;
+            $nextTick(function() {
+                if (typeof window.RPV_boot === 'function') {
+                    window.RPV_boot();
+                }
+            });
+        }
+    ">
 
     {{-- ── STATE 1: Belum pilih naskah ─────────────────────────────── --}}
     @if (!$versionId || !$pdfUrl)

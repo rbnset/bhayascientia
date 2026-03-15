@@ -109,7 +109,7 @@
             document.head.appendChild(s);
         }
     }
-    boot();
+    window.RPV_boot = boot;
 
     /* ════════════════════════════════════════════════════════════════
        MAIN
@@ -1916,5 +1916,7 @@
         setTool('highlight');
         startViewer();
     }
+
+    window.RPV_boot = boot;
 
 })();
