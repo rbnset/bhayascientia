@@ -304,7 +304,7 @@
         }
 
         /* ── Sanitizer ── */
-        var VT = ['highlight', 'underline', 'strikethrough', 'freehand', 'comment', 'sticky', 'shape'];
+        var VT = ['highlight', 'underline', 'strikethrough', 'freehand', 'comment', 'sticky', 'shape', 'copy-text'];
         var VC = ['yellow', 'green', 'red', 'blue', 'orange', 'black', 'white', 'pink', 'purple', 'cyan'];
         var VS = ['rect', 'ellipse', 'arrow', 'line'];
 
@@ -771,7 +771,7 @@
             var pop = document.getElementById('rpv-edit-popup');
             if (!pop) {
                 pop = document.createElement('div'); pop.id = 'rpv-edit-popup';
-                pop.style.cssText = 'position:fixed;z-index:20000;background:#1a1a1a;border:2px solid #FF6B18;'
+                pop.style.cssText = 'position:fixed;z-index:99995;background:#1a1a1a;border:2px solid #FF6B18;'
                     + 'border-radius:14px;padding:.875rem;width:min(300px,90vw);'
                     + 'box-shadow:0 12px 40px rgba(0,0,0,.6);display:none;';
                 pop.innerHTML = '<p style="font-size:12px;font-weight:700;color:#FF6B18;margin:0 0 .5rem;">✏️ Edit Anotasi</p>'
@@ -917,12 +917,13 @@
         /* ── Tool management ── */
         function setTool(tool) {
             activeTool = tool;
-            stage.classList.remove('freehand-mode', 'shape-mode', 'eraser-mode', 'pan-mode', 'select-mode');
+            stage.classList.remove('freehand-mode', 'shape-mode', 'eraser-mode', 'pan-mode', 'select-mode', 'copy-text-mode');
             if (tool === 'freehand' || tool === 'brush') stage.classList.add('freehand-mode');
             if (tool === 'shape') stage.classList.add('shape-mode');
             if (tool === 'eraser') stage.classList.add('eraser-mode');
             if (tool === 'pan') stage.classList.add('pan-mode');
             if (tool === 'select') stage.classList.add('select-mode');
+            if (tool === 'copy-text') stage.classList.add('copy-text-mode');
             applyTextLayerPointerEvents();
             if (freeCanvas) freeCanvas.style.pointerEvents = ['freehand', 'brush', 'shape'].includes(tool) ? 'auto' : 'none';
             if (eraserCur) eraserCur.style.display = tool === 'eraser' ? 'block' : 'none';
@@ -931,7 +932,8 @@
                 pan: '🖐 Hand', select: '↖ Pilih', highlight: '✏️ Highlight',
                 underline: '__ Underline', strikethrough: '~~ Strikethrough',
                 comment: '💬 Komentar', freehand: '🖊 Pen', brush: '🖌️ Brush',
-                shape: '⬛ Shape', eraser: '🧹 Hapus', sticky: '📌 Sticky'
+                shape: '⬛ Shape', eraser: '🧹 Hapus', sticky: '📌 Sticky',
+                'copy-text': '📋 Salin Teks'
             };
             var lbl = document.getElementById('rpv-active-label'); if (lbl) lbl.textContent = LABELS[tool] || tool;
             var sz = document.getElementById('rpv-sizes'); if (sz) sz.style.display = ['freehand', 'brush', 'shape'].includes(tool) ? 'flex' : 'none';
@@ -940,7 +942,8 @@
 
         /* FIX BUG 12: fungsi terpisah untuk set pointer-events textLayer */
         function applyTextLayerPointerEvents() {
-            var needsSel = ['highlight', 'comment', 'underline', 'strikethrough'].includes(activeTool);
+            /* copy-text: aktifkan text selection tapi tidak trigger addAnnot */
+            var needsSel = ['highlight', 'comment', 'underline', 'strikethrough', 'copy-text'].includes(activeTool);
             textLayer.style.pointerEvents = needsSel ? 'auto' : 'none';
             textLayer.style.userSelect = needsSel ? 'text' : 'none';
             textLayer.style.webkitUserSelect = needsSel ? 'text' : 'none';
@@ -996,6 +999,25 @@
             clearTimeout(selTimer);
             selTimer = setTimeout(async function () {
                 var info = getSelInfo(); if (!info || info.rect.w < 2) return;
+
+                /* copy-text mode: hanya seleksi teks untuk copy, TIDAK buat anotasi */
+                if (activeTool === 'copy-text') {
+                    /* Beri hint bahwa teks bisa di-copy dengan Ctrl+C / Cmd+C */
+                    if (info.text && info.text.trim()) {
+                        /* Coba auto-copy via clipboard API */
+                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                            navigator.clipboard.writeText(info.text.trim()).then(function () {
+                                snack('📋 Teks disalin ke clipboard!', '#22c55e');
+                            }).catch(function () {
+                                snack('📋 Teks dipilih — tekan Ctrl+C untuk menyalin', '#60A5FA');
+                            });
+                        } else {
+                            snack('📋 Teks dipilih — tekan Ctrl+C untuk menyalin', '#60A5FA');
+                        }
+                    }
+                    return; /* JANGAN lanjut ke addAnnot */
+                }
+
                 var base = {
                     page: pageNum, color: activeColor,
                     rect_x: info.rect.x, rect_y: info.rect.y,
@@ -1729,15 +1751,47 @@
                     var angle = Math.atan2(tx[1], tx[0]);
                     var span = document.createElement('span');
                     span.textContent = item.str;
-                    span.style.fontSize = fh + 'px';
-                    span.style.left = tx[4] + 'px';
-                    span.style.top = (tx[5] - fh) + 'px';
-                    span.style.transformOrigin = '0% 0%';
+                    /*
+                     * FIX BUG B — Text selection presisi, tidak ada zoom/shift efek
+                     *
+                     * Masalah lama:
+                     * 1. Tidak ada position:absolute → span mengikuti flow normal
+                     * 2. Tidak ada line-height:1 → browser tambah line-height default
+                     *    yang menggeser teks ke bawah dari posisi seharusnya
+                     * 3. Tidak ada white-space:pre → spasi multiple collapse
+                     * 4. Tidak ada padding:0;margin:0 → ada extra spacing
+                     *
+                     * Solusi: set semua properti layout ke nilai eksplisit &
+                     * pakai top = tx[5]-fh yang merupakan baseline minus ascender.
+                     * scaleX diambil SETELAH append agar getBoundingClientRect
+                     * menggunakan ukuran render aktual.
+                     */
+                    span.style.cssText = 'position:absolute;'
+                        + 'left:' + tx[4] + 'px;'
+                        + 'top:' + (tx[5] - fh) + 'px;'
+                        + 'font-size:' + fh + 'px;'
+                        + 'line-height:1;'
+                        + 'white-space:pre;'
+                        + 'padding:0;margin:0;'
+                        + 'color:transparent;'
+                        + 'cursor:text;'
+                        + 'transform-origin:0% 0%;'
+                        + '-webkit-touch-callout:none;';
                     textLayer.appendChild(span);
-                    var tw = item.width * cs, mw = span.getBoundingClientRect().width;
-                    var t = angle !== 0 ? 'rotate(' + (-angle) + 'rad)' : '';
-                    if (mw > 1 && tw > 0) t += ' scaleX(' + (tw / mw) + ')';
-                    if (t.trim()) span.style.transform = t.trim();
+                    /*
+                     * scaleX: kompensasi perbedaan lebar render browser vs PDF.
+                     * Diukur SETELAH appendChild agar layout sudah dihitung.
+                     * Gunakan scrollWidth bukan getBoundingClientRect().width
+                     * untuk menghindari pengaruh transform sebelumnya.
+                     */
+                    var tw = item.width * cs;
+                    var mw = span.scrollWidth || span.getBoundingClientRect().width;
+                    var t = '';
+                    if (angle !== 0) t = 'rotate(' + (-angle) + 'rad)';
+                    if (mw > 1 && tw > 0 && Math.abs(tw - mw) > 0.5) {
+                        t += (t ? ' ' : '') + 'scaleX(' + (tw / mw) + ')';
+                    }
+                    if (t) span.style.transform = t;
                 });
 
                 scheduleRender();

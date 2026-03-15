@@ -78,6 +78,60 @@ $annotApiBase = $reviewId
         opacity: 1;
         transform: translateX(-50%) translateY(0);
     }
+
+    /* ── copy-text-mode: kursor teks & seleksi biru ── */
+    #rpv-stage.copy-text-mode #rpv-text-layer {
+        cursor: text !important;
+    }
+
+    #rpv-stage.copy-text-mode #rpv-text-layer span::selection {
+        background: rgba(59, 130, 246, 0.4) !important;
+        color: transparent !important;
+    }
+
+    #rpv-stage.copy-text-mode #rpv-text-layer span::-moz-selection {
+        background: rgba(59, 130, 246, 0.4) !important;
+        color: transparent !important;
+    }
+
+    /*
+ * FIX TEXT LAYER PRECISION
+ * Pastikan text-layer span tidak punya extra spacing dari browser default.
+ * Ini mencegah efek "teks lebih besar / lebih tinggi" saat diseleksi.
+ */
+    #rpv-text-layer {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        line-height: 1;
+        /* pointer-events diatur via JS */
+    }
+
+    #rpv-text-layer span {
+        position: absolute;
+        color: transparent;
+        white-space: pre;
+        cursor: text;
+        line-height: 1;
+        padding: 0;
+        margin: 0;
+        border: none;
+        outline: none;
+        /* transform-origin diatur via JS */
+    }
+
+    #rpv-text-layer span::selection {
+        background: rgba(66, 133, 244, 0.35);
+        color: transparent;
+    }
+
+    #rpv-text-layer span::-moz-selection {
+        background: rgba(66, 133, 244, 0.35);
+        color: transparent;
+    }
 </style>
 
 <div id="rpv-outer-wrap">
@@ -340,6 +394,16 @@ $annotApiBase = $reviewId
                     style="width:16px;height:16px;">
                     <path d="M20 20H7L3 16l10-10 7 7-3 3" />
                     <path d="M6.5 17.5l5-5" />
+                </svg>
+            </button>
+
+            {{-- Tombol Salin Teks — hanya seleksi teks tanpa membuat anotasi --}}
+            <button type="button" class="rpv-tool" data-tool="copy-text"
+                title="Salin Teks — pilih teks lalu Ctrl+C untuk menyalin">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    style="width:16px;height:16px;">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
                 </svg>
             </button>
 
