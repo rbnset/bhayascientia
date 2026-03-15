@@ -1,27 +1,69 @@
 /**
- * pdf-annotations.js — v3.3 PATCH
+ * pdf-annotations.js — v3.4 (no-loop fix)
  * public/js/pdf-annotations.js
  *
- * PATCH v3.3 (dari v3.2):
- * 1. Redo 500 fix — payload() sekarang sanitize semua field nullable,
- *    pastikan color & type selalu ada dan valid sebelum kirim ke server
- * 2. Text tool fix — font_size field terpisah dari stroke_width,
- *    default font size 14px, text popup langsung bisa dipakai
- * 3. Redo: validasi data sebelum apiSave agar tidak 500
+ * FIX v3.4:
+ * 1. waitForViewer() DIHAPUS — diganti dengan onReady hook langsung.
+ *    Poll 400×80ms adalah penyebab utama "loading terus".
+ * 2. Inisialisasi sekarang bergantung pada window._pdfViewer yang
+ *    di-expose oleh pdf-viewer.js, lalu V.onReady(cb) untuk menunggu
+ *    PDF selesai dimuat — tidak ada setTimeout loop sama sekali.
+ * 3. Safety net: jika _pdfViewer belum ada saat script ini jalan
+ *    (race condition load order), pakai DOMContentLoaded + requestIdleCallback.
  */
 (function () {
     'use strict';
 
-    let _tick = 0;
-    function waitForViewer(cb) {
-        if (window._pdfViewer && window._pdfViewer.pdfDoc) { cb(window._pdfViewer); return; }
-        if (_tick++ > 400) { console.error('[annot] timeout'); return; }
-        setTimeout(() => waitForViewer(cb), 80);
+    /* ── Bootstrap: tunggu _pdfViewer tersedia, lalu panggil init ──
+       Tidak ada polling. Tiga jalur:
+       A) _pdfViewer sudah ada saat script ini jalan → langsung
+       B) _pdfViewer belum ada → tunggu event 'pdf-viewer-ready' atau
+          DOMContentLoaded, lalu check lagi satu kali
+       C) Tidak ada sama sekali setelah 15s → log error, berhenti
+    ─────────────────────────────────────────────────────────────── */
+    function bootstrap() {
+        if (window._pdfViewer) {
+            init(window._pdfViewer);
+            return;
+        }
+
+        /* Jalur B: pdf-viewer.js belum selesai di-parse, tunggu */
+        let resolved = false;
+
+        function tryInit() {
+            if (resolved) return;
+            if (window._pdfViewer) {
+                resolved = true;
+                init(window._pdfViewer);
+            }
+        }
+
+        /* pdf-viewer.js bisa dispatch event ini saat _pdfViewer siap */
+        window.addEventListener('pdf-viewer-ready', tryInit, { once: true });
+
+        /* Fallback: setelah DOM selesai + idle */
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function () {
+                requestIdleCallback ? requestIdleCallback(tryInit) : setTimeout(tryInit, 0);
+            }, { once: true });
+        } else {
+            requestIdleCallback ? requestIdleCallback(tryInit) : setTimeout(tryInit, 0);
+        }
+
+        /* Jalur C: hard timeout 15 detik — hanya log, tidak reload */
+        setTimeout(function () {
+            if (!resolved) {
+                console.error('[annot] _pdfViewer tidak tersedia setelah 15s. Pastikan pdf-viewer.js dimuat lebih dulu.');
+            }
+        }, 15000);
     }
 
-    waitForViewer(function (V) {
+    /* ── Main init — dipanggil sekali setelah _pdfViewer siap ─────── */
+    function init(V) {
+        /* Guard: jangan init dua kali */
+        if (window._pdfAnnotations) { console.log('[annot] already init'); return; }
 
-        /* ── CONFIG ─────────────────────────────────────────────── */
+        /* ── CONFIG ──────────────────────────────────────────────── */
         const slug = window.PDF_CONFIG?.slug || 'unknown';
         const API = `/api/annotations/${slug}`;
 
@@ -37,7 +79,7 @@
             };
         }
 
-        /* ── STATE ──────────────────────────────────────────────── */
+        /* ── STATE ───────────────────────────────────────────────── */
         let annots = [];
         let undoStack = [];
         let redoStack = [];
@@ -53,7 +95,7 @@
         let panSX = 0, panSY = 0, panScrollX = 0, panScrollY = 0;
         let renderPending = false;
 
-        /* ── DOM ────────────────────────────────────────────────── */
+        /* ── DOM ─────────────────────────────────────────────────── */
         const stage = V.stage;
         const annotLayer = V.annotLayer;
         const textLayer = V.textLayer;
@@ -86,7 +128,7 @@
         const syncTxtEl = document.getElementById('annot-sync-text');
         const eraserCur = document.getElementById('eraser-cursor');
 
-        /* ── UTILS ──────────────────────────────────────────────── */
+        /* ── UTILS ───────────────────────────────────────────────── */
         function snack(msg, col) { V.snack(msg, col); }
         const COLORS = {
             yellow: '#FFD700', green: '#4ADE80', red: '#EF4444', blue: '#60A5FA',
@@ -100,23 +142,23 @@
             const s = e.changedTouches?.[0] ?? e.touches?.[0] ?? e;
             return { x: s.clientX - r.left, y: s.clientY - r.top };
         }
-        function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>'); }
+        function esc(s) {
+            return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+        }
         function syncFC() {
             if (!freeCanvas) return;
             const w = stage.offsetWidth, h = stage.offsetHeight;
-            if (freeCanvas.width !== w || freeCanvas.height !== h) { freeCanvas.width = w; freeCanvas.height = h; }
+            if (freeCanvas.width !== w || freeCanvas.height !== h) {
+                freeCanvas.width = w; freeCanvas.height = h;
+            }
             freeCanvas.style.width = w + 'px'; freeCanvas.style.height = h + 'px';
         }
 
-        /* ═══════════════════════════════════════════════════════
-           PAYLOAD SANITIZER — KUNCI FIX REDO 500
-           Pastikan semua field yang wajib ada dan valid sebelum
-           dikirim ke server. Ini mencegah 422/500 saat redo.
-        ═══════════════════════════════════════════════════════ */
+        /* ── PAYLOAD SANITIZER ───────────────────────────────────── */
         function sanitizePayload(raw) {
             const type = VALID_TYPES.includes(raw.type) ? raw.type : 'highlight';
             const color = VALID_COLORS.includes(raw.color) ? raw.color : 'yellow';
-
             const p = {
                 page: parseInt(raw.page) || V.pageNum,
                 type: type,
@@ -132,14 +174,11 @@
                 stroke_width: (typeof raw.stroke_width === 'number' && raw.stroke_width > 0) ? raw.stroke_width : 2,
                 fill_opacity: (typeof raw.fill_opacity === 'number') ? raw.fill_opacity : 0,
             };
-
-            /* shape_type wajib ada jika type=shape */
             if (p.type === 'shape' && !p.shape_type) p.shape_type = 'rect';
-
             return p;
         }
 
-        /* ── SYNC INDICATOR ─────────────────────────────────────── */
+        /* ── SYNC INDICATOR ──────────────────────────────────────── */
         let syncT = null;
         function showSync(msg, ok = false) {
             if (!syncEl) return;
@@ -151,10 +190,13 @@
             syncT = setTimeout(() => syncEl.classList.remove('show'), ok ? 1800 : 4000);
         }
 
-        /* ── API ────────────────────────────────────────────────── */
+        /* ── API ─────────────────────────────────────────────────── */
         async function apiLoad() {
             try {
-                const r = await fetch(API, { credentials: 'same-origin', headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+                const r = await fetch(API, {
+                    credentials: 'same-origin',
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                });
                 if (!r.ok) throw new Error(r.status);
                 const j = await r.json();
                 return Array.isArray(j.data) ? j.data : [];
@@ -162,11 +204,13 @@
         }
 
         async function apiSave(payload) {
-            /* Sanitize dulu sebelum kirim */
             const clean = sanitizePayload(payload);
             showSync('Menyimpan...');
             try {
-                const r = await fetch(API, { method: 'POST', credentials: 'same-origin', headers: hdrs(), body: JSON.stringify(clean) });
+                const r = await fetch(API, {
+                    method: 'POST', credentials: 'same-origin',
+                    headers: hdrs(), body: JSON.stringify(clean),
+                });
                 const j = await r.json();
                 if (!r.ok) { console.error('[annot] save err:', clean, j); showSync('Gagal: ' + (j.message || r.status)); return null; }
                 showSync('Tersimpan ✓', true);
@@ -176,7 +220,10 @@
 
         async function apiPatch(id, payload) {
             try {
-                await fetch(`${API}/${id}`, { method: 'PUT', credentials: 'same-origin', headers: hdrs(), body: JSON.stringify(payload) });
+                await fetch(`${API}/${id}`, {
+                    method: 'PUT', credentials: 'same-origin',
+                    headers: hdrs(), body: JSON.stringify(payload),
+                });
             } catch (e) { console.error('[annot] patch:', e); }
         }
 
@@ -196,14 +243,14 @@
             } catch (e) { console.error('[annot] delPage:', e); }
         }
 
-        /* ── LOAD ───────────────────────────────────────────────── */
+        /* ── LOAD ────────────────────────────────────────────────── */
         async function loadAll() {
             annots = await apiLoad();
             console.log('[annot] loaded', annots.length);
             scheduleRender(); updateBadge(); updateUndoRedo();
         }
 
-        /* ── RENDER ─────────────────────────────────────────────── */
+        /* ── RENDER ──────────────────────────────────────────────── */
         function scheduleRender() {
             if (renderPending) return; renderPending = true;
             requestAnimationFrame(() => { renderPending = false; doRender(); });
@@ -262,7 +309,7 @@
             freeCtx.save(); freeCtx.strokeStyle = hex(a.color); freeCtx.lineWidth = (a.stroke_width || 2) * s;
             freeCtx.lineCap = 'round'; freeCtx.lineJoin = 'round'; freeCtx.globalAlpha = .92;
             freeCtx.beginPath(); freeCtx.moveTo(pts[0][0] * s, pts[0][1] * s);
-            for (let i = 1; i < pts.length; i++)freeCtx.lineTo(pts[i][0] * s, pts[i][1] * s);
+            for (let i = 1; i < pts.length; i++) freeCtx.lineTo(pts[i][0] * s, pts[i][1] * s);
             freeCtx.stroke(); freeCtx.restore();
             if (a.rect && (a.rect.w > 0 || a.rect.h > 0)) {
                 const hit = document.createElement('div'); hit.dataset.annotId = String(a.id);
@@ -298,17 +345,8 @@
             });
             makeDraggable(note, a, s); stage.appendChild(note);
         }
-
-        /* ── FREE TEXT RENDER ───────────────────────────────────
-           PERBAIKAN: font_size diambil dari stroke_width tapi
-           di-clamp minimum 10px agar terbaca.
-           Cara pakai: pilih tool 🔤, pilih ukuran dari ab-sizes
-           (2=kecil, 4=sedang, 8=besar, 14=sangat besar),
-           kemudian klik area PDF → ketik teks → klik Tambah.
-        ─────────────────────────────────────────────────────── */
         function rText(a, s) {
             if (!a.rect) return;
-            /* font_size tersimpan di stroke_width, minimum 10 */
             const fontSize = Math.max(10, (a.stroke_width || 14)) * s;
             const el = document.createElement('div');
             el.className = 'annot-freetext'; el.dataset.annotId = String(a.id);
@@ -361,10 +399,11 @@
             el.addEventListener('touchstart', onDown, { passive: false });
             document.addEventListener('mousemove', onMove, { passive: false });
             document.addEventListener('touchmove', onMove, { passive: false });
-            document.addEventListener('mouseup', onUp); document.addEventListener('touchend', onUp);
+            document.addEventListener('mouseup', onUp);
+            document.addEventListener('touchend', onUp);
         }
 
-        /* ── TOOLTIP ─────────────────────────────────────────── */
+        /* ── TOOLTIP ─────────────────────────────────────────────── */
         function showTip(a, cx, cy) {
             if (!annotTip) return;
             const ic = { highlight: '✏️', underline: '__', strikethrough: '~~', freehand: '🖊', shape: '⬛', comment: '💬', sticky: '📌', text: '🔤' };
@@ -387,7 +426,7 @@
                 annotTip.classList.remove('show');
         });
 
-        /* ── ADD / REMOVE ────────────────────────────────────── */
+        /* ── ADD / REMOVE ────────────────────────────────────────── */
         async function addAnnot(payload) {
             const saved = await apiSave(payload);
             if (!saved) return null;
@@ -405,62 +444,35 @@
             updateUndoRedo(); scheduleRender(); snack('🗑 Anotasi dihapus');
         }
 
-        /* ── UNDO / REDO ─────────────────────────────────────────
-           PERBAIKAN:
-           - undoStack push {action:'add'|'del', data: savedAnnot}
-           - Saat undo 'add': hapus dari server, push {action:'readd', data: annotAsli}
-           - Saat undo 'del': tambah lagi ke server, push {action:'redel', data: annotBaru}
-           - Saat redo 'readd': tambah kembali, push kembali ke undoStack
-           - Saat redo 'redel': hapus kembali, push kembali ke undoStack
-           Semua payload di-sanitize sebelum POST.
-        ──────────────────────────────────────────────────────── */
+        /* ── UNDO / REDO ─────────────────────────────────────────── */
         function updateUndoRedo() {
             if (undoBtn) undoBtn.disabled = !undoStack.length;
             if (redoBtn) redoBtn.disabled = !redoStack.length;
         }
-
         async function doUndo() {
             if (!undoStack.length) return;
             const op = undoStack.pop();
             if (op.action === 'add') {
                 const a = annots.find(x => String(x.id) === String(op.data.id));
-                if (a) {
-                    await apiDel(a.id);
-                    annots = annots.filter(x => String(x.id) !== String(a.id));
-                    redoStack.push({ action: 'readd', data: a }); /* redo bisa tambah lagi */
-                }
+                if (a) { await apiDel(a.id); annots = annots.filter(x => String(x.id) !== String(a.id)); redoStack.push({ action: 'readd', data: a }); }
             } else if (op.action === 'del') {
-                const saved = await apiSave(op.data); /* sanitizePayload ada di apiSave */
-                if (saved) {
-                    annots.push(saved);
-                    redoStack.push({ action: 'redel', data: saved }); /* redo bisa hapus lagi */
-                }
+                const saved = await apiSave(op.data);
+                if (saved) { annots.push(saved); redoStack.push({ action: 'redel', data: saved }); }
             }
             updateUndoRedo(); scheduleRender();
         }
-
         async function doRedo() {
             if (!redoStack.length) return;
             const op = redoStack.pop();
             if (op.action === 'readd') {
-                /* Tambah kembali anotasi yang tadi di-undo */
-                const saved = await apiSave(op.data); /* sanitizePayload ada di apiSave */
-                if (saved) {
-                    annots.push(saved);
-                    undoStack.push({ action: 'add', data: saved }); /* bisa undo lagi */
-                }
+                const saved = await apiSave(op.data);
+                if (saved) { annots.push(saved); undoStack.push({ action: 'add', data: saved }); }
             } else if (op.action === 'redel') {
-                /* Hapus lagi anotasi yang tadi di-restore */
                 const a = annots.find(x => String(x.id) === String(op.data.id));
-                if (a) {
-                    await apiDel(a.id);
-                    annots = annots.filter(x => String(x.id) !== String(a.id));
-                    undoStack.push({ action: 'del', data: a }); /* bisa undo lagi */
-                }
+                if (a) { await apiDel(a.id); annots = annots.filter(x => String(x.id) !== String(a.id)); undoStack.push({ action: 'del', data: a }); }
             }
             updateUndoRedo(); scheduleRender();
         }
-
         undoBtn?.addEventListener('click', doUndo);
         redoBtn?.addEventListener('click', doRedo);
         document.addEventListener('keydown', e => {
@@ -469,7 +481,7 @@
             if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); doRedo(); }
         });
 
-        /* ── BADGE & PANEL ───────────────────────────────────── */
+        /* ── BADGE & PANEL ───────────────────────────────────────── */
         function updateBadge() {
             const n = annots.length;
             if (panelBadge) { panelBadge.textContent = n > 99 ? '99+' : String(n); panelBadge.classList.toggle('show', n > 0); }
@@ -498,7 +510,7 @@
             });
         }
 
-        /* ── TOOL MANAGEMENT ─────────────────────────────────── */
+        /* ── TOOL MANAGEMENT ──────────────────────────────────────── */
         function setTool(tool) {
             activeTool = tool;
             stage.classList.remove('freehand-mode', 'shape-mode', 'eraser-mode', 'pan-mode', 'select-mode', 'text-tool-mode');
@@ -509,7 +521,11 @@
             if (tool === 'select') stage.classList.add('select-mode');
             if (tool === 'text') stage.classList.add('text-tool-mode');
             const needsSel = ['highlight', 'comment', 'underline', 'strikethrough'].includes(tool);
-            if (textLayer) { textLayer.style.pointerEvents = needsSel ? 'auto' : 'none'; textLayer.style.userSelect = needsSel ? 'text' : 'none'; textLayer.style.webkitUserSelect = needsSel ? 'text' : 'none'; }
+            if (textLayer) {
+                textLayer.style.pointerEvents = needsSel ? 'auto' : 'none';
+                textLayer.style.userSelect = needsSel ? 'text' : 'none';
+                textLayer.style.webkitUserSelect = needsSel ? 'text' : 'none';
+            }
             if (freeCanvas) freeCanvas.style.pointerEvents = ['freehand', 'shape'].includes(tool) ? 'auto' : 'none';
             if (eraserCur) eraserCur.style.display = tool === 'eraser' ? 'block' : 'none';
             if (tool !== 'select' && selectedId) { selectedId = null; scheduleRender(); }
@@ -520,7 +536,7 @@
         window.addEventListener('annot-shape-change', e => { activeShape = e.detail.shape; });
         setTool('highlight');
 
-        /* ── TEXT SELECTION ──────────────────────────────────── */
+        /* ── TEXT SELECTION ───────────────────────────────────────── */
         function getSelInfo() {
             const sel = window.getSelection();
             if (!sel || sel.isCollapsed || !sel.rangeCount) return null;
@@ -531,7 +547,11 @@
             if (!rects.length) return null;
             const L = Math.min(...rects.map(r => r.left)), T = Math.min(...rects.map(r => r.top));
             const R = Math.max(...rects.map(r => r.right)), B = Math.max(...rects.map(r => r.bottom));
-            return { rect: { x: (L - sr.left) / s, y: (T - sr.top) / s, w: (R - L) / s, h: (B - T) / s }, text: sel.toString().substring(0, 1000), br: range.getBoundingClientRect() };
+            return {
+                rect: { x: (L - sr.left) / s, y: (T - sr.top) / s, w: (R - L) / s, h: (B - T) / s },
+                text: sel.toString().substring(0, 1000),
+                br: range.getBoundingClientRect(),
+            };
         }
         let selTimer = null;
         function onSelEnd(e) {
@@ -543,11 +563,18 @@
                 if (activeTool === 'highlight') { await addAnnot({ ...base, type: 'highlight' }); window.getSelection()?.removeAllRanges(); snack('✏️ Highlight!'); }
                 else if (activeTool === 'underline') { await addAnnot({ ...base, type: 'underline' }); window.getSelection()?.removeAllRanges(); snack('__ Underline!'); }
                 else if (activeTool === 'strikethrough') { await addAnnot({ ...base, type: 'strikethrough' }); window.getSelection()?.removeAllRanges(); snack('~~ Strikethrough!'); }
-                else if (activeTool === 'comment') { pendingRect = info.rect; pendingText = info.text; openPopup(commentPop, info.br.left, info.br.bottom + 8); if (commentTxt) { commentTxt.value = ''; commentTxt.focus(); } }
+                else if (activeTool === 'comment') {
+                    pendingRect = info.rect; pendingText = info.text;
+                    openPopup(commentPop, info.br.left, info.br.bottom + 8);
+                    if (commentTxt) { commentTxt.value = ''; commentTxt.focus(); }
+                }
             }, 80);
         }
         document.addEventListener('mouseup', onSelEnd);
-        document.addEventListener('touchend', e => { if (!['highlight', 'comment', 'underline', 'strikethrough'].includes(activeTool)) return; onSelEnd(e); }, { passive: true });
+        document.addEventListener('touchend', e => {
+            if (!['highlight', 'comment', 'underline', 'strikethrough'].includes(activeTool)) return;
+            onSelEnd(e);
+        }, { passive: true });
 
         function openPopup(popup, cx, cy) {
             if (!popup) return;
@@ -564,7 +591,7 @@
         });
         commentCancel?.addEventListener('click', () => { commentPop?.classList.remove('show'); pendingRect = null; pendingText = null; window.getSelection()?.removeAllRanges(); });
 
-        /* ── FREEHAND ─────────────────────────────────────────── */
+        /* ── FREEHAND ─────────────────────────────────────────────── */
         function fhStart(e) { if (activeTool !== 'freehand') return; if (e.cancelable) e.preventDefault(); isDrawing = true; freePoints = []; const p = stageXY(e), s = V.getScale(); freePoints.push([p.x / s, p.y / s]); }
         function fhMove(e) {
             if (!isDrawing || activeTool !== 'freehand') return; if (e.cancelable) e.preventDefault();
@@ -583,7 +610,7 @@
             await addAnnot({ page: V.pageNum, type: 'freehand', color: activeColor, stroke_width: activeSize, path_points: freePoints, rect_x: bx, rect_y: by, rect_w: Math.max(...xs) - bx, rect_h: Math.max(...ys) - by });
         }
 
-        /* ── SHAPE ───────────────────────────────────────────── */
+        /* ── SHAPE ────────────────────────────────────────────────── */
         function shStart(e) { if (activeTool !== 'shape') return; if (e.cancelable) e.preventDefault(); isDrawing = true; drawStart = stageXY(e); shapePreviewEl = document.createElement('div'); shapePreviewEl.style.cssText = `position:absolute;pointer-events:none;z-index:25;border:${activeSize}px solid ${hex(activeColor)};${activeShape === 'ellipse' ? 'border-radius:50%;' : ''}left:${drawStart.x}px;top:${drawStart.y}px;width:0;height:0;`; stage.appendChild(shapePreviewEl); }
         function shMove(e) { if (!isDrawing || activeTool !== 'shape' || !shapePreviewEl || !drawStart) return; if (e.cancelable) e.preventDefault(); const c = stageXY(e); Object.assign(shapePreviewEl.style, { left: Math.min(drawStart.x, c.x) + 'px', top: Math.min(drawStart.y, c.y) + 'px', width: Math.abs(c.x - drawStart.x) + 'px', height: Math.abs(c.y - drawStart.y) + 'px' }); }
         async function shEnd(e) {
@@ -604,14 +631,14 @@
             freeCanvas.addEventListener('touchend', e => { fhEnd(e); shEnd(e); }, { passive: false });
         }
 
-        /* ── ERASER cursor ───────────────────────────────────── */
+        /* ── ERASER cursor ───────────────────────────────────────── */
         document.addEventListener('mousemove', e => {
             if (!eraserCur) return;
             eraserCur.style.display = activeTool === 'eraser' ? 'block' : 'none';
             if (activeTool === 'eraser') { eraserCur.style.left = e.clientX + 'px'; eraserCur.style.top = e.clientY + 'px'; }
         });
 
-        /* ── UNIFIED STAGE CLICK ─────────────────────────────── */
+        /* ── UNIFIED STAGE CLICK ─────────────────────────────────── */
         stage.addEventListener('click', e => {
             const hitAnnot = e.target.closest('[data-annot-id],.sticky-note,.annot-freetext');
             if (activeTool === 'sticky') {
@@ -626,10 +653,8 @@
                 if (hitAnnot) return;
                 if (e.target.closest('#comment-popup,#sticky-popup,#freetext-popup,#annot-bottom-bar')) return;
                 const p = stageXY(e), s = V.getScale(); textPos = { x: p.x / s, y: p.y / s };
-                ensureTextPopup();
-                openPopup(document.getElementById('freetext-popup'), e.clientX, e.clientY);
-                setTimeout(() => document.getElementById('freetext-input')?.focus(), 30);
-                return;
+                ensureTextPopup(); openPopup(document.getElementById('freetext-popup'), e.clientX, e.clientY);
+                setTimeout(() => document.getElementById('freetext-input')?.focus(), 30); return;
             }
             if (activeTool === 'select') { if (!hitAnnot) { selectedId = null; scheduleRender(); } return; }
             if (activeTool === 'eraser') { if (!hitAnnot) snack('Klik/sentuh anotasi untuk menghapus', '#60A5FA'); return; }
@@ -660,14 +685,8 @@
         });
         stickyCancel?.addEventListener('click', () => { stickyPop?.classList.remove('show'); stickyPos = null; });
 
-        /* ── FREE TEXT POPUP ─────────────────────────────────────
-           PERBAIKAN: popup dibuat sekali, input ukuran dari activeSize
-           yang dikonversi ke font size (2→10, 4→14, 8→20, 14→28)
-        ─────────────────────────────────────────────────────── */
-        function sizeToPx(s) {
-            const map = { 2: 10, 4: 14, 8: 20, 14: 28 };
-            return map[s] || 14;
-        }
+        /* ── FREE TEXT POPUP ─────────────────────────────────────── */
+        function sizeToPx(s) { return ({ 2: 10, 4: 14, 8: 20, 14: 28 })[s] || 14; }
 
         function ensureTextPopup() {
             if (document.getElementById('freetext-popup')) return;
@@ -677,12 +696,11 @@
                 <p style="font-size:12px;font-weight:700;color:#ff6b18;margin:0 0 .5rem">🔤 Tambah Teks ke PDF</p>
                 <p style="font-size:10px;color:#666;margin:0 0 .5rem">Ketik teks, lalu klik Tambah</p>
                 <textarea id="freetext-input" placeholder="Contoh: Penting! atau Catatan..." style="width:100%;background:#2d2d2d;border:1.5px solid #3d3d3d;color:white;border-radius:8px;padding:.5rem;font-size:13px;resize:none;outline:none;height:72px;display:block;box-sizing:border-box;"></textarea>
-                <div id="freetext-size-preview" style="margin-top:.4rem;font-size:10px;color:#888;">Ukuran teks: <span id="freetext-size-label">14px</span></div>
+                <div style="margin-top:.4rem;font-size:10px;color:#888;">Ukuran teks: <span id="freetext-size-label">14px</span></div>
                 <div style="display:flex;gap:.4rem;margin-top:.5rem">
                     <button id="freetext-save" style="flex:1;padding:.5rem;background:#ff6b18;color:white;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;touch-action:manipulation;">✓ Tambah</button>
                     <button id="freetext-cancel" style="padding:.5rem .75rem;background:#2d2d2d;color:#aaa;border:none;border-radius:8px;font-size:12px;cursor:pointer;touch-action:manipulation;">Batal</button>
-                </div>
-            `;
+                </div>`;
             document.body.appendChild(p);
             document.getElementById('freetext-save').addEventListener('click', async () => {
                 const inp = document.getElementById('freetext-input');
@@ -691,30 +709,23 @@
                 if (!textPos) { snack('Klik area PDF dulu!'); return; }
                 const fontSize = sizeToPx(activeSize);
                 if (inp) inp.value = ''; p.style.display = 'none';
-                await addAnnot({
-                    page: V.pageNum, type: 'text', color: activeColor,
-                    stroke_width: fontSize, /* stroke_width dipakai sebagai font size */
-                    rect_x: textPos.x, rect_y: textPos.y, rect_w: 200, rect_h: fontSize * 2,
-                    comment: txt,
-                });
+                await addAnnot({ page: V.pageNum, type: 'text', color: activeColor, stroke_width: fontSize, rect_x: textPos.x, rect_y: textPos.y, rect_w: 200, rect_h: fontSize * 2, comment: txt });
                 textPos = null; snack('🔤 Teks ditambahkan!');
             });
             document.getElementById('freetext-cancel').addEventListener('click', () => { p.style.display = 'none'; textPos = null; });
         }
-
-        /* Update size preview saat size berubah */
         window.addEventListener('annot-size-change', () => {
             const lbl = document.getElementById('freetext-size-label');
             if (lbl) lbl.textContent = sizeToPx(activeSize) + 'px';
         });
 
-        /* ── SELECT: delete key ──────────────────────────────── */
+        /* ── SELECT: delete key ───────────────────────────────────── */
         document.addEventListener('keydown', e => {
             if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
             if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) { removeAnnot(selectedId); selectedId = null; }
         });
 
-        /* ── PAN ─────────────────────────────────────────────── */
+        /* ── PAN ──────────────────────────────────────────────────── */
         stage.addEventListener('mousedown', e => { if (activeTool !== 'pan') return; isPanning = true; panSX = e.clientX; panSY = e.clientY; panScrollX = canvasWrap?.scrollLeft || 0; panScrollY = canvasWrap?.scrollTop || 0; if (e.cancelable) e.preventDefault(); }, { passive: false });
         document.addEventListener('mousemove', e => { if (!isPanning || activeTool !== 'pan') return; if (canvasWrap) { canvasWrap.scrollLeft = panScrollX + (panSX - e.clientX); canvasWrap.scrollTop = panScrollY + (panSY - e.clientY); } });
         document.addEventListener('mouseup', () => { isPanning = false; });
@@ -722,23 +733,35 @@
         document.addEventListener('touchmove', e => { if (!isPanning || activeTool !== 'pan' || e.touches.length !== 1) return; if (canvasWrap) { canvasWrap.scrollLeft = panScrollX + (panSX - e.touches[0].clientX); canvasWrap.scrollTop = panScrollY + (panSY - e.touches[0].clientY); } if (e.cancelable) e.preventDefault(); }, { passive: false });
         document.addEventListener('touchend', () => { isPanning = false; });
 
-        /* ── ZOOM ANTI-FLICKER ───────────────────────────────── */
+        /* ── ZOOM ANTI-FLICKER ────────────────────────────────────── */
         let zoomT = null;
-        if (mainCanvas) { new MutationObserver(() => { clearTimeout(zoomT); zoomT = setTimeout(() => { syncFC(); scheduleRender(); }, 60); }).observe(mainCanvas, { attributes: true, attributeFilter: ['width', 'height'] }); }
+        if (mainCanvas) {
+            new MutationObserver(() => {
+                clearTimeout(zoomT);
+                zoomT = setTimeout(() => { syncFC(); scheduleRender(); }, 60);
+            }).observe(mainCanvas, { attributes: true, attributeFilter: ['width', 'height'] });
+        }
 
-        /* ── PAGE CHANGE ─────────────────────────────────────── */
+        /* ── PAGE CHANGE ──────────────────────────────────────────── */
         V.onPageChange = function () {
-            commentPop?.classList.remove('show'); stickyPop?.classList.remove('show');
+            commentPop?.classList.remove('show');
+            stickyPop?.classList.remove('show');
             const fp = document.getElementById('freetext-popup'); if (fp) fp.style.display = 'none';
             annotTip?.classList.remove('show');
             pendingRect = null; pendingText = null; stickyPos = null; textPos = null;
-            window.getSelection()?.removeAllRanges(); scheduleRender();
+            window.getSelection()?.removeAllRanges();
+            scheduleRender();
         };
 
-        /* ── INIT ────────────────────────────────────────────── */
-        V.onReady(async () => { syncFC(); await loadAll(); });
-        window._pdfAnnotations = true;
-        console.log('[annot] v3.3 ready, slug=', slug);
+        /* ── INIT: tunggu PDF siap via onReady hook ───────────────── */
+        V.onReady(async () => {
+            syncFC();
+            await loadAll();
+        });
 
-    });
+        window._pdfAnnotations = true;
+        console.log('[annot] v3.4 ready, slug=', slug);
+    } /* end init() */
+
+    bootstrap();
 })();
