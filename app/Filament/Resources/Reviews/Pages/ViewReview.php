@@ -283,15 +283,6 @@ class ViewReview extends ViewRecord
             // ────────────────────────────────────────────────────────────────
             // ─────────────────────────────────────────────────────────────────
 
-            Section::make('Anotasi PDF Reviewer')
-                ->icon('heroicon-o-pencil-square')
-                ->columnSpanFull()
-                ->visible(fn() => $this->hasAnnotations())
-                ->schema([
-                    View::make('filament.reviews.annotation-summary')
-                        ->columnSpanFull(),
-                ]),
-
             Section::make('')
                 ->columnSpanFull()
                 ->visible(fn() => !$hasDecision)
