@@ -1,14 +1,13 @@
 {{--
 resources/views/filament/reviews/pdf-viewer.blade.php
 
-Diembed di ReviewForm Step 2 via:
-View::make('filament.reviews.pdf-viewer')->columnSpanFull()
-
-Dependencies:
-- public/css/review-pdf-viewer.css
-- public/js/review-pdf-viewer.js
-- Route: manuscripts.view → /manuscripts/{version}
-- Route: api/review-annotations/{reviewId}/...
+FIX v5.1:
+- Hapus <script>
+    pdf.js dari blade — sekarang di-load dinamis oleh review-pdf-viewer.js
+  (menghindari race condition: script muncul SEBELUM JS siap memproses)
+- Hapus whitespace di <script src="...">
+</script> agar tidak ada isi yang terparse
+- jsPDF tetap di-load dari blade (tidak ada onload callback di JS untuk ini)
 --}}
 
 @php
@@ -39,23 +38,15 @@ $annotApiBase = $reviewId
 : null;
 @endphp
 
-{{-- ═══════════════════════════════════════════════════
-CSS
-════════════════════════════════════════════════════ --}}
 <link rel="stylesheet"
     href="{{ asset('css/review-pdf-viewer.css') }}?v={{ filemtime(public_path('css/review-pdf-viewer.css')) }}">
 
-{{-- ═══════════════════════════════════════════════════
-OUTER WRAP
-════════════════════════════════════════════════════ --}}
 <div id="rpv-outer-wrap">
 
-    {{-- ──────────────────────────────────────────────
-    STATE 1: Belum pilih naskah
-    ─────────────────────────────────────────────── --}}
+    {{-- ── STATE 1: Belum pilih naskah ─────────────────────────────── --}}
     @if (!$versionId || !$pdfUrl)
     <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
-                    gap:1rem;text-align:center;padding:3rem 2rem;min-height:400px;">
+                gap:1rem;text-align:center;padding:3rem 2rem;min-height:400px;">
         <div style="font-size:3rem;">📄</div>
         <p style="color:#fff;font-weight:700;font-size:1rem;margin:0;">Pilih Naskah di Step 1</p>
         <p style="color:#6B7280;font-size:.875rem;max-width:340px;line-height:1.5;margin:0;">
@@ -65,19 +56,17 @@ OUTER WRAP
         <div style="display:flex;gap:.4rem;flex-wrap:wrap;justify-content:center;margin-top:.5rem;">
             @foreach(['✏️ Highlight','💬 Komentar','📌 Sticky Note','🖊 Pen','🖌️ Brush','⬛ Shape'] as $tool)
             <span style="background:#2d2d2d;color:#9CA3AF;font-size:11px;
-                                 padding:.3rem .65rem;border-radius:99px;border:1px solid #3d3d3d;">
+                         padding:.3rem .65rem;border-radius:99px;border:1px solid #3d3d3d;">
                 {{ $tool }}
             </span>
             @endforeach
         </div>
     </div>
 
-    {{-- ──────────────────────────────────────────────
-    STATE 2: Review belum disimpan (belum ada ID)
-    ─────────────────────────────────────────────── --}}
+    {{-- ── STATE 2: Review belum disimpan ──────────────────────────── --}}
     @elseif (!$reviewId)
     <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
-                    gap:1rem;text-align:center;padding:3rem 2rem;min-height:400px;">
+                gap:1rem;text-align:center;padding:3rem 2rem;min-height:400px;">
         <div style="font-size:3rem;">⚠️</div>
         <p style="color:#F59E0B;font-weight:700;font-size:1rem;margin:0;">Simpan Draft Dulu</p>
         <p style="color:#6B7280;font-size:.875rem;max-width:380px;line-height:1.5;margin:0;">
@@ -89,9 +78,7 @@ OUTER WRAP
         </p>
     </div>
 
-    {{-- ──────────────────────────────────────────────
-    STATE 3: Siap — tampilkan viewer
-    ─────────────────────────────────────────────── --}}
+    {{-- ── STATE 3: Siap — tampilkan viewer ────────────────────────── --}}
     @else
 
     {{-- ══ TOOLBAR ══ --}}
@@ -101,7 +88,6 @@ OUTER WRAP
             📄 {{ Str::limit($publicationTitle ?? 'Naskah', 38) }}
         </span>
 
-        {{-- Navigasi halaman --}}
         <div class="rpv-page-group">
             <button type="button" class="rpv-btn" id="rpv-prev" title="Halaman sebelumnya (←)">‹</button>
             <input type="number" id="rpv-page-input" class="rpv-page-input" value="1" min="1">
@@ -110,19 +96,16 @@ OUTER WRAP
             <button type="button" class="rpv-btn" id="rpv-next" title="Halaman berikutnya (→)">›</button>
         </div>
 
-        {{-- Zoom (desktop only) --}}
         <button type="button" class="rpv-btn rpv-desktop-only" id="rpv-zoom-out" title="Perkecil (-)">−</button>
         <span class="rpv-zoom-val rpv-desktop-only" id="rpv-zoom-val">100%</span>
         <button type="button" class="rpv-btn rpv-desktop-only" id="rpv-zoom-in" title="Perbesar (+)">+</button>
 
-        {{-- Mode baca (desktop only) --}}
         <div class="rpv-desktop-only" style="display:flex;gap:2px;">
             <button type="button" class="rpv-btn active" data-rpv-mode="normal" title="Normal">☀️</button>
             <button type="button" class="rpv-btn" data-rpv-mode="sepia" title="Sepia">📜</button>
             <button type="button" class="rpv-btn" data-rpv-mode="night" title="Night">🌙</button>
         </div>
 
-        {{-- Cari --}}
         <button type="button" class="rpv-btn" id="rpv-search-btn" title="Cari teks (Ctrl+F)">
             <svg style="width:13px;height:13px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -131,27 +114,24 @@ OUTER WRAP
             <span class="rpv-desktop-only">Cari</span>
         </button>
 
-        {{-- Fullscreen (desktop only) --}}
         <button type="button" class="rpv-btn rpv-desktop-only" id="rpv-fs-btn" title="Layar penuh (F)">
             <svg style="width:13px;height:13px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5
-                             M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                       M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
             </svg>
             <span>Layar Penuh</span>
         </button>
 
-        {{-- Download + Anotasi --}}
         <button type="button" class="rpv-btn primary" id="rpv-download-btn" title="Download PDF dengan anotasi">
             <svg style="width:13px;height:13px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1
-                             m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                       m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
             <span>Download + Anotasi</span>
         </button>
 
     </div>{{-- /#rpv-toolbar --}}
 
-    {{-- Progress bar --}}
     <div class="rpv-progress-track">
         <div class="rpv-progress-fill" id="rpv-progress"></div>
     </div>
@@ -159,18 +139,12 @@ OUTER WRAP
     {{-- ══ CANVAS AREA ══ --}}
     <div id="rpv-canvas-wrap">
 
-        {{-- Loading state --}}
         <div id="rpv-loading">
             <div class="rpv-spinner"></div>
-            <p style="color:#fff;font-size:13px;font-weight:600;margin:0;">
-                Memuat dokumen...
-            </p>
-            <p style="color:#6b7280;font-size:11px;margin:0;" id="rpv-load-sub">
-                Harap tunggu sebentar
-            </p>
+            <p style="color:#fff;font-size:13px;font-weight:600;margin:0;">Memuat dokumen...</p>
+            <p style="color:#6b7280;font-size:11px;margin:0;" id="rpv-load-sub">Harap tunggu sebentar</p>
         </div>
 
-        {{-- Stage: canvas + layers --}}
         <div id="rpv-stage">
             <canvas id="rpv-canvas"></canvas>
             <div id="rpv-text-layer"></div>
@@ -178,7 +152,6 @@ OUTER WRAP
             <canvas id="rpv-freehand-canvas"></canvas>
         </div>
 
-        {{-- Annotation panel (slide in dari kanan) --}}
         <div id="rpv-panel">
             <div class="rpv-panel-header">
                 <span class="rpv-panel-title">📝 Anotasi Saya</span>
@@ -193,16 +166,12 @@ OUTER WRAP
             </div>
         </div>
 
-        {{-- Export overlay --}}
         <div id="rpv-export-overlay">
             <div class="rpv-spinner"></div>
-            <p style="color:#fff;font-size:13px;font-weight:600;margin:0;">
-                Mengekspor PDF...
-            </p>
+            <p style="color:#fff;font-size:13px;font-weight:600;margin:0;">Mengekspor PDF...</p>
             <p style="color:#6b7280;font-size:11px;margin:0;" id="rpv-export-status">Memproses halaman...</p>
         </div>
 
-        {{-- Mobile FAB --}}
         <div id="rpv-mobile-fab">
             <button type="button" id="rpv-mobile-fab-btn" aria-label="Menu">
                 <svg style="width:22px;height:22px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -218,13 +187,12 @@ OUTER WRAP
         <div class="rpv-annot-label" id="rpv-active-label">✏️ Highlight</div>
         <div class="rpv-ab-tools">
 
-            {{-- Navigasi --}}
             <button type="button" class="rpv-tool" data-tool="pan" title="Geser (Hand)">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     style="width:16px;height:16px;">
                     <path d="M18 11V6.5a1.5 1.5 0 00-3 0V11m0 0V8.5a1.5 1.5 0 00-3 0V11
-                                 m0 0V10a1.5 1.5 0 00-3 0v6c0 2.21 1.79 4 4 4h2a4 4 0 004-4v-5
-                                 a1.5 1.5 0 00-3 0" stroke-linecap="round" stroke-linejoin="round" />
+                             m0 0V10a1.5 1.5 0 00-3 0v6c0 2.21 1.79 4 4 4h2a4 4 0 004-4v-5
+                             a1.5 1.5 0 00-3 0" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
             </button>
             <button type="button" class="rpv-tool" data-tool="select" title="Pilih anotasi">
@@ -236,7 +204,6 @@ OUTER WRAP
 
             <div class="rpv-ab-sep"></div>
 
-            {{-- Markup teks --}}
             <button type="button" class="rpv-tool active" data-tool="highlight" title="Highlight teks">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     style="width:16px;height:16px;">
@@ -269,7 +236,6 @@ OUTER WRAP
 
             <div class="rpv-ab-sep"></div>
 
-            {{-- Drawing --}}
             <button type="button" class="rpv-tool" data-tool="freehand" title="Pen bebas">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     style="width:16px;height:16px;">
@@ -282,7 +248,7 @@ OUTER WRAP
                     style="width:16px;height:16px;">
                     <path d="M9.06 11.9l8.07-8.06a2.85 2.85 0 114.03 4.03l-8.06 8.08" />
                     <path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02
-                                  1 1 2.48 1 3.5 1 1.66 0 3-1.34 3-3s-1.34-3.04-1.5-3.04z" fill="currentColor"
+                             1 1 2.48 1 3.5 1 1.66 0 3-1.34 3-3s-1.34-3.04-1.5-3.04z" fill="currentColor"
                         stroke="none" />
                 </svg>
             </button>
@@ -306,7 +272,6 @@ OUTER WRAP
 
             <div class="rpv-ab-sep"></div>
 
-            {{-- Eraser --}}
             <button type="button" class="rpv-tool" data-tool="eraser" title="Hapus anotasi">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     style="width:16px;height:16px;">
@@ -317,7 +282,6 @@ OUTER WRAP
 
             <div class="rpv-ab-sep"></div>
 
-            {{-- Shape picker (muncul saat tool=shape) --}}
             <div class="rpv-shapes" id="rpv-shapes">
                 <button type="button" class="rpv-shape active" data-shape="rect" title="Kotak">⬛</button>
                 <button type="button" class="rpv-shape" data-shape="ellipse" title="Lingkaran">⭕</button>
@@ -326,7 +290,6 @@ OUTER WRAP
                 <div class="rpv-ab-sep"></div>
             </div>
 
-            {{-- Size picker --}}
             <div class="rpv-sizes" id="rpv-sizes">
                 <div class="rpv-size selected" data-size="2" title="Tipis"></div>
                 <div class="rpv-size" data-size="4" title="Normal"></div>
@@ -335,7 +298,6 @@ OUTER WRAP
                 <div class="rpv-ab-sep"></div>
             </div>
 
-            {{-- Colors --}}
             <div class="rpv-colors">
                 <div class="rpv-color selected" data-color="yellow" title="Kuning"></div>
                 <div class="rpv-color" data-color="green" title="Hijau"></div>
@@ -351,13 +313,11 @@ OUTER WRAP
 
             <div class="rpv-ab-sep"></div>
 
-            {{-- Undo / Redo --}}
             <button type="button" class="rpv-action" id="rpv-undo" title="Undo (Ctrl+Z)" disabled>↩</button>
             <button type="button" class="rpv-action" id="rpv-redo" title="Redo (Ctrl+Y)" disabled>↪</button>
 
             <div class="rpv-ab-sep"></div>
 
-            {{-- Panel toggle --}}
             <button type="button" class="rpv-tool" id="rpv-panel-btn" title="Daftar anotasi" style="position:relative;">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     style="width:16px;height:16px;">
@@ -374,21 +334,18 @@ OUTER WRAP
         </div>{{-- /.rpv-ab-tools --}}
     </div>{{-- /#rpv-annot-bar --}}
 
-    {{-- ══ OVERLAYS (di luar canvas-wrap agar z-index benar) ══ --}}
+    {{-- ══ OVERLAYS ══ --}}
 
-    {{-- Tooltip --}}
     <div id="rpv-tooltip">
         <div class="rpv-tip-text" id="rpv-tip-text"></div>
         <div class="rpv-tip-actions">
-            <button type="button" id="rpv-tip-edit" style="flex:1;padding:.3rem;background:rgba(96,165,250,.12);
-                           border:1px solid #60a5fa;color:#60a5fa;border-radius:6px;
-                           font-size:11px;cursor:pointer;display:none;">✏️ Edit</button>
+            <button type="button" id="rpv-tip-edit" style="flex:1;padding:.3rem;background:rgba(96,165,250,.12);border:1px solid #60a5fa;
+                       color:#60a5fa;border-radius:6px;font-size:11px;cursor:pointer;display:none;">✏️ Edit</button>
             <button type="button" class="rpv-tip-del" id="rpv-tip-del">🗑 Hapus</button>
             <button type="button" class="rpv-tip-close" id="rpv-tip-close">✕ Tutup</button>
         </div>
     </div>
 
-    {{-- Comment popup --}}
     <div class="rpv-popup" id="rpv-comment-pop">
         <p class="rpv-popup-title">💬 Tambah Komentar</p>
         <textarea id="rpv-comment-txt" placeholder="Catatan reviewer untuk teks ini..."></textarea>
@@ -398,7 +355,6 @@ OUTER WRAP
         </div>
     </div>
 
-    {{-- Sticky popup --}}
     <div class="rpv-popup" id="rpv-sticky-pop">
         <p class="rpv-popup-title">📌 Tambah Sticky Note</p>
         <textarea id="rpv-sticky-txt" placeholder="Catatan untuk bagian ini..."></textarea>
@@ -408,7 +364,6 @@ OUTER WRAP
         </div>
     </div>
 
-    {{-- Search overlay --}}
     <div id="rpv-search">
         <div id="rpv-search-box">
             <div class="rpv-search-row">
@@ -422,19 +377,16 @@ OUTER WRAP
         </div>
     </div>
 
-    {{-- Mobile bottom sheet backdrop --}}
     <div id="rpv-sheet-backdrop"></div>
 
-    {{-- Mobile bottom sheet --}}
     <div id="rpv-bottom-sheet">
         <div class="rpv-sheet-handle"></div>
 
         <p style="font-size:12px;font-weight:700;color:#fff;margin:0 0 .75rem;
-                      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
             {{ Str::limit($publicationTitle ?? 'Naskah', 38) }}
         </p>
 
-        {{-- Navigasi halaman --}}
         <div class="rpv-sheet-sec">
             <span class="rpv-sheet-lbl">Navigasi</span>
             <div class="rpv-sheet-page-row">
@@ -447,7 +399,6 @@ OUTER WRAP
             </div>
         </div>
 
-        {{-- Zoom --}}
         <div class="rpv-sheet-sec">
             <span class="rpv-sheet-lbl">Zoom</span>
             <div class="rpv-sheet-zoom-row">
@@ -457,7 +408,6 @@ OUTER WRAP
             </div>
         </div>
 
-        {{-- Mode baca --}}
         <div class="rpv-sheet-sec">
             <span class="rpv-sheet-lbl">Mode Baca</span>
             <div class="rpv-sheet-mode-row">
@@ -467,47 +417,48 @@ OUTER WRAP
             </div>
         </div>
 
-        {{-- Fullscreen & Search --}}
         <div class="rpv-sheet-sec" style="display:flex;gap:.5rem;">
             <button type="button" id="rpv-sheet-fs" style="flex:1;padding:.55rem;background:#2d2d2d;border:1px solid #3d3d3d;
-                           color:#d1d5db;border-radius:8px;font-size:11px;font-weight:600;
-                           cursor:pointer;">🔲 Fullscreen</button>
+                       color:#d1d5db;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;">
+                🔲 Fullscreen
+            </button>
             <button type="button" id="rpv-sheet-search" style="flex:1;padding:.55rem;background:#2d2d2d;border:1px solid #3d3d3d;
-                           color:#d1d5db;border-radius:8px;font-size:11px;font-weight:600;
-                           cursor:pointer;">🔍 Cari</button>
+                       color:#d1d5db;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;">
+                🔍 Cari
+            </button>
         </div>
 
         <button type="button" class="rpv-sheet-close" id="rpv-sheet-close">Tutup</button>
     </div>{{-- /#rpv-bottom-sheet --}}
 
-    {{-- Sync indicator --}}
     <div id="rpv-sync">
         <div class="rpv-sync-dot"></div>
         <span id="rpv-sync-txt">Menyimpan...</span>
     </div>
 
-    {{-- Eraser cursor --}}
     <div id="rpv-eraser-cursor"></div>
 
     {{-- ══ SCRIPTS ══ --}}
 
-    {{-- Config untuk JS --}}
+    {{-- Config --}}
     <script>
         window.RPV_CONFIG = {
-                pdfUrl      : @json($pdfUrl),
-                reviewId    : @json($reviewId),
-                apiBase     : @json($annotApiBase),
-                reviewerName: @json($reviewerName),
-            };
+            pdfUrl      : @json($pdfUrl),
+            reviewId    : @json($reviewId),
+            apiBase     : @json($annotApiBase),
+            reviewerName: @json($reviewerName),
+        };
     </script>
 
-    {{-- pdf.js 3.11 --}}
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" crossorigin="anonymous"></script>
+    {{--
+    FIX: pdf.js TIDAK lagi di-load di sini.
+    review-pdf-viewer.js akan memuat pdf.js secara dinamis via onload callback,
+    sehingga tidak ada race condition antara script load order.
 
-    {{-- jsPDF UMD --}}
+    jsPDF tetap di-load di sini karena tidak ada async dependency pada timing boot.
+    --}}
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>
 
-    {{-- Review PDF Viewer (cache-bust dengan filemtime) --}}
     <script src="{{ asset('js/review-pdf-viewer.js') }}?v={{ filemtime(public_path('js/review-pdf-viewer.js')) }}">
     </script>
 
