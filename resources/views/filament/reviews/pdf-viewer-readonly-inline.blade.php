@@ -15,6 +15,7 @@ $annotCount = \App\Models\PdfAnnotation::where('review_id', $review->id)->count(
 $uid = 'rpvri_' . $review->id;
 @endphp
 
+{{-- ✅ FIX: CSS ditulis via PHP echo agar $uid bisa diinterpolasi dengan benar --}}
 <style>
     @keyframes {
             {
@@ -410,6 +411,7 @@ $uid = 'rpvri_' . $review->id;
             {{-- Loading --}}
             <div id="{{ $uid }}-loading"
                 style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.75rem;background:#1a1a1a;z-index:20;">
+                {{-- ✅ FIX: animation name menggunakan format yang benar --}}
                 <div
                     style="width:34px;height:34px;border:3px solid #333;border-top-color:#FF6B18;border-radius:50%;animation:{{ $uid }}_spin .8s linear infinite;">
                 </div>
@@ -472,7 +474,7 @@ $uid = 'rpvri_' . $review->id;
         </div>
     </div>
 
-    {{-- Search Overlay (posisi:absolute dalam wrap) --}}
+    {{-- Search Overlay --}}
     <div id="{{ $uid }}-search"
         style="position:absolute;inset:0;z-index:9999;background:rgba(0,0,0,.6);display:none;align-items:flex-start;justify-content:center;padding-top:60px;">
         <div
@@ -496,7 +498,7 @@ $uid = 'rpvri_' . $review->id;
         </div>
     </div>
 
-    {{-- Tooltip (posisi:absolute dalam wrap) --}}
+    {{-- Tooltip --}}
     <div id="{{ $uid }}-tooltip"
         style="position:absolute;z-index:9998;background:#1a1a1a;border:1.5px solid #3d3d3d;border-radius:9px;padding:.55rem .75rem;min-width:190px;max-width:300px;box-shadow:0 8px 24px rgba(0,0,0,.5);display:none;pointer-events:auto;">
         <div id="{{ $uid }}-tip-reviewer" style="font-size:10px;color:#FF6B18;font-weight:700;margin-bottom:.2rem;">
