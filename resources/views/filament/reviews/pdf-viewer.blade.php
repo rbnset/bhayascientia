@@ -11,17 +11,14 @@ $versionId = $formState['publication_version_id'] ?? null;
 $reviewId = $review?->id ?? null;
 
 // ── MODE DETEKSI ──────────────────────────────────────────
-// Jika dipanggil dari ViewReview (infolist/view page),
-// $review sudah ada dan $formState kosong → pakai data dari $review langsung.
+// Jika dipanggil dari ViewReview (infolist), $review ada tapi $formState kosong
 $isReadOnly = false;
 
 if ($review && $reviewId && empty($versionId)) {
-// Dipanggil dari ViewReview (author mode)
 $versionId = $review->publication_version_id;
 $isReadOnly = true;
 }
 
-// Bisa juga di-override eksplisit dari parent component jika perlu
 if (isset($readOnly) && $readOnly === true) {
 $isReadOnly = true;
 }
@@ -72,7 +69,7 @@ $annotApiBase = $reviewId
         </div>
     </div>
 
-    {{-- ── STATE 2: Review belum disimpan (hanya untuk reviewer/non-readOnly) ── --}}
+    {{-- ── STATE 2: Review belum disimpan (hanya untuk reviewer) ──── --}}
     @elseif (!$reviewId && !$isReadOnly)
     <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
                 gap:1rem;text-align:center;padding:3rem 2rem;min-height:400px;">
@@ -102,7 +99,7 @@ $annotApiBase = $reviewId
         <span style="background:#374151;color:#9CA3AF;font-size:10px;font-weight:700;
                      padding:2px 10px;border-radius:20px;border:1px solid #4B5563;
                      letter-spacing:.5px;text-transform:uppercase;">
-            👁 Read Only
+            👁 View Only
         </span>
         @endif
 
@@ -140,7 +137,7 @@ $annotApiBase = $reviewId
             <span>Layar Penuh</span>
         </button>
 
-        {{-- Tombol Download + Anotasi hanya untuk reviewer (non read-only) --}}
+        {{-- Tombol Download hanya untuk reviewer --}}
         @if (!$isReadOnly)
         <button type="button" class="rpv-btn primary" id="rpv-download-btn" title="Download PDF dengan anotasi">
             <svg style="width:13px;height:13px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -170,21 +167,27 @@ $annotApiBase = $reviewId
             <canvas id="rpv-canvas"></canvas>
             <div id="rpv-text-layer"></div>
             <div id="rpv-annotation-layer"></div>
+            {{-- freehand canvas tetap ada untuk render anotasi reviewer, tapi pointer-events:none jika readOnly --}}
             <canvas id="rpv-freehand-canvas"></canvas>
         </div>
 
+        {{-- Panel anotasi: author bisa lihat list tapi tidak bisa hapus --}}
         <div id="rpv-panel">
             <div class="rpv-panel-header">
-                <span class="rpv-panel-title">📝 Anotasi Saya</span>
+                <span class="rpv-panel-title">
+                    @if ($isReadOnly) 👁 Anotasi Reviewer @else 📝 Anotasi Saya @endif
+                </span>
                 <button type="button" class="rpv-panel-close" id="rpv-panel-close">✕</button>
             </div>
             <div class="rpv-panel-list" id="rpv-panel-list">
                 <div class="rpv-panel-empty">Belum ada anotasi.</div>
             </div>
+            @if (!$isReadOnly)
             <div class="rpv-panel-footer">
                 <button type="button" class="rpv-panel-clear" id="rpv-panel-clear">🗑 Hapus semua di halaman
                     ini</button>
             </div>
+            @endif
         </div>
 
         <div id="rpv-export-overlay">
@@ -203,7 +206,7 @@ $annotApiBase = $reviewId
 
     </div>{{-- /#rpv-canvas-wrap --}}
 
-    {{-- ══ ANNOTATION BAR — DISEMBUNYIKAN untuk author (read-only) ══ --}}
+    {{-- ══ ANNOTATION BAR — hanya untuk reviewer ══ --}}
     @if (!$isReadOnly)
     <div id="rpv-annot-bar">
         <div class="rpv-annot-label" id="rpv-active-label">✏️ Highlight</div>
@@ -355,6 +358,33 @@ $annotApiBase = $reviewId
 
         </div>{{-- /.rpv-ab-tools --}}
     </div>{{-- /#rpv-annot-bar --}}
+
+    @else
+    {{-- ══ MINI BAR untuk Author (view-only) ══ --}}
+    {{-- Hanya tombol navigasi panel anotasi, tanpa tools edit --}}
+    <div id="rpv-annot-bar" style="justify-content:space-between;">
+        <div style="display:flex;align-items:center;gap:8px;padding:0 4px;">
+            <span style="font-size:11px;color:#9CA3AF;">
+                👁 Mode baca — anotasi reviewer ditampilkan di atas dokumen
+            </span>
+        </div>
+        <div class="rpv-ab-tools">
+            <button type="button" class="rpv-tool" id="rpv-panel-btn" title="Lihat daftar anotasi reviewer"
+                style="position:relative;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    style="width:16px;height:16px;">
+                    <line x1="8" y1="6" x2="21" y2="6" />
+                    <line x1="8" y1="12" x2="21" y2="12" />
+                    <line x1="8" y1="18" x2="21" y2="18" />
+                    <circle cx="3" cy="6" r="1" fill="currentColor" />
+                    <circle cx="3" cy="12" r="1" fill="currentColor" />
+                    <circle cx="3" cy="18" r="1" fill="currentColor" />
+                </svg>
+                <span style="font-size:11px;margin-left:4px;">Lihat Anotasi</span>
+                <span class="rpv-badge" id="rpv-badge">0</span>
+            </button>
+        </div>
+    </div>
     @endif {{-- end !$isReadOnly --}}
 
     {{-- ══ OVERLAYS ══ --}}
@@ -362,13 +392,18 @@ $annotApiBase = $reviewId
     <div id="rpv-tooltip">
         <div class="rpv-tip-text" id="rpv-tip-text"></div>
         <div class="rpv-tip-actions">
+            {{-- Tombol edit & hapus disembunyikan untuk author --}}
+            @if (!$isReadOnly)
             <button type="button" id="rpv-tip-edit" style="flex:1;padding:.3rem;background:rgba(96,165,250,.12);border:1px solid #60a5fa;
                        color:#60a5fa;border-radius:6px;font-size:11px;cursor:pointer;display:none;">✏️ Edit</button>
             <button type="button" class="rpv-tip-del" id="rpv-tip-del">🗑 Hapus</button>
+            @endif
             <button type="button" class="rpv-tip-close" id="rpv-tip-close">✕ Tutup</button>
         </div>
     </div>
 
+    {{-- Popup comment & sticky hanya untuk reviewer --}}
+    @if (!$isReadOnly)
     <div class="rpv-popup" id="rpv-comment-pop">
         <p class="rpv-popup-title">💬 Tambah Komentar</p>
         <textarea id="rpv-comment-txt" placeholder="Catatan reviewer untuk teks ini..."></textarea>
@@ -386,6 +421,7 @@ $annotApiBase = $reviewId
             <button type="button" class="rpv-popup-cancel" id="rpv-sticky-cancel">Batal</button>
         </div>
     </div>
+    @endif
 
     <div id="rpv-search">
         <div id="rpv-search-box">
@@ -468,7 +504,7 @@ $annotApiBase = $reviewId
             reviewId    : @json($reviewId),
             apiBase     : @json($annotApiBase),
             reviewerName: @json($reviewerName),
-            readOnly    : @json($isReadOnly),   // ← TAMBAHAN: JS juga tahu mode read-only
+            readOnly    : @json($isReadOnly),  // ← JS pakai ini untuk blok interaksi
         };
     </script>
 
