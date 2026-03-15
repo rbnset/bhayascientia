@@ -40,7 +40,7 @@ class ViewReview extends ViewRecord
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Mount — reviewer & admin redirect ke edit
+    // Mount
     // ─────────────────────────────────────────────────────────────
 
     public function mount(int|string $record): void
@@ -70,10 +70,17 @@ class ViewReview extends ViewRecord
 
     /**
      * Cek apakah review ini punya anotasi PDF dari reviewer.
+     * Hasilnya di-cache agar tidak double-query dengan annotation-summary blade.
      */
     protected function hasAnnotations(): bool
     {
-        return \App\Models\PdfAnnotation::where('review_id', $this->record->id)->exists();
+        // FIX BUG 6: cache result agar tidak double query
+        static $cache = [];
+        $id = $this->record->id;
+        if (!isset($cache[$id])) {
+            $cache[$id] = \App\Models\PdfAnnotation::where('review_id', $id)->exists();
+        }
+        return $cache[$id];
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -82,11 +89,10 @@ class ViewReview extends ViewRecord
 
     protected function renderStatusBanner(): HtmlString
     {
-        $decision          = $this->record->decision ?? null;
-        $publication       = $this->record->publicationVersion?->publication;
-        $isPublished       = $this->isPublished();
+        $decision    = $this->record->decision ?? null;
+        $publication = $this->record->publicationVersion?->publication;
+        $isPublished = $this->isPublished();
 
-        // Jika sudah published, override banner
         if ($isPublished) {
             $publishedAt = $publication?->published_at
                 ? \Carbon\Carbon::parse($publication->published_at)
@@ -225,11 +231,23 @@ class ViewReview extends ViewRecord
         $hasNotes    = $this->record->notes()->exists();
         $hasComment  = filled($this->record->overall_comment);
 
+        /*
+         * FIX BUG 8: Pre-compute nilai boolean di luar closure agar
+         * arrow function tidak perlu capture $this (aman di PHP 7.4+).
+         * Sekaligus menghindari masalah context capture di berbagai versi PHP.
+         */
+        $hasAnnots = $this->hasAnnotations();
+        $record    = $this->record;
+
         return $schema->components([
 
-            \Filament\Forms\Components\Placeholder::make('status_banner')
-                ->label('')
-                ->content(fn() => $this->renderStatusBanner())
+            /*
+             * FIX BUG 10: Placeholder adalah Forms component, tidak bisa dipakai
+             * di infolist Schema. Ganti dengan View::make() yang di-render sebagai
+             * HTML mentah agar status banner tetap tampil.
+             */
+            View::make('filament.reviews.status-banner')
+                ->viewData(['bannerHtml' => $this->renderStatusBanner()])
                 ->columnSpanFull(),
 
             Section::make('Hasil Review')
@@ -267,20 +285,24 @@ class ViewReview extends ViewRecord
                         ->placeholder('Belum ada keputusan'),
                 ]),
 
-            // ── ✅ BARU: Section Anotasi PDF Reviewer ─────────────
+            /*
+             * FIX BUG 3 & 8: inject $record ke view lewat viewData() agar
+             * annotation-summary.blade.php mendapat $record dengan benar.
+             * visible() pakai $hasAnnots (pre-computed) bukan closure $this.
+             */
             Section::make('Anotasi PDF Reviewer')
                 ->icon('heroicon-o-pencil-square')
                 ->columnSpanFull()
-                ->visible(fn() => $this->hasAnnotations())
+                ->visible($hasAnnots)
                 ->schema([
                     View::make('filament.reviews.annotation-summary')
+                        ->viewData(['record' => $record])
                         ->columnSpanFull(),
                 ]),
-            // ──────────────────────────────────────────────────────
 
             Section::make('')
                 ->columnSpanFull()
-                ->visible(fn() => !$hasDecision)
+                ->visible(! $hasDecision)
                 ->schema([
                     TextEntry::make('waiting_info')
                         ->label('')
@@ -290,7 +312,7 @@ class ViewReview extends ViewRecord
                                 'Anda akan mendapat notifikasi ketika hasilnya tersedia.'
                         )
                         ->extraAttributes([
-                            'style' => 'color:#6B7280;font-style:italic;text-align:center;padding:16px 0;'
+                            'style' => 'color:#6B7280;font-style:italic;text-align:center;padding:16px 0;',
                         ])
                         ->columnSpanFull(),
                 ]),
@@ -298,7 +320,7 @@ class ViewReview extends ViewRecord
             Grid::make()
                 ->columns(['default' => 1, 'lg' => 2])
                 ->columnSpanFull()
-                ->visible(fn() => $hasDecision && ($hasNotes || $hasComment))
+                ->visible($hasDecision && ($hasNotes || $hasComment))
                 ->schema([
 
                     Section::make('Catatan per Bagian')
@@ -308,7 +330,7 @@ class ViewReview extends ViewRecord
                             RepeatableEntry::make('notes')
                                 ->label('')
                                 ->columnSpanFull()
-                                ->visible(fn() => $hasNotes)
+                                ->visible($hasNotes)
                                 ->schema([
                                     TextEntry::make('section')
                                         ->label('Bagian')
@@ -336,7 +358,7 @@ class ViewReview extends ViewRecord
                             TextEntry::make('notes_empty')
                                 ->label('')
                                 ->default('Reviewer tidak memberikan catatan per bagian.')
-                                ->visible(fn() => !$hasNotes)
+                                ->visible(! $hasNotes)
                                 ->extraAttributes(['style' => 'color:#9CA3AF;font-style:italic;']),
                         ]),
 
@@ -348,13 +370,13 @@ class ViewReview extends ViewRecord
                                 ->label('')
                                 ->html()
                                 ->columnSpanFull()
-                                ->visible(fn() => $hasComment)
+                                ->visible($hasComment)
                                 ->extraAttributes(['class' => 'text-justify']),
 
                             TextEntry::make('comment_empty')
                                 ->label('')
                                 ->default('Reviewer tidak memberikan komentar umum.')
-                                ->visible(fn() => !$hasComment)
+                                ->visible(! $hasComment)
                                 ->extraAttributes(['style' => 'color:#9CA3AF;font-style:italic;']),
                         ]),
                 ]),
@@ -368,7 +390,6 @@ class ViewReview extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
-            // ── ✅ BARU: Lihat Anotasi PDF Reviewer ──────────────
             Action::make('lihatAnotasiPdf')
                 ->label(function () {
                     $count = \App\Models\PdfAnnotation::where('review_id', $this->record->id)->count();
@@ -384,16 +405,51 @@ class ViewReview extends ViewRecord
                 ->modalHeading(function () {
                     $title = $this->record->publicationVersion?->publication?->title ?? 'Naskah';
                     $v     = $this->record->publicationVersion?->version_number;
-                    return "Anotasi Reviewer — " . \Illuminate\Support\Str::limit($title, 50) . ($v ? " (v{$v})" : '');
+                    return 'Anotasi Reviewer — ' . \Illuminate\Support\Str::limit($title, 50) . ($v ? " (v{$v})" : '');
                 })
                 ->modalContent(function () {
+                    /*
+                     * FIX BUG 2: guard null publicationVersion agar tidak crash
+                     * saat route() dipanggil dengan null model.
+                     */
                     $review = $this->record->load([
                         'publicationVersion.publication.publicationType',
                         'reviewer',
                         'notes',
                     ]);
 
+                    // Guard: jika publicationVersion tidak ada, modal tidak bisa dibuka
+                    if (! $review->publicationVersion) {
+                        return view('filament.reviews.pdf-viewer-missing');
+                    }
+
+                    /*
+                     * FIX BUG 4: pastikan route 'manuscripts.view' memang return
+                     * file binary PDF (bukan HTML viewer). Jika route return HTML,
+                     * pdfjsLib.getDocument() akan gagal parse.
+                     *
+                     * route('manuscripts.view', $version) harus terdaftar di web.php
+                     * dan return response()->file(...) atau Storage::response(...)
+                     * BUKAN return view(...)
+                     *
+                     * Jika route belum ada atau return HTML, gunakan Storage URL langsung:
+                     * $pdfUrl = Storage::url($review->publicationVersion->pdf_file_path);
+                     */
                     $pdfUrl = route('manuscripts.view', $review->publicationVersion);
+
+                    /*
+                     * FIX BUG 5: gunakan route() helper untuk apiUrl jika route terdaftar,
+                     * sehingga APP_URL mismatch tidak menjadi masalah.
+                     * Jika belum ada named route, url() tetap dipakai tapi
+                     * tambahkan pengecekan config APP_URL di .env.
+                     *
+                     * Nama route yang direkomendasikan: 'api.review-annotations.readonly'
+                     * Daftarkan di routes/api.php:
+                     *   Route::get('/review-annotations/{review}/readonly', [...])
+                     *       ->name('api.review-annotations.readonly');
+                     *
+                     * Untuk sementara tetap pakai url() tapi dengan format yang konsisten:
+                     */
                     $apiUrl = url("/api/review-annotations/{$review->id}/readonly");
 
                     return view('filament.reviews.pdf-viewer-readonly', compact('review', 'pdfUrl', 'apiUrl'));
@@ -402,7 +458,6 @@ class ViewReview extends ViewRecord
                 ->modalSubmitAction(false)
                 ->modalCancelActionLabel('Tutup'),
 
-            // ── Lihat Manuskrip PDF ───────────────────────────────
             Action::make('previewPdf')
                 ->label(function () {
                     $v = $this->record->publicationVersion?->version_number;
@@ -416,7 +471,6 @@ class ViewReview extends ViewRecord
                 ]))
                 ->openUrlInNewTab(),
 
-            // ── Download PDF Anotasi ──────────────────────────────
             Action::make('downloadAnnotatedPdf')
                 ->label('Download PDF Anotasi')
                 ->icon('heroicon-o-arrow-down-tray')
@@ -428,7 +482,6 @@ class ViewReview extends ViewRecord
                     return Storage::disk('local')->download($attachment->file_path);
                 }),
 
-            // ── Upload Revisi — author, revision_required ─────────
             Action::make('uploadRevisi')
                 ->label('Upload Revisi')
                 ->icon('heroicon-o-arrow-up-tray')
@@ -443,7 +496,6 @@ class ViewReview extends ViewRecord
                 ]))
                 ->tooltip('Perbaiki naskah lalu upload revisi di halaman publikasi'),
 
-            // ── Lihat Halaman Publikasi — jika sudah published ────
             Action::make('lihatPublikasi')
                 ->label('Lihat Halaman Publikasi')
                 ->icon('heroicon-o-arrow-top-right-on-square')
