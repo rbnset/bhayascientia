@@ -723,27 +723,31 @@ return $arr;
             var pdf    = null;
             var status = document.getElementById('rpv-ro-export-status');
 
-            for (var p = 1; p <= pdfDoc.numPages; p++) {
-                if (status) status.textContent = 'Halaman ' + p + ' / ' + pdfDoc.numPages;
-                var pg = await pdfDoc.getPage(p);
-                var vp = pg.getViewport({ scale: SCALE });
-                offC.width  = Math.floor(vp.width);
-                offC.height = Math.floor(vp.height);
-                offCtx.clearRect(0, 0, offC.width, offC.height);
-                await pg.render({ canvasContext: offCtx, viewport: vp }).promise;
+        for (var p = 1; p <= pdfDoc.numPages; p++) {
+            if (status) status.textContent = 'Halaman ' + p + ' / ' + pdfDoc.numPages;
+            var pg = await pdfDoc.getPage(p);
+            var vp = pg.getViewport({ scale: SCALE });
+            offC.width  = Math.floor(vp.width);
+            offC.height = Math.floor(vp.height);
+            offCtx.clearRect(0, 0, offC.width, offC.height);
+            await pg.render({ canvasContext: offCtx, viewport: vp }).promise;
 
-                var wMm = vp.width  * .264583;
-                var hMm = vp.height * .264583;
-                if (!pdf) {
-                    pdf = new jsPDFLib({
-                        orientation: vp.width > vp.height ? 'landscape' : 'portrait',
-                        unit: 'mm', format: [wMm, hMm]
-                    });
-                } else {
-                    pdf.addPage([wMm, hMm], vp.width > vp.height ? 'landscape' : 'portrait');
-                }
-                pdf.addImage(offC.toDataURL('image/jpeg', .92), 'JPEG', 0, 0, wMm, hMm, '', 'FAST');
+            /* ── Gambar anotasi reviewer di atas PDF ── */
+            annots.filter(function (a) { return a.page === p; })
+                .forEach(function (a) { drawAnnotOnCanvas(offCtx, a, SCALE); });
+
+            var wMm = vp.width  * .264583;
+            var hMm = vp.height * .264583;
+            if (!pdf) {
+                pdf = new jsPDFLib({
+                    orientation: vp.width > vp.height ? 'landscape' : 'portrait',
+                    unit: 'mm', format: [wMm, hMm]
+                });
+            } else {
+                pdf.addPage([wMm, hMm], vp.width > vp.height ? 'landscape' : 'portrait');
             }
+            pdf.addImage(offC.toDataURL('image/jpeg', .92), 'JPEG', 0, 0, wMm, hMm, '', 'FAST');
+        }
 
             var fname = (CFG.title || 'naskah').replace(/[^a-z0-9]/gi, '-').toLowerCase();
             pdf.save(fname + '-' + Date.now() + '.pdf');
@@ -757,6 +761,27 @@ return $arr;
             if (exportOL) exportOL.classList.remove('show');
         }
     });
+
+    /* ══════════════════════════════════════════════════════════════
+    DRAW ANOTASI KE CANVAS (untuk export PDF)
+    ══════════════════════════════════════════════════════════════ */
+    function drawAnnotOnCanvas(c, a, s) {
+        if (!a.rect && a.type !== 'freehand') return;
+        c.save();
+        var col = hex(a.color);
+
+        if (a.type === 'highlight' || a.type === 'comment') {
+            if (!a.rect) return;
+            c.globalAlpha = .38;
+            c.fillStyle = col;
+            c.fillRect(a.rect.x*s, a.rect.y*s, a.rect.w*s, a.rect.h*s);
+            /* Gambar dot biru untuk comment */
+            if (a.type === 'comment' && a.comment) {
+                c.globalAlpha = 1;
+                c.fillStyle = '#60A5FA';
+                c.beginPath();
+                c.arc(a.rect.x*s + a.rect.w*s - 4, a.rect.y*s + 4, 5, 0, Math.PI*2);
+                c.fill();
 
     /* ══════════════════════════════════════════════════════════════
        NAVIGASI & ZOOM
