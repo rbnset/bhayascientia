@@ -372,7 +372,7 @@
             var el = document.createElement('div'); el.dataset.annotId = String(a.id);
             var t = Math.max(1.5, 2 * s);
             /* Tengah visual teks Latin ~ 35% dari tinggi dari atas */
-            var top = a.rect.y * s + a.rect.h * s * 0.55 - t / 2; // 55%=tengah visual teks Latin PDF
+            var top = a.rect.y * s + a.rect.h * s * 0.62 - t / 2; // 55%=tengah visual teks Latin PDF
             el.style.cssText = 'position:absolute;left:' + (a.rect.x * s) + 'px;top:' + top + 'px;width:' + (a.rect.w * s) + 'px;height:' + t + 'px;background:' + hex(a.color) + ';pointer-events:auto;cursor:pointer;z-index:5;opacity:.9;border-radius:1px;';
             attachEv(el, a); annotLayer.appendChild(el);
         }
@@ -1126,7 +1126,7 @@
                 if (!a.rect) return;
                 c.globalAlpha = .9; c.fillStyle = col;
                 var st2 = Math.max(1.5, 2 * s);
-                c.fillRect(a.rect.x * s, a.rect.y * s + a.rect.h * s * 0.55 - st2 / 2, a.rect.w * s, st2);
+                c.fillRect(a.rect.x * s, a.rect.y * s + a.rect.h * s * 0.62 - st2 / 2, a.rect.w * s, st2);
 
             } else if (a.type === 'freehand') {
                 if (!a.path_points || !a.path_points.length) return;
