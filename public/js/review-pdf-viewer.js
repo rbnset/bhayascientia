@@ -214,15 +214,14 @@
                     if (!a.rect && a.rect_x != null) {
                         a.rect = { x: +a.rect_x, y: +a.rect_y, w: +a.rect_w, h: +a.rect_h };
                     }
-                    /* arrow coords dari server (kolom extra atau meta JSON) */
-                    if (a.arrow_x1 == null && a.extra_data) {
-                        try {
-                            var ex = typeof a.extra_data === 'string' ? JSON.parse(a.extra_data) : a.extra_data;
-                            if (ex && ex.arrow_x1 != null) {
-                                a.arrow_x1 = +ex.arrow_x1; a.arrow_y1 = +ex.arrow_y1;
-                                a.arrow_x2 = +ex.arrow_x2; a.arrow_y2 = +ex.arrow_y2;
-                            }
-                        } catch (_) { }
+                    /* Pulihkan arrow coords dari path_points jika belum ada */
+                    if ((a.type === 'shape') && (a.shape_type === 'arrow' || a.shape_type === 'line')) {
+                        if (a.arrow_x1 == null && Array.isArray(a.path_points) && a.path_points.length >= 2) {
+                            a.arrow_x1 = +a.path_points[0][0];
+                            a.arrow_y1 = +a.path_points[0][1];
+                            a.arrow_x2 = +a.path_points[1][0];
+                            a.arrow_y2 = +a.path_points[1][1];
+                        }
                     }
                     return a;
                 });
@@ -238,7 +237,22 @@
                 var j = await r.json();
                 if (!r.ok) { showSync('Gagal: ' + (j.message || r.status)); return null; }
                 showSync('Tersimpan ✓', true);
-                return j.data || null;
+                var saved = j.data || null;
+                /* Pulihkan arrow coords dari path_points jika server tidak kembalikan */
+                if (saved && saved.type === 'shape' && (saved.shape_type === 'arrow' || saved.shape_type === 'line')) {
+                    if (saved.arrow_x1 == null && Array.isArray(saved.path_points) && saved.path_points.length >= 2) {
+                        saved.arrow_x1 = +saved.path_points[0][0];
+                        saved.arrow_y1 = +saved.path_points[0][1];
+                        saved.arrow_x2 = +saved.path_points[1][0];
+                        saved.arrow_y2 = +saved.path_points[1][1];
+                    }
+                    /* Jika server pun tidak kembalikan path_points tapi clean sudah punya */
+                    if (saved.arrow_x1 == null && clean.arrow_x1 != null) {
+                        saved.arrow_x1 = clean.arrow_x1; saved.arrow_y1 = clean.arrow_y1;
+                        saved.arrow_x2 = clean.arrow_x2; saved.arrow_y2 = clean.arrow_y2;
+                    }
+                }
+                return saved;
             } catch (e) { console.error('[RPV] save:', e); showSync('Error jaringan'); return null; }
         }
 
@@ -372,7 +386,7 @@
             var el = document.createElement('div'); el.dataset.annotId = String(a.id);
             var t = Math.max(1.5, 2 * s);
             /* Tengah visual teks Latin ~ 35% dari tinggi dari atas */
-            var top = a.rect.y * s + a.rect.h * s * 0.64 - t / 2; // 55%=tengah visual teks Latin PDF
+            var top = a.rect.y * s + a.rect.h * s * 0.62 - t / 2; // 62%=tengah visual turun
             el.style.cssText = 'position:absolute;left:' + (a.rect.x * s) + 'px;top:' + top + 'px;width:' + (a.rect.w * s) + 'px;height:' + t + 'px;background:' + hex(a.color) + ';pointer-events:auto;cursor:pointer;z-index:5;opacity:.9;border-radius:1px;';
             attachEv(el, a); annotLayer.appendChild(el);
         }
@@ -546,23 +560,45 @@
 
         /* ── Edit popup ── */
         function openEditPopup(a) {
+            /* Gunakan class 'rpv-edit-dialog' bukan 'rpv-popup' agar tidak di-clear
+               oleh renderPage yang menghapus semua .rpv-popup */
             var pop = document.getElementById('rpv-edit-popup');
             if (!pop) {
-                pop = document.createElement('div'); pop.id = 'rpv-edit-popup'; pop.className = 'rpv-popup';
-                pop.innerHTML = '<p class="rpv-popup-title">✏️ Edit</p><textarea id="rpv-edit-txt" style="width:100%;background:#2d2d2d;border:1.5px solid #3d3d3d;color:#fff;border-radius:8px;padding:.5rem;font-size:13px;resize:none;outline:none;height:80px;display:block;box-sizing:border-box;"></textarea><div class="rpv-popup-actions"><button type="button" class="rpv-popup-save" id="rpv-edit-save">Simpan</button><button type="button" class="rpv-popup-cancel" id="rpv-edit-cancel">Batal</button></div>';
+                pop = document.createElement('div');
+                pop.id = 'rpv-edit-popup';
+                /* Style sama dengan .rpv-popup tapi class berbeda */
+                pop.style.cssText = 'position:fixed;z-index:20000;background:#1a1a1a;border:2px solid #FF6B18;border-radius:14px;padding:.875rem;width:300px;box-shadow:0 12px 40px rgba(0,0,0,.6);display:none;';
+                pop.innerHTML = '<p style="font-size:12px;font-weight:700;color:#FF6B18;margin:0 0 .5rem;">✏️ Edit Anotasi</p>'
+                    + '<textarea id="rpv-edit-txt" style="width:100%;background:#2d2d2d;border:1.5px solid #3d3d3d;color:#fff;border-radius:8px;padding:.5rem;font-size:13px;resize:none;outline:none;height:80px;display:block;box-sizing:border-box;"></textarea>'
+                    + '<div style="display:flex;gap:.4rem;margin-top:.5rem;">'
+                    + '<button type="button" id="rpv-edit-save" style="flex:1;padding:.5rem;background:#FF6B18;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">Simpan</button>'
+                    + '<button type="button" id="rpv-edit-cancel" style="padding:.5rem .75rem;background:#2d2d2d;color:#9ca3af;border:none;border-radius:8px;font-size:12px;cursor:pointer;">Batal</button>'
+                    + '</div>';
                 document.body.appendChild(pop);
-                document.getElementById('rpv-edit-cancel').addEventListener('click', function () { pop.classList.remove('show'); });
+                document.getElementById('rpv-edit-cancel').addEventListener('click', function () {
+                    pop.style.display = 'none';
+                });
+                /* Klik di luar popup → tutup */
+                document.addEventListener('click', function (e) {
+                    if (pop.style.display !== 'none' && !pop.contains(e.target) && !e.target.closest('#rpv-tooltip')) {
+                        pop.style.display = 'none';
+                    }
+                });
             }
             var txt = document.getElementById('rpv-edit-txt');
             txt.value = a.comment || '';
-            pop.style.left = Math.max(4, Math.min(window.innerWidth / 2 - 140, window.innerWidth - 292)) + 'px';
-            pop.style.top = Math.max(4, window.innerHeight / 2 - 100) + 'px';
-            pop.classList.add('show'); setTimeout(function () { txt.focus(); }, 30);
-            var old = document.getElementById('rpv-edit-save');
-            var btn = old.cloneNode(true); old.parentNode.replaceChild(btn, old);
-            btn.addEventListener('click', async function () {
+            var pw = 300, ph = 170;
+            pop.style.left = Math.max(4, Math.min(window.innerWidth / 2 - pw / 2, window.innerWidth - pw - 4)) + 'px';
+            pop.style.top = Math.max(4, window.innerHeight / 2 - ph / 2) + 'px';
+            pop.style.display = 'block';
+            setTimeout(function () { txt.focus(); txt.select(); }, 40);
+            /* Replace save button to avoid duplicate listeners */
+            var oldBtn = document.getElementById('rpv-edit-save');
+            var newBtn = oldBtn.cloneNode(true); oldBtn.parentNode.replaceChild(newBtn, oldBtn);
+            newBtn.addEventListener('click', async function () {
                 var v = txt.value.trim(); if (!v) { snack('Tidak boleh kosong!'); return; }
-                pop.classList.remove('show'); await apiPatch(a.id, { comment: v });
+                pop.style.display = 'none';
+                await apiPatch(a.id, { comment: v });
                 var idx = annots.findIndex(function (x) { return String(x.id) === String(a.id); });
                 if (idx >= 0) annots[idx].comment = v;
                 scheduleRender(); snack('✓ Diperbarui', '#22c55e');
@@ -572,6 +608,15 @@
         /* ── Add / Remove ── */
         async function addAnnot(payload) {
             var saved = await apiSave(payload); if (!saved) return null;
+            /* Jika server tidak kembalikan arrow coords, ambil dari payload asli */
+            if (payload.arrow_x1 != null && saved.arrow_x1 == null) {
+                saved.arrow_x1 = payload.arrow_x1; saved.arrow_y1 = payload.arrow_y1;
+                saved.arrow_x2 = payload.arrow_x2; saved.arrow_y2 = payload.arrow_y2;
+            }
+            /* Pastikan rect object ada */
+            if (!saved.rect && saved.rect_x != null) {
+                saved.rect = { x: +saved.rect_x, y: +saved.rect_y, w: +saved.rect_w, h: +saved.rect_h };
+            }
             annots.push(saved);
             undoStack.push({ action: 'add', data: saved }); redoStack = [];
             updateUndoRedo(); scheduleRender(); return saved;
@@ -861,6 +906,8 @@
                 stroke_width: activeSize,
                 rect_x: rx, rect_y: ry, rect_w: rw, rect_h: rh,
                 /* Simpan titik asal untuk arrow */
+                /* Simpan titik arah di path_points agar tersimpan ke DB */
+                path_points: [[x1, y1], [x2, y2]],
                 arrow_x1: x1, arrow_y1: y1, arrow_x2: x2, arrow_y2: y2,
             });
         }
@@ -1118,15 +1165,15 @@
 
             } else if (a.type === 'underline') {
                 if (!a.rect) return;
-                c.globalAlpha = .9; c.fillStyle = col;
+                c.globalAlpha = .75; c.fillStyle = col;
                 var ut = Math.max(1.5, 2 * s);
                 c.fillRect(a.rect.x * s, (a.rect.y + a.rect.h) * s - 1, a.rect.w * s, ut);
 
             } else if (a.type === 'strikethrough') {
                 if (!a.rect) return;
-                c.globalAlpha = .9; c.fillStyle = col;
+                c.globalAlpha = .75; c.fillStyle = col;
                 var st2 = Math.max(1.5, 2 * s);
-                c.fillRect(a.rect.x * s, a.rect.y * s + a.rect.h * s * 0.64 - st2 / 2, a.rect.w * s, st2);
+                c.fillRect(a.rect.x * s, a.rect.y * s + a.rect.h * s * 0.62 - st2 / 2, a.rect.w * s, st2);
 
             } else if (a.type === 'freehand') {
                 if (!a.path_points || !a.path_points.length) return;
@@ -1140,10 +1187,10 @@
                 c.stroke();
 
             } else if (a.type === 'shape') {
-                /* FIX: shape sekarang ikut tersimpan di PDF download */
                 if (!a.rect) return;
                 var sw = (a.stroke_width || 2) * s;
-                c.globalAlpha = 1; c.strokeStyle = col; c.lineWidth = sw;
+                /* Warna dengan sedikit transparansi */
+                c.globalAlpha = 0.85; c.strokeStyle = col; c.lineWidth = sw;
                 c.lineCap = 'round'; c.lineJoin = 'round';
                 var st = a.shape_type || 'rect';
 
@@ -1162,7 +1209,6 @@
                     c.stroke();
 
                 } else if (st === 'line') {
-                    /* Pakai arrow_x1/y1/x2/y2 jika ada */
                     var lx1 = a.arrow_x1 != null ? a.arrow_x1 * s : a.rect.x * s;
                     var ly1 = a.arrow_y1 != null ? a.arrow_y1 * s : (a.rect.y + a.rect.h / 2) * s;
                     var lx2 = a.arrow_x2 != null ? a.arrow_x2 * s : (a.rect.x + a.rect.w) * s;
@@ -1180,7 +1226,6 @@
                     var headLen = Math.min(alen * 0.35, Math.max(10, sw * 5));
                     var aang = Math.atan2(ady, adx);
                     c.beginPath(); c.moveTo(ax1, ay1); c.lineTo(ax2, ay2); c.stroke();
-                    /* Kepala panah */
                     c.beginPath();
                     c.moveTo(ax2 - headLen * Math.cos(aang - Math.PI / 6), ay2 - headLen * Math.sin(aang - Math.PI / 6));
                     c.lineTo(ax2, ay2);
@@ -1189,37 +1234,48 @@
                 }
 
             } else if (a.type === 'sticky') {
-                /* FIX: sticky note ikut tersimpan di PDF download */
                 if (!a.rect || !a.comment) return;
-                var stickyW = Math.max(130, 180 * s), stickyH = Math.max(60, 90 * s);
+                /* Ukuran sticky di canvas export lebih besar (scale 2x) */
+                var stickyW = Math.max(160, 200 * s), stickyH = Math.max(80, 110 * s);
                 var sx = a.rect.x * s, sy = a.rect.y * s;
-                /* Background warna */
-                var stickyColors = { yellow: '#FEF9C3', green: '#DCFCE7', red: '#FEE2E2', blue: '#DBEAFE', orange: '#FFEDD5', pink: '#FCE7F3', purple: '#EDE9FE', cyan: '#CFFAFE', black: '#1F2937', white: '#F9FAFB' };
-                c.globalAlpha = .95;
-                c.fillStyle = stickyColors[a.color] || '#FEF9C3';
-                if (c.roundRect) c.roundRect(sx, sy, stickyW, stickyH, 4);
+                var stickyBg = {
+                    yellow: '#FEF9C3', green: '#DCFCE7', red: '#FEE2E2', blue: '#DBEAFE',
+                    orange: '#FFEDD5', pink: '#FCE7F3', purple: '#EDE9FE', cyan: '#CFFAFE',
+                    black: '#1F2937', white: '#F9FAFB'
+                };
+                /* Background semi-transparan (0.75) */
+                c.globalAlpha = 0.75;
+                c.fillStyle = stickyBg[a.color] || '#FEF9C3';
+                c.beginPath();
+                if (c.roundRect) c.roundRect(sx, sy, stickyW, stickyH, 6);
                 else c.rect(sx, sy, stickyW, stickyH);
                 c.fill();
                 /* Border */
-                c.globalAlpha = 1; c.strokeStyle = col; c.lineWidth = 1.5;
-                if (c.roundRect) c.roundRect(sx, sy, stickyW, stickyH, 4);
+                c.globalAlpha = 0.9; c.strokeStyle = col; c.lineWidth = Math.max(1.5, s);
+                c.beginPath();
+                if (c.roundRect) c.roundRect(sx, sy, stickyW, stickyH, 6);
                 else c.rect(sx, sy, stickyW, stickyH);
                 c.stroke();
-                /* Teks */
+                /* Header strip */
+                c.globalAlpha = 0.35; c.fillStyle = col;
+                c.fillRect(sx, sy, stickyW, Math.max(4, 18 * s / 2));
+                /* Teks — ukuran lebih besar, minimum 13px */
                 c.globalAlpha = 1;
-                c.fillStyle = a.color === 'black' ? '#D1D5DB' : 'rgba(0,0,0,.8)';
-                var fs = Math.max(9, 11 * s);
-                c.font = '600 ' + fs + 'px ui-sans-serif,sans-serif';
-                var words = a.comment.split(' '), lineH = fs * 1.4, ly = sy + fs + 8, lx = sx + 6;
+                c.fillStyle = a.color === 'black' ? '#E5E7EB' : 'rgba(0,0,0,.85)';
+                var fs = Math.max(13, 13 * s);
+                c.font = '600 ' + fs + 'px ui-sans-serif,system-ui,sans-serif';
+                var padX = 8, padY = Math.max(4, 20 * s / 2) + fs;
+                var maxW = stickyW - padX * 2;
+                var words = a.comment.split(' '), lineH = fs * 1.45, ly = sy + padY, lx = sx + padX;
                 var line = '';
                 for (var wi = 0; wi < words.length; wi++) {
                     var test = line + words[wi] + ' ';
-                    if (c.measureText(test).width > stickyW - 12 && line !== '') {
-                        c.fillText(line, lx, ly); line = words[wi] + ' '; ly += lineH;
+                    if (c.measureText(test).width > maxW && line !== '') {
+                        c.fillText(line.trimEnd(), lx, ly); line = words[wi] + ' '; ly += lineH;
                         if (ly > sy + stickyH - 4) break;
                     } else { line = test; }
                 }
-                if (line.trim()) c.fillText(line, lx, ly);
+                if (line.trim()) c.fillText(line.trimEnd(), lx, ly);
             }
             c.restore();
         }
@@ -1234,6 +1290,7 @@
             if (pageRendering) { pendingPage = num; return; }
             pageRendering = true; pageNum = num; saveLast(num);
             document.querySelectorAll('.rpv-popup').forEach(function (p) { p.classList.remove('show'); });
+            /* rpv-edit-popup pakai display:none — tidak perlu dihapus di sini */
             tooltip.classList.remove('show');
             pendingRect = null; pendingText = null; stickyPos = null;
             if (window.getSelection) window.getSelection().removeAllRanges();
