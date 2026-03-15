@@ -368,41 +368,6 @@ class ViewReview extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
-            // ── ✅ BARU: Lihat Anotasi PDF Reviewer ──────────────
-            Action::make('lihatAnotasiPdf')
-                ->label(function () {
-                    $count = \App\Models\PdfAnnotation::where('review_id', $this->record->id)->count();
-                    return $count > 0
-                        ? "Lihat Anotasi Reviewer ({$count})"
-                        : 'Lihat Anotasi Reviewer';
-                })
-                ->icon('heroicon-o-pencil-square')
-                ->color('info')
-                ->visible(
-                    fn() => filled($this->record->publicationVersion?->pdf_file_path)
-                )
-                ->modalHeading(function () {
-                    $title = $this->record->publicationVersion?->publication?->title ?? 'Naskah';
-                    $v     = $this->record->publicationVersion?->version_number;
-                    return "Anotasi Reviewer — " . \Illuminate\Support\Str::limit($title, 50) . ($v ? " (v{$v})" : '');
-                })
-                ->modalContent(function () {
-                    $review = $this->record->load([
-                        'publicationVersion.publication.publicationType',
-                        'reviewer',
-                        'notes',
-                    ]);
-
-                    $pdfUrl = route('manuscripts.view', $review->publicationVersion);
-                    $apiUrl = url("/api/review-annotations/{$review->id}/readonly");
-
-                    return view('filament.reviews.pdf-viewer-readonly', compact('review', 'pdfUrl', 'apiUrl'));
-                })
-                ->modalWidth('7xl')
-                ->modalSubmitAction(false)
-                ->modalCancelActionLabel('Tutup'),
-
-            // ── Lihat Manuskrip PDF ───────────────────────────────
             Action::make('previewPdf')
                 ->label(function () {
                     $v = $this->record->publicationVersion?->version_number;
