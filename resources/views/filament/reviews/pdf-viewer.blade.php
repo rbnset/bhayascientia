@@ -134,16 +134,7 @@ $annotApiBase = $reviewId
     }
 </style>
 
-<div id="rpv-outer-wrap" x-data="{ _rpvBooted: false }" x-intersect="
-        if (!_rpvBooted) {
-            _rpvBooted = true;
-            $nextTick(function() {
-                if (typeof window.RPV_boot === 'function') window.RPV_boot();
-            });
-        }
-    " x-on:reset-pdf-viewer.window="
-        _rpvBooted = false;
-    ">
+<div id="rpv-outer-wrap">
 
     {{-- ── STATE 1: Belum pilih naskah ─────────────────────────────── --}}
     @if (!$versionId || !$pdfUrl)
@@ -628,6 +619,42 @@ $annotApiBase = $reviewId
             reviewerName: @json($reviewerName),
             readOnly    : @json($isReadOnly),
         };
+    </script>
+
+    {{-- Boot --}}
+    <script>
+        (function () {
+    // Fungsi utama untuk cek apakah rpv-outer-wrap visible dan boot
+    function tryBoot() {
+        var el = document.getElementById('rpv-outer-wrap');
+        if (!el) return;
+
+        // Cek apakah elemen benar-benar visible (tidak hidden oleh Wizard)
+        var rect = el.getBoundingClientRect();
+        var isVisible = rect.width > 0 && rect.height > 0 && el.offsetParent !== null;
+
+        if (!isVisible) return;
+
+        // Reset guard agar boot bisa jalan ulang
+        var reviewId = (window.RPV_CONFIG && window.RPV_CONFIG.reviewId) || 'x';
+        window['_rpvA_' + reviewId] = false;
+
+        if (typeof window.RPV_boot === 'function') {
+            window.RPV_boot();
+        }
+    }
+
+    // ✅ Kunci utama: hook ke Livewire setiap kali Livewire selesai update DOM
+    document.addEventListener('livewire:updated', function () {
+        // Tunggu sebentar agar Wizard selesai show/hide stepnya
+        setTimeout(tryBoot, 50);
+    });
+
+    // Fallback: boot pertama kali saat halaman load
+    document.addEventListener('DOMContentLoaded', function () {
+        setTimeout(tryBoot, 100);
+    });
+    })();
     </script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>

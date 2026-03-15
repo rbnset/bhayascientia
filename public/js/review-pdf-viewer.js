@@ -57,10 +57,21 @@
 (function () {
     'use strict';
 
-    /* ── selalu reset guard, biarkan boot ulang ────────────────────────────────────────── */
-    var _gk = '_rpvA_' + ((window.RPV_CONFIG && window.RPV_CONFIG.reviewId) || 'x');
-    // Reset guard setiap kali boot dipanggil (bisa dari x-intersect berkali-kali)
-    window[_gk] = false;
+    // ✅ GANTI DENGAN guard yang lebih simpel — hanya block jika SEDANG running:
+    var _gkId = (window.RPV_CONFIG && window.RPV_CONFIG.reviewId) || 'x';
+    var _gk = '_rpvA_' + _gkId;
+
+    // Jika viewer sedang aktif rendering di DOM yang sama, skip
+    if (window[_gk] === true && document.getElementById('rpv-canvas-wrap')) {
+        // Cek apakah wrapper masih visible — jika ya, memang sedang running, skip
+        var _cw = document.getElementById('rpv-canvas-wrap');
+        if (_cw && _cw.offsetParent !== null && _cw.getBoundingClientRect().width > 0) {
+            console.log('[RPV] already running and visible, skip');
+            return;
+        }
+        // Jika tidak visible (step sedang tersembunyi), reset dan boot ulang
+        window[_gk] = false;
+    }
 
     /* ── FIX BUG 7: Paksa overflow-x hidden pada canvas-wrap ── */
     (function applyOverflowFix() {
