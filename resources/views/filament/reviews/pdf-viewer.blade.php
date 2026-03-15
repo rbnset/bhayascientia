@@ -1209,15 +1209,25 @@ $annotApiBase = $reviewId
             <span>Cari</span>
         </button>
 
-        {{-- Download --}}
-        <a href="{{ route('manuscripts.download', $version) }}" class="rpv-btn primary" title="Download PDF">
+        {{-- Fullscreen --}}
+        <button type="button" class="rpv-btn" id="rpv-fs-btn" title="Fullscreen (F)">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path id="rpv-fs-icon" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+            </svg>
+            <span>Layar Penuh</span>
+        </button>
+
+        {{-- Download dengan anotasi --}}
+        <button type="button" class="rpv-btn primary" id="rpv-download-btn" title="Download PDF dengan anotasi">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
-            <span>Download</span>
-        </a>
+            <span>Download + Anotasi</span>
+        </button>
     </div>
+
 
     {{-- Progress bar --}}
     <div class="rpv-progress-track">
@@ -1497,32 +1507,25 @@ $annotApiBase = $reviewId
     ulang untuk konteks review dengan reviewId.
     --}}
     <script>
+        {{-- pdf.js --}}
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js">
+    </script>
+    {{-- jsPDF untuk export PDF dengan anotasi --}}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <script>
         (function () {
             'use strict';
 
-            // Tunggu pdf.js siap
-            if (typeof pdfjsLib === 'undefined') {
-                console.error('[RPV] pdfjsLib not found');
-                return;
-            }
+            if (typeof pdfjsLib === 'undefined') { console.error('[RPV] pdfjsLib not found'); return; }
             pdfjsLib.GlobalWorkerOptions.workerSrc =
                 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
             pdfjsLib.verbosity = 0;
 
             const CFG = window.RPV_CONFIG;
-            if (!CFG || !CFG.pdfUrl) {
-                console.error('[RPV] RPV_CONFIG missing');
-                return;
-            }
+            if (!CFG?.pdfUrl) { console.error('[RPV] config missing'); return; }
 
-            /* ── CONFIG ──────────────────────────────────────────── */
-            const API       = CFG.apiBase;      // null jika review belum disimpan
-            const REVIEW_ID = CFG.reviewId;
-
-            const VALID_TYPES  = ['highlight','underline','strikethrough','freehand','comment','sticky','shape','text'];
-            const VALID_COLORS = ['yellow','green','red','blue','orange','black','white','pink','purple','cyan'];
-            const VALID_SHAPES = ['rect','ellipse','arrow','line'];
-
+            /* ── COLORS ──────────────────────────────────────── */
             const COLORS = {
                 yellow:'#FFD700', green:'#4ADE80', red:'#EF4444', blue:'#60A5FA',
                 orange:'#FF6B18', black:'#111111', white:'#FFFFFF',
@@ -1530,21 +1533,11 @@ $annotApiBase = $reviewId
             };
             const hex = n => COLORS[n] || '#FFD700';
 
-            function csrf() { return document.querySelector('meta[name="csrf-token"]')?.content || ''; }
-            function hdrs() {
-                return {
-                    'Content-Type':'application/json', 'Accept':'application/json',
-                    'X-CSRF-TOKEN':csrf(), 'X-Requested-With':'XMLHttpRequest',
-                };
-            }
-
-            /* ── STATE ───────────────────────────────────────────── */
+            /* ── STATE ───────────────────────────────────────── */
             let pdfDoc = null, pageNum = 1, pageRendering = false, pendingPage = null;
-            let baseScale = 1.0;
+            let baseScale = 1.0, zoomFactor = 1.0;
             const ZOOM_MIN = 0.5, ZOOM_MAX = 4.0, ZOOM_STEP = 0.25;
-            let zoomFactor = 1.0;
             const DPR = window.devicePixelRatio || 1;
-
             let annots = [], undoStack = [], redoStack = [];
             let activeTool = 'highlight', activeColor = 'yellow', activeSize = 2, activeShape = 'rect';
             let isDrawing = false, drawStart = null, freePoints = [], shapePreviewEl = null;
@@ -1552,10 +1545,12 @@ $annotApiBase = $reviewId
             let selectedId = null, isPanning = false;
             let panSX = 0, panSY = 0, panScrollX = 0, panScrollY = 0;
             let renderPending = false, syncT = null, searchDebounce = null;
-            let searchResults = [], searchIndex = -1, searchHighlights = [];
-            let currentQuery = '';
+            let searchResults = [], searchIndex = -1, searchHighlights = [], currentQuery = '';
+            let isFullscreen = false;
+            let exportInProgress = false;
 
-            /* ── DOM ─────────────────────────────────────────────── */
+            /* ── DOM ─────────────────────────────────────────── */
+            const outerWrap  = document.getElementById('review-pdf-viewer-wrap');
             const wrap       = document.getElementById('rpv-canvas-wrap');
             const stage      = document.getElementById('rpv-stage');
             const mainCanvas = document.getElementById('rpv-canvas');
@@ -1565,14 +1560,13 @@ $annotApiBase = $reviewId
             const freeCanvas = document.getElementById('rpv-freehand-canvas');
             const freeCtx    = freeCanvas?.getContext('2d');
             const loadingEl  = document.getElementById('rpv-loading');
-            const loadSubEl  = document.getElementById('rpv-load-sub');
+            const loadSub    = document.getElementById('rpv-load-sub');
             const tooltip    = document.getElementById('rpv-tooltip');
-            const tipTxt     = document.getElementById('rpv-tip-text');
             const syncEl     = document.getElementById('rpv-sync');
             const syncTxtEl  = document.getElementById('rpv-sync-txt');
             const eraserCur  = document.getElementById('rpv-eraser-cursor');
 
-            /* ── UTILS ───────────────────────────────────────────── */
+            /* ── UTILS ───────────────────────────────────────── */
             function snack(msg, color = '#FF6B18') {
                 const el = Object.assign(document.createElement('div'), { textContent: msg });
                 el.style.cssText = `position:fixed;top:1rem;left:50%;transform:translateX(-50%);background:#1A1A1A;border:1px solid ${color};color:#fff;padding:.45rem 1rem;border-radius:99px;font-size:13px;font-weight:600;z-index:99999;transition:opacity .4s;pointer-events:none;white-space:nowrap;`;
@@ -1611,7 +1605,19 @@ $annotApiBase = $reviewId
                 freeCanvas.style.width = w + 'px'; freeCanvas.style.height = h + 'px';
             }
 
-            /* ── PAYLOAD SANITIZER ───────────────────────────────── */
+            function csrf() { return document.querySelector('meta[name="csrf-token"]')?.content || ''; }
+            function hdrs() {
+                return {
+                    'Content-Type':'application/json', 'Accept':'application/json',
+                    'X-CSRF-TOKEN':csrf(), 'X-Requested-With':'XMLHttpRequest',
+                };
+            }
+
+            /* ── PAYLOAD SANITIZER ───────────────────────────── */
+            const VALID_TYPES  = ['highlight','underline','strikethrough','freehand','comment','sticky','shape','text'];
+            const VALID_COLORS = ['yellow','green','red','blue','orange','black','white','pink','purple','cyan'];
+            const VALID_SHAPES = ['rect','ellipse','arrow','line'];
+
             function sanitize(raw) {
                 const type  = VALID_TYPES.includes(raw.type)   ? raw.type  : 'highlight';
                 const color = VALID_COLORS.includes(raw.color) ? raw.color : 'yellow';
@@ -1633,7 +1639,9 @@ $annotApiBase = $reviewId
                 return p;
             }
 
-            /* ── API ─────────────────────────────────────────────── */
+            /* ── API ─────────────────────────────────────────── */
+            const API = CFG.apiBase;
+
             async function apiLoad() {
                 if (!API) return [];
                 try {
@@ -1648,10 +1656,7 @@ $annotApiBase = $reviewId
             }
 
             async function apiSave(payload) {
-                if (!API) {
-                    snack('⚠️ Simpan draft review dulu sebelum beri anotasi!', '#F59E0B');
-                    return null;
-                }
+                if (!API) { snack('⚠️ Simpan draft review dulu!', '#F59E0B'); return null; }
                 const clean = sanitize(payload);
                 showSync('Menyimpan...');
                 try {
@@ -1694,13 +1699,14 @@ $annotApiBase = $reviewId
                 } catch (e) { console.error('[RPV] delPage:', e); }
             }
 
-            /* ── LOAD ANNOTATIONS ────────────────────────────────── */
+            /* ── LOAD ALL ────────────────────────────────────── */
             async function loadAll() {
                 annots = await apiLoad();
+                console.log('[RPV] loaded', annots.length, 'annotations');
                 scheduleRender(); updateBadge(); updateUndoRedo();
             }
 
-            /* ── RENDER ──────────────────────────────────────────── */
+            /* ── RENDER ANNOTATIONS ──────────────────────────── */
             function scheduleRender() {
                 if (renderPending) return; renderPending = true;
                 requestAnimationFrame(() => { renderPending = false; doRender(); });
@@ -1712,7 +1718,7 @@ $annotApiBase = $reviewId
                 annotLayer.style.pointerEvents = 'none';
                 syncFC();
                 if (freeCtx) freeCtx.clearRect(0, 0, freeCanvas.width, freeCanvas.height);
-                stage.querySelectorAll('.rpv-sticky-note,.rpv-freetext').forEach(e => e.remove());
+                stage.querySelectorAll('.rpvr-sticky-note,.rpvr-freetext').forEach(e => e.remove());
 
                 annots.filter(a => a.page === pageNum).forEach(a => {
                     switch (a.type) {
@@ -1726,15 +1732,15 @@ $annotApiBase = $reviewId
                     }
                 });
                 updateBadge();
-                if (searchResults.length > 0) applySearchHighlights();
+                if (searchResults.length > 0 && currentQuery) applySearchHighlights();
             }
 
             function rHL(a, s) {
                 if (!a.rect) return;
                 const el = document.createElement('div'), sel = selectedId == a.id;
                 el.dataset.annotId = String(a.id);
-                el.style.cssText = `position:absolute;left:${a.rect.x*s}px;top:${a.rect.y*s}px;width:${a.rect.w*s}px;height:${a.rect.h*s}px;background:${hex(a.color)};opacity:${sel?.75:.38};border-radius:2px;pointer-events:auto;cursor:pointer;z-index:5;outline:${sel?'2px solid #FF6B18':'none'};`;
-                if (a.type==='comment' && a.comment) {
+                el.style.cssText = `position:absolute;left:${a.rect.x*s}px;top:${a.rect.y*s}px;width:${a.rect.w*s}px;height:${a.rect.h*s}px;background:${hex(a.color)};opacity:${sel?.75:.38};border-radius:2px;pointer-events:auto;cursor:pointer;z-index:5;outline:${sel?'2px solid #FF6B18':'none'};transition:opacity .15s;`;
+                if (a.type==='comment'&&a.comment) {
                     const dot = document.createElement('span');
                     dot.style.cssText = 'position:absolute;top:-4px;right:-4px;width:8px;height:8px;background:#60A5FA;border-radius:50%;pointer-events:none;';
                     el.appendChild(dot);
@@ -1758,8 +1764,7 @@ $annotApiBase = $reviewId
             function rFH(a, s) {
                 if (!a.path_points?.length || !freeCtx) return;
                 const pts = a.path_points;
-                freeCtx.save();
-                freeCtx.strokeStyle = hex(a.color); freeCtx.lineWidth = (a.stroke_width||2)*s;
+                freeCtx.save(); freeCtx.strokeStyle = hex(a.color); freeCtx.lineWidth = (a.stroke_width||2)*s;
                 freeCtx.lineCap = 'round'; freeCtx.lineJoin = 'round'; freeCtx.globalAlpha = .92;
                 freeCtx.beginPath(); freeCtx.moveTo(pts[0][0]*s, pts[0][1]*s);
                 for (let i=1;i<pts.length;i++) freeCtx.lineTo(pts[i][0]*s, pts[i][1]*s);
@@ -1774,14 +1779,14 @@ $annotApiBase = $reviewId
                 if (!a.rect) return;
                 const x=a.rect.x*s, y=a.rect.y*s, w=Math.max(4,a.rect.w*s), h=Math.max(4,a.rect.h*s);
                 const sw=Math.max(1,(a.stroke_width||2)*s), col=hex(a.color), sel=selectedId==a.id;
-                const wrap2=document.createElement('div'); wrap2.dataset.annotId=String(a.id);
-                wrap2.style.cssText=`position:absolute;left:${x}px;top:${y}px;width:${w}px;height:${h}px;pointer-events:auto;cursor:pointer;z-index:5;outline:${sel?'2px dashed #FF6B18':'none'};`;
-                const st=a.shape_type||'rect'; let svg='';
-                if (st==='rect') svg=`<rect x="${sw/2}" y="${sw/2}" width="${Math.max(1,w-sw)}" height="${Math.max(1,h-sw)}" rx="2" fill="none" stroke="${col}" stroke-width="${sw}"/>`;
-                else if (st==='ellipse') svg=`<ellipse cx="${w/2}" cy="${h/2}" rx="${Math.max(1,w/2-sw/2)}" ry="${Math.max(1,h/2-sw/2)}" fill="none" stroke="${col}" stroke-width="${sw}"/>`;
-                else if (st==='arrow') { const hh=Math.max(4,h*.35),hx=Math.max(sw*3,w*.25); svg=`<line x1="${sw}" y1="${h/2}" x2="${w-hx+sw}" y2="${h/2}" stroke="${col}" stroke-width="${sw}" stroke-linecap="round"/><polygon points="${w-sw/2},${h/2} ${w-hx},${h/2-hh} ${w-hx},${h/2+hh}" fill="${col}"/>`; }
-                else if (st==='line') svg=`<line x1="${sw}" y1="${h/2}" x2="${w-sw}" y2="${h/2}" stroke="${col}" stroke-width="${sw}" stroke-linecap="round"/>`;
-                wrap2.innerHTML=`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" style="overflow:visible;display:block;pointer-events:none">${svg}</svg>`;
+                const wrap2 = document.createElement('div'); wrap2.dataset.annotId = String(a.id);
+                wrap2.style.cssText = `position:absolute;left:${x}px;top:${y}px;width:${w}px;height:${h}px;pointer-events:auto;cursor:pointer;z-index:5;outline:${sel?'2px dashed #FF6B18':'none'};`;
+                const st = a.shape_type||'rect'; let svg='';
+                if(st==='rect') svg=`<rect x="${sw/2}" y="${sw/2}" width="${Math.max(1,w-sw)}" height="${Math.max(1,h-sw)}" rx="2" fill="none" stroke="${col}" stroke-width="${sw}"/>`;
+                else if(st==='ellipse') svg=`<ellipse cx="${w/2}" cy="${h/2}" rx="${Math.max(1,w/2-sw/2)}" ry="${Math.max(1,h/2-sw/2)}" fill="none" stroke="${col}" stroke-width="${sw}"/>`;
+                else if(st==='arrow'){const hh=Math.max(4,h*.35),hx=Math.max(sw*3,w*.25);svg=`<line x1="${sw}" y1="${h/2}" x2="${w-hx+sw}" y2="${h/2}" stroke="${col}" stroke-width="${sw}" stroke-linecap="round"/><polygon points="${w-sw/2},${h/2} ${w-hx},${h/2-hh} ${w-hx},${h/2+hh}" fill="${col}"/>`;}
+                else if(st==='line') svg=`<line x1="${sw}" y1="${h/2}" x2="${w-sw}" y2="${h/2}" stroke="${col}" stroke-width="${sw}" stroke-linecap="round"/>`;
+                wrap2.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" style="overflow:visible;display:block;pointer-events:none">${svg}</svg>`;
                 attachEv(wrap2, a); annotLayer.appendChild(wrap2);
             }
             function rSticky(a, s) {
@@ -1789,10 +1794,11 @@ $annotApiBase = $reviewId
                 const note = document.createElement('div');
                 note.className = 'rpv-sticky-note'; note.dataset.annotId = String(a.id); note.dataset.color = a.color||'yellow';
                 note.style.left = (a.rect.x*s)+'px'; note.style.top = (a.rect.y*s)+'px';
-                note.innerHTML = `<div class="rpv-sn-header"><span>📌</span><button class="rpv-sn-del">×</button></div><div class="rpv-sn-body">${esc(a.comment)}</div>`;
+                note.innerHTML = `<div class="rpv-sn-header"><span>📌</span><button type="button" class="rpv-sn-del">×</button></div><div class="rpv-sn-body">${esc(a.comment)}</div>`;
                 note.querySelector('.rpv-sn-del').addEventListener('click', ev => { ev.stopPropagation(); removeAnnot(a.id); });
                 note.addEventListener('click', ev => {
                     if (activeTool==='eraser') { ev.stopPropagation(); removeAnnot(a.id); return; }
+                    if (activeTool==='select') { ev.stopPropagation(); selectedId=String(a.id); scheduleRender(); return; }
                     ev.stopPropagation(); showTip(a, ev.clientX, ev.clientY);
                 });
                 makeDraggable(note, a, s); stage.appendChild(note);
@@ -1815,16 +1821,16 @@ $annotApiBase = $reviewId
                 el.addEventListener('click', ev => {
                     ev.stopPropagation();
                     if (activeTool==='eraser') { removeAnnot(a.id); return; }
-                    if (activeTool==='select') { selectedId = selectedId==a.id?null:String(a.id); scheduleRender(); return; }
+                    if (activeTool==='select') { selectedId = selectedId==a.id ? null : String(a.id); scheduleRender(); return; }
                     showTip(a, ev.clientX, ev.clientY);
                 });
                 el.addEventListener('touchend', ev => {
-                    ev.stopPropagation(); if (ev.cancelable) ev.preventDefault();
+                    ev.stopPropagation(); if(ev.cancelable)ev.preventDefault();
                     const t = ev.changedTouches[0];
                     if (activeTool==='eraser') { removeAnnot(a.id); return; }
-                    if (activeTool==='select') { selectedId = selectedId==a.id?null:String(a.id); scheduleRender(); return; }
+                    if (activeTool==='select') { selectedId = selectedId==a.id ? null : String(a.id); scheduleRender(); return; }
                     showTip(a, t.clientX, t.clientY);
-                }, { passive:false });
+                }, {passive:false});
             }
 
             function makeDraggable(el, annotData, s) {
@@ -1841,11 +1847,11 @@ $annotApiBase = $reviewId
                     if(e.cancelable)e.preventDefault();
                 }
                 async function onUp() {
-                    if (!dragging) return; dragging=false; el.style.zIndex='9'; if (!moved) return;
+                    if (!dragging) return; dragging=false; el.style.zIndex='9'; if(!moved) return;
                     const newX=parseFloat(el.style.left)/s, newY=parseFloat(el.style.top)/s;
                     const idx=annots.findIndex(a=>String(a.id)===String(annotData.id));
                     if (idx>=0&&annots[idx].rect) { annots[idx].rect.x=newX; annots[idx].rect.y=newY; }
-                    await apiPatch(annotData.id, { rect_x:newX, rect_y:newY, rect_w:annotData.rect?.w||180, rect_h:annotData.rect?.h||90 });
+                    await apiPatch(annotData.id, {rect_x:newX,rect_y:newY,rect_w:annotData.rect?.w||180,rect_h:annotData.rect?.h||90});
                 }
                 el.addEventListener('mousedown', onDown, {passive:false});
                 el.addEventListener('touchstart', onDown, {passive:false});
@@ -1855,44 +1861,46 @@ $annotApiBase = $reviewId
                 document.addEventListener('touchend', onUp);
             }
 
-            /* ── TOOLTIP ─────────────────────────────────────────── */
+            /* ── TOOLTIP ─────────────────────────────────────── */
             function showTip(a, cx, cy) {
                 const ic = {highlight:'✏️',underline:'__',strikethrough:'~~',freehand:'🖊',shape:'⬛',comment:'💬',sticky:'📌',text:'🔤'};
                 let txt = `${ic[a.type]||'•'} ${a.type}`;
                 if (a.comment) txt = `${ic[a.type]||'•'} ${a.comment.substring(0,80)}`;
                 else if (a.selected_text) txt = `${ic[a.type]||'•'} "${a.selected_text.substring(0,60)}"`;
+                const tipTxt = document.getElementById('rpv-tip-text');
                 if (tipTxt) { tipTxt.textContent=txt; tipTxt.dataset.annotId=String(a.id); }
                 tooltip.classList.add('show');
                 const vw=window.innerWidth, vh=window.innerHeight;
-                tooltip.style.left=Math.max(4, Math.min(cx-135, vw-278))+'px';
+                tooltip.style.left=Math.max(4,Math.min(cx-135,vw-278))+'px';
                 tooltip.style.top=((cy+120>vh)?Math.max(4,cy-120):cy+8)+'px';
             }
             document.getElementById('rpv-tip-close')?.addEventListener('click', () => tooltip.classList.remove('show'));
             document.getElementById('rpv-tip-del')?.addEventListener('click', async () => {
-                const id=tipTxt?.dataset.annotId; tooltip.classList.remove('show'); if(id) await removeAnnot(id);
+                const id = document.getElementById('rpv-tip-text')?.dataset.annotId;
+                tooltip.classList.remove('show'); if(id) await removeAnnot(id);
             });
             document.addEventListener('click', e => {
-                if (tooltip&&!tooltip.contains(e.target)&&!e.target.closest('[data-annot-id],.rpv-sticky-note,.rpv-freetext'))
+                if (tooltip && !tooltip.contains(e.target) && !e.target.closest('[data-annot-id],.rpv-sticky-note,.rpv-freetext'))
                     tooltip.classList.remove('show');
             });
 
-            /* ── ADD / REMOVE ────────────────────────────────────── */
+            /* ── ADD / REMOVE ────────────────────────────────── */
             async function addAnnot(payload) {
-                const saved = await apiSave(payload); if (!saved) return null;
+                const saved = await apiSave(payload); if(!saved) return null;
                 annots.push(saved);
-                undoStack.push({ action:'add', data:saved }); redoStack=[];
+                undoStack.push({action:'add',data:saved}); redoStack=[];
                 updateUndoRedo(); scheduleRender(); return saved;
             }
             async function removeAnnot(id) {
-                const a=annots.find(x=>String(x.id)===String(id)); if (!a) return;
+                const a = annots.find(x=>String(x.id)===String(id)); if(!a) return;
                 await apiDel(a.id);
-                annots=annots.filter(x=>String(x.id)!==String(id));
+                annots = annots.filter(x=>String(x.id)!==String(id));
                 if (selectedId===String(id)) selectedId=null;
                 undoStack.push({action:'del',data:a}); redoStack=[];
                 updateUndoRedo(); scheduleRender(); snack('🗑 Anotasi dihapus');
             }
 
-            /* ── UNDO / REDO ─────────────────────────────────────── */
+            /* ── UNDO / REDO ─────────────────────────────────── */
             function updateUndoRedo() {
                 const u=document.getElementById('rpv-undo'); if(u) u.disabled=!undoStack.length;
                 const r=document.getElementById('rpv-redo'); if(r) r.disabled=!redoStack.length;
@@ -1902,9 +1910,9 @@ $annotApiBase = $reviewId
                 const op=undoStack.pop();
                 if (op.action==='add') {
                     const a=annots.find(x=>String(x.id)===String(op.data.id));
-                    if (a) { await apiDel(a.id); annots=annots.filter(x=>String(x.id)!==String(a.id)); redoStack.push({action:'readd',data:a}); }
+                    if(a){await apiDel(a.id);annots=annots.filter(x=>String(x.id)!==String(a.id));redoStack.push({action:'readd',data:a});}
                 } else if (op.action==='del') {
-                    const saved=await apiSave(op.data); if(saved) { annots.push(saved); redoStack.push({action:'redel',data:saved}); }
+                    const saved=await apiSave(op.data); if(saved){annots.push(saved);redoStack.push({action:'redel',data:saved});}
                 }
                 updateUndoRedo(); scheduleRender();
             }
@@ -1912,97 +1920,86 @@ $annotApiBase = $reviewId
                 if (!redoStack.length) return;
                 const op=redoStack.pop();
                 if (op.action==='readd') {
-                    const saved=await apiSave(op.data); if(saved) { annots.push(saved); undoStack.push({action:'add',data:saved}); }
+                    const saved=await apiSave(op.data); if(saved){annots.push(saved);undoStack.push({action:'add',data:saved});}
                 } else if (op.action==='redel') {
                     const a=annots.find(x=>String(x.id)===String(op.data.id));
-                    if (a) { await apiDel(a.id); annots=annots.filter(x=>String(x.id)!==String(a.id)); undoStack.push({action:'del',data:a}); }
+                    if(a){await apiDel(a.id);annots=annots.filter(x=>String(x.id)!==String(a.id));undoStack.push({action:'del',data:a});}
                 }
                 updateUndoRedo(); scheduleRender();
             }
             document.getElementById('rpv-undo')?.addEventListener('click', doUndo);
             document.getElementById('rpv-redo')?.addEventListener('click', doRedo);
 
-            /* ── BADGE & PANEL ───────────────────────────────────── */
+            /* ── BADGE & PANEL ───────────────────────────────── */
             function updateBadge() {
                 const n=annots.length, badge=document.getElementById('rpv-badge');
-                if (badge) { badge.textContent=n>99?'99+':String(n); badge.classList.toggle('show',n>0); }
+                if(badge){badge.textContent=n>99?'99+':String(n);badge.classList.toggle('show',n>0);}
             }
             document.getElementById('rpv-panel-btn')?.addEventListener('click', e => {
-                e.stopPropagation(); document.getElementById('rpv-panel')?.classList.toggle('open'); buildPanel();
+                e.stopPropagation();
+                document.getElementById('rpv-panel')?.classList.toggle('open'); buildPanel();
             });
             document.getElementById('rpv-panel-close')?.addEventListener('click', () => document.getElementById('rpv-panel')?.classList.remove('open'));
             document.getElementById('rpv-panel-clear')?.addEventListener('click', async () => {
-                if (!confirm(`Hapus semua anotasi di halaman ${pageNum}?`)) return;
+                if(!confirm(`Hapus semua anotasi di halaman ${pageNum}?`)) return;
                 await apiDelPage(pageNum);
                 annots=annots.filter(a=>a.page!==pageNum); undoStack=[]; redoStack=[];
                 updateUndoRedo(); scheduleRender(); buildPanel(); snack(`🗑 Halaman ${pageNum} dibersihkan`);
             });
             function buildPanel() {
-                const list=document.getElementById('rpv-panel-list'); if (!list) return;
-                if (!annots.length) { list.innerHTML='<div class="rpv-panel-empty">Belum ada anotasi.</div>'; return; }
+                const list=document.getElementById('rpv-panel-list'); if(!list) return;
+                if(!annots.length){list.innerHTML='<div class="rpv-panel-empty">Belum ada anotasi.</div>';return;}
                 list.innerHTML='';
                 const ic={highlight:'✏️',underline:'__',strikethrough:'~~',freehand:'🖊',shape:'⬛',comment:'💬',sticky:'📌',text:'🔤'};
                 [...annots].sort((a,b)=>a.page-b.page||a.id-b.id).forEach(a=>{
                     const el=document.createElement('div'); el.className='rpv-panel-item';
-                    el.innerHTML=`<div class="rpv-panel-dot" style="background:${hex(a.color)}"></div><div class="rpv-panel-body"><span class="rpv-panel-type">${ic[a.type]||'•'} ${a.type}</span><span class="rpv-panel-pg">Hal.${a.page}</span><div class="rpv-panel-text">${esc(a.comment||a.selected_text||a.shape_type||'—')}</div></div><button class="rpv-panel-del">🗑</button>`;
-                    el.querySelector('.rpv-panel-del').addEventListener('click', async ev=>{ev.stopPropagation(); await removeAnnot(a.id); buildPanel();});
-                    el.addEventListener('click',()=>{if(a.page!==pageNum)renderPage(a.page); document.getElementById('rpv-panel')?.classList.remove('open');});
+                    el.innerHTML=`<div class="rpv-panel-dot" style="background:${hex(a.color)}"></div><div class="rpv-panel-body"><span class="rpv-panel-type">${ic[a.type]||'•'} ${a.type}</span><span class="rpv-panel-pg">Hal.${a.page}</span><div class="rpv-panel-text">${esc(a.comment||a.selected_text||a.shape_type||'—')}</div></div><button type="button" class="rpv-panel-del">🗑</button>`;
+                    el.querySelector('.rpv-panel-del').addEventListener('click', async ev=>{ev.stopPropagation();await removeAnnot(a.id);buildPanel();});
+                    el.addEventListener('click',()=>{if(a.page!==pageNum)renderPage(a.page);document.getElementById('rpv-panel')?.classList.remove('open');});
                     list.appendChild(el);
                 });
             }
 
-            /* ── TOOL MANAGEMENT ─────────────────────────────────── */
+            /* ── TOOL MANAGEMENT ─────────────────────────────── */
             function setTool(tool) {
                 activeTool = tool;
                 stage.classList.remove('freehand-mode','shape-mode','eraser-mode','pan-mode','select-mode','text-tool-mode');
-                if (tool==='freehand') stage.classList.add('freehand-mode');
-                if (tool==='shape') stage.classList.add('shape-mode');
-                if (tool==='eraser') stage.classList.add('eraser-mode');
-                if (tool==='pan') stage.classList.add('pan-mode');
-                if (tool==='select') stage.classList.add('select-mode');
-                if (tool==='text') stage.classList.add('text-tool-mode');
+                if(tool==='freehand') stage.classList.add('freehand-mode');
+                if(tool==='shape') stage.classList.add('shape-mode');
+                if(tool==='eraser') stage.classList.add('eraser-mode');
+                if(tool==='pan') stage.classList.add('pan-mode');
+                if(tool==='select') stage.classList.add('select-mode');
+                if(tool==='text') stage.classList.add('text-tool-mode');
                 const needsSel=['highlight','comment','underline','strikethrough'].includes(tool);
                 textLayer.style.pointerEvents=needsSel?'auto':'none';
                 textLayer.style.userSelect=needsSel?'text':'none';
                 textLayer.style.webkitUserSelect=needsSel?'text':'none';
-                if (freeCanvas) freeCanvas.style.pointerEvents=['freehand','shape'].includes(tool)?'auto':'none';
-                if (eraserCur) eraserCur.style.display=tool==='eraser'?'block':'none';
-                if (tool!=='select'&&selectedId) { selectedId=null; scheduleRender(); }
-
-                // Update active tool label
+                if(freeCanvas) freeCanvas.style.pointerEvents=['freehand','shape'].includes(tool)?'auto':'none';
+                if(eraserCur) eraserCur.style.display=tool==='eraser'?'block':'none';
+                if(tool!=='select'&&selectedId){selectedId=null;scheduleRender();}
                 const LABELS={pan:'🖐 Hand',select:'↖ Pilih',highlight:'✏️ Highlight',underline:'__ Underline',strikethrough:'~~ Strikethrough',comment:'💬 Komentar',freehand:'🖊 Pen Bebas',shape:'⬛ Shape',text:'🔤 Teks',eraser:'🧹 Hapus'};
                 const lbl=document.getElementById('rpv-active-label'); if(lbl) lbl.textContent=LABELS[tool]||tool;
-
-                // Show/hide size & shape sub-pickers
-                document.getElementById('rpv-sizes')?.style.setProperty('display', ['freehand','shape','text'].includes(tool)?'flex':'none');
-                document.getElementById('rpv-shapes')?.classList.toggle('show', tool==='shape');
+                document.getElementById('rpv-sizes')?.style.setProperty('display',['freehand','shape','text'].includes(tool)?'flex':'none');
+                document.getElementById('rpv-shapes')?.classList.toggle('show',tool==='shape');
             }
-
-            /* ─ Tool clicks ─ */
             document.querySelectorAll('.rpv-tool[data-tool]').forEach(btn => {
                 btn.addEventListener('click', () => {
                     document.querySelectorAll('.rpv-tool[data-tool]').forEach(b=>b.classList.remove('active'));
                     btn.classList.add('active'); setTool(btn.dataset.tool);
                 });
             });
-
-            /* ─ Color ─ */
             document.querySelectorAll('.rpv-color').forEach(sw => {
                 sw.addEventListener('click', () => {
                     document.querySelectorAll('.rpv-color').forEach(s=>s.classList.remove('selected'));
                     sw.classList.add('selected'); activeColor=sw.dataset.color;
                 });
             });
-
-            /* ─ Size ─ */
             document.querySelectorAll('.rpv-size').forEach(d => {
                 d.addEventListener('click', () => {
                     document.querySelectorAll('.rpv-size').forEach(x=>x.classList.remove('selected'));
                     d.classList.add('selected'); activeSize=+d.dataset.size;
                 });
             });
-
-            /* ─ Shape ─ */
             document.querySelectorAll('.rpv-shape').forEach(b => {
                 b.addEventListener('click', () => {
                     document.querySelectorAll('.rpv-shape').forEach(x=>x.classList.remove('active'));
@@ -2010,68 +2007,89 @@ $annotApiBase = $reviewId
                 });
             });
 
-            /* ── TEXT SELECTION ──────────────────────────────────── */
+            /* ── TEXT SELECTION ──────────────────────────────── */
+            /*
+             * FIX HIGHLIGHT MELESET:
+             * Masalah: span di textLayer posisinya dari vpCss.transform (include DPR offset),
+             * tapi getBoundingClientRect() pada span dibaca relatif terhadap viewport browser,
+             * sedangkan stageRect juga dari viewport. Ini seharusnya sinkron.
+             *
+             * Root cause sesungguhnya: `item.width * vpCss.scale` tidak akurat untuk
+             * scaling karena vpCss.scale = cssScale bukan renderScale.
+             * Fix: gunakan cssScale langsung untuk menghitung rect, bukan melalui transform matrix.
+             */
             function getSelInfo() {
                 const sel=window.getSelection();
-                if (!sel||sel.isCollapsed||!sel.rangeCount) return null;
+                if(!sel||sel.isCollapsed||!sel.rangeCount) return null;
                 const range=sel.getRangeAt(0);
-                if (!textLayer?.contains(range.commonAncestorContainer)) return null;
-                const sr=stage.getBoundingClientRect(), s=baseScale*zoomFactor;
+                if(!textLayer?.contains(range.commonAncestorContainer)) return null;
+                const stageRect=stage.getBoundingClientRect();
+                const s=baseScale*zoomFactor;
                 const rects=Array.from(range.getClientRects()).filter(r=>r.width>.5&&r.height>.5);
-                if (!rects.length) return null;
-                const L=Math.min(...rects.map(r=>r.left)), T=Math.min(...rects.map(r=>r.top));
-                const R=Math.max(...rects.map(r=>r.right)), B=Math.max(...rects.map(r=>r.bottom));
-                return { rect:{x:(L-sr.left)/s,y:(T-sr.top)/s,w:(R-L)/s,h:(B-T)/s}, text:sel.toString().substring(0,1000), br:range.getBoundingClientRect() };
+                if(!rects.length) return null;
+                const L=Math.min(...rects.map(r=>r.left));
+                const T=Math.min(...rects.map(r=>r.top));
+                const R=Math.max(...rects.map(r=>r.right));
+                const B=Math.max(...rects.map(r=>r.bottom));
+                return {
+                    rect:{
+                        x:(L-stageRect.left)/s,
+                        y:(T-stageRect.top)/s,
+                        w:(R-L)/s,
+                        h:(B-T)/s
+                    },
+                    text:sel.toString().substring(0,1000),
+                    br:range.getBoundingClientRect()
+                };
             }
 
             let selTimer=null;
             function onSelEnd(e) {
-                if (e.target.closest('.rpv-popup,#rpv-annot-bar,#rpv-panel')) return;
+                if(e.target.closest('.rpv-popup,#rpv-annot-bar,#rpv-panel')) return;
                 clearTimeout(selTimer);
-                selTimer=setTimeout(async ()=>{
+                selTimer=setTimeout(async()=>{
                     const info=getSelInfo(); if(!info||info.rect.w<2) return;
                     const base={page:pageNum,color:activeColor,rect_x:info.rect.x,rect_y:info.rect.y,rect_w:info.rect.w,rect_h:info.rect.h,selected_text:info.text};
-                    if (activeTool==='highlight') { await addAnnot({...base,type:'highlight'}); window.getSelection()?.removeAllRanges(); snack('✏️ Highlight!'); }
-                    else if (activeTool==='underline') { await addAnnot({...base,type:'underline'}); window.getSelection()?.removeAllRanges(); snack('__ Underline!'); }
-                    else if (activeTool==='strikethrough') { await addAnnot({...base,type:'strikethrough'}); window.getSelection()?.removeAllRanges(); snack('~~ Strikethrough!'); }
-                    else if (activeTool==='comment') {
+                    if(activeTool==='highlight'){await addAnnot({...base,type:'highlight'});window.getSelection()?.removeAllRanges();snack('✏️ Highlight!');}
+                    else if(activeTool==='underline'){await addAnnot({...base,type:'underline'});window.getSelection()?.removeAllRanges();snack('__ Underline!');}
+                    else if(activeTool==='strikethrough'){await addAnnot({...base,type:'strikethrough'});window.getSelection()?.removeAllRanges();snack('~~ Strikethrough!');}
+                    else if(activeTool==='comment'){
                         pendingRect=info.rect; pendingText=info.text;
-                        openPopup(document.getElementById('rpv-comment-pop'), info.br.left, info.br.bottom+8);
+                        openPopup(document.getElementById('rpv-comment-pop'),info.br.left,info.br.bottom+8);
                         const t=document.getElementById('rpv-comment-txt'); if(t){t.value='';t.focus();}
                     }
-                }, 80);
+                },80);
             }
             document.addEventListener('mouseup', onSelEnd);
             document.addEventListener('touchend', e=>{
-                if (!['highlight','comment','underline','strikethrough'].includes(activeTool)) return;
+                if(!['highlight','comment','underline','strikethrough'].includes(activeTool)) return;
                 onSelEnd(e);
-            }, {passive:true});
+            },{passive:true});
 
-            function openPopup(popup, cx, cy) {
-                if (!popup) return;
+            function openPopup(popup,cx,cy) {
+                if(!popup) return;
                 const vw=window.innerWidth,vh=window.innerHeight,pw=284,ph=170;
                 popup.style.left=Math.max(4,Math.min(cx-pw/2,vw-pw-4))+'px';
                 popup.style.top=Math.max(4,(cy+ph>vh?cy-ph-8:cy))+'px';
                 popup.classList.add('show');
             }
 
-            /* Comment popup handlers */
-            document.getElementById('rpv-comment-save')?.addEventListener('click', async ()=>{
+            document.getElementById('rpv-comment-save')?.addEventListener('click', async()=>{
                 const txt=document.getElementById('rpv-comment-txt')?.value.trim();
-                if (!txt||!pendingRect) {snack('Tulis komentar dulu!');return;}
+                if(!txt||!pendingRect){snack('Tulis komentar dulu!');return;}
                 document.getElementById('rpv-comment-txt').value='';
                 document.getElementById('rpv-comment-pop')?.classList.remove('show');
                 await addAnnot({page:pageNum,type:'comment',color:activeColor,rect_x:pendingRect.x,rect_y:pendingRect.y,rect_w:pendingRect.w,rect_h:pendingRect.h,selected_text:pendingText||'',comment:txt});
                 window.getSelection()?.removeAllRanges(); pendingRect=null; pendingText=null; snack('💬 Komentar disimpan!');
             });
             document.getElementById('rpv-comment-cancel')?.addEventListener('click', ()=>{
-                document.getElementById('rpv-comment-pop')?.classList.remove('show'); pendingRect=null; pendingText=null; window.getSelection()?.removeAllRanges();
+                document.getElementById('rpv-comment-pop')?.classList.remove('show');
+                pendingRect=null; pendingText=null; window.getSelection()?.removeAllRanges();
             });
 
-            /* Sticky popup handlers */
-            document.getElementById('rpv-sticky-save')?.addEventListener('click', async ()=>{
+            document.getElementById('rpv-sticky-save')?.addEventListener('click', async()=>{
                 const txt=document.getElementById('rpv-sticky-txt')?.value.trim();
-                if (!txt||!stickyPos) {snack('Tulis catatan dulu!');return;}
+                if(!txt||!stickyPos){snack('Tulis catatan dulu!');return;}
                 document.getElementById('rpv-sticky-txt').value='';
                 document.getElementById('rpv-sticky-pop')?.classList.remove('show');
                 await addAnnot({page:pageNum,type:'sticky',color:activeColor,rect_x:stickyPos.x,rect_y:stickyPos.y,rect_w:180,rect_h:90,comment:txt});
@@ -2081,17 +2099,17 @@ $annotApiBase = $reviewId
                 document.getElementById('rpv-sticky-pop')?.classList.remove('show'); stickyPos=null;
             });
 
-            /* ── FREEHAND ─────────────────────────────────────────── */
+            /* ── FREEHAND ─────────────────────────────────────── */
             function fhStart(e){if(activeTool!=='freehand')return;if(e.cancelable)e.preventDefault();isDrawing=true;freePoints=[];const p=stageXY(e),s=baseScale*zoomFactor;freePoints.push([p.x/s,p.y/s]);}
             function fhMove(e){if(!isDrawing||activeTool!=='freehand')return;if(e.cancelable)e.preventDefault();const p=stageXY(e),s=baseScale*zoomFactor;freePoints.push([p.x/s,p.y/s]);if(!freeCtx||freePoints.length<2)return;const last=freePoints[freePoints.length-2],cur=freePoints[freePoints.length-1];freeCtx.save();freeCtx.strokeStyle=hex(activeColor);freeCtx.lineWidth=activeSize*s;freeCtx.lineCap='round';freeCtx.lineJoin='round';freeCtx.globalAlpha=.92;freeCtx.beginPath();freeCtx.moveTo(last[0]*s,last[1]*s);freeCtx.lineTo(cur[0]*s,cur[1]*s);freeCtx.stroke();freeCtx.restore();}
             async function fhEnd(e){if(!isDrawing||activeTool!=='freehand')return;if(e.cancelable)e.preventDefault();isDrawing=false;if(freePoints.length<2)return;const xs=freePoints.map(p=>p[0]),ys=freePoints.map(p=>p[1]),bx=Math.min(...xs),by=Math.min(...ys);await addAnnot({page:pageNum,type:'freehand',color:activeColor,stroke_width:activeSize,path_points:freePoints,rect_x:bx,rect_y:by,rect_w:Math.max(...xs)-bx,rect_h:Math.max(...ys)-by});}
 
-            /* ── SHAPE ───────────────────────────────────────────── */
+            /* ── SHAPE ───────────────────────────────────────── */
             function shStart(e){if(activeTool!=='shape')return;if(e.cancelable)e.preventDefault();isDrawing=true;drawStart=stageXY(e);shapePreviewEl=document.createElement('div');shapePreviewEl.style.cssText=`position:absolute;pointer-events:none;z-index:25;border:${activeSize}px solid ${hex(activeColor)};${activeShape==='ellipse'?'border-radius:50%;':''}left:${drawStart.x}px;top:${drawStart.y}px;width:0;height:0;`;stage.appendChild(shapePreviewEl);}
             function shMove(e){if(!isDrawing||activeTool!=='shape'||!shapePreviewEl||!drawStart)return;if(e.cancelable)e.preventDefault();const c=stageXY(e);Object.assign(shapePreviewEl.style,{left:Math.min(drawStart.x,c.x)+'px',top:Math.min(drawStart.y,c.y)+'px',width:Math.abs(c.x-drawStart.x)+'px',height:Math.abs(c.y-drawStart.y)+'px'});}
             async function shEnd(e){if(!isDrawing||activeTool!=='shape')return;if(e.cancelable)e.preventDefault();isDrawing=false;shapePreviewEl?.remove();shapePreviewEl=null;const c=stageXY(e),s=baseScale*zoomFactor;if(!drawStart)return;const x=Math.min(drawStart.x,c.x)/s,y=Math.min(drawStart.y,c.y)/s,w=Math.abs(c.x-drawStart.x)/s,h=Math.abs(c.y-drawStart.y)/s;drawStart=null;if(w<4&&h<4)return;await addAnnot({page:pageNum,type:'shape',color:activeColor,shape_type:activeShape,stroke_width:activeSize,rect_x:x,rect_y:y,rect_w:w,rect_h:activeShape==='line'?1:h});}
 
-            if (freeCanvas) {
+            if(freeCanvas){
                 freeCanvas.addEventListener('mousedown',e=>{fhStart(e);shStart(e);},{passive:false});
                 freeCanvas.addEventListener('mousemove',e=>{fhMove(e);shMove(e);},{passive:false});
                 freeCanvas.addEventListener('mouseup',e=>{fhEnd(e);shEnd(e);},{passive:false});
@@ -2101,95 +2119,277 @@ $annotApiBase = $reviewId
                 freeCanvas.addEventListener('touchend',e=>{fhEnd(e);shEnd(e);},{passive:false});
             }
 
-            /* ── ERASER CURSOR ───────────────────────────────────── */
+            /* ── ERASER CURSOR ───────────────────────────────── */
             document.addEventListener('mousemove', e=>{
-                if (!eraserCur) return;
+                if(!eraserCur) return;
                 eraserCur.style.display=activeTool==='eraser'?'block':'none';
-                if (activeTool==='eraser') { eraserCur.style.left=e.clientX+'px'; eraserCur.style.top=e.clientY+'px'; }
+                if(activeTool==='eraser'){eraserCur.style.left=e.clientX+'px';eraserCur.style.top=e.clientY+'px';}
             });
 
-            /* ── STAGE CLICK (sticky / text / select / eraser) ───── */
+            /* ── STAGE CLICK ─────────────────────────────────── */
             stage.addEventListener('click', e => {
                 const hitAnnot=e.target.closest('[data-annot-id],.rpv-sticky-note,.rpv-freetext');
-                if (activeTool==='sticky') {
-                    if (hitAnnot) return;
-                    if (e.target.closest('.rpv-popup,#rpv-annot-bar')) return;
+                if(activeTool==='sticky'){
+                    if(hitAnnot) return;
+                    if(e.target.closest('.rpv-popup,#rpv-annot-bar')) return;
                     const p=stageXY(e),s=baseScale*zoomFactor; stickyPos={x:p.x/s,y:p.y/s};
-                    openPopup(document.getElementById('rpv-sticky-pop'), e.clientX, e.clientY);
-                    const t=document.getElementById('rpv-sticky-txt'); if(t){t.value='';setTimeout(()=>t.focus(),30);} return;
+                    openPopup(document.getElementById('rpv-sticky-pop'),e.clientX,e.clientY);
+                    const t=document.getElementById('rpv-sticky-txt');if(t){t.value='';setTimeout(()=>t.focus(),30);}return;
                 }
-                if (activeTool==='text') {
-                    if (hitAnnot) return;
-                    if (e.target.closest('.rpv-popup,#rpv-annot-bar')) return;
+                if(activeTool==='text'){
+                    if(hitAnnot) return;
+                    if(e.target.closest('.rpv-popup,#rpv-annot-bar')) return;
                     const p=stageXY(e),s=baseScale*zoomFactor; textPos={x:p.x/s,y:p.y/s};
-                    ensureTextPopup(); openPopup(document.getElementById('rpv-freetext-popup'), e.clientX, e.clientY);
-                    setTimeout(()=>document.getElementById('rpv-freetext-input')?.focus(), 30); return;
+                    ensureTextPopup(); openPopup(document.getElementById('rpv-freetext-popup'),e.clientX,e.clientY);
+                    setTimeout(()=>document.getElementById('rpv-freetext-input')?.focus(),30); return;
                 }
-                if (activeTool==='select') { if (!hitAnnot) { selectedId=null; scheduleRender(); } return; }
-                if (activeTool==='eraser') { if (!hitAnnot) snack('Klik anotasi untuk menghapus','#60A5FA'); return; }
+                if(activeTool==='select'){if(!hitAnnot){selectedId=null;scheduleRender();}return;}
+                if(activeTool==='eraser'){if(!hitAnnot) snack('Klik anotasi untuk menghapus','#60A5FA');return;}
             });
 
-            /* ── FREE TEXT POPUP ─────────────────────────────────── */
-            function sizeToPx(s) { return {2:10,4:14,8:20,14:28}[s]||14; }
+            /* ── FREE TEXT POPUP ─────────────────────────────── */
+            function sizeToPx(s){return {2:10,4:14,8:20,14:28}[s]||14;}
             function ensureTextPopup() {
-                if (document.getElementById('rpv-freetext-popup')) return;
+                if(document.getElementById('rpv-freetext-popup')) return;
                 const p=document.createElement('div'); p.id='rpv-freetext-popup';
                 p.className='rpv-popup';
-                p.innerHTML=`<p class="rpv-popup-title">🔤 Tambah Teks ke Naskah</p><textarea id="rpv-freetext-input" placeholder="Contoh: Perlu diperbaiki..."></textarea><div style="font-size:10px;color:#666;margin-top:.3rem">Ukuran: <span id="rpv-freetext-size-lbl">${sizeToPx(activeSize)}px</span></div><div class="rpv-popup-actions"><button class="rpv-popup-save" id="rpv-freetext-save">✓ Tambah</button><button class="rpv-popup-cancel" id="rpv-freetext-cancel">Batal</button></div>`;
+                p.innerHTML=`<p class="rpv-popup-title">🔤 Tambah Teks ke Naskah</p><textarea id="rpv-freetext-input" placeholder="Contoh: Perlu diperbaiki..."></textarea><div style="font-size:10px;color:#666;margin-top:.3rem">Ukuran: <span id="rpv-freetext-size-lbl">${sizeToPx(activeSize)}px</span></div><div class="rpv-popup-actions"><button type="button" class="rpv-popup-save" id="rpv-freetext-save">✓ Tambah</button><button type="button" class="rpv-popup-cancel" id="rpv-freetext-cancel">Batal</button></div>`;
                 document.body.appendChild(p);
-                document.getElementById('rpv-freetext-save').addEventListener('click', async ()=>{
+                document.getElementById('rpv-freetext-save').addEventListener('click', async()=>{
                     const inp=document.getElementById('rpv-freetext-input');
                     const txt=inp?.value.trim();
-                    if (!txt||!textPos) {snack('Ketik teks dulu!');return;}
-                    const fs=sizeToPx(activeSize); if(inp)inp.value=''; p.classList.remove('show');
+                    if(!txt||!textPos){snack('Ketik teks dulu!');return;}
+                    const fs=sizeToPx(activeSize);if(inp)inp.value='';p.classList.remove('show');
                     await addAnnot({page:pageNum,type:'text',color:activeColor,stroke_width:fs,rect_x:textPos.x,rect_y:textPos.y,rect_w:200,rect_h:fs*2,comment:txt});
                     textPos=null; snack('🔤 Teks ditambahkan!');
                 });
-                document.getElementById('rpv-freetext-cancel').addEventListener('click', ()=>{p.classList.remove('show');textPos=null;});
+                document.getElementById('rpv-freetext-cancel').addEventListener('click',()=>{p.classList.remove('show');textPos=null;});
             }
 
-            /* ── PAN ─────────────────────────────────────────────── */
+            /* ── PAN ─────────────────────────────────────────── */
             stage.addEventListener('mousedown', e=>{if(activeTool!=='pan')return;isPanning=true;panSX=e.clientX;panSY=e.clientY;panScrollX=wrap?.scrollLeft||0;panScrollY=wrap?.scrollTop||0;if(e.cancelable)e.preventDefault();},{passive:false});
             document.addEventListener('mousemove', e=>{if(!isPanning||activeTool!=='pan')return;if(wrap){wrap.scrollLeft=panScrollX+(panSX-e.clientX);wrap.scrollTop=panScrollY+(panSY-e.clientY);}});
-            document.addEventListener('mouseup', ()=>{isPanning=false;});
+            document.addEventListener('mouseup',()=>{isPanning=false;});
 
-            /* ── SEARCH ──────────────────────────────────────────── */
+            /* ── FULLSCREEN ──────────────────────────────────── */
+            function enterFullscreen() {
+                isFullscreen=true;
+                outerWrap.style.cssText='position:fixed!important;inset:0!important;z-index:99999!important;border-radius:0!important;height:100vh!important;max-height:100vh!important;';
+                wrap.style.height='calc(100vh - 98px)';
+                document.body.style.overflow='hidden';
+                document.getElementById('rpv-fs-btn')?.setAttribute('title','Keluar Fullscreen (F)');
+                document.getElementById('rpv-fs-icon')?.setAttribute('d','M6 18L18 6M6 6l12 12'); // X icon
+                snack('🔲 Layar penuh — tekan F atau Esc untuk keluar');
+                if(pdfDoc) pdfDoc.getPage(pageNum).then(p=>{baseScale=1.0;computeBase(p);renderPage(pageNum);});
+            }
+            function exitFullscreen() {
+                isFullscreen=false;
+                outerWrap.style.cssText='';
+                wrap.style.height='';
+                document.body.style.overflow='';
+                document.getElementById('rpv-fs-btn')?.setAttribute('title','Fullscreen (F)');
+                if(pdfDoc) pdfDoc.getPage(pageNum).then(p=>{baseScale=1.0;computeBase(p);renderPage(pageNum);});
+            }
+            document.getElementById('rpv-fs-btn')?.addEventListener('click', ()=>{
+                isFullscreen ? exitFullscreen() : enterFullscreen();
+            });
+
+            /* ── EXPORT PDF DENGAN ANOTASI (client-side) ─────── */
+            /*
+             * Cara kerja:
+             * 1. Render setiap halaman PDF ke offscreen canvas (scale tinggi untuk kualitas)
+             * 2. Render anotasi di atas canvas tersebut
+             * 3. Gabung semua halaman jadi satu PDF pakai jsPDF
+             * Kelebihan: tidak butuh server, anotasi freehand/shape ikut ter-embed
+             */
+            async function exportPdfWithAnnotations() {
+                if(exportInProgress){snack('⏳ Sedang export...');return;}
+                if(!pdfDoc){snack('PDF belum dimuat!');return;}
+                if(typeof window.jspdf === 'undefined' && typeof jspdf === 'undefined'){
+                    snack('⚠️ jsPDF belum dimuat, coba lagi sebentar','#F59E0B');return;
+                }
+
+                exportInProgress=true;
+                snack('⏳ Menyiapkan PDF dengan anotasi...','#6366f1');
+                showSync('Mengekspor PDF...');
+
+                try {
+                    const { jsPDF } = window.jspdf || jspdf;
+                    const EXPORT_SCALE = 2.0; // kualitas export
+                    const offCanvas = document.createElement('canvas');
+                    const offCtx = offCanvas.getContext('2d');
+                    let pdf = null;
+
+                    for (let p=1; p<=pdfDoc.numPages; p++) {
+                        const page = await pdfDoc.getPage(p);
+                        const vp = page.getViewport({scale: EXPORT_SCALE});
+                        offCanvas.width = Math.floor(vp.width);
+                        offCanvas.height = Math.floor(vp.height);
+
+                        // Render PDF page ke offscreen canvas
+                        await page.render({canvasContext: offCtx, viewport: vp}).promise;
+
+                        // Render anotasi halaman ini ke offscreen canvas
+                        const pageAnnots = annots.filter(a=>a.page===p);
+                        for (const a of pageAnnots) {
+                            renderAnnotToCanvas(offCtx, a, EXPORT_SCALE);
+                        }
+
+                        // Inisialisasi jsPDF dengan ukuran halaman pertama
+                        const wMm = vp.width  * 0.264583; // px to mm (96dpi)
+                        const hMm = vp.height * 0.264583;
+
+                        if (!pdf) {
+                            pdf = new jsPDF({
+                                orientation: vp.width > vp.height ? 'landscape' : 'portrait',
+                                unit: 'mm',
+                                format: [wMm, hMm],
+                            });
+                        } else {
+                            pdf.addPage([wMm, hMm], vp.width > vp.height ? 'landscape' : 'portrait');
+                        }
+
+                        // Tambah canvas sebagai image ke PDF
+                        const imgData = offCanvas.toDataURL('image/jpeg', 0.92);
+                        pdf.addImage(imgData, 'JPEG', 0, 0, wMm, hMm, '', 'FAST');
+
+                        // Update progress
+                        showSync(`Halaman ${p}/${pdfDoc.numPages}...`);
+                    }
+
+                    // Download
+                    const filename = 'review-annotated-' + Date.now() + '.pdf';
+                    pdf.save(filename);
+                    snack('✅ PDF berhasil didownload!', '#22c55e');
+                    showSync('Export selesai ✓', true);
+
+                } catch(err) {
+                    console.error('[RPV] export error:', err);
+                    snack('❌ Gagal export: ' + err.message, '#ef4444');
+                    showSync('Export gagal');
+                } finally {
+                    exportInProgress=false;
+                }
+            }
+
+            /* Render satu anotasi ke canvas (untuk export) */
+            function renderAnnotToCanvas(c, a, s) {
+                if (!a.rect && a.type !== 'freehand') return;
+                c.save();
+                const col = hex(a.color);
+
+                switch(a.type) {
+                    case 'highlight':
+                    case 'comment':
+                        if(!a.rect) break;
+                        c.globalAlpha = 0.38;
+                        c.fillStyle = col;
+                        c.fillRect(a.rect.x*s, a.rect.y*s, a.rect.w*s, a.rect.h*s);
+                        break;
+                    case 'underline':
+                        if(!a.rect) break;
+                        c.globalAlpha = 0.9;
+                        c.fillStyle = col;
+                        const ut = Math.max(1.5, 2*s);
+                        c.fillRect(a.rect.x*s, (a.rect.y+a.rect.h)*s-ut, a.rect.w*s, ut);
+                        break;
+                    case 'strikethrough':
+                        if(!a.rect) break;
+                        c.globalAlpha = 0.9;
+                        c.fillStyle = col;
+                        const st2 = Math.max(1.5, 2*s);
+                        c.fillRect(a.rect.x*s, (a.rect.y+a.rect.h/2)*s-st2/2, a.rect.w*s, st2);
+                        break;
+                    case 'freehand':
+                        if(!a.path_points?.length) break;
+                        c.globalAlpha = 0.92;
+                        c.strokeStyle = col;
+                        c.lineWidth = (a.stroke_width||2)*s;
+                        c.lineCap = 'round'; c.lineJoin = 'round';
+                        c.beginPath();
+                        c.moveTo(a.path_points[0][0]*s, a.path_points[0][1]*s);
+                        for(let i=1;i<a.path_points.length;i++) c.lineTo(a.path_points[i][0]*s,a.path_points[i][1]*s);
+                        c.stroke();
+                        break;
+                    case 'shape':
+                        if(!a.rect) break;
+                        const x=a.rect.x*s,y=a.rect.y*s,w=Math.max(4,a.rect.w*s),h=Math.max(4,a.rect.h*s);
+                        const sw=(a.stroke_width||2)*s;
+                        c.globalAlpha=1; c.strokeStyle=col; c.lineWidth=sw;
+                        const st3=a.shape_type||'rect';
+                        if(st3==='rect'){c.beginPath();c.rect(x+sw/2,y+sw/2,w-sw,h-sw);c.stroke();}
+                        else if(st3==='ellipse'){c.beginPath();c.ellipse(x+w/2,y+h/2,w/2-sw/2,h/2-sw/2,0,0,Math.PI*2);c.stroke();}
+                        else if(st3==='line'||st3==='arrow'){c.beginPath();c.moveTo(x+sw,y+h/2);c.lineTo(x+w-sw,y+h/2);c.stroke();if(st3==='arrow'){const hh=Math.max(4,h*.35),hx=Math.max(sw*3,w*.25);c.beginPath();c.moveTo(x+w-sw/2,y+h/2);c.lineTo(x+w-hx,y+h/2-hh);c.lineTo(x+w-hx,y+h/2+hh);c.closePath();c.fillStyle=col;c.fill();}}
+                        break;
+                    case 'text':
+                        if(!a.rect||!a.comment) break;
+                        const fs=Math.max(10,(a.stroke_width||14))*s;
+                        c.globalAlpha=1; c.fillStyle=col; c.font=`600 ${fs}px sans-serif`;
+                        c.shadowColor='rgba(0,0,0,0.35)'; c.shadowBlur=3;
+                        c.fillText(a.comment, a.rect.x*s, a.rect.y*s+fs);
+                        c.shadowBlur=0;
+                        break;
+                    case 'sticky':
+                        if(!a.rect||!a.comment) break;
+                        const sw2=Math.max(130,180*s), sh2=Math.max(60,90*s);
+                        c.globalAlpha=0.92; c.fillStyle=col;
+                        c.beginPath();
+                        if(c.roundRect) c.roundRect(a.rect.x*s,a.rect.y*s,sw2,sh2,6);
+                        else c.rect(a.rect.x*s,a.rect.y*s,sw2,sh2);
+                        c.fill();
+                        c.globalAlpha=1; c.fillStyle='rgba(0,0,0,0.75)';
+                        const fs2=Math.max(9,11*s);
+                        c.font=`${fs2}px sans-serif`;
+                        const words=a.comment.split(' '), lineH=fs2*1.4;
+                        let line='', ly=a.rect.y*s+fs2+8;
+                        for(const w of words){
+                            const test=line+w+' ';
+                            if(c.measureText(test).width>sw2-12&&line!==''){c.fillText(line,a.rect.x*s+6,ly);line=w+' ';ly+=lineH;}else line=test;
+                        }
+                        c.fillText(line,a.rect.x*s+6,ly);
+                        break;
+                }
+                c.restore();
+            }
+
+            /* Bind download button */
+            document.getElementById('rpv-download-btn')?.addEventListener('click', exportPdfWithAnnotations);
+
+            /* ── SEARCH ──────────────────────────────────────── */
             function openSearch(){document.getElementById('rpv-search')?.classList.add('show');document.getElementById('rpv-search-input')?.focus();}
             function closeSearch(){document.getElementById('rpv-search')?.classList.remove('show');clearSearchHighlights();currentQuery='';searchResults=[];searchIndex=-1;const i=document.getElementById('rpv-search-input');if(i)i.value='';document.getElementById('rpv-search-results').innerHTML='';document.getElementById('rpv-search-status').textContent='Ketik untuk mencari...';}
-            function clearSearchHighlights(){annotLayer.querySelectorAll('.rpv-search-hl').forEach(e=>e.remove());searchHighlights=[];}
+            function clearSearchHighlights(){annotLayer.querySelectorAll('.rpvr-search-hl').forEach(e=>e.remove());searchHighlights=[];}
             function applySearchHighlights(){
-                clearSearchHighlights(); if(!currentQuery||!pdfDoc)return;
-                const q=currentQuery.toLowerCase(), sr=stage.getBoundingClientRect();
+                clearSearchHighlights();if(!currentQuery||!pdfDoc)return;
+                const q=currentQuery.toLowerCase(),sr=stage.getBoundingClientRect();
                 Array.from(textLayer.querySelectorAll('span')).forEach(span=>{
-                    if (!span.firstChild) return;
-                    const text=span.textContent, lower=text.toLowerCase(); let idx=lower.indexOf(q);
-                    let gi=0;
-                    while (idx!==-1) {
-                        try {
-                            const range=document.createRange(); range.setStart(span.firstChild,idx); range.setEnd(span.firstChild,Math.min(idx+q.length,text.length));
+                    if(!span.firstChild)return;
+                    const text=span.textContent,lower=text.toLowerCase();let idx=lower.indexOf(q);
+                    while(idx!==-1){
+                        try{
+                            const range=document.createRange();range.setStart(span.firstChild,idx);range.setEnd(span.firstChild,Math.min(idx+q.length,text.length));
                             Array.from(range.getClientRects()).forEach(rect=>{
                                 if(rect.width<1||rect.height<1)return;
-                                const el=document.createElement('div'); el.className='rpv-search-hl'; el.dataset.matchIdx=gi;
-                                el.style.left=(rect.left-sr.left)+'px'; el.style.top=(rect.top-sr.top)+'px'; el.style.width=rect.width+'px'; el.style.height=rect.height+'px';
-                                annotLayer.appendChild(el); searchHighlights.push(el);
+                                const el=document.createElement('div');el.className='rpvr-search-hl';
+                                el.style.cssText=`position:absolute;background:rgba(255,215,0,.45);border-radius:2px;pointer-events:none;z-index:7;left:${rect.left-sr.left}px;top:${rect.top-sr.top}px;width:${rect.width}px;height:${rect.height}px;`;
+                                annotLayer.appendChild(el);searchHighlights.push(el);
                             });
-                        } catch(_){}
-                        gi++; idx=lower.indexOf(q,idx+1);
+                        }catch(_){}
+                        idx=lower.indexOf(q,idx+1);
                     }
                 });
                 searchHighlights.forEach((el,i)=>el.classList.toggle('active-match',i===searchIndex));
-                if (searchHighlights[searchIndex]) searchHighlights[searchIndex].scrollIntoView({behavior:'smooth',block:'center'});
+                if(searchHighlights[searchIndex])searchHighlights[searchIndex].scrollIntoView({behavior:'smooth',block:'center'});
             }
             async function doSearch(query){
-                if(!pdfDoc||!query.trim()){document.getElementById('rpv-search-status').textContent='Ketik untuk mencari...';clearSearchHighlights();currentQuery='';return;}
+                if(!pdfDoc||!query.trim()){clearSearchHighlights();currentQuery='';document.getElementById('rpv-search-status').textContent='Ketik untuk mencari...';return;}
                 document.getElementById('rpv-search-status').textContent='Mencari...';
-                searchResults=[]; currentQuery=query; const q=query.toLowerCase();
+                searchResults=[];currentQuery=query;const q=query.toLowerCase();
                 for(let p=1;p<=pdfDoc.numPages;p++){const page=await pdfDoc.getPage(p);const content=await page.getTextContent();const text=content.items.map(i=>i.str).join(' ');const lt=text.toLowerCase();let idx=lt.indexOf(q);while(idx!==-1){searchResults.push({page:p,excerpt:text.substring(Math.max(0,idx-35),idx+q.length+50).trim()});idx=lt.indexOf(q,idx+1);}}
-                const list=document.getElementById('rpv-search-results'); list.innerHTML='';
+                const list=document.getElementById('rpv-search-results');list.innerHTML='';
                 if(!searchResults.length){document.getElementById('rpv-search-status').textContent=`Tidak ditemukan: "${query}"`;clearSearchHighlights();return;}
-                document.getElementById('rpv-search-status').textContent=`${searchResults.length} hasil`;
-                searchIndex=0;
-                searchResults.slice(0,40).forEach((r,i)=>{const el=document.createElement('div');el.className='rpv-sri'+(i===0?' active-sri':'');const hl=r.excerpt.replace(new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi'),m=>`<mark>${m}</mark>`);el.innerHTML=`<span class="pg">Hal.${r.page}</span><span>${hl}</span>`;el.addEventListener('click',()=>{searchIndex=i;document.querySelectorAll('.rpv-sri').forEach((x,j)=>x.classList.toggle('active-sri',j===i));if(r.page!==pageNum)renderPage(r.page);else{applySearchHighlights();}});list.appendChild(el);});
+                document.getElementById('rpv-search-status').textContent=`${searchResults.length} hasil`;searchIndex=0;
+                searchResults.slice(0,40).forEach((r,i)=>{const el=document.createElement('div');el.style.cssText='padding:.35rem .5rem;background:#1f1f1f;border-radius:6px;cursor:pointer;font-size:11px;color:#9ca3af;display:flex;gap:.5rem;align-items:baseline;border:1px solid transparent;margin-bottom:2px;';el.innerHTML=`<span style="color:#FF6B18;font-weight:700;flex-shrink:0;">Hal.${r.page}</span><span>${esc(r.excerpt).replace(new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi'),m=>`<mark style="background:rgba(255,107,24,.35);color:#fff;border-radius:2px;padding:0 1px;">${m}</mark>`)}</span>`;el.addEventListener('click',()=>{searchIndex=i;if(r.page!==pageNum)renderPage(r.page);else applySearchHighlights();});list.appendChild(el);});
                 if(searchResults[0].page===pageNum)applySearchHighlights();else renderPage(searchResults[0].page);
             }
             document.getElementById('rpv-search-input')?.addEventListener('input',function(){clearTimeout(searchDebounce);searchDebounce=setTimeout(()=>doSearch(this.value),450);});
@@ -2199,149 +2399,166 @@ $annotApiBase = $reviewId
             document.getElementById('rpv-search')?.addEventListener('click',e=>{if(e.target===document.getElementById('rpv-search'))closeSearch();});
             document.getElementById('rpv-search-btn')?.addEventListener('click',openSearch);
 
-            /* ── PDF RENDER ──────────────────────────────────────── */
-            function getScale(){return baseScale*zoomFactor;}
-
+            /* ── PDF RENDER ──────────────────────────────────── */
             function computeBase(page) {
                 const cw=wrap.clientWidth||800, padding=16, nw=page.getViewport({scale:1}).width;
-                baseScale=Math.max(0.5, Math.min((cw-padding*2)/nw, 2.5));
+                baseScale=Math.max(0.5,Math.min((cw-padding*2)/nw,2.5));
             }
 
             function renderPage(num) {
-                if (num<1||(pdfDoc&&num>pdfDoc.numPages)) return;
-                if (pageRendering) { pendingPage=num; return; }
+                if(num<1||(pdfDoc&&num>pdfDoc.numPages)) return;
+                if(pageRendering){pendingPage=num;return;}
                 pageRendering=true; pageNum=num;
 
-                // Close popups on page change
                 document.querySelectorAll('.rpv-popup').forEach(p=>p.classList.remove('show'));
                 tooltip.classList.remove('show');
-                pendingRect=null; pendingText=null; stickyPos=null; textPos=null;
+                pendingRect=null;pendingText=null;stickyPos=null;textPos=null;
                 window.getSelection()?.removeAllRanges();
 
                 pdfDoc.getPage(num).then(async page=>{
-                    if (baseScale===1.0) computeBase(page);
-                    const cssScale=getScale(), renderScale=cssScale*DPR;
-                    const vpCss=page.getViewport({scale:cssScale}), vpRender=page.getViewport({scale:renderScale});
+                    if(baseScale===1.0) computeBase(page);
+                    const cssScale=baseScale*zoomFactor;
+                    const renderScale=cssScale*DPR;
+                    const vpCss=page.getViewport({scale:cssScale});
+                    const vpRender=page.getViewport({scale:renderScale});
 
-                    mainCanvas.width=Math.floor(vpRender.width); mainCanvas.height=Math.floor(vpRender.height);
-                    mainCanvas.style.width=Math.floor(vpCss.width)+'px'; mainCanvas.style.height=Math.floor(vpCss.height)+'px';
-                    stage.style.width=Math.floor(vpCss.width)+'px'; stage.style.height=Math.floor(vpCss.height)+'px';
+                    mainCanvas.width=Math.floor(vpRender.width);
+                    mainCanvas.height=Math.floor(vpRender.height);
+                    mainCanvas.style.width=Math.floor(vpCss.width)+'px';
+                    mainCanvas.style.height=Math.floor(vpCss.height)+'px';
+                    stage.style.width=Math.floor(vpCss.width)+'px';
+                    stage.style.height=Math.floor(vpCss.height)+'px';
 
                     await page.render({canvasContext:ctx,viewport:vpRender}).promise.catch(e=>console.warn(e.message));
-
                     pageRendering=false;
-                    if (pendingPage!==null) { const p=pendingPage; pendingPage=null; renderPage(p); return; }
+                    if(pendingPage!==null){const p=pendingPage;pendingPage=null;renderPage(p);return;}
 
-                    // Text layer
-                    textLayer.innerHTML=''; textLayer.style.width=vpCss.width+'px'; textLayer.style.height=vpCss.height+'px';
+                    /* ── TEXT LAYER (FIX HIGHLIGHT OFFSET) ──────────
+                     * Gunakan vpCss (bukan vpRender) untuk text layer.
+                     * Kunci: transform matrix dari vpCss sudah dalam CSS pixels,
+                     * sehingga posisi span langsung sinkron dengan canvas CSS size.
+                     * JANGAN kalikan dengan DPR lagi.
+                     */
+                    textLayer.innerHTML='';
+                    textLayer.style.width=Math.floor(vpCss.width)+'px';
+                    textLayer.style.height=Math.floor(vpCss.height)+'px';
+
                     const content=await page.getTextContent();
                     content.items.forEach(item=>{
-                        if (!item.str||!item.str.trim()) return;
+                        if(!item.str||!item.str.trim()) return;
                         const tx=pdfjsLib.Util.transform(vpCss.transform,item.transform);
-                        const fh=Math.sqrt(tx[2]*tx[2]+tx[3]*tx[3]), angle=Math.atan2(tx[1],tx[0]);
-                        const span=document.createElement('span'); span.textContent=item.str; span.style.fontSize=fh+'px'; span.style.left=tx[4]+'px'; span.style.top=(tx[5]-fh)+'px';
+                        const fh=Math.sqrt(tx[2]*tx[2]+tx[3]*tx[3]);
+                        const angle=Math.atan2(tx[1],tx[0]);
+                        const span=document.createElement('span');
+                        span.textContent=item.str;
+                        span.style.fontSize=fh+'px';
+                        span.style.left=tx[4]+'px';
+                        span.style.top=(tx[5]-fh)+'px';
+                        span.style.transformOrigin='0% 0%';
                         textLayer.appendChild(span);
-                        const tw=item.width*vpCss.scale, mw=span.getBoundingClientRect().width;
-                        let t=angle!==0?`rotate(${-angle}rad)`:''
-                        if (mw>1&&tw>0) t+=` scaleX(${tw/mw})`;
-                        if (t.trim()) span.style.transform=t.trim();
+
+                        /* Scale span agar lebar teks pas dengan PDF */
+                        const targetW=item.width*cssScale;
+                        const measuredW=span.getBoundingClientRect().width;
+                        let t=angle!==0?`rotate(${-angle}rad)`:'';
+                        if(measuredW>1&&targetW>0) t+=` scaleX(${targetW/measuredW})`;
+                        if(t.trim()) span.style.transform=t.trim();
                     });
 
                     scheduleRender();
 
-                    // Update UI
-                    stage.style.display='block'; loadingEl.classList.add('hidden');
+                    /* Update UI */
+                    stage.style.display='block';
+                    loadingEl.classList.add('hidden');
                     document.getElementById('rpv-page-input').value=num;
                     document.getElementById('rpv-prev').disabled=num<=1;
                     document.getElementById('rpv-next').disabled=!pdfDoc||num>=pdfDoc.numPages;
                     const pct=pdfDoc?(num/pdfDoc.numPages*100):0;
                     document.getElementById('rpv-progress').style.width=pct+'%';
-                    const zv=document.getElementById('rpv-zoom-val'); if(zv)zv.textContent=Math.round(zoomFactor*100)+'%';
+                    document.getElementById('rpv-zoom-val').textContent=Math.round(zoomFactor*100)+'%';
+                    document.getElementById('rpv-progress-txt').textContent=`Hal. ${num}/${pdfDoc?.numPages||'?'} · ${Math.round(pct)}%`;
                     wrap.scrollTo({top:0,behavior:'smooth'});
 
                 }).catch(e=>{
                     console.error('[RPV] render error:',e);
-                    pageRendering=false; loadingEl.classList.add('hidden'); stage.style.display='block';
+                    pageRendering=false;
+                    loadingEl.classList.add('hidden');
+                    stage.style.display='block';
                 });
             }
 
-            /* ── NAVIGATION ──────────────────────────────────────── */
+            /* ── NAVIGATION ──────────────────────────────────── */
             document.getElementById('rpv-prev')?.addEventListener('click',()=>{if(pageNum>1){pageNum--;renderPage(pageNum);}});
             document.getElementById('rpv-next')?.addEventListener('click',()=>{if(pdfDoc&&pageNum<pdfDoc.numPages){pageNum++;renderPage(pageNum);}});
             document.getElementById('rpv-page-input')?.addEventListener('change',function(){const n=parseInt(this.value);if(pdfDoc&&n>=1&&n<=pdfDoc.numPages)renderPage(n);else this.value=pageNum;});
 
-            /* ── ZOOM ────────────────────────────────────────────── */
-            function zoomIn(){zoomFactor=Math.min(zoomFactor+ZOOM_STEP,ZOOM_MAX);baseScale=1.0;if(pdfDoc)pdfDoc.getPage(pageNum).then(p=>{computeBase(p);renderPage(pageNum);});}
-            function zoomOut(){zoomFactor=Math.max(zoomFactor-ZOOM_STEP,ZOOM_MIN);baseScale=1.0;if(pdfDoc)pdfDoc.getPage(pageNum).then(p=>{computeBase(p);renderPage(pageNum);});}
-            document.getElementById('rpv-zoom-in')?.addEventListener('click',zoomIn);
-            document.getElementById('rpv-zoom-out')?.addEventListener('click',zoomOut);
+            /* ── ZOOM ────────────────────────────────────────── */
+            function doZoom(dir){
+                zoomFactor=dir>0?Math.min(zoomFactor+ZOOM_STEP,ZOOM_MAX):Math.max(zoomFactor-ZOOM_STEP,ZOOM_MIN);
+                baseScale=1.0;
+                if(pdfDoc)pdfDoc.getPage(pageNum).then(p=>{computeBase(p);renderPage(pageNum);});
+            }
+            document.getElementById('rpv-zoom-in')?.addEventListener('click',()=>doZoom(1));
+            document.getElementById('rpv-zoom-out')?.addEventListener('click',()=>doZoom(-1));
 
-            /* ── READING MODE ────────────────────────────────────── */
+            /* ── READING MODE ────────────────────────────────── */
             document.querySelectorAll('[data-rpv-mode]').forEach(btn=>{
                 btn.addEventListener('click',()=>{
                     document.querySelectorAll('[data-rpv-mode]').forEach(b=>b.classList.remove('active'));
                     btn.classList.add('active');
-                    const wrap2=document.getElementById('review-pdf-viewer-wrap');
-                    wrap2?.classList.remove('mode-sepia','mode-night');
-                    if (btn.dataset.rpvMode!=='normal') wrap2?.classList.add('mode-'+btn.dataset.rpvMode);
+                    outerWrap?.classList.remove('mode-sepia','mode-night');
+                    if(btn.dataset.rpvMode!=='normal') outerWrap?.classList.add('mode-'+btn.dataset.rpvMode);
                 });
             });
 
-            /* ── KEYBOARD ────────────────────────────────────────── */
+            /* ── KEYBOARD ────────────────────────────────────── */
             document.addEventListener('keydown', e=>{
-                if (['INPUT','TEXTAREA'].includes(e.target.tagName)) return;
-                if ((e.ctrlKey||e.metaKey)&&e.key==='f') {e.preventDefault();openSearch();return;}
-                if ((e.ctrlKey||e.metaKey)&&!e.shiftKey&&e.key==='z') {e.preventDefault();doUndo();return;}
-                if ((e.ctrlKey||e.metaKey)&&(e.key==='y'||(e.shiftKey&&e.key==='z'))) {e.preventDefault();doRedo();return;}
-                if ((e.key==='Delete'||e.key==='Backspace')&&selectedId) {removeAnnot(selectedId);selectedId=null;return;}
-                switch(e.key) {
-                    case 'ArrowLeft': if(pageNum>1){pageNum--;renderPage(pageNum);} break;
-                    case 'ArrowRight': if(pdfDoc&&pageNum<pdfDoc.numPages){pageNum++;renderPage(pageNum);} break;
-                    case '+': case '=': zoomIn(); break;
-                    case '-': zoomOut(); break;
-                    case 'Escape': closeSearch(); break;
+                if(['INPUT','TEXTAREA'].includes(e.target.tagName)) return;
+                if((e.ctrlKey||e.metaKey)&&e.key==='f'){e.preventDefault();openSearch();return;}
+                if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&e.key==='z'){e.preventDefault();doUndo();return;}
+                if((e.ctrlKey||e.metaKey)&&(e.key==='y'||(e.shiftKey&&e.key==='z'))){e.preventDefault();doRedo();return;}
+                if((e.key==='Delete'||e.key==='Backspace')&&selectedId){removeAnnot(selectedId);selectedId=null;return;}
+                switch(e.key){
+                    case'ArrowLeft':if(pageNum>1){pageNum--;renderPage(pageNum);}break;
+                    case'ArrowRight':if(pdfDoc&&pageNum<pdfDoc.numPages){pageNum++;renderPage(pageNum);}break;
+                    case'+':case'=':doZoom(1);break;
+                    case'-':doZoom(-1);break;
+                    case'f':case'F':isFullscreen?exitFullscreen():enterFullscreen();break;
+                    case'Escape':
+                        if(document.getElementById('rpv-search')?.classList.contains('show'))closeSearch();
+                        else if(isFullscreen)exitFullscreen();
+                        break;
                 }
             });
 
-            /* ── RESIZE ──────────────────────────────────────────── */
-            let resizeT=null; let lastW=wrap.clientWidth;
+            /* ── RESIZE ──────────────────────────────────────── */
+            let resT=null,lastW=wrap.clientWidth;
             window.addEventListener('resize',()=>{
-                const w=wrap.clientWidth; if(Math.abs(w-lastW)<20)return; lastW=w;
-                clearTimeout(resizeT); resizeT=setTimeout(()=>{if(!pdfDoc)return;baseScale=1.0;pdfDoc.getPage(pageNum).then(p=>{computeBase(p);renderPage(pageNum);});},250);
+                const w=wrap.clientWidth;if(Math.abs(w-lastW)<20)return;lastW=w;
+                clearTimeout(resT);resT=setTimeout(()=>{if(!pdfDoc)return;baseScale=1.0;renderPage(pageNum);},250);
             });
 
-            /* ── LOAD PDF ────────────────────────────────────────── */
-            const task = pdfjsLib.getDocument({
-                url: CFG.pdfUrl,
-                withCredentials: false,
-                verbosity: 0,
-                rangeChunkSize: 65536,
-            });
+            /* ── SYNC FREECANVAS ─────────────────────────────── */
+            if(mainCanvas){
+                new MutationObserver(()=>syncFC()).observe(mainCanvas,{attributes:true,attributeFilter:['width','height']});
+            }
 
-            task.onProgress = function(data) {
-                if (data.total>0 && loadSubEl) {
-                    const pct=Math.round((data.loaded/data.total)*100);
-                    loadSubEl.textContent=`Mengunduh... ${pct}%`;
-                }
-            };
-
+            /* ── LOAD PDF ────────────────────────────────────── */
+            const task=pdfjsLib.getDocument({url:CFG.pdfUrl,withCredentials:false,verbosity:0,rangeChunkSize:65536});
+            task.onProgress=d=>{if(d.total>0&&loadSub)loadSub.textContent=`Mengunduh... ${Math.round(d.loaded/d.total*100)}%`;};
             task.promise.then(async doc=>{
                 pdfDoc=doc;
                 document.getElementById('rpv-page-total').textContent=doc.numPages;
                 document.getElementById('rpv-page-input').max=doc.numPages;
                 renderPage(1);
                 await loadAll();
+                console.log('[RPV] ready, reviewId=',CFG.reviewId);
             }).catch(err=>{
                 console.error('[RPV] PDF load error:',err);
-                loadingEl.innerHTML=`<div style="font-size:2rem">⚠️</div><p style="color:#ef4444;font-weight:700;">Gagal memuat PDF</p><p style="color:#6b7280;font-size:12px;">${err.message}</p>`;
+                loadingEl.innerHTML=`<div style="font-size:2rem">⚠️</div><p style="color:#ef4444;font-weight:700;font-size:13px;">Gagal memuat PDF</p><p style="color:#6b7280;font-size:11px;">${err.message}</p>`;
             });
 
-            // Sync freeCanvas size on canvas mutation
-            if (mainCanvas) {
-                new MutationObserver(()=>{syncFC();}).observe(mainCanvas,{attributes:true,attributeFilter:['width','height']});
-            }
-
-            console.log('[RPV] Review PDF Viewer ready, reviewId=', REVIEW_ID, 'api=', API);
+            setTool('highlight');
 
         })();
     </script>
