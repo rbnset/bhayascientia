@@ -147,6 +147,8 @@
         var searchResults = [], searchIdx = -1, searchHLs = [], searchQuery = '';
         var isFullscreen = false, exportBusy = false;
         var SK = 'rpv_' + (CFG.reviewId || 'x');
+        var SK_BOOKMARK = SK + '_bm';   /* localStorage: halaman yang ditandai */
+        var SK_MODE = SK + '_mode'; /* localStorage: reading mode terakhir */
 
         /* ── DOM ── */
         var outerWrap = document.getElementById('rpv-outer-wrap');
@@ -236,7 +238,57 @@
 
         function saveLast(p) { try { localStorage.setItem(SK + '_last', p); } catch (e) { } }
         function loadLast() { try { return parseInt(localStorage.getItem(SK + '_last') || '1'); } catch (e) { return 1; } }
+
+        /* ── Bookmark helpers ── */
+        function getBookmark() {
+            try { var v = localStorage.getItem(SK_BOOKMARK); return v ? parseInt(v) : null; } catch (e) { return null; }
+        }
+        function setBookmark(pg) {
+            try { localStorage.setItem(SK_BOOKMARK, pg); } catch (e) { }
+        }
+        function clearBookmark() {
+            try { localStorage.removeItem(SK_BOOKMARK); } catch (e) { }
+        }
+        function showBookmarkToast(msg) {
+            var toast = document.getElementById('rpv-bookmark-toast');
+            var msgEl = document.getElementById('rpv-bookmark-msg');
+            if (!toast) return;
+            if (msgEl) msgEl.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(function () { toast.classList.remove('show'); }, 2500);
+        }
+        function updateBookmarkBtn() {
+            var btn = document.getElementById('rpv-bookmark-btn'); if (!btn) return;
+            var bm = getBookmark();
+            var isMarked = bm && bm === pageNum;
+            btn.classList.toggle('bookmarked', !!isMarked);
+            btn.title = isMarked
+                ? 'Halaman ini sudah ditandai — klik untuk hapus tanda'
+                : (bm ? 'Tandai halaman ini (saat ini: hal.' + bm + ')' : 'Tandai halaman ini sebagai posisi baca');
+            /* Update sheet button juga */
+            var shBtn = document.getElementById('rpv-sheet-bookmark-btn');
+            if (shBtn) {
+                shBtn.textContent = isMarked ? '🔖 Hapus Tanda Baca' : '🔖 Tandai Halaman Ini';
+                shBtn.style.borderColor = isMarked ? '#FF6B18' : '#3d3d3d';
+                shBtn.style.color = isMarked ? '#FF6B18' : '#d1d5db';
+            }
+        }
+        function toggleBookmark() {
+            var bm = getBookmark();
+            if (bm && bm === pageNum) {
+                clearBookmark();
+                showBookmarkToast('Tanda baca dihapus');
+            } else {
+                setBookmark(pageNum);
+                showBookmarkToast('Halaman ' + pageNum + ' ditandai ✓');
+            }
+            updateBookmarkBtn();
+        }
         function on(id, ev, fn) { var el = document.getElementById(id); if (el) el.addEventListener(ev, fn); }
+
+        /* ── Bookmark button listeners ── */
+        on('rpv-bookmark-btn', 'click', toggleBookmark);
+        on('rpv-sheet-bookmark-btn', 'click', function () { toggleBookmark(); closeSheet(); });
 
         /* ── Loading helpers ── */
         /* FIX BUG 8 + BUG 11: fungsi terpusat untuk show/hide loading */
@@ -1290,6 +1342,8 @@
             on('rpv-sheet-zoom-out', 'click', function () { doZoom(-1); });
             on('rpv-sheet-fs', 'click', function () { closeSheet(); setTimeout(function () { isFullscreen ? exitFS() : enterFS(); }, 200); });
             on('rpv-sheet-search', 'click', function () { closeSheet(); setTimeout(openSearch, 200); });
+            /* Bookmark dari sheet */
+            on('rpv-sheet-bookmark-btn', 'click', function () { toggleBookmark(); closeSheet(); });
             document.querySelectorAll('[data-rpv-sheet-mode]').forEach(function (btn) {
                 btn.addEventListener('click', function () {
                     document.querySelectorAll('[data-rpv-sheet-mode]').forEach(function (b) { b.classList.remove('active'); });
@@ -1423,6 +1477,7 @@
                 case 'ArrowRight': nextPage(); break;
                 case '+': case '=': doZoom(1); break;
                 case '-': doZoom(-1); break;
+                case 'b': case 'B': toggleBookmark(); break;
                 case 'f': case 'F': isFullscreen ? exitFS() : enterFS(); break;
                 case 'Escape':
                     var ov = document.getElementById('rpv-search');
@@ -1514,24 +1569,106 @@
                 }
             } else if (a.type === 'sticky') {
                 if (!a.rect || !a.comment) return;
-                var stickyW = Math.max(160, 200 * s), stickyH = Math.max(80, 110 * s);
-                var sx = a.rect.x * s, sy = a.rect.y * s;
-                var stickyBg = { yellow: '#FEF9C3', green: '#DCFCE7', red: '#FEE2E2', blue: '#DBEAFE', orange: '#FFEDD5', pink: '#FCE7F3', purple: '#EDE9FE', cyan: '#CFFAFE', black: '#1F2937', white: '#F9FAFB' };
-                c.globalAlpha = 0.75; c.fillStyle = stickyBg[a.color] || '#FEF9C3';
-                c.beginPath(); if (c.roundRect) c.roundRect(sx, sy, stickyW, stickyH, 6); else c.rect(sx, sy, stickyW, stickyH); c.fill();
-                c.globalAlpha = 0.9; c.strokeStyle = col; c.lineWidth = Math.max(1.5, s);
-                c.beginPath(); if (c.roundRect) c.roundRect(sx, sy, stickyW, stickyH, 6); else c.rect(sx, sy, stickyW, stickyH); c.stroke();
-                c.globalAlpha = 0.35; c.fillStyle = col; c.fillRect(sx, sy, stickyW, Math.max(4, 18 * s / 2));
-                c.globalAlpha = 1; c.fillStyle = a.color === 'black' ? '#E5E7EB' : 'rgba(0,0,0,.85)';
-                var fs = Math.max(13, 13 * s); c.font = '600 ' + fs + 'px ui-sans-serif,system-ui,sans-serif';
-                var padX = 8, padY = Math.max(4, 20 * s / 2) + fs, maxW = stickyW - padX * 2;
-                var words = a.comment.split(' '), lineH = fs * 1.45, ly = sy + padY, lx = sx + padX, line = '';
+                /*
+                 * STICKY NOTE EXPORT — ukuran PRESISI sama dengan CSS .rpv-sticky-note
+                 *
+                 * CSS mendefinisikan: width:180px, min-height:90px (fixed px, TIDAK di-scale)
+                 * Di layar: posisi = rect.x * screenScale, ukuran = tetap 180×90 CSS px
+                 * Di export canvas: posisi = rect.x * exportScale
+                 *
+                 * Agar ukuran sticky di export SAMA dengan di layar secara visual,
+                 * kita harus konversi 180px CSS ke unit export canvas:
+                 *   ratio = exportScale / screenScale
+                 *   stickyW_export = 180 * ratio
+                 *
+                 * Ini menjamin sticky terlihat sama besar di PDF export vs tampilan layar.
+                 */
+                var CSS_W = 180;  /* px — harus sama dengan .rpv-sticky-note { width } */
+                var CSS_H = 90;   /* px — harus sama dengan .rpv-sticky-note { min-height } */
+                var CSS_FS = 12;   /* px — font-size body .rpv-sn-body */
+                var CSS_PAD = 8;    /* px — padding horizontal */
+                var CSS_HDR = 22;   /* px — tinggi header strip */
+
+                var screenS = baseScale * zoomFactor;
+                var ratio = s / screenS;  /* faktor konversi CSS px → export canvas px */
+
+                var stickyW = CSS_W * ratio;
+                var stickyH = CSS_H * ratio;
+                var headerH = CSS_HDR * ratio;
+                var fs_body = CSS_FS * ratio;
+                var padX = CSS_PAD * ratio;
+
+                var sx = a.rect.x * s;
+                var sy = a.rect.y * s;
+
+                var stickyBg = {
+                    yellow: '#FEF9C3', green: '#DCFCE7', red: '#FEE2E2', blue: '#DBEAFE',
+                    orange: '#FFEDD5', pink: '#FCE7F3', purple: '#EDE9FE', cyan: '#CFFAFE',
+                    black: '#1F2937', white: '#F9FAFB'
+                };
+                var borderCol = {
+                    yellow: '#FDE047', green: '#86EFAC', red: '#FCA5A5', blue: '#93C5FD',
+                    orange: '#FDBA74', pink: '#F9A8D4', purple: '#C4B5FD', cyan: '#67E8F9',
+                    black: '#374151', white: '#D1D5DB'
+                };
+
+                /* Background */
+                c.globalAlpha = 0.92;
+                c.fillStyle = stickyBg[a.color] || '#FEF9C3';
+                c.beginPath();
+                if (c.roundRect) c.roundRect(sx, sy, stickyW, stickyH, 4 * ratio);
+                else c.rect(sx, sy, stickyW, stickyH);
+                c.fill();
+
+                /* Border — sama dengan .rpv-sticky-note { border: 1.5px } */
+                c.globalAlpha = 1;
+                c.strokeStyle = borderCol[a.color] || '#FDE047';
+                c.lineWidth = Math.max(1, 1.5 * ratio);
+                c.beginPath();
+                if (c.roundRect) c.roundRect(sx, sy, stickyW, stickyH, 4 * ratio);
+                else c.rect(sx, sy, stickyW, stickyH);
+                c.stroke();
+
+                /* Header strip — sama dengan .rpv-sn-header */
+                c.globalAlpha = 0.2;
+                c.fillStyle = borderCol[a.color] || '#FDE047';
+                c.fillRect(sx, sy, stickyW, headerH);
+
+                /* Icon 📌 di header */
+                c.globalAlpha = 1;
+                c.font = Math.round(fs_body * 1.1) + 'px serif';
+                c.fillStyle = a.color === 'black' ? '#9CA3AF' : '#374151';
+                c.fillText('📌', sx + padX * 0.5, sy + headerH - ratio * 2);
+
+                /* Teks body — font-size & padding sama persis dengan CSS */
+                c.globalAlpha = 1;
+                c.fillStyle = a.color === 'black' ? '#D1D5DB' : '#374151';
+                c.font = '500 ' + Math.round(fs_body) + 'px ui-sans-serif,system-ui,sans-serif';
+
+                var lX = sx + padX;
+                var lY = sy + headerH + fs_body + ratio * 2;
+                var maxW = stickyW - padX * 2;
+                var lineH = fs_body * 1.5;
+                var words = a.comment.split(' ');
+                var line = '';
+
                 for (var wi = 0; wi < words.length; wi++) {
                     var test = line + words[wi] + ' ';
-                    if (c.measureText(test).width > maxW && line !== '') { c.fillText(line.trimEnd(), lx, ly); line = words[wi] + ' '; ly += lineH; if (ly > sy + stickyH - 4) break; }
-                    else { line = test; }
+                    if (c.measureText(test).width > maxW && line !== '') {
+                        c.fillText(line.trimEnd(), lX, lY);
+                        line = words[wi] + ' ';
+                        lY += lineH;
+                        if (lY > sy + stickyH - ratio * 3) {
+                            c.fillText('...', lX, lY - lineH + fs_body);
+                            break;
+                        }
+                    } else {
+                        line = test;
+                    }
                 }
-                if (line.trim()) c.fillText(line.trimEnd(), lx, ly);
+                if (line.trim() && lY <= sy + stickyH - ratio * 3) {
+                    c.fillText(line.trimEnd(), lX, lY);
+                }
             }
             c.restore();
         }
@@ -1617,6 +1754,9 @@
                 var spEl = document.getElementById('rpv-sheet-page'); if (spEl) spEl.textContent = num;
                 if (wrap) wrap.scrollTo({ top: 0, behavior: 'smooth' });
 
+                /* Update tombol bookmark setiap ganti halaman */
+                updateBookmarkBtn();
+
             }).catch(function (e) {
                 console.error('[RPV] render error:', e);
                 pageRendering = false;
@@ -1693,6 +1833,15 @@
                 var piEl = document.getElementById('rpv-page-input'); if (piEl) piEl.max = doc.numPages;
                 renderPage(1); await loadAll();
                 var saved = loadLast(); if (saved > 1) setTimeout(function () { showResume(saved); }, 1200);
+                /* Jika ada bookmark yang berbeda dari posisi terakhir, beritahu user */
+                var bm = getBookmark();
+                if (bm && bm !== saved && bm <= doc.numPages) {
+                    setTimeout(function () {
+                        snack('🔖 Tanda baca ada di hal.' + bm + ' — klik 🔖 di toolbar untuk ke sana', '#60A5FA');
+                    }, 2500);
+                }
+                /* Init state tombol bookmark */
+                updateBookmarkBtn();
                 console.log('[RPV] ready, reviewId=', CFG.reviewId);
             }).catch(function (err) {
                 console.error('[RPV] PDF load error:', err);

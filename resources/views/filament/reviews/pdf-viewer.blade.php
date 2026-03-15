@@ -11,7 +11,6 @@ $versionId = $formState['publication_version_id'] ?? null;
 $reviewId = $review?->id ?? null;
 
 // ── MODE DETEKSI ──────────────────────────────────────────
-// Jika dipanggil dari ViewReview (infolist), $review ada tapi $formState kosong
 $isReadOnly = false;
 
 if ($review && $reviewId && empty($versionId)) {
@@ -46,6 +45,40 @@ $annotApiBase = $reviewId
 
 <link rel="stylesheet"
     href="{{ asset('css/review-pdf-viewer.css') }}?v={{ filemtime(public_path('css/review-pdf-viewer.css')) }}">
+
+{{-- Inline style untuk tombol bookmark --}}
+<style>
+    #rpv-bookmark-btn.bookmarked {
+        color: #FF6B18 !important;
+        border-color: rgba(255, 107, 24, .4) !important;
+        background: rgba(255, 107, 24, .1) !important;
+    }
+
+    #rpv-bookmark-toast {
+        position: fixed;
+        top: 1rem;
+        left: 50%;
+        transform: translateX(-50%) translateY(-12px);
+        background: #1a1a1a;
+        border: 1.5px solid #FF6B18;
+        color: #fff;
+        padding: 6px 16px;
+        border-radius: 99px;
+        font-size: 12px;
+        font-weight: 600;
+        z-index: 99999;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity .3s, transform .3s;
+        white-space: nowrap;
+        max-width: 90vw;
+    }
+
+    #rpv-bookmark-toast.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+</style>
 
 <div id="rpv-outer-wrap">
 
@@ -98,7 +131,7 @@ $annotApiBase = $reviewId
         @if ($isReadOnly)
         <span style="background:#374151;color:#9CA3AF;font-size:10px;font-weight:700;
                      padding:2px 10px;border-radius:20px;border:1px solid #4B5563;
-                     letter-spacing:.5px;text-transform:uppercase;">
+                     letter-spacing:.5px;text-transform:uppercase;flex-shrink:0;">
             👁 View Only
         </span>
         @endif
@@ -120,6 +153,11 @@ $annotApiBase = $reviewId
             <button type="button" class="rpv-btn" data-rpv-mode="sepia" title="Sepia">📜</button>
             <button type="button" class="rpv-btn" data-rpv-mode="night" title="Night">🌙</button>
         </div>
+
+        {{-- ── TOMBOL TANDAI BACA (BOOKMARK) ── --}}
+        <button type="button" class="rpv-btn" id="rpv-bookmark-btn" title="Tandai halaman ini sebagai posisi baca">
+            🔖<span class="rpv-desktop-only" style="margin-left:3px;font-size:11px;"> Tandai</span>
+        </button>
 
         <button type="button" class="rpv-btn" id="rpv-search-btn" title="Cari teks (Ctrl+F)">
             <svg style="width:13px;height:13px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -167,11 +205,10 @@ $annotApiBase = $reviewId
             <canvas id="rpv-canvas"></canvas>
             <div id="rpv-text-layer"></div>
             <div id="rpv-annotation-layer"></div>
-            {{-- freehand canvas tetap ada untuk render anotasi reviewer, tapi pointer-events:none jika readOnly --}}
             <canvas id="rpv-freehand-canvas"></canvas>
         </div>
 
-        {{-- Panel anotasi: author bisa lihat list tapi tidak bisa hapus --}}
+        {{-- Panel anotasi --}}
         <div id="rpv-panel">
             <div class="rpv-panel-header">
                 <span class="rpv-panel-title">
@@ -184,8 +221,9 @@ $annotApiBase = $reviewId
             </div>
             @if (!$isReadOnly)
             <div class="rpv-panel-footer">
-                <button type="button" class="rpv-panel-clear" id="rpv-panel-clear">🗑 Hapus semua di halaman
-                    ini</button>
+                <button type="button" class="rpv-panel-clear" id="rpv-panel-clear">
+                    🗑 Hapus semua di halaman ini
+                </button>
             </div>
             @endif
         </div>
@@ -361,7 +399,6 @@ $annotApiBase = $reviewId
 
     @else
     {{-- ══ MINI BAR untuk Author (view-only) ══ --}}
-    {{-- Hanya tombol navigasi panel anotasi, tanpa tools edit --}}
     <div id="rpv-annot-bar" style="justify-content:space-between;">
         <div style="display:flex;align-items:center;gap:8px;padding:0 4px;">
             <span style="font-size:11px;color:#9CA3AF;">
@@ -385,24 +422,24 @@ $annotApiBase = $reviewId
             </button>
         </div>
     </div>
-    @endif {{-- end !$isReadOnly --}}
+    @endif
 
     {{-- ══ OVERLAYS ══ --}}
 
     <div id="rpv-tooltip">
         <div class="rpv-tip-text" id="rpv-tip-text"></div>
         <div class="rpv-tip-actions">
-            {{-- Tombol edit & hapus disembunyikan untuk author --}}
             @if (!$isReadOnly)
             <button type="button" id="rpv-tip-edit" style="flex:1;padding:.3rem;background:rgba(96,165,250,.12);border:1px solid #60a5fa;
-                       color:#60a5fa;border-radius:6px;font-size:11px;cursor:pointer;display:none;">✏️ Edit</button>
+                           color:#60a5fa;border-radius:6px;font-size:11px;cursor:pointer;display:none;">
+                ✏️ Edit
+            </button>
             <button type="button" class="rpv-tip-del" id="rpv-tip-del">🗑 Hapus</button>
             @endif
             <button type="button" class="rpv-tip-close" id="rpv-tip-close">✕ Tutup</button>
         </div>
     </div>
 
-    {{-- Popup comment & sticky hanya untuk reviewer --}}
     @if (!$isReadOnly)
     <div class="rpv-popup" id="rpv-comment-pop">
         <p class="rpv-popup-title">💬 Tambah Komentar</p>
@@ -476,13 +513,22 @@ $annotApiBase = $reviewId
             </div>
         </div>
 
+        {{-- Tandai baca di bottom sheet --}}
+        <div class="rpv-sheet-sec">
+            <span class="rpv-sheet-lbl">Tanda Baca</span>
+            <button type="button" id="rpv-sheet-bookmark-btn" style="width:100%;padding:.55rem;background:#2d2d2d;border:1px solid #3d3d3d;
+                           color:#d1d5db;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;">
+                🔖 Tandai Halaman Ini
+            </button>
+        </div>
+
         <div class="rpv-sheet-sec" style="display:flex;gap:.5rem;">
             <button type="button" id="rpv-sheet-fs" style="flex:1;padding:.55rem;background:#2d2d2d;border:1px solid #3d3d3d;
-                       color:#d1d5db;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;">
+                           color:#d1d5db;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;">
                 🔲 Fullscreen
             </button>
             <button type="button" id="rpv-sheet-search" style="flex:1;padding:.55rem;background:#2d2d2d;border:1px solid #3d3d3d;
-                       color:#d1d5db;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;">
+                           color:#d1d5db;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;">
                 🔍 Cari
             </button>
         </div>
@@ -497,6 +543,9 @@ $annotApiBase = $reviewId
 
     <div id="rpv-eraser-cursor"></div>
 
+    {{-- Bookmark toast --}}
+    <div id="rpv-bookmark-toast">🔖 <span id="rpv-bookmark-msg">Halaman ditandai</span></div>
+
     {{-- ══ SCRIPTS ══ --}}
     <script>
         window.RPV_CONFIG = {
@@ -504,7 +553,7 @@ $annotApiBase = $reviewId
             reviewId    : @json($reviewId),
             apiBase     : @json($annotApiBase),
             reviewerName: @json($reviewerName),
-            readOnly    : @json($isReadOnly),  // ← JS pakai ini untuk blok interaksi
+            readOnly    : @json($isReadOnly),
         };
     </script>
 
