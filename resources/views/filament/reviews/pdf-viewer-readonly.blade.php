@@ -1,1029 +1,530 @@
 {{--
 resources/views/filament/reviews/pdf-viewer-readonly.blade.php
-FIXED v3: no loading loop, stable retry, correct guard
+
+Tampilan read-only untuk author:
+- Hanya menampilkan PDF + anotasi reviewer yang sudah ada
+- Tidak ada toolbar anotasi, tidak ada tools
+- Hanya navigasi halaman & zoom
 --}}
+
 @php
-$reviewerName = $review->reviewer?->name ?? 'Reviewer';
-$pubTitle = $review->publicationVersion?->publication?->title ?? 'Naskah';
-$versionNo = $review->publicationVersion?->version_number ?? 1;
-$decision = $review->decision;
-$decisionLabel = match($decision) {
-'accepted' => ['Diterima ✅', '#059669', '#D1FAE5'],
-'revision_required'=> ['Perlu Revisi ✏️', '#D97706', '#FEF3C7'],
-'rejected' => ['Ditolak ❌', '#DC2626', '#FEE2E2'],
-default => ['Dalam Review ⏳', '#7C3AED', '#EDE9FE'],
-};
-$annotCount = \App\Models\PdfAnnotation::where('review_id', $review->id)->count();
+use App\Models\PublicationVersion;
+use App\Models\PdfAnnotation;
+
+$review = $this->record ?? null;
+$reviewId = $review?->id ?? null;
+$versionId = $review?->publication_version_id ?? null;
+
+$pdfUrl = null;
+$publicationTitle = null;
+
+if ($versionId) {
+$version = PublicationVersion::with('publication')->find($versionId);
+if ($version) {
+$publicationTitle = $version->publication?->title;
+$pdfUrl = $version->pdf_file_path
+? route('manuscripts.view', $version)
+: null;
+}
+}
+
+// Ambil semua anotasi reviewer untuk review ini
+$annotations = $reviewId
+? PdfAnnotation::where('review_id', $reviewId)->get()->toArray()
+: [];
+
+$annotApiBase = $reviewId
+? url("/api/review-annotations/{$reviewId}")
+: null;
 @endphp
 
+@if (!$pdfUrl)
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+                gap:1rem;text-align:center;padding:3rem 2rem;min-height:300px;">
+    <div style="font-size:2.5rem;">📄</div>
+    <p style="color:#6B7280;font-size:.875rem;margin:0;">PDF tidak tersedia.</p>
+</div>
+@else
+
+<link rel="stylesheet"
+    href="{{ asset('css/review-pdf-viewer.css') }}?v={{ filemtime(public_path('css/review-pdf-viewer.css')) }}">
+
+{{-- Override CSS: sembunyikan elemen yang tidak diperlukan author --}}
 <style>
-    @keyframes rpvr-spin {
-        to {
-            transform: rotate(360deg);
-        }
+    #rpv-ro-wrap #rpv-annot-bar,
+    #rpv-ro-wrap #rpv-sync,
+    #rpv-ro-wrap #rpv-eraser-cursor,
+    #rpv-ro-wrap #rpv-export-overlay,
+    #rpv-ro-wrap #rpv-mobile-fab,
+    #rpv-ro-wrap #rpv-panel-footer,
+    #rpv-ro-wrap .rpv-tip-del,
+    #rpv-ro-wrap .rpv-tip-edit {
+        display: none !important;
     }
 
-    #rpvr-canvas-wrap {
-        scroll-behavior: smooth;
+    #rpv-ro-wrap #rpv-panel .rpv-panel-footer {
+        display: none !important;
     }
 
-    #rpvr-text-layer span {
-        position: absolute;
-        white-space: pre;
-        color: transparent;
-        line-height: 1;
-        transform-origin: 0% 0%;
-        cursor: text;
-    }
-
-    .rpvr-search-hl {
-        position: absolute;
-        background: rgba(255, 215, 0, .45);
-        border-radius: 2px;
-        pointer-events: none;
-        z-index: 7;
-    }
-
-    .rpvr-search-hl.active-match {
-        background: rgba(255, 107, 24, .6);
-        outline: 2px solid #FF6B18;
-    }
-
-    #rpvr-panel-list::-webkit-scrollbar {
-        width: 4px;
-    }
-
-    #rpvr-panel-list::-webkit-scrollbar-thumb {
-        background: #3d3d3d;
-        border-radius: 99px;
-    }
-
-    .rpvr-panel-item {
-        display: flex;
-        align-items: flex-start;
-        gap: .5rem;
-        padding: .5rem;
-        background: #1a1a1a;
-        border-radius: 8px;
-        cursor: pointer;
-        border: 1px solid transparent;
-        transition: border-color .15s;
-    }
-
-    .rpvr-panel-item:hover {
-        border-color: #3d3d3d;
-        background: #1f1f1f;
-    }
-
-    .rpvr-panel-item.active-item {
-        border-color: #FF6B18;
-        background: rgba(255, 107, 24, .08);
-    }
-
-    .rpvr-sticky-note {
-        position: absolute;
-        z-index: 9;
-        min-width: 150px;
-        max-width: 210px;
-        border-radius: 8px;
-        overflow: hidden;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, .4);
-        pointer-events: auto;
-        cursor: pointer;
-    }
-
-    .rpvr-sticky-note[data-color="yellow"] {
-        background: #FEF9C3;
-        border: 1.5px solid #FDE047;
-    }
-
-    .rpvr-sticky-note[data-color="green"] {
-        background: #DCFCE7;
-        border: 1.5px solid #86EFAC;
-    }
-
-    .rpvr-sticky-note[data-color="blue"] {
-        background: #DBEAFE;
-        border: 1.5px solid #93C5FD;
-    }
-
-    .rpvr-sticky-note[data-color="orange"] {
-        background: #FFEDD5;
-        border: 1.5px solid #FDBA74;
-    }
-
-    .rpvr-sticky-note[data-color="pink"] {
-        background: #FCE7F3;
-        border: 1.5px solid #F9A8D4;
-    }
-
-    .rpvr-sticky-note[data-color="purple"] {
-        background: #EDE9FE;
-        border: 1.5px solid #C4B5FD;
-    }
-
-    .rpvr-sticky-note[data-color="red"] {
-        background: #FEE2E2;
-        border: 1.5px solid #FCA5A5;
-    }
-
-    .rpvr-sticky-note[data-color="cyan"] {
-        background: #CFFAFE;
-        border: 1.5px solid #67E8F9;
-    }
-
-    .rpvr-sticky-note[data-color="black"] {
-        background: #1F2937;
-        border: 1.5px solid #374151;
-    }
-
-    .rpvr-sticky-note[data-color="white"] {
-        background: #F9FAFB;
-        border: 1.5px solid #D1D5DB;
-    }
-
-    .rpvr-sticky-note .rpvr-sn-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: .25rem .4rem;
-        background: rgba(0, 0, 0, .1);
-        font-size: 11px;
-        font-weight: 700;
-        color: rgba(0, 0, 0, .7);
-    }
-
-    .rpvr-sticky-note[data-color="black"] .rpvr-sn-header {
-        color: #9CA3AF;
-    }
-
-    .rpvr-sticky-note .rpvr-sn-body {
-        padding: .4rem .5rem;
-        font-size: 12px;
-        color: rgba(0, 0, 0, .85);
-        word-break: break-word;
-        white-space: pre-wrap;
-    }
-
-    .rpvr-sticky-note[data-color="black"] .rpvr-sn-body {
-        color: #D1D5DB;
+    /* Toolbar read-only: lebih compact */
+    #rpv-ro-wrap #rpv-toolbar {
+        gap: 6px;
     }
 </style>
 
-<div id="rpvr-wrap" style="background:#1A1A1A;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;
-            height:85vh;min-height:600px;font-family:ui-sans-serif,system-ui,sans-serif;">
+<div id="rpv-ro-wrap">
 
-    {{-- META HEADER --}}
-    <div style="background:#111;border-bottom:1px solid #2d2d2d;padding:.75rem 1rem;
-                display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;flex-shrink:0;">
-        <div style="display:flex;align-items:center;gap:.5rem;background:#1f1f1f;
-                    border:1px solid #3d3d3d;border-radius:8px;padding:.35rem .75rem;">
-            <div style="width:28px;height:28px;background:linear-gradient(135deg,#FF6B18,#e55d10);
-                        border-radius:50%;display:flex;align-items:center;justify-content:center;
-                        font-size:12px;font-weight:700;color:#fff;flex-shrink:0;">
-                {{ strtoupper(substr($reviewerName, 0, 1)) }}
-            </div>
-            <div>
-                <div style="font-size:10px;color:#6b7280;line-height:1;">Direview oleh</div>
-                <div style="font-size:12px;font-weight:700;color:#fff;line-height:1.3;">{{ $reviewerName }}</div>
-            </div>
-        </div>
-        <div style="background:#1f1f1f;border:1px solid #3d3d3d;border-radius:8px;padding:.35rem .75rem;">
-            <div style="font-size:10px;color:#6b7280;line-height:1;">Versi</div>
-            <div style="font-size:12px;font-weight:700;color:#a78bfa;line-height:1.3;">v{{ $versionNo }}</div>
-        </div>
-        <div style="background:{{ $decisionLabel[2] }};border:1.5px solid {{ $decisionLabel[1] }};
-                    border-radius:8px;padding:.35rem .75rem;">
-            <div style="font-size:10px;color:{{ $decisionLabel[1] }};font-weight:700;line-height:1;">Keputusan</div>
-            <div style="font-size:12px;font-weight:700;color:{{ $decisionLabel[1] }};line-height:1.3;">{{
-                $decisionLabel[0] }}</div>
-        </div>
-        <div style="background:#1f1f1f;border:1px solid #3d3d3d;border-radius:8px;padding:.35rem .75rem;">
-            <div style="font-size:10px;color:#6b7280;line-height:1;">Total Anotasi</div>
-            <div style="font-size:12px;font-weight:700;color:#FF6B18;line-height:1.3;">{{ $annotCount }} catatan</div>
-        </div>
-        <div style="margin-left:auto;display:flex;align-items:center;gap:.4rem;
-                    background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.3);
-                    border-radius:8px;padding:.35rem .75rem;">
-            <svg style="width:14px;height:14px;flex-shrink:0;" fill="none" stroke="#60a5fa" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            </svg>
-            <span style="font-size:11px;font-weight:700;color:#60a5fa;">Mode Lihat Saja</span>
-        </div>
-    </div>
+    {{-- ══ TOOLBAR (navigasi + zoom saja) ══ --}}
+    <div id="rpv-toolbar">
+        <span class="rpv-title" title="{{ $publicationTitle }}">
+            📄 {{ Str::limit($publicationTitle ?? 'Naskah', 38) }}
+        </span>
 
-    {{-- TOOLBAR --}}
-    <div id="rpvr-toolbar" style="background:#262626;border-bottom:1px solid #3d3d3d;padding:.4rem .75rem;
-                display:flex;align-items:center;gap:.5rem;flex-shrink:0;flex-wrap:wrap;">
-        <div style="display:flex;align-items:center;gap:.35rem;background:#333;border-radius:8px;padding:.3rem .5rem;">
-            <button id="rpvr-prev"
-                style="width:28px;height:28px;border-radius:6px;border:none;background:#4d4d4d;color:#fff;cursor:pointer;font-size:14px;">‹</button>
-            <input type="number" id="rpvr-page-input"
-                style="width:38px;text-align:center;background:#1a1a1a;border:1.5px solid #4d4d4d;color:#fff;border-radius:6px;font-size:12px;font-weight:700;padding:.2rem .3rem;outline:none;"
-                value="1" min="1">
-            <span style="color:#555;font-size:11px;">/</span>
-            <span id="rpvr-page-total" style="color:#9ca3af;font-size:12px;font-weight:600;">—</span>
-            <button id="rpvr-next"
-                style="width:28px;height:28px;border-radius:6px;border:none;background:#4d4d4d;color:#fff;cursor:pointer;font-size:14px;">›</button>
+        <span style="background:#374151;color:#9CA3AF;font-size:10px;font-weight:700;
+                     padding:2px 10px;border-radius:20px;border:1px solid #4B5563;
+                     letter-spacing:.5px;text-transform:uppercase;flex-shrink:0;">
+            👁 Anotasi Reviewer
+        </span>
+
+        <div class="rpv-page-group">
+            <button type="button" class="rpv-btn" id="rpv-ro-prev">‹</button>
+            <input type="number" id="rpv-ro-page-input" class="rpv-page-input" value="1" min="1">
+            <span class="rpv-page-sep">/</span>
+            <span class="rpv-page-total" id="rpv-ro-page-total">—</span>
+            <button type="button" class="rpv-btn" id="rpv-ro-next">›</button>
         </div>
-        <button id="rpvr-zoom-out"
-            style="padding:.3rem .6rem;border-radius:6px;border:none;background:#3d3d3d;color:#d1d5db;cursor:pointer;font-size:14px;font-weight:700;">−</button>
-        <span id="rpvr-zoom-val"
-            style="color:#d1d5db;font-size:11px;font-weight:700;min-width:38px;text-align:center;">100%</span>
-        <button id="rpvr-zoom-in"
-            style="padding:.3rem .6rem;border-radius:6px;border:none;background:#3d3d3d;color:#d1d5db;cursor:pointer;font-size:14px;font-weight:700;">+</button>
-        <button id="rpvr-search-btn"
-            style="display:flex;align-items:center;gap:.3rem;padding:.3rem .65rem;border-radius:6px;border:none;background:#3d3d3d;color:#d1d5db;cursor:pointer;font-size:11px;font-weight:600;">
-            <svg style="width:13px;height:13px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+
+        <button type="button" class="rpv-btn rpv-desktop-only" id="rpv-ro-zoom-out">−</button>
+        <span class="rpv-zoom-val rpv-desktop-only" id="rpv-ro-zoom-val">100%</span>
+        <button type="button" class="rpv-btn rpv-desktop-only" id="rpv-ro-zoom-in">+</button>
+
+        {{-- Tombol panel anotasi --}}
+        <button type="button" class="rpv-btn" id="rpv-ro-panel-btn" style="position:relative;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;">
+                <line x1="8" y1="6" x2="21" y2="6" />
+                <line x1="8" y1="12" x2="21" y2="12" />
+                <line x1="8" y1="18" x2="21" y2="18" />
+                <circle cx="3" cy="6" r="1" fill="currentColor" />
+                <circle cx="3" cy="12" r="1" fill="currentColor" />
+                <circle cx="3" cy="18" r="1" fill="currentColor" />
             </svg>
-            Cari
+            <span class="rpv-desktop-only">Anotasi</span>
+            <span class="rpv-badge" id="rpv-ro-badge">0</span>
         </button>
-        <button id="rpvr-panel-btn"
-            style="position:relative;display:flex;align-items:center;gap:.3rem;padding:.3rem .65rem;border-radius:6px;border:none;background:#3d3d3d;color:#d1d5db;cursor:pointer;font-size:11px;font-weight:600;">
-            <svg style="width:13px;height:13px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <line x1="8" y1="6" x2="21" y2="6" stroke-width="2" />
-                <line x1="8" y1="12" x2="21" y2="12" stroke-width="2" />
-                <line x1="8" y1="18" x2="21" y2="18" stroke-width="2" />
-                <circle cx="3" cy="6" r="1.5" fill="currentColor" />
-                <circle cx="3" cy="12" r="1.5" fill="currentColor" />
-                <circle cx="3" cy="18" r="1.5" fill="currentColor" />
-            </svg>
-            Daftar Anotasi
-            <span id="rpvr-badge" style="display:none;background:#FF6B18;color:#fff;font-size:9px;font-weight:700;
-                         min-width:16px;height:16px;border-radius:99px;
-                         align-items:center;justify-content:center;padding:0 3px;">0</span>
-        </button>
-        <div style="flex:1;"></div>
-        <span id="rpvr-progress-txt" style="font-size:10px;color:#4b5563;white-space:nowrap;"></span>
     </div>
 
-    {{-- Progress bar --}}
-    <div style="height:2px;background:#333;flex-shrink:0;">
-        <div id="rpvr-progress-bar"
-            style="height:100%;background:linear-gradient(90deg,#FF6B18,#e55d10);width:0%;transition:width .3s;"></div>
+    <div class="rpv-progress-track">
+        <div class="rpv-progress-fill" id="rpv-ro-progress"></div>
     </div>
 
-    {{-- MAIN AREA --}}
-    <div style="flex:1;display:flex;overflow:hidden;position:relative;">
+    {{-- ══ CANVAS AREA ══ --}}
+    <div id="rpv-canvas-wrap">
 
-        {{-- Canvas area --}}
-        <div id="rpvr-canvas-wrap" style="flex:1;overflow:auto;display:flex;justify-content:center;
-                    align-items:flex-start;background:#404040;position:relative;">
-
-            {{-- Loading --}}
-            <div id="rpvr-loading" style="position:absolute;inset:0;display:flex;flex-direction:column;
-                        align-items:center;justify-content:center;gap:.75rem;background:#1a1a1a;z-index:20;">
-                <div style="width:36px;height:36px;border:3px solid #333;border-top-color:#FF6B18;
-                            border-radius:50%;animation:rpvr-spin .8s linear infinite;"></div>
-                <p style="color:#fff;font-size:13px;font-weight:600;margin:0;">Memuat dokumen...</p>
-                <p id="rpvr-load-sub" style="color:#6b7280;font-size:11px;margin:0;">Harap tunggu sebentar</p>
-                <button id="rpvr-retry-btn" type="button" onclick="window.rpvrRetry()" style="display:none;margin-top:.5rem;padding:.4rem .875rem;background:#FF6B18;color:#fff;
-                           border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">
-                    🔄 Muat Ulang Dokumen
-                </button>
-            </div>
-
-            {{-- Stage --}}
-            <div id="rpvr-stage"
-                style="position:relative;display:none;margin:1rem;box-shadow:0 8px 32px rgba(0,0,0,.5);">
-                <canvas id="rpvr-canvas"></canvas>
-                <div id="rpvr-text-layer"
-                    style="position:absolute;inset:0;overflow:hidden;pointer-events:none;user-select:text;-webkit-user-select:text;">
-                </div>
-                <div id="rpvr-annotation-layer"
-                    style="position:absolute;inset:0;pointer-events:none;overflow:visible;z-index:5;"></div>
-                <canvas id="rpvr-freehand-canvas"
-                    style="position:absolute;inset:0;pointer-events:none;z-index:10;touch-action:none;"></canvas>
-            </div>
+        <div id="rpv-loading">
+            <div class="rpv-spinner"></div>
+            <p style="color:#fff;font-size:13px;font-weight:600;margin:0;">Memuat dokumen...</p>
+            <p style="color:#6b7280;font-size:11px;margin:0;">Harap tunggu sebentar</p>
         </div>
 
-        {{-- ANNOTATION PANEL --}}
-        <div id="rpvr-panel" style="width:0;overflow:hidden;background:#111;border-left:1px solid #2d2d2d;
-                    display:flex;flex-direction:column;transition:width .25s ease;flex-shrink:0;">
-            <div style="padding:.75rem;border-bottom:1px solid #2d2d2d;display:flex;
-                        align-items:center;justify-content:space-between;flex-shrink:0;">
-                <span style="font-size:13px;font-weight:700;color:#fff;">📝 Anotasi Reviewer</span>
-                <button id="rpvr-panel-close"
-                    style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:16px;line-height:1;padding:2px 4px;">✕</button>
+        <div id="rpv-stage">
+            <canvas id="rpv-canvas"></canvas>
+            <div id="rpv-text-layer"></div>
+            <div id="rpv-annotation-layer"></div>
+            <canvas id="rpv-freehand-canvas" style="pointer-events:none;position:absolute;inset:0;z-index:10;"></canvas>
+        </div>
+
+        {{-- Panel anotasi — view only, tanpa tombol hapus --}}
+        <div id="rpv-panel">
+            <div class="rpv-panel-header">
+                <span class="rpv-panel-title">👁 Anotasi Reviewer</span>
+                <button type="button" class="rpv-panel-close" id="rpv-ro-panel-close">✕</button>
             </div>
-            <div style="padding:.5rem .75rem;border-bottom:1px solid #1f1f1f;flex-shrink:0;">
-                <label style="font-size:10px;color:#6b7280;display:block;margin-bottom:.25rem;">Filter Halaman</label>
-                <select id="rpvr-panel-filter"
-                    style="width:100%;background:#1f1f1f;border:1.5px solid #3d3d3d;color:#d1d5db;border-radius:6px;font-size:11px;padding:.25rem .4rem;outline:none;cursor:pointer;">
-                    <option value="all">Semua halaman</option>
-                    <option value="current">Halaman ini saja</option>
-                </select>
+            <div class="rpv-panel-list" id="rpv-ro-panel-list">
+                <div class="rpv-panel-empty">Belum ada anotasi.</div>
             </div>
-            <div id="rpvr-panel-list"
-                style="flex:1;overflow-y:auto;padding:.4rem;display:flex;flex-direction:column;gap:3px;">
-                <div style="text-align:center;color:#4b5563;font-size:12px;padding:1.5rem;">Memuat anotasi...</div>
-            </div>
-            <div id="rpvr-panel-footer"
-                style="padding:.6rem .75rem;border-top:1px solid #2d2d2d;display:flex;gap:.5rem;flex-wrap:wrap;flex-shrink:0;">
-                <div style="flex:1;background:#1f1f1f;border-radius:6px;padding:.4rem .5rem;text-align:center;">
-                    <div id="rpvr-stat-total" style="font-size:16px;font-weight:700;color:#FF6B18;">0</div>
-                    <div style="font-size:9px;color:#6b7280;">Total</div>
-                </div>
-                <div style="flex:1;background:#1f1f1f;border-radius:6px;padding:.4rem .5rem;text-align:center;">
-                    <div id="rpvr-stat-page" style="font-size:16px;font-weight:700;color:#60a5fa;">0</div>
-                    <div style="font-size:9px;color:#6b7280;">Di halaman ini</div>
-                </div>
-                <div style="flex:1;background:#1f1f1f;border-radius:6px;padding:.4rem .5rem;text-align:center;">
-                    <div id="rpvr-stat-pages" style="font-size:16px;font-weight:700;color:#4ade80;">0</div>
-                    <div style="font-size:9px;color:#6b7280;">Hal. berisi</div>
-                </div>
-            </div>
+            {{-- Sengaja tidak ada panel-footer (hapus semua) --}}
+        </div>
+
+    </div>
+
+    {{-- Tooltip view-only: hanya tutup, tanpa hapus/edit --}}
+    <div id="rpv-tooltip">
+        <div class="rpv-tip-text" id="rpv-ro-tip-text"></div>
+        <div class="rpv-tip-actions">
+            <button type="button" class="rpv-tip-close" id="rpv-ro-tip-close">✕ Tutup</button>
         </div>
     </div>
 
-    {{-- SEARCH OVERLAY --}}
-    <div id="rpvr-search" style="position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.5);
-                display:none;align-items:flex-start;justify-content:center;padding-top:80px;">
-        <div style="background:#1a1a1a;border:1.5px solid #3d3d3d;border-radius:14px;
-                    padding:.875rem;width:420px;max-width:calc(100vw - 2rem);
-                    box-shadow:0 16px 48px rgba(0,0,0,.7);">
-            <div style="display:flex;gap:.4rem;">
-                <input type="text" id="rpvr-search-input"
-                    style="flex:1;background:#2d2d2d;border:1.5px solid #3d3d3d;color:#fff;border-radius:8px;padding:.45rem .7rem;font-size:13px;outline:none;"
-                    placeholder="Cari kata atau kalimat...">
-                <button id="rpvr-sprev"
-                    style="width:32px;height:32px;background:#2d2d2d;border:1px solid #3d3d3d;border-radius:7px;color:#9ca3af;cursor:pointer;font-size:13px;">↑</button>
-                <button id="rpvr-snext"
-                    style="width:32px;height:32px;background:#2d2d2d;border:1px solid #3d3d3d;border-radius:7px;color:#9ca3af;cursor:pointer;font-size:13px;">↓</button>
-                <button id="rpvr-sclose"
-                    style="width:32px;height:32px;background:#2d2d2d;border:1px solid #3d3d3d;border-radius:7px;color:#9ca3af;cursor:pointer;font-size:13px;">✕</button>
-            </div>
-            <div id="rpvr-search-status" style="font-size:11px;color:#6b7280;margin-top:.4rem;">Ketik untuk mencari...
-            </div>
-            <div id="rpvr-search-results"
-                style="margin-top:.5rem;max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;">
-            </div>
-        </div>
-    </div>
+</div>{{-- /#rpv-ro-wrap --}}
 
-    {{-- TOOLTIP --}}
-    <div id="rpvr-tooltip" style="position:fixed;z-index:9998;background:#1a1a1a;border:1.5px solid #3d3d3d;
-                border-radius:10px;padding:.6rem .8rem;min-width:200px;max-width:320px;
-                box-shadow:0 8px 24px rgba(0,0,0,.5);display:none;">
-        <div id="rpvr-tip-reviewer" style="font-size:10px;color:#FF6B18;font-weight:700;margin-bottom:.25rem;"></div>
-        <div id="rpvr-tip-text" style="font-size:12px;color:#d1d5db;word-break:break-word;margin-bottom:.4rem;"></div>
-        <button id="rpvr-tip-close"
-            style="padding:.25rem .6rem;background:#2d2d2d;border:1px solid #3d3d3d;color:#9ca3af;border-radius:6px;font-size:11px;cursor:pointer;width:100%;">✕
-            Tutup</button>
-    </div>
-</div>
-
-{{-- CONFIG --}}
+{{-- ══ CONFIG & SCRIPT ══ --}}
 <script>
-    window.RPVR_CONFIG = {
-    pdfUrl  : @json($pdfUrl),
-    apiUrl  : @json($apiUrl),
-    reviewId: @json($review->id),
-    reviewer: @json($reviewerName),
-};
+    window.RPV_RO_CONFIG = {
+        pdfUrl     : @json($pdfUrl),
+        reviewId   : @json($reviewId),
+        apiBase    : @json($annotApiBase),
+        annotations: @json($annotations),  {{-- anotasi di-pass langsung dari server --}}
+    };
 </script>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" crossorigin="anonymous"></script>
 <script>
-    /* =====================================================================
-   RPVR READONLY VIEWER — v3 (no-loop fix)
-   FIX: guard by reviewId; retry tidak memuat script baru,
-        cukup panggil rpvrInit() langsung; baseScale tidak di-reset
-        secara salah; retry-button timeout hanya berjalan sekali.
-   ===================================================================== */
-(function () {
-    'use strict';
+    (function () {
+    var WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    var CFG    = window.RPV_RO_CONFIG;
+    if (!CFG || !CFG.pdfUrl) return;
 
-    var CFG = window.RPVR_CONFIG;
-    if (!CFG || !CFG.pdfUrl) { console.error('[RPVR] config missing'); return; }
+    pdfjsLib.GlobalWorkerOptions.workerSrc = WORKER;
+    pdfjsLib.verbosity = 0;
 
-    /* ── Guard: satu instance per reviewId ────────────────────────── */
-    var GUARD_KEY = '_rpvrInit_' + CFG.reviewId;
-    if (window[GUARD_KEY]) { console.log('[RPVR] already initialised'); return; }
-    window[GUARD_KEY] = true;
-
-    var PDFJS_CDN  = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-    var WORKER_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
-    /* ── Retry button: tampil setelah 10 detik jika masih loading ─── */
-    var retryTimer = setTimeout(function () {
-        var stage = document.getElementById('rpvr-stage');
-        var btn   = document.getElementById('rpvr-retry-btn');
-        var sub   = document.getElementById('rpvr-load-sub');
-        /* Hanya tampilkan jika PDF belum berhasil dimuat */
-        if (stage && stage.style.display === 'none' && btn) {
-            btn.style.display = 'block';
-            if (sub) sub.textContent = 'Memakan waktu lebih lama dari biasanya...';
-        }
-    }, 10000);
-
-    /* ── Expose retry ke window (dipanggil tombol onclick) ─────────── */
-    window.rpvrRetry = function () {
-        clearTimeout(retryTimer);
-        /* Reset guard agar rpvrInit bisa jalan ulang */
-        window[GUARD_KEY] = false;
-
-        /* Reset tampilan loading */
-        var loading = document.getElementById('rpvr-loading');
-        if (loading) {
-            loading.style.display = '';
-            loading.innerHTML =
-                '<div style="width:36px;height:36px;border:3px solid #333;border-top-color:#FF6B18;'
-                + 'border-radius:50%;animation:rpvr-spin .8s linear infinite;"></div>'
-                + '<p style="color:#fff;font-size:13px;font-weight:600;margin:0;">Memuat ulang...</p>'
-                + '<p id="rpvr-load-sub" style="color:#6b7280;font-size:11px;margin:0;">Harap tunggu sebentar</p>';
-        }
-        var stage = document.getElementById('rpvr-stage');
-        if (stage) stage.style.display = 'none';
-
-        /* Panggil init ulang — TIDAK memuat script baru */
-        rpvrInit();
+    /* ── Color map ── */
+    var COLORS = {
+        yellow:'#FFD700', green:'#4ADE80', red:'#EF4444', blue:'#60A5FA',
+        orange:'#FF6B18', black:'#111111', white:'#FFFFFF',
+        pink:'#F472B6', purple:'#A78BFA', cyan:'#22D3EE'
     };
+    function hex(n) { return COLORS[n] || '#FFD700'; }
+    function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>'); }
 
-    /* ── Muat pdf.js lalu langsung panggil rpvrInit ─────────────────
-       Tidak ada loop polling. onload = library siap = langsung main.
-    ─────────────────────────────────────────────────────────────────── */
-    function rpvrBoot() {
-        if (typeof pdfjsLib !== 'undefined') {
-            pdfjsLib.GlobalWorkerOptions.workerSrc = WORKER_CDN;
-            pdfjsLib.verbosity = 0;
-            rpvrInit();
-        } else {
-            var s = document.createElement('script');
-            s.src = PDFJS_CDN;
-            s.crossOrigin = 'anonymous';
-            s.onload = function () {
-                pdfjsLib.GlobalWorkerOptions.workerSrc = WORKER_CDN;
-                pdfjsLib.verbosity = 0;
-                rpvrInit();
-            };
-            s.onerror = function () {
-                showFatalError('Gagal memuat library PDF. Periksa koneksi internet.');
-            };
-            document.head.appendChild(s);
-        }
-    }
+    /* ── DOM ── */
+    var wrap       = document.getElementById('rpv-canvas-wrap');
+    var stage      = document.getElementById('rpv-stage');
+    var mainCanvas = document.getElementById('rpv-canvas');
+    var ctx        = mainCanvas.getContext('2d');
+    var textLayer  = document.getElementById('rpv-text-layer');
+    var annotLayer = document.getElementById('rpv-annotation-layer');
+    var freeCanvas = document.getElementById('rpv-freehand-canvas');
+    var freeCtx    = freeCanvas ? freeCanvas.getContext('2d') : null;
+    var loadingEl  = document.getElementById('rpv-loading');
+    var tooltip    = document.getElementById('rpv-tooltip');
 
-    function showFatalError(msg) {
-        var loading = document.getElementById('rpvr-loading');
-        if (!loading) return;
-        loading.innerHTML =
-            '<div style="font-size:2rem">⚠️</div>'
-            + '<p style="color:#ef4444;font-weight:700;font-size:13px;margin:0;">' + msg + '</p>'
-            + '<button type="button" onclick="window.rpvrRetry()" style="margin-top:.75rem;padding:.4rem .875rem;'
-            + 'background:#FF6B18;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">🔄 Coba Lagi</button>';
-    }
+    /* ── State ── */
+    var annots = [];
+    var pdfDoc = null, pageNum = 1, pageRendering = false, pendingPage = null;
+    var baseScale = 1, zoomFactor = 1, needsRecompute = true;
+    var DPR = window.devicePixelRatio || 1;
+    var ZOOM_MIN = 0.5, ZOOM_MAX = 4, ZOOM_STEP = 0.25;
 
-    /* ════════════════════════════════════════════════════════════════
-       rpvrInit — inti viewer, dipanggil setelah pdf.js siap.
-       Fungsi ini boleh dipanggil ulang oleh rpvrRetry (guard di atas
-       sudah di-reset sebelum pemanggilan ulang).
-    ════════════════════════════════════════════════════════════════ */
-    function rpvrInit() {
-        /* Guard ulang di sini untuk keamanan */
-        if (window[GUARD_KEY]) { console.log('[RPVR] already running'); return; }
-        window[GUARD_KEY] = true;
-
-        /* ── Colors ── */
-        var COLORS = {
-            yellow:'#FFD700', green:'#4ADE80', red:'#EF4444', blue:'#60A5FA',
-            orange:'#FF6B18', black:'#111111', white:'#FFFFFF',
-            pink:'#F472B6',   purple:'#A78BFA', cyan:'#22D3EE'
-        };
-        function hex(n) { return COLORS[n] || '#FFD700'; }
-
-        /* ── State ── */
-        var pdfDoc = null, pageNum = 1, pageRendering = false, pendingPage = null;
-        var baseScale = 1.0, zoomFactor = 1.0;
-        var ZOOM_MIN = 0.5, ZOOM_MAX = 4.0, ZOOM_STEP = 0.25;
-        var DPR = window.devicePixelRatio || 1;
-        var annots = [], panelOpen = false, filterMode = 'all';
-        var searchResults = [], searchIndex = -1, searchHLs = [], searchQuery = '';
-        var searchDebounce = null, activeAnnotId = null;
-        var baseScaleComputed = false; /* FIX: hanya hitung baseScale sekali per viewport */
-
-        /* ── DOM refs ── */
-        var wrap       = document.getElementById('rpvr-canvas-wrap');
-        var stage      = document.getElementById('rpvr-stage');
-        var canvas     = document.getElementById('rpvr-canvas');
-        var ctx        = canvas.getContext('2d');
-        var textLayer  = document.getElementById('rpvr-text-layer');
-        var annotLayer = document.getElementById('rpvr-annotation-layer');
-        var freeCanvas = document.getElementById('rpvr-freehand-canvas');
-        var freeCtx    = freeCanvas ? freeCanvas.getContext('2d') : null;
-        var loadingEl  = document.getElementById('rpvr-loading');
-        var loadSub    = document.getElementById('rpvr-load-sub');
-        var tooltip    = document.getElementById('rpvr-tooltip');
-        var panel      = document.getElementById('rpvr-panel');
-
-        /* ── Utils ── */
-        function esc(s) {
-            return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;')
-                .replace(/>/g,'&gt;').replace(/\n/g,'<br>');
-        }
-        function syncFC() {
-            if (!freeCanvas) return;
-            var w = stage.offsetWidth, h = stage.offsetHeight;
-            if (freeCanvas.width !== w || freeCanvas.height !== h) {
-                freeCanvas.width = w; freeCanvas.height = h;
+    /* ── Normalize anotasi dari server ── */
+    function normalize(rows) {
+        return rows.map(function (a) {
+            if (!a.rect && a.rect_x != null) {
+                a.rect = { x: +a.rect_x, y: +a.rect_y, w: +a.rect_w, h: +a.rect_h };
             }
-            freeCanvas.style.width = w + 'px'; freeCanvas.style.height = h + 'px';
-        }
-        function $id(id) { return document.getElementById(id); }
-
-        /* ── Load annotations ── */
-        async function loadAnnotations() {
-            try {
-                var r = await fetch(CFG.apiUrl, {
-                    credentials: 'same-origin',
-                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
-                });
-                if (!r.ok) throw new Error(r.status);
-                var j = await r.json();
-                var rows = Array.isArray(j.data) ? j.data : [];
-                annots = rows.map(function (a) {
-                    if (!a.rect && a.rect_x != null) {
-                        a.rect = { x: +a.rect_x, y: +a.rect_y, w: +a.rect_w, h: +a.rect_h };
-                    }
-                    if (a.type === 'shape' && (a.shape_type === 'arrow' || a.shape_type === 'line')) {
-                        if (a.arrow_x1 == null && Array.isArray(a.path_points) && a.path_points.length >= 2) {
-                            a.arrow_x1 = +a.path_points[0][0]; a.arrow_y1 = +a.path_points[0][1];
-                            a.arrow_x2 = +a.path_points[1][0]; a.arrow_y2 = +a.path_points[1][1];
-                        }
-                    }
-                    return a;
-                });
-                console.log('[RPVR] loaded', annots.length, 'annotations');
-                renderAnnotations();
-                buildPanel();
-                updateBadge();
-                updateStats();
-            } catch (e) {
-                console.error('[RPVR] load annotations:', e);
-            }
-        }
-
-        /* ── Render annotations ── */
-        function renderAnnotations() {
-            annotLayer.innerHTML = '';
-            annotLayer.style.pointerEvents = 'none';
-            syncFC();
-            if (freeCtx) freeCtx.clearRect(0, 0, freeCanvas.width, freeCanvas.height);
-            stage.querySelectorAll('.rpvr-sticky-note').forEach(function (e) { e.remove(); });
-            var scale = baseScale * zoomFactor;
-            annots.filter(function (a) { return a.page === pageNum; }).forEach(function (a) {
-                if (a.type === 'highlight' || a.type === 'comment') rHL(a, scale);
-                else if (a.type === 'underline')     rUL(a, scale);
-                else if (a.type === 'strikethrough') rST(a, scale);
-                else if (a.type === 'freehand')      rFH(a, scale);
-                else if (a.type === 'shape')         rSH(a, scale);
-                else if (a.type === 'sticky')        rSticky(a, scale);
-            });
-            updateStats();
-            if (searchResults.length > 0 && searchQuery) applySearchHL();
-        }
-
-        /* ── Render helpers ── */
-        function rHL(a, s) {
-            if (!a.rect) return;
-            var el = document.createElement('div'), isAct = activeAnnotId == a.id;
-            el.dataset.annotId = String(a.id);
-            el.style.cssText = 'position:absolute;left:' + (a.rect.x * s) + 'px;top:' + (a.rect.y * s) + 'px;'
-                + 'width:' + (a.rect.w * s) + 'px;height:' + (a.rect.h * s) + 'px;background:' + hex(a.color)
-                + ';opacity:' + (isAct ? .75 : .38) + ';border-radius:2px;pointer-events:auto;cursor:pointer;z-index:5;'
-                + 'outline:' + (isAct ? '2px solid #FF6B18' : 'none') + ';transition:opacity .15s;';
-            if (a.type === 'comment' && a.comment) {
-                var dot = document.createElement('span');
-                dot.style.cssText = 'position:absolute;top:-4px;right:-4px;width:8px;height:8px;background:#60A5FA;border-radius:50%;pointer-events:none;';
-                el.appendChild(dot);
-            }
-            attachClick(el, a); annotLayer.appendChild(el);
-        }
-        function rUL(a, s) {
-            if (!a.rect) return;
-            var el = document.createElement('div'); el.dataset.annotId = String(a.id);
-            var t = Math.max(1.5, 2 * s);
-            el.style.cssText = 'position:absolute;left:' + (a.rect.x * s) + 'px;top:' + ((a.rect.y + a.rect.h) * s - t) + 'px;'
-                + 'width:' + (a.rect.w * s) + 'px;height:' + t + 'px;background:' + hex(a.color)
-                + ';pointer-events:auto;cursor:pointer;z-index:5;opacity:.9;border-radius:1px;';
-            attachClick(el, a); annotLayer.appendChild(el);
-        }
-        function rST(a, s) {
-            if (!a.rect) return;
-            var el = document.createElement('div'); el.dataset.annotId = String(a.id);
-            var t = Math.max(1.5, 2 * s);
-            var top = a.rect.y * s + a.rect.h * s * 0.62 - t / 2;
-            el.style.cssText = 'position:absolute;left:' + (a.rect.x * s) + 'px;top:' + top + 'px;'
-                + 'width:' + (a.rect.w * s) + 'px;height:' + t + 'px;background:' + hex(a.color)
-                + ';pointer-events:auto;cursor:pointer;z-index:5;opacity:.9;border-radius:1px;';
-            attachClick(el, a); annotLayer.appendChild(el);
-        }
-        function rFH(a, s) {
-            if (!a.path_points || !a.path_points.length || !freeCtx) return;
-            var pts = a.path_points;
-            freeCtx.save(); freeCtx.strokeStyle = hex(a.color); freeCtx.lineWidth = (a.stroke_width || 2) * s;
-            freeCtx.lineCap = 'round'; freeCtx.lineJoin = 'round'; freeCtx.globalAlpha = .92;
-            freeCtx.beginPath(); freeCtx.moveTo(pts[0][0] * s, pts[0][1] * s);
-            for (var i = 1; i < pts.length; i++) freeCtx.lineTo(pts[i][0] * s, pts[i][1] * s);
-            freeCtx.stroke(); freeCtx.restore();
-            if (a.rect && (a.rect.w > 0 || a.rect.h > 0)) {
-                var hit = document.createElement('div'); hit.dataset.annotId = String(a.id);
-                hit.style.cssText = 'position:absolute;left:' + ((a.rect.x - 8) * s) + 'px;top:' + ((a.rect.y - 8) * s) + 'px;'
-                    + 'width:' + ((a.rect.w + 16) * s) + 'px;height:' + ((a.rect.h + 16) * s) + 'px;'
-                    + 'background:transparent;pointer-events:auto;cursor:pointer;z-index:6;';
-                attachClick(hit, a); annotLayer.appendChild(hit);
-            }
-        }
-        function rSH(a, s) {
-            if (!a.rect) return;
-            var col = hex(a.color), sw = Math.max(1, (a.stroke_width || 2) * s);
-            var st = a.shape_type || 'rect';
-            var el = document.createElement('div'); el.dataset.annotId = String(a.id);
-            if (st === 'arrow' || st === 'line') {
-                var ax1 = a.arrow_x1 != null ? a.arrow_x1 * s : a.rect.x * s;
-                var ay1 = a.arrow_y1 != null ? a.arrow_y1 * s : (a.rect.y + a.rect.h / 2) * s;
-                var ax2 = a.arrow_x2 != null ? a.arrow_x2 * s : (a.rect.x + a.rect.w) * s;
-                var ay2 = a.arrow_y2 != null ? a.arrow_y2 * s : (a.rect.y + a.rect.h / 2) * s;
-                var bx = Math.min(ax1, ax2) - sw * 2, by = Math.min(ay1, ay2) - sw * 2;
-                var bw = Math.abs(ax2 - ax1) + sw * 4, bh = Math.abs(ay2 - ay1) + sw * 4;
-                var lx1 = ax1 - bx, ly1 = ay1 - by, lx2 = ax2 - bx, ly2 = ay2 - by;
-                el.style.cssText = 'position:absolute;left:' + bx + 'px;top:' + by + 'px;width:' + bw + 'px;height:' + bh + 'px;pointer-events:auto;cursor:pointer;z-index:5;';
-                var svg = '';
-                if (st === 'line') {
-                    svg = '<line x1="' + lx1 + '" y1="' + ly1 + '" x2="' + lx2 + '" y2="' + ly2 + '" stroke="' + col + '" stroke-width="' + sw + '" stroke-linecap="round"/>';
-                } else {
-                    var dx = lx2 - lx1, dy = ly2 - ly1, len = Math.sqrt(dx * dx + dy * dy);
-                    if (len > 1) {
-                        var hl = Math.min(len * .35, Math.max(10, sw * 5));
-                        var ang = Math.atan2(dy, dx);
-                        var hx1 = lx2 - hl * Math.cos(ang - Math.PI / 6), hy1 = ly2 - hl * Math.sin(ang - Math.PI / 6);
-                        var hx2 = lx2 - hl * Math.cos(ang + Math.PI / 6), hy2 = ly2 - hl * Math.sin(ang + Math.PI / 6);
-                        svg = '<line x1="' + lx1 + '" y1="' + ly1 + '" x2="' + lx2 + '" y2="' + ly2 + '" stroke="' + col + '" stroke-width="' + sw + '" stroke-linecap="round"/>'
-                            + '<polyline points="' + hx1 + ',' + hy1 + ' ' + lx2 + ',' + ly2 + ' ' + hx2 + ',' + hy2 + '" fill="none" stroke="' + col + '" stroke-width="' + sw + '" stroke-linecap="round" stroke-linejoin="round"/>';
-                    }
+            if (a.type === 'shape' && (a.shape_type === 'arrow' || a.shape_type === 'line')) {
+                if (a.arrow_x1 == null && Array.isArray(a.path_points) && a.path_points.length >= 2) {
+                    a.arrow_x1 = +a.path_points[0][0]; a.arrow_y1 = +a.path_points[0][1];
+                    a.arrow_x2 = +a.path_points[1][0]; a.arrow_y2 = +a.path_points[1][1];
                 }
-                el.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="' + bw + '" height="' + bh + '" style="overflow:visible;display:block;pointer-events:none">' + svg + '</svg>';
+            }
+            return a;
+        });
+    }
+
+    /* ── Sync freehand canvas size ── */
+    function syncFC() {
+        if (!freeCanvas) return;
+        var w = stage.offsetWidth, h = stage.offsetHeight;
+        if (freeCanvas.width !== w || freeCanvas.height !== h) {
+            freeCanvas.width = w; freeCanvas.height = h;
+        }
+        freeCanvas.style.width = w + 'px'; freeCanvas.style.height = h + 'px';
+    }
+
+    /* ── Render semua anotasi di halaman saat ini ── */
+    function doRender() {
+        var s = baseScale * zoomFactor;
+        annotLayer.innerHTML = '';
+        annotLayer.style.pointerEvents = 'auto'; /* bisa klik untuk tooltip */
+        syncFC();
+        if (freeCtx) freeCtx.clearRect(0, 0, freeCanvas.width, freeCanvas.height);
+        stage.querySelectorAll('.rpv-sticky-note').forEach(function (e) { e.remove(); });
+
+        annots.filter(function (a) { return a.page === pageNum; }).forEach(function (a) {
+            if (a.type === 'highlight' || a.type === 'comment') rHL(a, s);
+            else if (a.type === 'underline')      rUL(a, s);
+            else if (a.type === 'strikethrough')  rST(a, s);
+            else if (a.type === 'freehand')       rFH(a, s);
+            else if (a.type === 'shape')          rSH(a, s);
+            else if (a.type === 'sticky')         rSticky(a, s);
+        });
+        updateBadge();
+    }
+
+    /* ── Render helpers (copy dari viewer utama, tanpa attachEv write) ── */
+    function rHL(a, s) {
+        if (!a.rect) return;
+        var el = document.createElement('div');
+        el.dataset.annotId = String(a.id);
+        el.style.cssText = 'position:absolute;left:'+(a.rect.x*s)+'px;top:'+(a.rect.y*s)+'px;width:'+(a.rect.w*s)+'px;height:'+(a.rect.h*s)+'px;background:'+hex(a.color)+';opacity:.38;border-radius:2px;pointer-events:auto;cursor:pointer;z-index:5;';
+        if (a.type === 'comment' && a.comment) {
+            var dot = document.createElement('span');
+            dot.style.cssText = 'position:absolute;top:-4px;right:-4px;width:8px;height:8px;background:#60A5FA;border-radius:50%;pointer-events:none;';
+            el.appendChild(dot);
+        }
+        el.addEventListener('click', function (ev) { ev.stopPropagation(); showTip(a, ev.clientX, ev.clientY); });
+        annotLayer.appendChild(el);
+    }
+
+    function rUL(a, s) {
+        if (!a.rect) return;
+        var el = document.createElement('div'); el.dataset.annotId = String(a.id);
+        var t = Math.max(1.5, 2*s);
+        el.style.cssText = 'position:absolute;left:'+(a.rect.x*s)+'px;top:'+((a.rect.y+a.rect.h)*s-1)+'px;width:'+(a.rect.w*s)+'px;height:'+t+'px;background:'+hex(a.color)+';pointer-events:auto;cursor:pointer;z-index:5;opacity:.9;border-radius:1px;';
+        el.addEventListener('click', function (ev) { ev.stopPropagation(); showTip(a, ev.clientX, ev.clientY); });
+        annotLayer.appendChild(el);
+    }
+
+    function rST(a, s) {
+        if (!a.rect) return;
+        var el = document.createElement('div'); el.dataset.annotId = String(a.id);
+        var t = Math.max(1.5, 2*s);
+        var top = a.rect.y*s + a.rect.h*s*0.62 - t/2;
+        el.style.cssText = 'position:absolute;left:'+(a.rect.x*s)+'px;top:'+top+'px;width:'+(a.rect.w*s)+'px;height:'+t+'px;background:'+hex(a.color)+';pointer-events:auto;cursor:pointer;z-index:5;opacity:.9;border-radius:1px;';
+        el.addEventListener('click', function (ev) { ev.stopPropagation(); showTip(a, ev.clientX, ev.clientY); });
+        annotLayer.appendChild(el);
+    }
+
+    function rFH(a, s) {
+        if (!a.path_points || !a.path_points.length || !freeCtx) return;
+        var pts = a.path_points;
+        freeCtx.save();
+        freeCtx.strokeStyle = hex(a.color); freeCtx.lineWidth = (a.stroke_width||2)*s;
+        freeCtx.lineCap = 'round'; freeCtx.lineJoin = 'round'; freeCtx.globalAlpha = .92;
+        freeCtx.beginPath(); freeCtx.moveTo(pts[0][0]*s, pts[0][1]*s);
+        for (var i = 1; i < pts.length; i++) freeCtx.lineTo(pts[i][0]*s, pts[i][1]*s);
+        freeCtx.stroke(); freeCtx.restore();
+        if (a.rect && (a.rect.w > 0 || a.rect.h > 0)) {
+            var hit = document.createElement('div'); hit.dataset.annotId = String(a.id);
+            hit.style.cssText = 'position:absolute;left:'+((a.rect.x-8)*s)+'px;top:'+((a.rect.y-8)*s)+'px;width:'+((a.rect.w+16)*s)+'px;height:'+((a.rect.h+16)*s)+'px;background:transparent;pointer-events:auto;cursor:pointer;z-index:6;';
+            hit.addEventListener('click', function (ev) { ev.stopPropagation(); showTip(a, ev.clientX, ev.clientY); });
+            annotLayer.appendChild(hit);
+        }
+    }
+
+    function rSH(a, s) {
+        if (!a.rect) return;
+        var col = hex(a.color), sw = Math.max(1,(a.stroke_width||2)*s), st = a.shape_type||'rect';
+        var el = document.createElement('div'); el.dataset.annotId = String(a.id);
+
+        if (st === 'arrow' || st === 'line') {
+            var ax1 = a.arrow_x1!=null?a.arrow_x1*s:a.rect.x*s, ay1 = a.arrow_y1!=null?a.arrow_y1*s:(a.rect.y+a.rect.h/2)*s;
+            var ax2 = a.arrow_x2!=null?a.arrow_x2*s:(a.rect.x+a.rect.w)*s, ay2 = a.arrow_y2!=null?a.arrow_y2*s:(a.rect.y+a.rect.h/2)*s;
+            var bx=Math.min(ax1,ax2)-sw*2, by=Math.min(ay1,ay2)-sw*2;
+            var bw=Math.abs(ax2-ax1)+sw*4, bh=Math.abs(ay2-ay1)+sw*4;
+            var lx1=ax1-bx, ly1=ay1-by, lx2=ax2-bx, ly2=ay2-by;
+            el.style.cssText = 'position:absolute;left:'+bx+'px;top:'+by+'px;width:'+bw+'px;height:'+bh+'px;pointer-events:auto;cursor:pointer;z-index:5;';
+            var svg = '';
+            if (st === 'line') {
+                svg = '<line x1="'+lx1+'" y1="'+ly1+'" x2="'+lx2+'" y2="'+ly2+'" stroke="'+col+'" stroke-width="'+sw+'" stroke-linecap="round"/>';
             } else {
-                var x = a.rect.x * s, y = a.rect.y * s, w = Math.max(4, a.rect.w * s), h = Math.max(4, a.rect.h * s);
-                el.style.cssText = 'position:absolute;left:' + x + 'px;top:' + y + 'px;width:' + w + 'px;height:' + h + 'px;pointer-events:auto;cursor:pointer;z-index:5;';
-                var svg = '';
-                if (st === 'rect')
-                    svg = '<rect x="' + (sw / 2) + '" y="' + (sw / 2) + '" width="' + Math.max(1, w - sw) + '" height="' + Math.max(1, h - sw) + '" rx="2" fill="none" stroke="' + col + '" stroke-width="' + sw + '"/>';
-                else if (st === 'ellipse')
-                    svg = '<ellipse cx="' + (w / 2) + '" cy="' + (h / 2) + '" rx="' + Math.max(1, w / 2 - sw / 2) + '" ry="' + Math.max(1, h / 2 - sw / 2) + '" fill="none" stroke="' + col + '" stroke-width="' + sw + '"/>';
-                el.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '" style="overflow:visible;display:block;pointer-events:none">' + svg + '</svg>';
+                var dx=lx2-lx1, dy=ly2-ly1, len=Math.sqrt(dx*dx+dy*dy);
+                if (len > 1) {
+                    var headLen=Math.min(len*.35,Math.max(10,sw*5)), ang=Math.atan2(dy,dx);
+                    var hx1=lx2-headLen*Math.cos(ang-Math.PI/6), hy1=ly2-headLen*Math.sin(ang-Math.PI/6);
+                    var hx2=lx2-headLen*Math.cos(ang+Math.PI/6), hy2=ly2-headLen*Math.sin(ang+Math.PI/6);
+                    svg = '<line x1="'+lx1+'" y1="'+ly1+'" x2="'+lx2+'" y2="'+ly2+'" stroke="'+col+'" stroke-width="'+sw+'" stroke-linecap="round"/>'
+                        + '<polyline points="'+hx1+','+hy1+' '+lx2+','+ly2+' '+hx2+','+hy2+'" fill="none" stroke="'+col+'" stroke-width="'+sw+'" stroke-linecap="round" stroke-linejoin="round"/>';
+                }
             }
-            attachClick(el, a); annotLayer.appendChild(el);
+            el.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="'+bw+'" height="'+bh+'" style="overflow:visible;display:block;pointer-events:none">'+svg+'</svg>';
+        } else {
+            var x=a.rect.x*s, y=a.rect.y*s, w=Math.max(4,a.rect.w*s), h=Math.max(4,a.rect.h*s);
+            el.style.cssText = 'position:absolute;left:'+x+'px;top:'+y+'px;width:'+w+'px;height:'+h+'px;pointer-events:auto;cursor:pointer;z-index:5;';
+            var svg = '';
+            if (st === 'rect') svg = '<rect x="'+(sw/2)+'" y="'+(sw/2)+'" width="'+Math.max(1,w-sw)+'" height="'+Math.max(1,h-sw)+'" rx="2" fill="none" stroke="'+col+'" stroke-width="'+sw+'"/>';
+            else if (st === 'ellipse') svg = '<ellipse cx="'+(w/2)+'" cy="'+(h/2)+'" rx="'+Math.max(1,w/2-sw/2)+'" ry="'+Math.max(1,h/2-sw/2)+'" fill="none" stroke="'+col+'" stroke-width="'+sw+'"/>';
+            el.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" style="overflow:visible;display:block;pointer-events:none">'+svg+'</svg>';
         }
-        function rSticky(a, s) {
-            if (!a.rect) return;
-            var note = document.createElement('div');
-            note.className = 'rpvr-sticky-note'; note.dataset.annotId = String(a.id);
-            note.dataset.color = a.color || 'yellow';
-            note.style.left = (a.rect.x * s) + 'px'; note.style.top = (a.rect.y * s) + 'px';
-            note.innerHTML = '<div class="rpvr-sn-header"><span>📌 ' + esc(CFG.reviewer).substring(0, 14) + '</span></div>'
-                + '<div class="rpvr-sn-body">' + esc(a.comment) + '</div>';
-            note.addEventListener('click', function (ev) { ev.stopPropagation(); showTip(a, ev.clientX, ev.clientY); });
-            stage.appendChild(note);
-        }
-        function attachClick(el, a) {
-            el.addEventListener('click', function (ev) { ev.stopPropagation(); showTip(a, ev.clientX, ev.clientY); });
-            el.addEventListener('touchend', function (ev) {
-                ev.stopPropagation(); if (ev.cancelable) ev.preventDefault();
-                var t = ev.changedTouches[0]; showTip(a, t.clientX, t.clientY);
-            }, { passive: false });
-        }
+        el.addEventListener('click', function (ev) { ev.stopPropagation(); showTip(a, ev.clientX, ev.clientY); });
+        annotLayer.appendChild(el);
+    }
 
-        /* ── Tooltip ── */
-        function showTip(a, cx, cy) {
-            var ic = { highlight:'✏️', underline:'__', strikethrough:'~~', freehand:'🖊', shape:'⬛', comment:'💬', sticky:'📌' };
-            activeAnnotId = a.id;
-            var rev = $id('rpvr-tip-reviewer'), txt = $id('rpvr-tip-text');
-            if (rev) rev.textContent = (ic[a.type] || '•') + ' ' + a.type + ' · oleh ' + CFG.reviewer;
-            var msg = a.comment || (a.selected_text ? '"' + a.selected_text.substring(0, 120) + '"') : ('Anotasi ' + a.type + ' di hal.' + a.page);
-            if (txt) txt.textContent = msg;
-            tooltip.style.display = 'block';
-            var vw = window.innerWidth, vh = window.innerHeight;
-            tooltip.style.left = Math.max(4, Math.min(cx - 160, vw - 324)) + 'px';
-            tooltip.style.top  = ((cy + 160 > vh) ? Math.max(4, cy - 160) : cy + 8) + 'px';
-            document.querySelectorAll('.rpvr-panel-item').forEach(function (el) {
-                el.classList.toggle('active-item', el.dataset.annotId == a.id);
+    function rSticky(a, s) {
+        if (!a.rect) return;
+        var note = document.createElement('div');
+        note.className = 'rpv-sticky-note'; note.dataset.color = a.color||'yellow';
+        note.style.left = (a.rect.x*s)+'px'; note.style.top = (a.rect.y*s)+'px';
+        /* View-only: tidak ada tombol edit/hapus */
+        note.innerHTML = '<div class="rpv-sn-header"><span>📌</span></div><div class="rpv-sn-body">'+esc(a.comment)+'</div>';
+        note.addEventListener('click', function (ev) { ev.stopPropagation(); showTip(a, ev.clientX, ev.clientY); });
+        stage.appendChild(note);
+    }
+
+    /* ── Tooltip view-only ── */
+    function showTip(a, cx, cy) {
+        var ic = { highlight:'✏️', underline:'__', strikethrough:'~~', freehand:'🖊', shape:'⬛', comment:'💬', sticky:'📌' };
+        var txt = a.comment
+            ? ic[a.type] + ' ' + a.comment.substring(0, 120)
+            : a.selected_text
+                ? ic[a.type] + ' "' + a.selected_text.substring(0, 80) + '"'
+                : ic[a.type] + ' ' + a.type;
+        var tipTxt = document.getElementById('rpv-ro-tip-text');
+        if (tipTxt) tipTxt.textContent = txt;
+        tooltip.classList.add('show');
+        var vw = window.innerWidth, vh = window.innerHeight;
+        tooltip.style.left = Math.max(4, Math.min(cx - 135, vw - 278)) + 'px';
+        tooltip.style.top  = ((cy + 140 > vh) ? Math.max(4, cy - 140) : cy + 8) + 'px';
+    }
+
+    var roTipClose = document.getElementById('rpv-ro-tip-close');
+    if (roTipClose) roTipClose.addEventListener('click', function () { tooltip.classList.remove('show'); });
+    document.addEventListener('click', function (e) {
+        if (tooltip && tooltip.classList.contains('show')) {
+            if (tooltip.contains(e.target)) return;
+            if (e.target.closest && e.target.closest('[data-annot-id],.rpv-sticky-note')) return;
+            tooltip.classList.remove('show');
+        }
+    });
+
+    /* ── Badge & Panel ── */
+    function updateBadge() {
+        var n = annots.length;
+        var badge = document.getElementById('rpv-ro-badge');
+        if (badge) { badge.textContent = n > 99 ? '99+' : String(n); badge.classList.toggle('show', n > 0); }
+    }
+
+    function buildPanel() {
+        var list = document.getElementById('rpv-ro-panel-list'); if (!list) return;
+        if (!annots.length) { list.innerHTML = '<div class="rpv-panel-empty">Belum ada anotasi dari reviewer.</div>'; return; }
+        list.innerHTML = '';
+        var ic = { highlight:'✏️', underline:'__', strikethrough:'~~', freehand:'🖊', shape:'⬛', comment:'💬', sticky:'📌' };
+        annots.slice().sort(function (a, b) { return a.page - b.page || a.id - b.id; }).forEach(function (a) {
+            var el = document.createElement('div'); el.className = 'rpv-panel-item';
+            /* Tanpa tombol edit/hapus */
+            el.innerHTML = '<div class="rpv-panel-dot" style="background:'+hex(a.color)+'"></div>'
+                + '<div class="rpv-panel-body">'
+                + '<span class="rpv-panel-type">'+(ic[a.type]||'•')+' '+a.type+'</span>'
+                + '<span class="rpv-panel-pg">Hal.'+a.page+'</span>'
+                + '<div class="rpv-panel-text">'+esc(a.comment||a.selected_text||a.shape_type||'—')+'</div>'
+                + '</div>';
+            el.addEventListener('click', function () {
+                if (a.page !== pageNum) renderPage(a.page);
+                var panel = document.getElementById('rpv-panel'); if (panel) panel.classList.remove('open');
             });
-            renderAnnotations();
-        }
-        $id('rpvr-tip-close') && $id('rpvr-tip-close').addEventListener('click', function () {
-            tooltip.style.display = 'none'; activeAnnotId = null; renderAnnotations();
+            list.appendChild(el);
         });
-        document.addEventListener('click', function (e) {
-            if (tooltip.style.display === 'block'
-                && !tooltip.contains(e.target)
-                && !e.target.closest('[data-annot-id],.rpvr-sticky-note')) {
-                tooltip.style.display = 'none'; activeAnnotId = null;
-            }
-        });
+    }
 
-        /* ── Panel ── */
-        function togglePanel(open) { panelOpen = open; panel.style.width = open ? '280px' : '0'; }
-        $id('rpvr-panel-btn')    && $id('rpvr-panel-btn').addEventListener('click', function () { togglePanel(!panelOpen); });
-        $id('rpvr-panel-close')  && $id('rpvr-panel-close').addEventListener('click', function () { togglePanel(false); });
-        $id('rpvr-panel-filter') && $id('rpvr-panel-filter').addEventListener('change', function () { filterMode = this.value; buildPanel(); });
+    var roPanelBtn   = document.getElementById('rpv-ro-panel-btn');
+    var roPanelClose = document.getElementById('rpv-ro-panel-close');
+    if (roPanelBtn) roPanelBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var panel = document.getElementById('rpv-panel'); if (panel) panel.classList.toggle('open');
+        buildPanel();
+    });
+    if (roPanelClose) roPanelClose.addEventListener('click', function () {
+        var panel = document.getElementById('rpv-panel'); if (panel) panel.classList.remove('open');
+    });
 
-        function buildPanel() {
-            var list = $id('rpvr-panel-list'); if (!list) return;
-            var filtered = filterMode === 'current' ? annots.filter(function (a) { return a.page === pageNum; }) : [].concat(annots);
-            if (!filtered.length) {
-                list.innerHTML = '<div style="text-align:center;color:#4b5563;font-size:12px;padding:1.5rem;">'
-                    + (filterMode === 'current' ? 'Tidak ada anotasi di halaman ini.' : 'Belum ada anotasi.') + '</div>';
-                return;
-            }
-            var ic = { highlight:'✏️', underline:'__', strikethrough:'~~', freehand:'🖊', shape:'⬛', comment:'💬', sticky:'📌' };
-            list.innerHTML = '';
-            filtered.slice().sort(function (a, b) { return a.page - b.page || a.id - b.id; }).forEach(function (a) {
-                var el = document.createElement('div'); el.className = 'rpvr-panel-item'; el.dataset.annotId = String(a.id);
-                if (activeAnnotId == a.id) el.classList.add('active-item');
-                var txt = a.comment || a.selected_text || a.shape_type || '—';
-                el.innerHTML = '<div style="width:10px;height:10px;border-radius:50%;background:' + hex(a.color) + ';flex-shrink:0;margin-top:3px;"></div>'
-                    + '<div style="flex:1;min-width:0;">'
-                    + '<div style="display:flex;align-items:center;gap:.3rem;margin-bottom:.15rem;">'
-                    + '<span style="font-size:10px;font-weight:700;color:#9ca3af;">' + (ic[a.type] || '•') + ' ' + a.type + '</span>'
-                    + '<span style="font-size:10px;color:#FF6B18;margin-left:auto;">Hal.' + a.page + '</span>'
-                    + '</div>'
-                    + '<div style="font-size:11px;color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + esc(txt).substring(0, 80) + '</div>'
-                    + '</div>';
-                el.addEventListener('click', function () {
-                    tooltip.style.display = 'none';
-                    if (a.page !== pageNum) {
-                        renderPdfPage(a.page).then(function () { activeAnnotId = a.id; renderAnnotations(); showTipById(a); });
-                    } else {
-                        activeAnnotId = a.id; renderAnnotations(); showTipById(a);
-                    }
-                });
-                list.appendChild(el);
-            });
-        }
-        function showTipById(a) {
-            var el = document.querySelector('[data-annot-id="' + a.id + '"]');
-            if (el) { var r = el.getBoundingClientRect(); showTip(a, r.left + r.width / 2, r.top); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
-        }
-        function updateBadge() {
-            var b = $id('rpvr-badge'), n = annots.length;
-            if (b) { b.textContent = n > 99 ? '99+' : String(n); b.style.display = n > 0 ? 'flex' : 'none'; }
-        }
-        function updateStats() {
-            var on = annots.filter(function (a) { return a.page === pageNum; }).length;
-            var pgs = new Set(annots.map(function (a) { return a.page; })).size;
-            var st = $id('rpvr-stat-total');  if (st)  st.textContent = annots.length;
-            var sp = $id('rpvr-stat-page');   if (sp)  sp.textContent = on;
-            var spp = $id('rpvr-stat-pages'); if (spp) spp.textContent = pgs;
-        }
+    /* ── Compute base scale ── */
+    function computeBase(page) {
+        var cw = wrap ? wrap.clientWidth : 800;
+        var nw = page.getViewport({ scale: 1 }).width;
+        baseScale = Math.max(.5, Math.min((cw - 24) / nw, 2.5));
+        needsRecompute = false;
+    }
 
-        /* ── PDF Render ── */
-        async function renderPdfPage(num) {
-            if (pageRendering) { pendingPage = num; return; }
-            pageRendering = true;
-            pageNum = num;
+    /* ── Render halaman ── */
+    function renderPage(num) {
+        if (num < 1 || (pdfDoc && num > pdfDoc.numPages)) return;
+        if (pageRendering) { pendingPage = num; return; }
+        pageRendering = true; pageNum = num;
 
-            var page = await pdfDoc.getPage(num);
+        pdfDoc.getPage(num).then(async function (page) {
+            if (needsRecompute) computeBase(page);
+            var cs  = baseScale * zoomFactor;
+            var vpC = page.getViewport({ scale: cs });
+            var vpR = page.getViewport({ scale: cs * DPR });
 
-            /* FIX: Hitung baseScale hanya saat pertama kali atau saat viewport berubah signifikan,
-               BUKAN setiap kali zoom (doZoom mengatur zoomFactor saja). */
-            if (!baseScaleComputed || baseScale === 1.0) {
-                var cw = wrap.clientWidth || 900;
-                var nw = page.getViewport({ scale: 1 }).width;
-                baseScale = Math.max(0.5, Math.min((cw - 32) / nw, 2.5));
-                baseScaleComputed = true;
-            }
+            mainCanvas.width  = Math.floor(vpR.width);
+            mainCanvas.height = Math.floor(vpR.height);
+            mainCanvas.style.width  = Math.floor(vpC.width)  + 'px';
+            mainCanvas.style.height = Math.floor(vpC.height) + 'px';
+            stage.style.width  = Math.floor(vpC.width)  + 'px';
+            stage.style.height = Math.floor(vpC.height) + 'px';
 
-            var cs = baseScale * zoomFactor;
-            var vpCss = page.getViewport({ scale: cs });
-            var vpR   = page.getViewport({ scale: cs * DPR });
+            await page.render({ canvasContext: ctx, viewport: vpR }).promise.catch(function(){});
 
-            canvas.width  = Math.floor(vpR.width);
-            canvas.height = Math.floor(vpR.height);
-            canvas.style.width  = Math.floor(vpCss.width)  + 'px';
-            canvas.style.height = Math.floor(vpCss.height) + 'px';
-            stage.style.width   = Math.floor(vpCss.width)  + 'px';
-            stage.style.height  = Math.floor(vpCss.height) + 'px';
-
-            await page.render({ canvasContext: ctx, viewport: vpR }).promise.catch(function (e) { console.warn(e); });
             pageRendering = false;
+            if (pendingPage !== null) { var pp = pendingPage; pendingPage = null; renderPage(pp); return; }
 
-            if (pendingPage !== null) { var p = pendingPage; pendingPage = null; await renderPdfPage(p); return; }
+            stage.style.display = 'block';
+            if (loadingEl) loadingEl.classList.add('hidden');
 
-            /* Text layer */
-            textLayer.innerHTML = '';
-            textLayer.style.width  = Math.floor(vpCss.width)  + 'px';
-            textLayer.style.height = Math.floor(vpCss.height) + 'px';
-            var content = await page.getTextContent();
-            content.items.forEach(function (item) {
-                if (!item.str || !item.str.trim()) return;
-                var tx = pdfjsLib.Util.transform(vpCss.transform, item.transform);
-                var fh = Math.sqrt(tx[2] * tx[2] + tx[3] * tx[3]);
-                var angle = Math.atan2(tx[1], tx[0]);
-                var span = document.createElement('span'); span.textContent = item.str;
-                span.style.fontSize = fh + 'px';
-                span.style.left = tx[4] + 'px';
-                span.style.top  = (tx[5] - fh) + 'px';
-                span.style.transformOrigin = '0% 0%';
-                textLayer.appendChild(span);
-                var tw = item.width * cs, mw = span.getBoundingClientRect().width;
-                var t = angle !== 0 ? 'rotate(' + (-angle) + 'rad)' : '';
-                if (mw > 1 && tw > 0) t += ' scaleX(' + (tw / mw) + ')';
-                if (t.trim()) span.style.transform = t.trim();
-            });
-
-            /* Update UI */
-            stage.style.display   = 'block';
-            loadingEl.style.display = 'none';
-            var pi = $id('rpvr-page-input'); if (pi) pi.value = num;
-            var pr = $id('rpvr-prev');        if (pr) pr.disabled = num <= 1;
-            var nx = $id('rpvr-next');        if (nx) nx.disabled = !pdfDoc || num >= pdfDoc.numPages;
-            var pct = pdfDoc ? (num / pdfDoc.numPages * 100) : 0;
-            var pb  = $id('rpvr-progress-bar'); if (pb) pb.style.width = pct + '%';
-            var zv  = $id('rpvr-zoom-val');     if (zv) zv.textContent = Math.round(zoomFactor * 100) + '%';
-            var pt  = $id('rpvr-progress-txt'); if (pt) pt.textContent = 'Hal. ' + num + '/' + (pdfDoc ? pdfDoc.numPages : '?') + ' · ' + Math.round(pct) + '%';
+            var piEl = document.getElementById('rpv-ro-page-input'); if (piEl) piEl.value = num;
+            var prev = document.getElementById('rpv-ro-prev'); if (prev) prev.disabled = num <= 1;
+            var next = document.getElementById('rpv-ro-next'); if (next) next.disabled = !pdfDoc || num >= pdfDoc.numPages;
+            var pct  = pdfDoc ? num / pdfDoc.numPages * 100 : 0;
+            var prog = document.getElementById('rpv-ro-progress'); if (prog) prog.style.width = pct + '%';
+            var zv   = document.getElementById('rpv-ro-zoom-val'); if (zv) zv.textContent = Math.round(zoomFactor * 100) + '%';
             if (wrap) wrap.scrollTo({ top: 0, behavior: 'smooth' });
-            syncFC();
-            renderAnnotations();
-            if (panelOpen) buildPanel();
-            if (searchQuery) applySearchHL();
-        }
 
-        /* ── Navigation ── */
-        $id('rpvr-prev') && $id('rpvr-prev').addEventListener('click', function () { if (pageNum > 1) { pageNum--; renderPdfPage(pageNum); } });
-        $id('rpvr-next') && $id('rpvr-next').addEventListener('click', function () { if (pdfDoc && pageNum < pdfDoc.numPages) { pageNum++; renderPdfPage(pageNum); } });
-        $id('rpvr-page-input') && $id('rpvr-page-input').addEventListener('change', function () {
-            var n = parseInt(this.value);
-            if (pdfDoc && n >= 1 && n <= pdfDoc.numPages) renderPdfPage(n);
-            else this.value = pageNum;
-        });
+            doRender();
 
-        /* ── Zoom ── FIX: baseScaleComputed direset agar dihitung ulang dari viewport terkini */
-        function doZoom(dir) {
-            zoomFactor = dir > 0
-                ? Math.min(zoomFactor + ZOOM_STEP, ZOOM_MAX)
-                : Math.max(zoomFactor - ZOOM_STEP, ZOOM_MIN);
-            /* Reset baseScale agar dihitung ulang untuk viewport saat ini */
-            baseScaleComputed = false;
-            if (pdfDoc) renderPdfPage(pageNum);
-        }
-        $id('rpvr-zoom-in')  && $id('rpvr-zoom-in').addEventListener('click', function () { doZoom(1); });
-        $id('rpvr-zoom-out') && $id('rpvr-zoom-out').addEventListener('click', function () { doZoom(-1); });
+        }).catch(function (e) {
+            console.error('[RPV-RO] render error:', e);
+            pageRendering = false;
+            if (loadingEl) loadingEl.classList.add('hidden');
+            stage.style.display = 'block';
+        });
+    }
 
-        /* ── Search ── */
-        function clearSearchHL() {
-            annotLayer.querySelectorAll('.rpvr-search-hl').forEach(function (e) { e.remove(); });
-            searchHLs = [];
-        }
-        function applySearchHL() {
-            clearSearchHL(); if (!searchQuery || !pdfDoc) return;
-            var q = searchQuery.toLowerCase(), sr = stage.getBoundingClientRect();
-            Array.from(textLayer.querySelectorAll('span')).forEach(function (span) {
-                if (!span.firstChild) return;
-                var text = span.textContent, lower = text.toLowerCase(), idx = lower.indexOf(q);
-                while (idx !== -1) {
-                    try {
-                        var range = document.createRange();
-                        range.setStart(span.firstChild, idx);
-                        range.setEnd(span.firstChild, Math.min(idx + q.length, text.length));
-                        Array.from(range.getClientRects()).forEach(function (rect) {
-                            if (rect.width < 1 || rect.height < 1) return;
-                            var el = document.createElement('div'); el.className = 'rpvr-search-hl';
-                            el.style.left = (rect.left - sr.left) + 'px'; el.style.top = (rect.top - sr.top) + 'px';
-                            el.style.width = rect.width + 'px'; el.style.height = rect.height + 'px';
-                            el.style.position = 'absolute';
-                            annotLayer.appendChild(el); searchHLs.push(el);
-                        });
-                    } catch (_) {}
-                    idx = lower.indexOf(q, idx + 1);
-                }
-            });
-            searchHLs.forEach(function (el, i) { el.classList.toggle('active-match', i === searchIndex); });
-            if (searchHLs[searchIndex]) searchHLs[searchIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-        async function doSearch(query) {
-            if (!pdfDoc || !query.trim()) { clearSearchHL(); searchQuery = ''; var ss = $id('rpvr-search-status'); if (ss) ss.textContent = 'Ketik untuk mencari...'; return; }
-            var ss = $id('rpvr-search-status'); if (ss) ss.textContent = 'Mencari...';
-            searchResults = []; searchQuery = query; var q = query.toLowerCase();
-            for (var p = 1; p <= pdfDoc.numPages; p++) {
-                var pg = await pdfDoc.getPage(p);
-                var c = await pg.getTextContent();
-                var text = c.items.map(function (i) { return i.str; }).join(' ');
-                var lt = text.toLowerCase(), idx = lt.indexOf(q);
-                while (idx !== -1) {
-                    searchResults.push({ page: p, excerpt: text.substring(Math.max(0, idx - 35), idx + q.length + 50).trim() });
-                    idx = lt.indexOf(q, idx + 1);
-                }
-            }
-            var list = $id('rpvr-search-results'); if (list) list.innerHTML = '';
-            if (!searchResults.length) { if (ss) ss.textContent = 'Tidak ditemukan: "' + query + '"'; clearSearchHL(); return; }
-            if (ss) ss.textContent = searchResults.length + ' hasil';
-            searchIndex = 0;
-            var escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            searchResults.slice(0, 40).forEach(function (r, i) {
-                var el = document.createElement('div');
-                el.style.cssText = 'padding:.35rem .5rem;background:#1f1f1f;border-radius:6px;cursor:pointer;font-size:11px;color:#9ca3af;display:flex;gap:.5rem;align-items:baseline;border:1px solid transparent;margin-bottom:2px;';
-                el.innerHTML = '<span style="color:#FF6B18;font-weight:700;flex-shrink:0;">Hal.' + r.page + '</span><span>'
-                    + esc(r.excerpt).replace(new RegExp(escaped, 'gi'), function (m) { return '<mark style="background:rgba(255,107,24,.35);color:#fff;border-radius:2px;padding:0 1px;">' + m + '</mark>'; })
-                    + '</span>';
-                el.addEventListener('click', function () {
-                    searchIndex = i;
-                    if (r.page !== pageNum) renderPdfPage(r.page).then(function () { applySearchHL(); });
-                    else applySearchHL();
-                });
-                if (list) list.appendChild(el);
-            });
-            if (searchResults[0].page === pageNum) applySearchHL();
-            else renderPdfPage(searchResults[0].page);
-        }
-        function openSearch() {
-            var ov = $id('rpvr-search'); if (ov) ov.style.display = 'flex';
-            var inp = $id('rpvr-search-input'); if (inp) setTimeout(function () { inp.focus(); }, 50);
-        }
-        function closeSearch() {
-            var ov = $id('rpvr-search'); if (ov) ov.style.display = 'none';
-            clearSearchHL(); searchQuery = ''; searchResults = []; searchIndex = -1;
-            var i = $id('rpvr-search-input'); if (i) i.value = '';
-            var rl = $id('rpvr-search-results'); if (rl) rl.innerHTML = '';
-            var ss = $id('rpvr-search-status'); if (ss) ss.textContent = 'Ketik untuk mencari...';
-        }
-        $id('rpvr-search-input') && $id('rpvr-search-input').addEventListener('input', function () {
-            clearTimeout(searchDebounce); var v = this.value;
-            searchDebounce = setTimeout(function () { doSearch(v); }, 450);
-        });
-        $id('rpvr-sclose') && $id('rpvr-sclose').addEventListener('click', closeSearch);
-        $id('rpvr-snext') && $id('rpvr-snext').addEventListener('click', function () {
-            if (!searchResults.length) return;
-            searchIndex = (searchIndex + 1) % searchResults.length;
-            var r = searchResults[searchIndex];
-            if (r.page !== pageNum) renderPdfPage(r.page).then(function () { applySearchHL(); });
-            else applySearchHL();
-        });
-        $id('rpvr-sprev') && $id('rpvr-sprev').addEventListener('click', function () {
-            if (!searchResults.length) return;
-            searchIndex = (searchIndex - 1 + searchResults.length) % searchResults.length;
-            var r = searchResults[searchIndex];
-            if (r.page !== pageNum) renderPdfPage(r.page).then(function () { applySearchHL(); });
-            else applySearchHL();
-        });
-        $id('rpvr-search') && $id('rpvr-search').addEventListener('click', function (e) { if (e.target === $id('rpvr-search')) closeSearch(); });
-        $id('rpvr-search-btn') && $id('rpvr-search-btn').addEventListener('click', openSearch);
+    function prevPage() { if (pageNum > 1) renderPage(pageNum - 1); }
+    function nextPage() { if (pdfDoc && pageNum < pdfDoc.numPages) renderPage(pageNum + 1); }
+    function doZoom(dir) {
+        zoomFactor = dir > 0 ? Math.min(zoomFactor + ZOOM_STEP, ZOOM_MAX) : Math.max(zoomFactor - ZOOM_STEP, ZOOM_MIN);
+        needsRecompute = true;
+        var zv = document.getElementById('rpv-ro-zoom-val'); if (zv) zv.textContent = Math.round(zoomFactor * 100) + '%';
+        if (pdfDoc) renderPage(pageNum);
+    }
 
-        /* ── Keyboard ── */
-        document.addEventListener('keydown', function (e) {
-            if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
-            if ((e.ctrlKey || e.metaKey) && e.key === 'f') { e.preventDefault(); openSearch(); return; }
-            switch (e.key) {
-                case 'ArrowLeft':  if (pageNum > 1) { pageNum--; renderPdfPage(pageNum); } break;
-                case 'ArrowRight': if (pdfDoc && pageNum < pdfDoc.numPages) { pageNum++; renderPdfPage(pageNum); } break;
-                case '+': case '=': doZoom(1); break;
-                case '-': doZoom(-1); break;
-                case 'Escape': closeSearch(); tooltip.style.display = 'none'; break;
-            }
-        });
+    var roPrev = document.getElementById('rpv-ro-prev'); if (roPrev) roPrev.addEventListener('click', prevPage);
+    var roNext = document.getElementById('rpv-ro-next'); if (roNext) roNext.addEventListener('click', nextPage);
+    var roZI   = document.getElementById('rpv-ro-zoom-in');  if (roZI) roZI.addEventListener('click', function () { doZoom(1); });
+    var roZO   = document.getElementById('rpv-ro-zoom-out'); if (roZO) roZO.addEventListener('click', function () { doZoom(-1); });
+    var roPI   = document.getElementById('rpv-ro-page-input');
+    if (roPI) roPI.addEventListener('change', function () {
+        var n = parseInt(this.value);
+        if (pdfDoc && n >= 1 && n <= pdfDoc.numPages) renderPage(n); else this.value = pageNum;
+    });
 
-        /* ── Resize ── */
-        var resT = null, lastW = wrap ? wrap.clientWidth : 0;
-        window.addEventListener('resize', function () {
-            var w = wrap ? wrap.clientWidth : 0;
-            if (Math.abs(w - lastW) < 20) return;
-            lastW = w;
-            clearTimeout(resT);
-            resT = setTimeout(function () {
-                if (!pdfDoc) return;
-                baseScaleComputed = false; /* hitung ulang fit saat resize */
-                renderPdfPage(pageNum);
-            }, 250);
-        });
-        if (canvas) new MutationObserver(function () { syncFC(); }).observe(canvas, { attributes: true, attributeFilter: ['width', 'height'] });
+    /* Keyboard: navigasi & zoom saja */
+    document.addEventListener('keydown', function (e) {
+        if (['INPUT','TEXTAREA'].includes(e.target.tagName)) return;
+        if (e.key === 'ArrowLeft')  prevPage();
+        if (e.key === 'ArrowRight') nextPage();
+        if (e.key === '+' || e.key === '=') doZoom(1);
+        if (e.key === '-') doZoom(-1);
+    });
 
-        /* ── Load PDF ── */
-        var task = pdfjsLib.getDocument({ url: CFG.pdfUrl, withCredentials: false, verbosity: 0, rangeChunkSize: 65536 });
-        task.onProgress = function (d) {
-            if (d.total > 0 && loadSub)
-                loadSub.textContent = 'Mengunduh... ' + Math.min(100, Math.round(d.loaded / d.total * 100)) + '%';
-        };
-        task.promise.then(async function (doc) {
+    /* Resize */
+    var resT = null, lastW = wrap ? wrap.clientWidth : 0;
+    window.addEventListener('resize', function () {
+        var w = wrap ? wrap.clientWidth : 0; if (Math.abs(w - lastW) < 20) return; lastW = w;
+        clearTimeout(resT); resT = setTimeout(function () { if (!pdfDoc) return; needsRecompute = true; renderPage(pageNum); }, 250);
+    });
+
+    /* ── Load PDF ── */
+    stage.style.display = 'none';
+    if (loadingEl) { loadingEl.classList.remove('hidden'); loadingEl.style.display = ''; }
+
+    /* Anotasi sudah ada dari server (tidak perlu fetch lagi) */
+    annots = normalize(CFG.annotations || []);
+    updateBadge();
+
+    pdfjsLib.getDocument({ url: CFG.pdfUrl, withCredentials: false, verbosity: 0 })
+        .promise.then(function (doc) {
             pdfDoc = doc;
-            var pt = $id('rpvr-page-total'); if (pt) pt.textContent = doc.numPages;
-            var pi = $id('rpvr-page-input'); if (pi) pi.max = doc.numPages;
-            clearTimeout(retryTimer); /* PDF berhasil — batalkan retry timer */
-            await renderPdfPage(1);
-            await loadAnnotations();
-            console.log('[RPVR] ready, reviewId=', CFG.reviewId);
+            var ptEl = document.getElementById('rpv-ro-page-total'); if (ptEl) ptEl.textContent = doc.numPages;
+            var piEl = document.getElementById('rpv-ro-page-input'); if (piEl) piEl.max = doc.numPages;
+            renderPage(1);
         }).catch(function (err) {
-            console.error('[RPVR] load error:', err);
-            showFatalError('Gagal memuat PDF: ' + err.message);
+            console.error('[RPV-RO] load error:', err);
+            if (loadingEl) loadingEl.innerHTML = '<div style="font-size:2rem">⚠️</div><p style="color:#ef4444;font-weight:700;font-size:13px;margin:0;">Gagal memuat PDF</p><p style="color:#6b7280;font-size:11px;margin:.25rem 0;">'+err.message+'</p>';
         });
-
-    } /* end rpvrInit() */
-
-    /* Boot */
-    rpvrBoot();
 
 })();
 </script>
+
+@endif

@@ -268,17 +268,19 @@ class ViewReview extends ViewRecord
                 ]),
 
             // ── ✅ PDF VIEWER read-only — author bisa lihat anotasi reviewer ──
-            Section::make('Manuscript PDF')
-                ->description('Baca naskah & lihat anotasi reviewer')
+            // ── PDF Viewer read-only untuk Author ──────────────────────────
+            Section::make('Manuscript PDF & Anotasi Reviewer')
+                ->description('Lihat naskah beserta anotasi yang diberikan reviewer')
                 ->icon('heroicon-o-document-text')
                 ->columnSpanFull()
                 ->visible(fn() => filled($this->record->publicationVersion?->pdf_file_path))
                 ->schema([
-                    \Filament\Infolists\Components\ViewEntry::make('pdf_viewer')
+                    \Filament\Infolists\Components\ViewEntry::make('pdf_viewer_readonly')
                         ->label('')
-                        ->view('filament.reviews.pdf-viewer')
+                        ->view('filament.reviews.pdf-viewer-readonly')
                         ->columnSpanFull(),
                 ]),
+            // ────────────────────────────────────────────────────────────────
             // ─────────────────────────────────────────────────────────────────
 
             Section::make('Anotasi PDF Reviewer')
