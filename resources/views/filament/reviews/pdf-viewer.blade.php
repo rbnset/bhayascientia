@@ -1173,7 +1173,7 @@ $annotApiBase = $reviewId
 
         {{-- Page nav --}}
         <div class="rpv-page-group">
-            <button class="rpv-btn" id="rpv-prev" title="Halaman sebelumnya (←)">
+            <button type="button" class="rpv-btn" id="rpv-prev" title="Halaman sebelumnya (←)">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
                 </svg>
@@ -1181,7 +1181,7 @@ $annotApiBase = $reviewId
             <input type="number" id="rpv-page-input" class="rpv-page-input" value="1" min="1">
             <span class="rpv-page-sep">/</span>
             <span class="rpv-page-total" id="rpv-page-total">—</span>
-            <button class="rpv-btn" id="rpv-next" title="Halaman berikutnya (→)">
+            <button type="button" class="rpv-btn" id="rpv-next" title="Halaman berikutnya (→)">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
                 </svg>
@@ -1189,19 +1189,19 @@ $annotApiBase = $reviewId
         </div>
 
         {{-- Zoom --}}
-        <button class="rpv-btn" id="rpv-zoom-out" title="Perkecil (-)">−</button>
+        <button type="button" class="rpv-btn" id="rpv-zoom-out" title="Perkecil (-)">−</button>
         <span class="rpv-zoom-val" id="rpv-zoom-val">100%</span>
-        <button class="rpv-btn" id="rpv-zoom-in" title="Perbesar (+)">+</button>
+        <button type="button" class="rpv-btn" id="rpv-zoom-in" title="Perbesar (+)">+</button>
 
         {{-- Reading mode --}}
         <div style="display:flex; gap:2px;">
-            <button class="rpv-btn active" data-rpv-mode="normal" title="Normal">☀️</button>
-            <button class="rpv-btn" data-rpv-mode="sepia" title="Sepia">📜</button>
-            <button class="rpv-btn" data-rpv-mode="night" title="Night">🌙</button>
+            <button type="button" class="rpv-btn active" data-rpv-mode="normal" title="Normal">☀️</button>
+            <button type="button" class="rpv-btn" data-rpv-mode="sepia" title="Sepia">📜</button>
+            <button type="button" class="rpv-btn" data-rpv-mode="night" title="Night">🌙</button>
         </div>
 
         {{-- Search --}}
-        <button class="rpv-btn" id="rpv-search-btn" title="Cari (Ctrl+F)">
+        <button type="button" class="rpv-btn" id="rpv-search-btn" title="Cari (Ctrl+F)">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -1253,7 +1253,7 @@ $annotApiBase = $reviewId
         <div class="rpv-ab-tools" id="rpv-ab-tools">
 
             {{-- Group 1: Navigation --}}
-            <button class="rpv-tool" data-tool="pan" title="Hand — Geser PDF">
+            <button type="button" class="rpv-tool" data-tool="pan" title="Hand — Geser PDF">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     style="width:16px;height:16px;">
                     <path
@@ -1261,7 +1261,7 @@ $annotApiBase = $reviewId
                         stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
             </button>
-            <button class="rpv-tool" data-tool="select" title="Pilih/Edit anotasi">
+            <button type="button" class="rpv-tool" data-tool="select" title="Pilih/Edit anotasi">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     style="width:16px;height:16px;">
                     <path d="M5 3l14 9-7 1-3 7L5 3z" stroke-linejoin="round" />
@@ -1271,7 +1271,7 @@ $annotApiBase = $reviewId
             <div class="rpv-ab-sep"></div>
 
             {{-- Group 2: Text markup --}}
-            <button class="rpv-tool active" data-tool="highlight" title="Highlight teks">
+            <button type="button" class="rpv-tool active" data-tool="highlight" title="Highlight teks">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     style="width:16px;height:16px;">
                     <path d="M9 19l-2 2H5l1-2L15 9l2 2L9 19z" stroke-linejoin="round" />
@@ -1279,14 +1279,14 @@ $annotApiBase = $reviewId
                     <line x1="5" y1="21" x2="19" y2="21" />
                 </svg>
             </button>
-            <button class="rpv-tool" data-tool="underline" title="Underline teks">
+            <button type="button" class="rpv-tool" data-tool="underline" title="Underline teks">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     style="width:16px;height:16px;">
                     <path d="M6 3v7a6 6 0 006 6 6 6 0 006-6V3" stroke-linecap="round" />
                     <line x1="4" y1="21" x2="20" y2="21" />
                 </svg>
             </button>
-            <button class="rpv-tool" data-tool="strikethrough" title="Strikethrough teks">
+            <button type="button" class="rpv-tool" data-tool="strikethrough" title="Strikethrough teks">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     style="width:16px;height:16px;">
                     <path d="M17.3 12H6.7M10 7.2C10 7.2 9 6 11.5 6c2.1 0 3 1 3 2.2 0 2-2 2.8-3.5 3"
@@ -1294,7 +1294,7 @@ $annotApiBase = $reviewId
                     <path d="M14 17c0 0 1 1-1.5 1-2.1 0-3.5-1-3.5-2.5" stroke-linecap="round" />
                 </svg>
             </button>
-            <button class="rpv-tool" data-tool="comment" title="Komentar di teks">
+            <button type="button" class="rpv-tool" data-tool="comment" title="Komentar di teks">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     style="width:16px;height:16px;">
                     <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
@@ -1304,14 +1304,14 @@ $annotApiBase = $reviewId
             <div class="rpv-ab-sep"></div>
 
             {{-- Group 3: Drawing --}}
-            <button class="rpv-tool" data-tool="freehand" title="Pen bebas">
+            <button type="button" class="rpv-tool" data-tool="freehand" title="Pen bebas">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     style="width:16px;height:16px;">
                     <path d="M12 20h9" />
                     <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
                 </svg>
             </button>
-            <button class="rpv-tool" data-tool="shape" title="Shape (kotak/lingkaran/panah)">
+            <button type="button" class="rpv-tool" data-tool="shape" title="Shape (kotak/lingkaran/panah)">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     style="width:16px;height:16px;">
                     <rect x="3" y="3" width="7" height="7" rx="1" />
@@ -1319,7 +1319,7 @@ $annotApiBase = $reviewId
                     <path d="M3 20h4M5 18v4M14 15l5 5m0-5l-5 5" />
                 </svg>
             </button>
-            <button class="rpv-tool" data-tool="text" title="Teks bebas">
+            <button type="button" class="rpv-tool" data-tool="text" title="Teks bebas">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     style="width:16px;height:16px;">
                     <polyline points="4 7 4 4 20 4 20 7" />
@@ -1327,7 +1327,7 @@ $annotApiBase = $reviewId
                     <line x1="12" y1="4" x2="12" y2="20" />
                 </svg>
             </button>
-            <button class="rpv-tool" data-tool="sticky" title="Sticky note">
+            <button type="button" class="rpv-tool" data-tool="sticky" title="Sticky note">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     style="width:16px;height:16px;">
                     <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
@@ -1340,7 +1340,7 @@ $annotApiBase = $reviewId
             <div class="rpv-ab-sep"></div>
 
             {{-- Group 4: Eraser --}}
-            <button class="rpv-tool" data-tool="eraser" title="Hapus anotasi">
+            <button type="button" class="rpv-tool" data-tool="eraser" title="Hapus anotasi">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     style="width:16px;height:16px;">
                     <path d="M20 20H7L3 16l10-10 7 7-3 3" />
@@ -1352,10 +1352,10 @@ $annotApiBase = $reviewId
 
             {{-- Shape sub-picker --}}
             <div class="rpv-shapes" id="rpv-shapes">
-                <button class="rpv-shape active" data-shape="rect" title="Kotak">⬛</button>
-                <button class="rpv-shape" data-shape="ellipse" title="Lingkaran">⭕</button>
-                <button class="rpv-shape" data-shape="arrow" title="Panah">➡</button>
-                <button class="rpv-shape" data-shape="line" title="Garis">—</button>
+                <button type="button" class="rpv-shape active" data-shape="rect" title="Kotak">⬛</button>
+                <button type="button" class="rpv-shape" data-shape="ellipse" title="Lingkaran">⭕</button>
+                <button type="button" class="rpv-shape" data-shape="arrow" title="Panah">➡</button>
+                <button type="button" class="rpv-shape" data-shape="line" title="Garis">—</button>
                 <div class="rpv-ab-sep"></div>
             </div>
 
@@ -1385,13 +1385,13 @@ $annotApiBase = $reviewId
             <div class="rpv-ab-sep"></div>
 
             {{-- Undo / Redo --}}
-            <button class="rpv-action" id="rpv-undo" title="Undo (Ctrl+Z)" disabled>↩</button>
-            <button class="rpv-action" id="rpv-redo" title="Redo (Ctrl+Y)" disabled>↪</button>
+            <button type="button" class="rpv-action" id="rpv-undo" title="Undo (Ctrl+Z)" disabled>↩</button>
+            <button type="button" class="rpv-action" id="rpv-redo" title="Redo (Ctrl+Y)" disabled>↪</button>
 
             <div class="rpv-ab-sep"></div>
 
             {{-- Panel toggle --}}
-            <button class="rpv-tool" id="rpv-panel-btn" title="Daftar anotasi" style="position:relative;">
+            <button type="button" class="rpv-tool" id="rpv-panel-btn" title="Daftar anotasi" style="position:relative;">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     style="width:16px;height:16px;">
                     <line x1="8" y1="6" x2="21" y2="6" />
@@ -1412,8 +1412,8 @@ $annotApiBase = $reviewId
     <div id="rpv-tooltip">
         <div class="rpv-tip-text" id="rpv-tip-text"></div>
         <div class="rpv-tip-actions">
-            <button class="rpv-tip-del" id="rpv-tip-del">🗑 Hapus</button>
-            <button class="rpv-tip-close" id="rpv-tip-close">✕ Tutup</button>
+            <button type="button" class="rpv-tip-del" id="rpv-tip-del">🗑 Hapus</button>
+            <button type="button" class="rpv-tip-close" id="rpv-tip-close">✕ Tutup</button>
         </div>
     </div>
 
@@ -1422,8 +1422,8 @@ $annotApiBase = $reviewId
         <p class="rpv-popup-title">💬 Tambah Komentar Review</p>
         <textarea id="rpv-comment-txt" placeholder="Catatan reviewer untuk teks ini..."></textarea>
         <div class="rpv-popup-actions">
-            <button class="rpv-popup-save" id="rpv-comment-save">Simpan</button>
-            <button class="rpv-popup-cancel" id="rpv-comment-cancel">Batal</button>
+            <button type="button" class="rpv-popup-save" id="rpv-comment-save">Simpan</button>
+            <button type="button" class="rpv-popup-cancel" id="rpv-comment-cancel">Batal</button>
         </div>
     </div>
 
@@ -1432,8 +1432,8 @@ $annotApiBase = $reviewId
         <p class="rpv-popup-title">📌 Tambah Sticky Note</p>
         <textarea id="rpv-sticky-txt" placeholder="Catatan untuk bagian ini..."></textarea>
         <div class="rpv-popup-actions">
-            <button class="rpv-popup-save" id="rpv-sticky-save">Tempel</button>
-            <button class="rpv-popup-cancel" id="rpv-sticky-cancel">Batal</button>
+            <button type="button" class="rpv-popup-save" id="rpv-sticky-save">Tempel</button>
+            <button type="button" class="rpv-popup-cancel" id="rpv-sticky-cancel">Batal</button>
         </div>
     </div>
 
@@ -1441,13 +1441,13 @@ $annotApiBase = $reviewId
     <div id="rpv-panel">
         <div class="rpv-panel-header">
             <span class="rpv-panel-title">📝 Anotasi Review Saya</span>
-            <button class="rpv-panel-close" id="rpv-panel-close">✕</button>
+            <button type="button" class="rpv-panel-close" id="rpv-panel-close">✕</button>
         </div>
         <div class="rpv-panel-list" id="rpv-panel-list">
             <div class="rpv-panel-empty">Belum ada anotasi.</div>
         </div>
         <div class="rpv-panel-footer">
-            <button class="rpv-panel-clear" id="rpv-panel-clear">🗑 Hapus semua di halaman ini</button>
+            <button type="button" class="rpv-panel-clear" id="rpv-panel-clear">🗑 Hapus semua di halaman ini</button>
         </div>
     </div>
 
@@ -1456,9 +1456,9 @@ $annotApiBase = $reviewId
         <div id="rpv-search-box">
             <div class="rpv-search-row">
                 <input type="text" id="rpv-search-input" placeholder="Cari kata atau kalimat...">
-                <button class="rpv-snav" id="rpv-sprev">↑</button>
-                <button class="rpv-snav" id="rpv-snext">↓</button>
-                <button class="rpv-snav" id="rpv-sclose">✕</button>
+                <button type="button" class="rpv-snav" id="rpv-sprev">↑</button>
+                <button type="button" class="rpv-snav" id="rpv-snext">↓</button>
+                <button type="button" class="rpv-snav" id="rpv-sclose">✕</button>
             </div>
             <div id="rpv-search-status">Ketik untuk mencari...</div>
             <div id="rpv-search-results"></div>
