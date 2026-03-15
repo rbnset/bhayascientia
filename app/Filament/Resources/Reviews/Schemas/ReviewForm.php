@@ -96,7 +96,7 @@ class ReviewForm
                                 ]),
 
                             Section::make('Manuscript PDF')
-                                ->description('Baca naskah versi yang dipilih dan akukan editing langsung disini agar dapat di lihat lagsung oleh author')
+                                ->description('Baca naskah versi yang dipilih dan lakukan editing langsung disini agar dapat di lihat oleh author')
                                 ->icon('heroicon-o-document-text')
                                 ->schema([
                                     View::make('filament.reviews.pdf-viewer')
