@@ -1,13 +1,37 @@
 /**
- * public/js/review-pdf-viewer.js  v5.2
+ * public/js/review-pdf-viewer.js  v5.1
  *
- * NEW v5.2:
- * - READ_ONLY mode untuk author (view-only annotations)
- *   Anotasi reviewer tetap tampil, tapi semua aksi tulis diblok.
+ * FIXES v5.1 (dari v5.0):
+ *
+ * BUG 1 — Search highlight tidak muncul
+ *   .replace() callback pakai string literal bukan return statement
+ *   FIX: return '<mark...>' + m + '</mark>'
+ *
+ * BUG 2 — Zoom & Resize loop / double-compute
+ *   doZoom, enterFS, exitFS, resize handler semuanya set baseScale = 1
+ *   yang men-trigger computeBase() DULU di renderPage() kemudian lagi
+ *   di dalam .then(). FIX: pakai flag needsRecompute = true, bukan
+ *   reset baseScale ke 1. computeBase() hanya jalan jika flag true.
+ *
+ * BUG 3 — shapePreviewSVG tidak di-clear saat ganti halaman
+ *   FIX: clearShapePreview() + hapus elemen dari DOM di renderPage()
+ *
+ * BUG 4 — Sheet zoom val & sheet page tidak update
+ *   FIX: doZoom update rpv-sheet-zoom-val; renderPage update rpv-sheet-page
+ *
+ * BUG 5 — boot() polling (penyebab loading terus jika CDN lambat)
+ *   FIX: pakai dynamic <script> onload, tidak ada setTimeout loop
+ *
+ * BUG 6 — Guard double-init bisa stuck jika run() error sebelum selesai
+ *   FIX: window[_gk] = true hanya di-set di dalam run() setelah DOM siap
  */
 (function () {
     'use strict';
 
+    /* ── Guard double-init ──────────────────────────────────────────
+       Cek apakah rpv-stage masih ada di DOM.
+       Jika TIDAK (Livewire rebuild) → reset guard dan re-init.
+    ────────────────────────────────────────────────────────────── */
     var _gk = '_rpvA_' + ((window.RPV_CONFIG && window.RPV_CONFIG.reviewId) || 'x');
     if (window[_gk]) {
         if (document.getElementById('rpv-stage')) {
@@ -18,6 +42,9 @@
         window[_gk] = false;
     }
 
+    /* ── FIX BUG 5: Load pdf.js via onload, bukan polling setTimeout ─
+       onload callback menjamin pdfjsLib siap sebelum run() dipanggil.
+    ────────────────────────────────────────────────────────────── */
     var PDFJS_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
     var WORKER_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
@@ -44,39 +71,17 @@
     }
     boot();
 
+    /* ════════════════════════════════════════════════════════════════
+       MAIN
+    ════════════════════════════════════════════════════════════════ */
     function run() {
         var CFG = window.RPV_CONFIG;
         if (!CFG || !CFG.pdfUrl) { console.error('[RPV] RPV_CONFIG missing'); return; }
 
+        /* FIX BUG 6: set guard di sini, setelah DOM & config tervalidasi */
         window[_gk] = true;
 
-        /* ══════════════════════════════════════════════════════════
-           READ_ONLY GUARD — ditempel tepat setelah guard double-init
-           Jika readOnly=true (author):
-           - Anotasi reviewer tetap di-load & ditampilkan (loadAll)
-           - Semua fungsi write (save/delete/patch) di-no-op
-           - freehand canvas & annotation layer pointer-events:none
-           - Sync indicator & eraser cursor disembunyikan
-        ══════════════════════════════════════════════════════════ */
-        var READ_ONLY = CFG.readOnly === true;
-        if (READ_ONLY) {
-            console.log('[RPV] read-only mode (author view)');
-            // Blok pointer events segera setelah DOM siap
-            var _roFree = document.getElementById('rpv-freehand-canvas');
-            if (_roFree) _roFree.style.pointerEvents = 'none';
-            var _roAnnot = document.getElementById('rpv-annotation-layer');
-            // annotation-layer tetap bisa ditampilkan, tapi tidak bisa diklik untuk hapus/edit
-            // pointer-events diset ke 'none' di sini; tooltip masih bisa muncul via hover jika diperlukan
-            // Untuk author: kita biarkan null (tidak blok) agar tooltip "lihat" anotasi bisa muncul
-            // Jika ingin full locked, uncomment baris ini:
-            // if (_roAnnot) _roAnnot.style.pointerEvents = 'none';
-            var _roSync = document.getElementById('rpv-sync');
-            if (_roSync) _roSync.style.display = 'none';
-            var _roEraser = document.getElementById('rpv-eraser-cursor');
-            if (_roEraser) _roEraser.style.display = 'none';
-        }
-        /* ══════════════════════════════════════════════════════════ */
-
+        /* ── Colors ── */
         var COLORS = {
             yellow: '#FFD700', green: '#4ADE80', red: '#EF4444', blue: '#60A5FA',
             orange: '#FF6B18', black: '#111111', white: '#FFFFFF',
@@ -84,10 +89,12 @@
         };
         function hex(n) { return COLORS[n] || '#FFD700'; }
 
+        /* ── State ── */
         var CACHE_KEY = '_rpv_' + btoa(CFG.pdfUrl).slice(0, 30).replace(/[^a-z0-9]/gi, '_');
         var pdfDoc = window[CACHE_KEY] || null;
         var pageNum = 1, pageRendering = false, pendingPage = null;
         var baseScale = 1, zoomFactor = 1;
+        /* FIX BUG 2: flag recompute, bukan reset baseScale = 1 */
         var needsRecompute = true;
         var ZOOM_MIN = 0.5, ZOOM_MAX = 4, ZOOM_STEP = 0.25;
         var DPR = window.devicePixelRatio || 1;
@@ -102,6 +109,7 @@
         var isFullscreen = false, exportBusy = false;
         var SK = 'rpv_' + (CFG.reviewId || 'x');
 
+        /* ── DOM ── */
         var outerWrap = document.getElementById('rpv-outer-wrap');
         var wrap = document.getElementById('rpv-canvas-wrap');
         var stage = document.getElementById('rpv-stage');
@@ -126,6 +134,7 @@
             freeCanvas.style.zIndex = '10';
         }
 
+        /* ── Utils ── */
         function snack(msg, color) {
             color = color || '#FF6B18';
             var el = document.createElement('div');
@@ -136,8 +145,6 @@
         }
 
         function showSync(msg, ok) {
-            /* READ_ONLY: jangan tampilkan sync indicator */
-            if (READ_ONLY) return;
             if (!syncEl) return;
             if (syncTxt) syncTxt.textContent = msg;
             syncEl.style.borderColor = ok ? '#22c55e' : '#FF6B18';
@@ -178,6 +185,7 @@
         function loadLast() { try { return parseInt(localStorage.getItem(SK + '_last') || '1'); } catch (e) { return 1; } }
         function on(id, ev, fn) { var el = document.getElementById(id); if (el) el.addEventListener(ev, fn); }
 
+        /* ── Sanitizer ── */
         var VT = ['highlight', 'underline', 'strikethrough', 'freehand', 'comment', 'sticky', 'shape'];
         var VC = ['yellow', 'green', 'red', 'blue', 'orange', 'black', 'white', 'pink', 'purple', 'cyan'];
         var VS = ['rect', 'ellipse', 'arrow', 'line'];
@@ -206,9 +214,8 @@
             return p;
         }
 
+        /* ── API ── */
         var API = CFG.apiBase;
-
-        /* ── API — semua fungsi write di-guard READ_ONLY ── */
 
         async function apiLoad() {
             if (!API) return [];
@@ -233,8 +240,6 @@
         }
 
         async function apiSave(payload) {
-            /* READ_ONLY: blok semua operasi simpan */
-            if (READ_ONLY) { console.warn('[RPV] apiSave blocked (read-only)'); return null; }
             if (!API) { snack('⚠️ Simpan draft dulu!', '#F59E0B'); return null; }
             var clean = sanitize(payload);
             showSync('Menyimpan...');
@@ -259,16 +264,12 @@
         }
 
         async function apiPatch(id, payload) {
-            /* READ_ONLY: blok semua operasi patch */
-            if (READ_ONLY) { console.warn('[RPV] apiPatch blocked (read-only)'); return; }
             if (!API) return;
             try { await fetch(API + '/' + id, { method: 'PUT', credentials: 'same-origin', headers: hdrs(), body: JSON.stringify(payload) }); }
             catch (e) { console.error('[RPV] patch:', e); }
         }
 
         async function apiDel(id) {
-            /* READ_ONLY: blok semua operasi hapus */
-            if (READ_ONLY) { console.warn('[RPV] apiDel blocked (read-only)'); return; }
             if (!API) return;
             showSync('Menghapus...');
             try { await fetch(API + '/' + id, { method: 'DELETE', credentials: 'same-origin', headers: hdrs() }); showSync('Dihapus ✓', true); }
@@ -276,8 +277,6 @@
         }
 
         async function apiDelPage(pg) {
-            /* READ_ONLY: blok */
-            if (READ_ONLY) { console.warn('[RPV] apiDelPage blocked (read-only)'); return; }
             if (!API) return;
             showSync('Membersihkan...');
             try { await fetch(API + '/page/' + pg, { method: 'DELETE', credentials: 'same-origin', headers: hdrs() }); showSync('Selesai ✓', true); }
@@ -290,6 +289,7 @@
             scheduleRender(); updateBadge(); updateUndoRedo();
         }
 
+        /* ── Search helpers ── */
         function clearSearchHL() {
             annotLayer.querySelectorAll('.rpvr-search-hl').forEach(function (e) { e.remove(); });
             searchHLs = [];
@@ -338,10 +338,14 @@
             }, 1500);
         }
 
+        /* ── FIX BUG 3: shapePreview cleanup ── */
         var shapePreviewSVG = null;
 
         function clearShapePreview() {
-            if (shapePreviewSVG) { shapePreviewSVG.innerHTML = ''; }
+            if (shapePreviewSVG) {
+                shapePreviewSVG.innerHTML = '';
+                /* Jangan hapus dari DOM di sini — cukup kosongkan */
+            }
         }
 
         function destroyShapePreview() {
@@ -351,6 +355,7 @@
             }
         }
 
+        /* ── Render ── */
         function scheduleRender() {
             if (renderPending) return;
             renderPending = true;
@@ -376,6 +381,7 @@
             if (searchResults.length > 0 && searchQuery) applySearchHL();
         }
 
+        /* ── Render helpers ── */
         function rHL(a, s) {
             if (!a.rect) return;
             var el = document.createElement('div'), sel = selectedId == a.id;
@@ -472,28 +478,17 @@
             var note = document.createElement('div');
             note.className = 'rpv-sticky-note'; note.dataset.annotId = String(a.id); note.dataset.color = a.color || 'yellow';
             note.style.left = (a.rect.x * s) + 'px'; note.style.top = (a.rect.y * s) + 'px';
-            /* READ_ONLY: sembunyikan tombol edit & hapus pada sticky note */
-            var stickyControls = READ_ONLY
-                ? '' // tidak ada tombol edit/hapus untuk author
-                : '<div style="display:flex;gap:3px;"><button type="button" class="rpv-sn-edit" style="background:none;border:none;cursor:pointer;font-size:12px;padding:0 2px;" title="Edit">✏️</button><button type="button" class="rpv-sn-del" style="background:none;border:none;cursor:pointer;font-size:14px;color:rgba(0,0,0,.5);padding:0 2px;line-height:1;" title="Hapus">×</button></div>';
-            note.innerHTML = '<div class="rpv-sn-header"><span>📌</span>' + stickyControls + '</div><div class="rpv-sn-body">' + esc(a.comment) + '</div>';
-            if (!READ_ONLY) {
-                note.querySelector('.rpv-sn-del').addEventListener('click', function (ev) { ev.stopPropagation(); stickyRemoveAnim(note, a.id); });
-                note.querySelector('.rpv-sn-edit').addEventListener('click', function (ev) { ev.stopPropagation(); openEditPopup(a); });
-            }
+            note.innerHTML = '<div class="rpv-sn-header"><span>📌</span><div style="display:flex;gap:3px;"><button type="button" class="rpv-sn-edit" style="background:none;border:none;cursor:pointer;font-size:12px;padding:0 2px;" title="Edit">✏️</button><button type="button" class="rpv-sn-del" style="background:none;border:none;cursor:pointer;font-size:14px;color:rgba(0,0,0,.5);padding:0 2px;line-height:1;" title="Hapus">×</button></div></div><div class="rpv-sn-body">' + esc(a.comment) + '</div>';
+            note.querySelector('.rpv-sn-del').addEventListener('click', function (ev) { ev.stopPropagation(); stickyRemoveAnim(note, a.id); });
+            note.querySelector('.rpv-sn-edit').addEventListener('click', function (ev) { ev.stopPropagation(); openEditPopup(a); });
             note.addEventListener('click', function (ev) {
-                /* READ_ONLY: eraser tidak aktif, tapi tooltip tetap bisa muncul */
-                if (!READ_ONLY && activeTool === 'eraser') { ev.stopPropagation(); stickyRemoveAnim(note, a.id); return; }
+                if (activeTool === 'eraser') { ev.stopPropagation(); stickyRemoveAnim(note, a.id); return; }
                 ev.stopPropagation(); showTip(a, ev.clientX, ev.clientY);
             });
-            /* READ_ONLY: sticky note tidak bisa di-drag oleh author */
-            if (!READ_ONLY) makeDraggable(note, a, s);
-            stage.appendChild(note);
+            makeDraggable(note, a, s); stage.appendChild(note);
         }
 
         function stickyRemoveAnim(el, id) {
-            /* READ_ONLY: guard tambahan */
-            if (READ_ONLY) return;
             el.style.transition = 'opacity .18s,transform .18s'; el.style.opacity = '0'; el.style.transform = 'scale(.85)';
             setTimeout(async function () { el.remove(); await removeAnnot(id); }, 180);
         }
@@ -501,16 +496,15 @@
         function attachEv(el, a) {
             el.addEventListener('click', function (ev) {
                 ev.stopPropagation();
-                /* READ_ONLY: eraser & select diblok, hanya tooltip yang boleh */
-                if (!READ_ONLY && activeTool === 'eraser') { removeAnnot(a.id); return; }
-                if (!READ_ONLY && activeTool === 'select') { selectedId = selectedId == a.id ? null : String(a.id); scheduleRender(); return; }
+                if (activeTool === 'eraser') { removeAnnot(a.id); return; }
+                if (activeTool === 'select') { selectedId = selectedId == a.id ? null : String(a.id); scheduleRender(); return; }
                 showTip(a, ev.clientX, ev.clientY);
             });
             el.addEventListener('touchend', function (ev) {
                 ev.stopPropagation(); if (ev.cancelable) ev.preventDefault();
                 var t = ev.changedTouches[0];
-                if (!READ_ONLY && activeTool === 'eraser') { removeAnnot(a.id); return; }
-                if (!READ_ONLY && activeTool === 'select') { selectedId = selectedId == a.id ? null : String(a.id); scheduleRender(); return; }
+                if (activeTool === 'eraser') { removeAnnot(a.id); return; }
+                if (activeTool === 'select') { selectedId = selectedId == a.id ? null : String(a.id); scheduleRender(); return; }
                 showTip(a, t.clientX, t.clientY);
             }, { passive: false });
         }
@@ -549,14 +543,7 @@
             var tipTxt = document.getElementById('rpv-tip-text');
             if (tipTxt) { tipTxt.textContent = txt; tipTxt.dataset.annotId = String(a.id); }
             var editBtn = document.getElementById('rpv-tip-edit');
-            /* READ_ONLY: sembunyikan tombol edit di tooltip */
-            if (editBtn) {
-                editBtn.style.display = (!READ_ONLY && ['comment', 'sticky'].includes(a.type)) ? '' : 'none';
-                editBtn.dataset.annotId = String(a.id);
-            }
-            /* READ_ONLY: sembunyikan tombol hapus di tooltip */
-            var delBtn = document.getElementById('rpv-tip-del');
-            if (delBtn) delBtn.style.display = READ_ONLY ? 'none' : '';
+            if (editBtn) { editBtn.style.display = ['comment', 'sticky'].includes(a.type) ? '' : 'none'; editBtn.dataset.annotId = String(a.id); }
             tooltip.classList.add('show');
             var vw = window.innerWidth, vh = window.innerHeight;
             tooltip.style.left = Math.max(4, Math.min(cx - 135, vw - 278)) + 'px';
@@ -565,13 +552,10 @@
 
         on('rpv-tip-close', 'click', function () { tooltip.classList.remove('show'); });
         on('rpv-tip-del', 'click', async function () {
-            /* READ_ONLY: guard tambahan */
-            if (READ_ONLY) return;
             var id = document.getElementById('rpv-tip-text') && document.getElementById('rpv-tip-text').dataset.annotId;
             tooltip.classList.remove('show'); if (id) await removeAnnot(id);
         });
         on('rpv-tip-edit', 'click', function () {
-            if (READ_ONLY) return;
             var id = document.getElementById('rpv-tip-edit') && document.getElementById('rpv-tip-edit').dataset.annotId;
             tooltip.classList.remove('show');
             if (id) { var a = annots.find(function (x) { return String(x.id) === id; }); if (a) openEditPopup(a); }
@@ -584,9 +568,8 @@
             }
         });
 
+        /* ── Edit popup ── */
         function openEditPopup(a) {
-            /* READ_ONLY: blok edit popup */
-            if (READ_ONLY) return;
             var pop = document.getElementById('rpv-edit-popup');
             if (!pop) {
                 pop = document.createElement('div'); pop.id = 'rpv-edit-popup';
@@ -621,9 +604,8 @@
             });
         }
 
+        /* ── Add / Remove ── */
         async function addAnnot(payload) {
-            /* READ_ONLY: blok tambah anotasi */
-            if (READ_ONLY) { console.warn('[RPV] addAnnot blocked (read-only)'); return null; }
             var saved = await apiSave(payload); if (!saved) return null;
             if (payload.arrow_x1 != null && saved.arrow_x1 == null) {
                 saved.arrow_x1 = payload.arrow_x1; saved.arrow_y1 = payload.arrow_y1;
@@ -638,8 +620,6 @@
         }
 
         async function removeAnnot(id) {
-            /* READ_ONLY: blok hapus anotasi */
-            if (READ_ONLY) { console.warn('[RPV] removeAnnot blocked (read-only)'); return; }
             var a = annots.find(function (x) { return String(x.id) === String(id); }); if (!a) return;
             await apiDel(a.id);
             annots = annots.filter(function (x) { return String(x.id) !== String(id); });
@@ -648,19 +628,20 @@
             updateUndoRedo(); scheduleRender(); snack('🗑 Dihapus');
         }
 
+        /* ── Undo / Redo ── */
         function updateUndoRedo() {
-            var u = document.getElementById('rpv-undo'); if (u) u.disabled = READ_ONLY || !undoStack.length;
-            var r = document.getElementById('rpv-redo'); if (r) r.disabled = READ_ONLY || !redoStack.length;
+            var u = document.getElementById('rpv-undo'); if (u) u.disabled = !undoStack.length;
+            var r = document.getElementById('rpv-redo'); if (r) r.disabled = !redoStack.length;
         }
         async function doUndo() {
-            if (READ_ONLY || !undoStack.length) return;
+            if (!undoStack.length) return;
             var op = undoStack.pop();
             if (op.action === 'add') { var a = annots.find(function (x) { return String(x.id) === String(op.data.id); }); if (a) { await apiDel(a.id); annots = annots.filter(function (x) { return String(x.id) !== String(a.id); }); redoStack.push({ action: 'readd', data: a }); } }
             else if (op.action === 'del') { var saved = await apiSave(op.data); if (saved) { annots.push(saved); redoStack.push({ action: 'redel', data: saved }); } }
             updateUndoRedo(); scheduleRender();
         }
         async function doRedo() {
-            if (READ_ONLY || !redoStack.length) return;
+            if (!redoStack.length) return;
             var op = redoStack.pop();
             if (op.action === 'readd') { var saved = await apiSave(op.data); if (saved) { annots.push(saved); undoStack.push({ action: 'add', data: saved }); } }
             else if (op.action === 'redel') { var a = annots.find(function (x) { return String(x.id) === String(op.data.id); }); if (a) { await apiDel(a.id); annots = annots.filter(function (x) { return String(x.id) !== String(a.id); }); undoStack.push({ action: 'del', data: a }); } }
@@ -669,6 +650,7 @@
         on('rpv-undo', 'click', doUndo);
         on('rpv-redo', 'click', doRedo);
 
+        /* ── Badge & Panel ── */
         function updateBadge() {
             var n = annots.length, badge = document.getElementById('rpv-badge');
             if (badge) { badge.textContent = n > 99 ? '99+' : String(n); badge.classList.toggle('show', n > 0); }
@@ -676,8 +658,6 @@
         on('rpv-panel-btn', 'click', function (e) { e.stopPropagation(); document.getElementById('rpv-panel') && document.getElementById('rpv-panel').classList.toggle('open'); buildPanel(); });
         on('rpv-panel-close', 'click', function () { document.getElementById('rpv-panel') && document.getElementById('rpv-panel').classList.remove('open'); });
         on('rpv-panel-clear', 'click', async function () {
-            /* READ_ONLY: blok hapus semua */
-            if (READ_ONLY) return;
             if (!confirm('Hapus semua anotasi di halaman ' + pageNum + '?')) return;
             await apiDelPage(pageNum); annots = annots.filter(function (a) { return a.page !== pageNum; });
             undoStack = []; redoStack = []; updateUndoRedo(); scheduleRender(); buildPanel(); snack('🗑 Halaman ' + pageNum + ' dibersihkan');
@@ -690,33 +670,16 @@
             var ic = { highlight: '✏️', underline: '__', strikethrough: '~~', freehand: '🖊', shape: '⬛', comment: '💬', sticky: '📌' };
             annots.slice().sort(function (a, b) { return a.page - b.page || a.id - b.id; }).forEach(function (a) {
                 var el = document.createElement('div'); el.className = 'rpv-panel-item';
-                /* READ_ONLY: hilangkan tombol edit/hapus di panel list */
-                var panelActions = READ_ONLY
-                    ? ''
-                    : '<div style="display:flex;gap:2px;flex-shrink:0;"><button type="button" data-pe="' + a.id + '" style="background:none;border:none;color:#4b5563;cursor:pointer;font-size:11px;padding:2px 3px;">✏️</button><button type="button" data-pd="' + a.id + '" style="background:none;border:none;color:#4b5563;cursor:pointer;font-size:12px;padding:2px 3px;">🗑</button></div>';
-                el.innerHTML = '<div class="rpv-panel-dot" style="background:' + hex(a.color) + '"></div><div class="rpv-panel-body"><span class="rpv-panel-type">' + (ic[a.type] || '•') + ' ' + a.type + '</span><span class="rpv-panel-pg">Hal.' + a.page + '</span><div class="rpv-panel-text">' + esc(a.comment || a.selected_text || a.shape_type || '—') + '</div></div>' + panelActions;
-                if (!READ_ONLY) {
-                    el.querySelector('[data-pd="' + a.id + '"]').addEventListener('click', async function (ev) { ev.stopPropagation(); await removeAnnot(a.id); buildPanel(); });
-                    el.querySelector('[data-pe="' + a.id + '"]').addEventListener('click', function (ev) { ev.stopPropagation(); openEditPopup(a); });
-                }
+                el.innerHTML = '<div class="rpv-panel-dot" style="background:' + hex(a.color) + '"></div><div class="rpv-panel-body"><span class="rpv-panel-type">' + (ic[a.type] || '•') + ' ' + a.type + '</span><span class="rpv-panel-pg">Hal.' + a.page + '</span><div class="rpv-panel-text">' + esc(a.comment || a.selected_text || a.shape_type || '—') + '</div></div><div style="display:flex;gap:2px;flex-shrink:0;"><button type="button" data-pe="' + a.id + '" style="background:none;border:none;color:#4b5563;cursor:pointer;font-size:11px;padding:2px 3px;">✏️</button><button type="button" data-pd="' + a.id + '" style="background:none;border:none;color:#4b5563;cursor:pointer;font-size:12px;padding:2px 3px;">🗑</button></div>';
+                el.querySelector('[data-pd="' + a.id + '"]').addEventListener('click', async function (ev) { ev.stopPropagation(); await removeAnnot(a.id); buildPanel(); });
+                el.querySelector('[data-pe="' + a.id + '"]').addEventListener('click', function (ev) { ev.stopPropagation(); openEditPopup(a); });
                 el.addEventListener('click', function () { if (a.page !== pageNum) renderPage(a.page); document.getElementById('rpv-panel') && document.getElementById('rpv-panel').classList.remove('open'); });
                 list.appendChild(el);
             });
         }
 
+        /* ── Tool management ── */
         function setTool(tool) {
-            /* READ_ONLY: paksa tool ke 'pan' agar tidak bisa menggambar */
-            if (READ_ONLY) {
-                activeTool = 'pan';
-                stage.classList.remove('freehand-mode', 'shape-mode', 'eraser-mode', 'select-mode');
-                stage.classList.add('pan-mode');
-                textLayer.style.pointerEvents = 'none';
-                textLayer.style.userSelect = 'none';
-                textLayer.style.webkitUserSelect = 'none';
-                if (freeCanvas) freeCanvas.style.pointerEvents = 'none';
-                if (eraserCur) eraserCur.style.display = 'none';
-                return;
-            }
             activeTool = tool;
             stage.classList.remove('freehand-mode', 'shape-mode', 'eraser-mode', 'pan-mode', 'select-mode');
             if (tool === 'freehand' || tool === 'brush') stage.classList.add('freehand-mode');
@@ -739,35 +702,40 @@
 
         document.querySelectorAll('.rpv-tool[data-tool]').forEach(function (btn) {
             btn.addEventListener('click', function () {
-                /* READ_ONLY: blok tool switching */
-                if (READ_ONLY) return;
                 document.querySelectorAll('.rpv-tool[data-tool]').forEach(function (b) { b.classList.remove('active'); });
                 btn.classList.add('active'); setTool(btn.dataset.tool);
             });
         });
         document.querySelectorAll('.rpv-color').forEach(function (sw) {
-            sw.addEventListener('click', function () {
-                if (READ_ONLY) return;
-                document.querySelectorAll('.rpv-color').forEach(function (s) { s.classList.remove('selected'); }); sw.classList.add('selected'); activeColor = sw.dataset.color;
-            });
+            sw.addEventListener('click', function () { document.querySelectorAll('.rpv-color').forEach(function (s) { s.classList.remove('selected'); }); sw.classList.add('selected'); activeColor = sw.dataset.color; });
         });
         document.querySelectorAll('.rpv-size').forEach(function (d) {
-            d.addEventListener('click', function () {
-                if (READ_ONLY) return;
-                document.querySelectorAll('.rpv-size').forEach(function (x) { x.classList.remove('selected'); }); d.classList.add('selected'); activeSize = +d.dataset.size;
-            });
+            d.addEventListener('click', function () { document.querySelectorAll('.rpv-size').forEach(function (x) { x.classList.remove('selected'); }); d.classList.add('selected'); activeSize = +d.dataset.size; });
         });
         document.querySelectorAll('.rpv-shape').forEach(function (b) {
-            b.addEventListener('click', function () {
-                if (READ_ONLY) return;
-                document.querySelectorAll('.rpv-shape').forEach(function (x) { x.classList.remove('active'); }); b.classList.add('active'); activeShape = b.dataset.shape;
-            });
+            b.addEventListener('click', function () { document.querySelectorAll('.rpv-shape').forEach(function (x) { x.classList.remove('active'); }); b.classList.add('active'); activeShape = b.dataset.shape; });
         });
+
+        /* ── Text selection ── */
+        function getSelInfo() {
+            var sel = window.getSelection(); if (!sel || sel.isCollapsed || !sel.rangeCount) return null;
+            var range = sel.getRangeAt(0); if (!textLayer || !textLayer.contains(range.commonAncestorContainer)) return null;
+            var sr = stage.getBoundingClientRect(), s = baseScale * zoomFactor;
+            var rects = Array.from(range.getClientRects()).filter(function (r) { return r.width > .5 && r.height > .5; });
+            if (!rects.length) return null;
+            var L = Math.min.apply(null, rects.map(function (r) { return r.left; }));
+            var T = Math.min.apply(null, rects.map(function (r) { return r.top; }));
+            var R = Math.max.apply(null, rects.map(function (r) { return r.right; }));
+            var B = Math.max.apply(null, rects.map(function (r) { return r.bottom; }));
+            return {
+                rect: { x: (L - sr.left) / s, y: (T - sr.top) / s, w: (R - L) / s, h: (B - T) / s },
+                text: sel.toString().substring(0, 1000),
+                br: range.getBoundingClientRect()
+            };
+        }
 
         var selTimer = null;
         function onSelEnd(e) {
-            /* READ_ONLY: blok text selection untuk anotasi */
-            if (READ_ONLY) return;
             if (e.target.closest && e.target.closest('.rpv-popup,#rpv-annot-bar,#rpv-panel,#rpv-edit-popup')) return;
             clearTimeout(selTimer);
             selTimer = setTimeout(async function () {
@@ -794,32 +762,13 @@
             }, 80);
         }
 
-        function getSelInfo() {
-            var sel = window.getSelection(); if (!sel || sel.isCollapsed || !sel.rangeCount) return null;
-            var range = sel.getRangeAt(0); if (!textLayer || !textLayer.contains(range.commonAncestorContainer)) return null;
-            var sr = stage.getBoundingClientRect(), s = baseScale * zoomFactor;
-            var rects = Array.from(range.getClientRects()).filter(function (r) { return r.width > .5 && r.height > .5; });
-            if (!rects.length) return null;
-            var L = Math.min.apply(null, rects.map(function (r) { return r.left; }));
-            var T = Math.min.apply(null, rects.map(function (r) { return r.top; }));
-            var R = Math.max.apply(null, rects.map(function (r) { return r.right; }));
-            var B = Math.max.apply(null, rects.map(function (r) { return r.bottom; }));
-            return {
-                rect: { x: (L - sr.left) / s, y: (T - sr.top) / s, w: (R - L) / s, h: (B - T) / s },
-                text: sel.toString().substring(0, 1000),
-                br: range.getBoundingClientRect()
-            };
-        }
-
         document.addEventListener('mouseup', onSelEnd);
         document.addEventListener('touchend', function (e) {
-            if (READ_ONLY) return;
             if (!['highlight', 'comment', 'underline', 'strikethrough'].includes(activeTool)) return;
             onSelEnd(e);
         }, { passive: true });
 
         on('rpv-comment-save', 'click', async function () {
-            if (READ_ONLY) return;
             var txtEl = document.getElementById('rpv-comment-txt');
             var txt = txtEl ? txtEl.value.trim() : '';
             if (!txt) { snack('Tulis komentar dulu!'); return; }
@@ -838,7 +787,6 @@
         });
 
         on('rpv-sticky-save', 'click', async function () {
-            if (READ_ONLY) return;
             var txtEl = document.getElementById('rpv-sticky-txt');
             var txt = txtEl ? txtEl.value.trim() : '';
             if (!txt) { snack('Tulis catatan dulu!'); return; }
@@ -855,12 +803,13 @@
             stickyPos = null;
         });
 
+        /* ── Freehand / Brush ── */
         function getFHSize() { return activeTool === 'brush' ? Math.max(6, activeSize * 3.5) : activeSize; }
         function getFHAlpha() { return activeTool === 'brush' ? .5 : .92; }
 
-        function fhStart(e) { if (READ_ONLY || (activeTool !== 'freehand' && activeTool !== 'brush')) return; if (e.cancelable) e.preventDefault(); isDrawing = true; freePoints = []; var p = stageXY(e), s = baseScale * zoomFactor; freePoints.push([p.x / s, p.y / s]); }
+        function fhStart(e) { if (activeTool !== 'freehand' && activeTool !== 'brush') return; if (e.cancelable) e.preventDefault(); isDrawing = true; freePoints = []; var p = stageXY(e), s = baseScale * zoomFactor; freePoints.push([p.x / s, p.y / s]); }
         function fhMove(e) {
-            if (READ_ONLY || !isDrawing || (activeTool !== 'freehand' && activeTool !== 'brush')) return; if (e.cancelable) e.preventDefault();
+            if (!isDrawing || (activeTool !== 'freehand' && activeTool !== 'brush')) return; if (e.cancelable) e.preventDefault();
             var p = stageXY(e), s = baseScale * zoomFactor; freePoints.push([p.x / s, p.y / s]);
             if (!freeCtx || freePoints.length < 2) return;
             var last = freePoints[freePoints.length - 2], cur = freePoints[freePoints.length - 1];
@@ -870,13 +819,14 @@
             freeCtx.stroke(); freeCtx.restore();
         }
         async function fhEnd(e) {
-            if (READ_ONLY || !isDrawing || (activeTool !== 'freehand' && activeTool !== 'brush')) return; if (e.cancelable) e.preventDefault(); isDrawing = false;
+            if (!isDrawing || (activeTool !== 'freehand' && activeTool !== 'brush')) return; if (e.cancelable) e.preventDefault(); isDrawing = false;
             if (freePoints.length < 2) return;
             var xs = freePoints.map(function (p) { return p[0]; }), ys = freePoints.map(function (p) { return p[1]; });
             var bx = Math.min.apply(null, xs), by = Math.min.apply(null, ys);
             await addAnnot({ page: pageNum, type: 'freehand', color: activeColor, stroke_width: getFHSize(), path_points: freePoints, rect_x: bx, rect_y: by, rect_w: Math.max.apply(null, xs) - bx, rect_h: Math.max.apply(null, ys) - by });
         }
 
+        /* ── Shape ── */
         function shapePreviewSVGEl() {
             if (!shapePreviewSVG) {
                 shapePreviewSVG = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -915,10 +865,17 @@
 
         var shDrawX1 = 0, shDrawY1 = 0;
 
-        function shStart(e) { if (READ_ONLY || activeTool !== 'shape') return; if (e.cancelable) e.preventDefault(); isDrawing = true; var p = stageXY(e); drawStart = p; shDrawX1 = p.x; shDrawY1 = p.y; shapePreviewSVGEl(); }
-        function shMove(e) { if (READ_ONLY || !isDrawing || activeTool !== 'shape' || !drawStart) return; if (e.cancelable) e.preventDefault(); var c = stageXY(e); updateShapePreview(shDrawX1, shDrawY1, c.x, c.y); }
+        function shStart(e) {
+            if (activeTool !== 'shape') return; if (e.cancelable) e.preventDefault();
+            isDrawing = true; var p = stageXY(e); drawStart = p; shDrawX1 = p.x; shDrawY1 = p.y;
+            shapePreviewSVGEl();
+        }
+        function shMove(e) {
+            if (!isDrawing || activeTool !== 'shape' || !drawStart) return; if (e.cancelable) e.preventDefault();
+            var c = stageXY(e); updateShapePreview(shDrawX1, shDrawY1, c.x, c.y);
+        }
         async function shEnd(e) {
-            if (READ_ONLY || !isDrawing || activeTool !== 'shape') return; if (e.cancelable) e.preventDefault();
+            if (!isDrawing || activeTool !== 'shape') return; if (e.cancelable) e.preventDefault();
             isDrawing = false; clearShapePreview();
             var c = stageXY(e), s = baseScale * zoomFactor; if (!drawStart) return;
             var x1 = shDrawX1 / s, y1 = shDrawY1 / s, x2 = c.x / s, y2 = c.y / s;
@@ -943,15 +900,15 @@
             freeCanvas.addEventListener('touchend', function (e) { fhEnd(e); shEnd(e); }, { passive: false });
         }
 
+        /* ── Eraser cursor ── */
         document.addEventListener('mousemove', function (e) {
             if (!eraserCur) return;
-            eraserCur.style.display = (!READ_ONLY && activeTool === 'eraser') ? 'block' : 'none';
-            if (!READ_ONLY && activeTool === 'eraser') { eraserCur.style.left = e.clientX + 'px'; eraserCur.style.top = e.clientY + 'px'; }
+            eraserCur.style.display = activeTool === 'eraser' ? 'block' : 'none';
+            if (activeTool === 'eraser') { eraserCur.style.left = e.clientX + 'px'; eraserCur.style.top = e.clientY + 'px'; }
         });
 
+        /* ── Stage click (sticky) ── */
         stage.addEventListener('click', function (e) {
-            /* READ_ONLY: blok sticky note placement & eraser via stage click */
-            if (READ_ONLY) return;
             if (e.target === freeCanvas) return;
             var hit = e.target.closest && (e.target.closest('[data-annot-id]') || e.target.closest('.rpv-sticky-note'));
             if (activeTool === 'sticky') {
@@ -973,6 +930,7 @@
             if (activeTool === 'eraser' && !hit) { snack('Klik anotasi untuk menghapus', '#60A5FA'); return; }
         });
 
+        /* ── Pan ── */
         stage.addEventListener('mousedown', function (e) { if (activeTool !== 'pan') return; isPanning = true; panSX = e.clientX; panSY = e.clientY; panScrollX = wrap ? wrap.scrollLeft : 0; panScrollY = wrap ? wrap.scrollTop : 0; if (e.cancelable) e.preventDefault(); }, { passive: false });
         document.addEventListener('mousemove', function (e) { if (!isPanning || activeTool !== 'pan') return; if (wrap) { wrap.scrollLeft = panScrollX + (panSX - e.clientX); wrap.scrollTop = panScrollY + (panSY - e.clientY); } });
         document.addEventListener('mouseup', function () { isPanning = false; });
@@ -988,6 +946,7 @@
             wrap.addEventListener('touchend', function (e) { if (e.changedTouches.length !== 1) return; var dx = swX - e.changedTouches[0].clientX, dy = swY - e.changedTouches[0].clientY; if (Math.abs(dx) > Math.abs(dy) * 1.8 && Math.abs(dx) > 60) { if (['freehand', 'brush', 'shape', 'pan'].includes(activeTool)) return; dx > 0 ? nextPage() : prevPage(); } }, { passive: true });
         }
 
+        /* ── Fullscreen ── */
         function updateFsBtn() {
             var btn = document.getElementById('rpv-fs-btn'); if (!btn) return;
             btn.innerHTML = isFullscreen
@@ -995,10 +954,20 @@
                 : '<svg style="width:13px;height:13px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg><span>Layar Penuh</span>';
         }
 
-        function enterFS() { isFullscreen = true; if (outerWrap) outerWrap.classList.add('is-fullscreen'); document.body.style.overflow = 'hidden'; updateFsBtn(); needsRecompute = true; renderPage(pageNum); }
-        function exitFS() { isFullscreen = false; if (outerWrap) outerWrap.classList.remove('is-fullscreen'); document.body.style.overflow = ''; updateFsBtn(); needsRecompute = true; renderPage(pageNum); }
+        /* FIX BUG 2: enterFS/exitFS pakai needsRecompute, bukan baseScale = 1 */
+        function enterFS() {
+            isFullscreen = true; if (outerWrap) outerWrap.classList.add('is-fullscreen');
+            document.body.style.overflow = 'hidden'; updateFsBtn();
+            needsRecompute = true; renderPage(pageNum);
+        }
+        function exitFS() {
+            isFullscreen = false; if (outerWrap) outerWrap.classList.remove('is-fullscreen');
+            document.body.style.overflow = ''; updateFsBtn();
+            needsRecompute = true; renderPage(pageNum);
+        }
         on('rpv-fs-btn', 'click', function () { isFullscreen ? exitFS() : enterFS(); });
 
+        /* ── Resume toast ── */
         function showResume(savedPage) {
             if (savedPage <= 1 || !pdfDoc || savedPage > pdfDoc.numPages) return;
             var t = document.getElementById('rpv-resume-toast');
@@ -1016,6 +985,7 @@
             var no = document.getElementById('rpv-resume-no'); if (no) no.onclick = function () { clearTimeout(auto); hide(); renderPage(1); };
         }
 
+        /* ── Mobile bottom sheet ── */
         function openSheet() { var s = document.getElementById('rpv-bottom-sheet'), b = document.getElementById('rpv-sheet-backdrop'); if (s) s.classList.add('show'); if (b) b.classList.add('show'); }
         function closeSheet() { var s = document.getElementById('rpv-bottom-sheet'), b = document.getElementById('rpv-sheet-backdrop'); if (s) s.classList.remove('show'); if (b) b.classList.remove('show'); }
 
@@ -1038,6 +1008,7 @@
         }
         bindSheet();
 
+        /* ── Reading mode ── */
         function applyMode(mode) {
             if (outerWrap) { outerWrap.classList.remove('mode-sepia', 'mode-night'); if (mode !== 'normal') outerWrap.classList.add('mode-' + mode); }
             document.querySelectorAll('[data-rpv-mode],[data-rpv-sheet-mode]').forEach(function (b) {
@@ -1048,7 +1019,12 @@
             btn.addEventListener('click', function () { applyMode(btn.dataset.rpvMode); });
         });
 
-        function openSearch() { var ov = document.getElementById('rpv-search'); if (!ov) return; ov.classList.add('show'); setTimeout(function () { var i = document.getElementById('rpv-search-input'); if (i) i.focus(); }, 60); }
+        /* ── Search ── */
+        function openSearch() {
+            var ov = document.getElementById('rpv-search'); if (!ov) return;
+            ov.classList.add('show');
+            setTimeout(function () { var i = document.getElementById('rpv-search-input'); if (i) i.focus(); }, 60);
+        }
         function closeSearch() {
             var ov = document.getElementById('rpv-search'); if (ov) ov.classList.remove('show');
             clearSearchHL(); searchQuery = ''; searchResults = []; searchIdx = -1;
@@ -1085,6 +1061,7 @@
             var escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             searchResults.slice(0, 40).forEach(function (r, i) {
                 var el = document.createElement('div'); el.className = 'rpv-sri';
+                /* FIX BUG 1: return statement, bukan string literal */
                 var hlExcerpt = esc(r.excerpt).replace(
                     new RegExp(escaped, 'gi'),
                     function (m) { return '<mark style="background:rgba(255,107,24,.35);color:#fff;border-radius:2px;padding:0 1px;">' + m + '</mark>'; }
@@ -1092,8 +1069,14 @@
                 el.innerHTML = '<span class="pg">Hal.' + r.page + '</span><span>' + hlExcerpt + '</span>';
                 el.addEventListener('click', function () {
                     searchIdx = i;
-                    if (r.page !== pageNum) { renderPage(r.page); setTimeout(function () { applySearchHL(); flashHL(i); }, 700); }
-                    else { applySearchHL(); flashHL(i); }
+                    /* FIX BUG 5: apply highlight SEBELUM close, bukan setelah */
+                    if (r.page !== pageNum) {
+                        renderPage(r.page);
+                        /* Tunggu render selesai lalu apply + close */
+                        setTimeout(function () { applySearchHL(); flashHL(i); }, 700);
+                    } else {
+                        applySearchHL(); flashHL(i);
+                    }
                     setTimeout(closeSearch, 1200);
                 });
                 list.appendChild(el);
@@ -1112,24 +1095,34 @@
                 });
             }
             on('rpv-sclose', 'click', closeSearch);
-            on('rpv-snext', 'click', function () { if (!searchResults.length) return; searchIdx = (searchIdx + 1) % searchResults.length; var r = searchResults[searchIdx]; if (r.page !== pageNum) { renderPage(r.page); setTimeout(function () { applySearchHL(); flashHL(searchIdx); }, 700); } else { applySearchHL(); flashHL(searchIdx); } });
-            on('rpv-sprev', 'click', function () { if (!searchResults.length) return; searchIdx = (searchIdx - 1 + searchResults.length) % searchResults.length; var r = searchResults[searchIdx]; if (r.page !== pageNum) { renderPage(r.page); setTimeout(function () { applySearchHL(); flashHL(searchIdx); }, 700); } else { applySearchHL(); flashHL(searchIdx); } });
+            on('rpv-snext', 'click', function () {
+                if (!searchResults.length) return;
+                searchIdx = (searchIdx + 1) % searchResults.length;
+                var r = searchResults[searchIdx];
+                if (r.page !== pageNum) { renderPage(r.page); setTimeout(function () { applySearchHL(); flashHL(searchIdx); }, 700); }
+                else { applySearchHL(); flashHL(searchIdx); }
+            });
+            on('rpv-sprev', 'click', function () {
+                if (!searchResults.length) return;
+                searchIdx = (searchIdx - 1 + searchResults.length) % searchResults.length;
+                var r = searchResults[searchIdx];
+                if (r.page !== pageNum) { renderPage(r.page); setTimeout(function () { applySearchHL(); flashHL(searchIdx); }, 700); }
+                else { applySearchHL(); flashHL(searchIdx); }
+            });
             on('rpv-search-btn', 'click', openSearch);
             var ov = document.getElementById('rpv-search');
             if (ov) ov.addEventListener('click', function (e) { if (e.target === ov) closeSearch(); });
         }
         bindSearch();
 
+        /* ── Keyboard ── */
         document.addEventListener('keydown', function (e) {
             if (e.target.id === 'rpv-search-input') return;
             if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
             if ((e.ctrlKey || e.metaKey) && e.key === 'f') { e.preventDefault(); openSearch(); return; }
-            /* READ_ONLY: blok keyboard shortcuts untuk undo/redo/delete */
-            if (!READ_ONLY) {
-                if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') { e.preventDefault(); doUndo(); return; }
-                if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); doRedo(); return; }
-                if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) { removeAnnot(selectedId); selectedId = null; return; }
-            }
+            if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') { e.preventDefault(); doUndo(); return; }
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); doRedo(); return; }
+            if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) { removeAnnot(selectedId); selectedId = null; return; }
             switch (e.key) {
                 case 'ArrowLeft': prevPage(); break; case 'ArrowRight': nextPage(); break;
                 case '+': case '=': doZoom(1); break; case '-': doZoom(-1); break;
@@ -1139,9 +1132,8 @@
             }
         });
 
+        /* ── Export ── */
         on('rpv-download-btn', 'click', async function () {
-            /* READ_ONLY: tombol download tidak ada di blade, tapi guard tetap dipasang */
-            if (READ_ONLY) return;
             if (exportBusy) { snack('⏳ Sedang export...'); return; }
             if (!pdfDoc) { snack('PDF belum dimuat!'); return; }
             var jsPDFLib = window.jspdf && window.jspdf.jsPDF || window.jsPDF;
@@ -1189,10 +1181,23 @@
                 if (!a.rect) return;
                 var sw = (a.stroke_width || 2) * s; c.globalAlpha = 0.85; c.strokeStyle = col; c.lineWidth = sw; c.lineCap = 'round'; c.lineJoin = 'round';
                 var stype = a.shape_type || 'rect';
-                if (stype === 'rect') { c.strokeRect(a.rect.x * s + sw / 2, a.rect.y * s + sw / 2, Math.max(1, a.rect.w * s - sw), Math.max(1, a.rect.h * s - sw)); }
-                else if (stype === 'ellipse') { c.beginPath(); c.ellipse((a.rect.x + a.rect.w / 2) * s, (a.rect.y + a.rect.h / 2) * s, Math.max(1, a.rect.w * s / 2 - sw / 2), Math.max(1, a.rect.h * s / 2 - sw / 2), 0, 0, Math.PI * 2); c.stroke(); }
-                else if (stype === 'line') { var lx1 = a.arrow_x1 != null ? a.arrow_x1 * s : a.rect.x * s, ly1 = a.arrow_y1 != null ? a.arrow_y1 * s : (a.rect.y + a.rect.h / 2) * s; var lx2 = a.arrow_x2 != null ? a.arrow_x2 * s : (a.rect.x + a.rect.w) * s, ly2 = a.arrow_y2 != null ? a.arrow_y2 * s : (a.rect.y + a.rect.h / 2) * s; c.beginPath(); c.moveTo(lx1, ly1); c.lineTo(lx2, ly2); c.stroke(); }
-                else if (stype === 'arrow') { var ax1 = a.arrow_x1 != null ? a.arrow_x1 * s : a.rect.x * s, ay1 = a.arrow_y1 != null ? a.arrow_y1 * s : (a.rect.y + a.rect.h / 2) * s; var ax2 = a.arrow_x2 != null ? a.arrow_x2 * s : (a.rect.x + a.rect.w) * s, ay2 = a.arrow_y2 != null ? a.arrow_y2 * s : (a.rect.y + a.rect.h / 2) * s; var adx = ax2 - ax1, ady = ay2 - ay1, alen = Math.sqrt(adx * adx + ady * ady); if (alen < 2) { c.restore(); return; } var headLen = Math.min(alen * 0.35, Math.max(10, sw * 5)), aang = Math.atan2(ady, adx); c.beginPath(); c.moveTo(ax1, ay1); c.lineTo(ax2, ay2); c.stroke(); c.beginPath(); c.moveTo(ax2 - headLen * Math.cos(aang - Math.PI / 6), ay2 - headLen * Math.sin(aang - Math.PI / 6)); c.lineTo(ax2, ay2); c.lineTo(ax2 - headLen * Math.cos(aang + Math.PI / 6), ay2 - headLen * Math.sin(aang + Math.PI / 6)); c.stroke(); }
+                if (stype === 'rect') {
+                    c.strokeRect(a.rect.x * s + sw / 2, a.rect.y * s + sw / 2, Math.max(1, a.rect.w * s - sw), Math.max(1, a.rect.h * s - sw));
+                } else if (stype === 'ellipse') {
+                    c.beginPath(); c.ellipse((a.rect.x + a.rect.w / 2) * s, (a.rect.y + a.rect.h / 2) * s, Math.max(1, a.rect.w * s / 2 - sw / 2), Math.max(1, a.rect.h * s / 2 - sw / 2), 0, 0, Math.PI * 2); c.stroke();
+                } else if (stype === 'line') {
+                    var lx1 = a.arrow_x1 != null ? a.arrow_x1 * s : a.rect.x * s, ly1 = a.arrow_y1 != null ? a.arrow_y1 * s : (a.rect.y + a.rect.h / 2) * s;
+                    var lx2 = a.arrow_x2 != null ? a.arrow_x2 * s : (a.rect.x + a.rect.w) * s, ly2 = a.arrow_y2 != null ? a.arrow_y2 * s : (a.rect.y + a.rect.h / 2) * s;
+                    c.beginPath(); c.moveTo(lx1, ly1); c.lineTo(lx2, ly2); c.stroke();
+                } else if (stype === 'arrow') {
+                    var ax1 = a.arrow_x1 != null ? a.arrow_x1 * s : a.rect.x * s, ay1 = a.arrow_y1 != null ? a.arrow_y1 * s : (a.rect.y + a.rect.h / 2) * s;
+                    var ax2 = a.arrow_x2 != null ? a.arrow_x2 * s : (a.rect.x + a.rect.w) * s, ay2 = a.arrow_y2 != null ? a.arrow_y2 * s : (a.rect.y + a.rect.h / 2) * s;
+                    var adx = ax2 - ax1, ady = ay2 - ay1, alen = Math.sqrt(adx * adx + ady * ady);
+                    if (alen < 2) { c.restore(); return; }
+                    var headLen = Math.min(alen * 0.35, Math.max(10, sw * 5)), aang = Math.atan2(ady, adx);
+                    c.beginPath(); c.moveTo(ax1, ay1); c.lineTo(ax2, ay2); c.stroke();
+                    c.beginPath(); c.moveTo(ax2 - headLen * Math.cos(aang - Math.PI / 6), ay2 - headLen * Math.sin(aang - Math.PI / 6)); c.lineTo(ax2, ay2); c.lineTo(ax2 - headLen * Math.cos(aang + Math.PI / 6), ay2 - headLen * Math.sin(aang + Math.PI / 6)); c.stroke();
+                }
             } else if (a.type === 'sticky') {
                 if (!a.rect || !a.comment) return;
                 var stickyW = Math.max(160, 200 * s), stickyH = Math.max(80, 110 * s);
@@ -1207,16 +1212,21 @@
                 var fs = Math.max(13, 13 * s); c.font = '600 ' + fs + 'px ui-sans-serif,system-ui,sans-serif';
                 var padX = 8, padY = Math.max(4, 20 * s / 2) + fs, maxW = stickyW - padX * 2;
                 var words = a.comment.split(' '), lineH = fs * 1.45, ly = sy + padY, lx = sx + padX, line = '';
-                for (var wi = 0; wi < words.length; wi++) { var test = line + words[wi] + ' '; if (c.measureText(test).width > maxW && line !== '') { c.fillText(line.trimEnd(), lx, ly); line = words[wi] + ' '; ly += lineH; if (ly > sy + stickyH - 4) break; } else { line = test; } }
+                for (var wi = 0; wi < words.length; wi++) {
+                    var test = line + words[wi] + ' ';
+                    if (c.measureText(test).width > maxW && line !== '') { c.fillText(line.trimEnd(), lx, ly); line = words[wi] + ' '; ly += lineH; if (ly > sy + stickyH - 4) break; }
+                    else { line = test; }
+                }
                 if (line.trim()) c.fillText(line.trimEnd(), lx, ly);
             }
             c.restore();
         }
 
+        /* ── PDF Render ── */
         function computeBase(page) {
             var cw = wrap ? wrap.clientWidth : 800, nw = page.getViewport({ scale: 1 }).width;
             baseScale = Math.max(.5, Math.min((cw - 24) / nw, 2.5));
-            needsRecompute = false;
+            needsRecompute = false; /* FIX BUG 2: reset flag setelah compute */
         }
 
         function prevPage() { if (pageNum > 1) { pageNum--; renderPage(pageNum); } }
@@ -1226,21 +1236,29 @@
             if (num < 1 || (pdfDoc && num > pdfDoc.numPages)) return;
             if (pageRendering) { pendingPage = num; return; }
             pageRendering = true; pageNum = num; saveLast(num);
+
+            /* FIX BUG 3: destroy shape preview SVG saat ganti halaman */
             destroyShapePreview();
+
             document.querySelectorAll('.rpv-popup').forEach(function (p) { p.classList.remove('show'); });
             tooltip.classList.remove('show');
             pendingRect = null; pendingText = null; stickyPos = null;
             if (window.getSelection) window.getSelection().removeAllRanges();
+
             pdfDoc.getPage(num).then(async function (page) {
+                /* FIX BUG 2: hanya computeBase jika flag needsRecompute true */
                 if (needsRecompute) computeBase(page);
+
                 var cs = baseScale * zoomFactor;
                 var vpCss = page.getViewport({ scale: cs }), vpR = page.getViewport({ scale: cs * DPR });
                 mainCanvas.width = Math.floor(vpR.width); mainCanvas.height = Math.floor(vpR.height);
                 mainCanvas.style.width = Math.floor(vpCss.width) + 'px'; mainCanvas.style.height = Math.floor(vpCss.height) + 'px';
                 stage.style.width = Math.floor(vpCss.width) + 'px'; stage.style.height = Math.floor(vpCss.height) + 'px';
+
                 await page.render({ canvasContext: ctx, viewport: vpR }).promise.catch(function (e) { console.warn(e.message); });
                 pageRendering = false;
                 if (pendingPage !== null) { var pp = pendingPage; pendingPage = null; renderPage(pp); return; }
+
                 textLayer.innerHTML = '';
                 textLayer.style.width = Math.floor(vpCss.width) + 'px';
                 textLayer.style.height = Math.floor(vpCss.height) + 'px';
@@ -1259,6 +1277,7 @@
                     if (mw > 1 && tw > 0) t += ' scaleX(' + (tw / mw) + ')';
                     if (t.trim()) span.style.transform = t.trim();
                 });
+
                 scheduleRender();
                 stage.style.display = 'block';
                 if (loadingEl) loadingEl.classList.add('hidden');
@@ -1268,10 +1287,13 @@
                 var pct = pdfDoc ? num / pdfDoc.numPages * 100 : 0;
                 var progEl = document.getElementById('rpv-progress'); if (progEl) progEl.style.width = pct + '%';
                 var zvEl = document.getElementById('rpv-zoom-val'); if (zvEl) zvEl.textContent = Math.round(zoomFactor * 100) + '%';
+                /* FIX BUG 4: update sheet page & zoom display */
                 var spEl = document.getElementById('rpv-sheet-page'); if (spEl) spEl.textContent = num;
                 if (wrap) wrap.scrollTo({ top: 0, behavior: 'smooth' });
+
             }).catch(function (e) {
-                console.error('[RPV] render error:', e); pageRendering = false;
+                console.error('[RPV] render error:', e);
+                pageRendering = false;
                 if (loadingEl) loadingEl.classList.add('hidden');
                 stage.style.display = 'block';
             });
@@ -1281,16 +1303,19 @@
         on('rpv-next', 'click', nextPage);
         on('rpv-page-input', 'change', function () { var n = parseInt(this.value); if (pdfDoc && n >= 1 && n <= pdfDoc.numPages) renderPage(n); else this.value = pageNum; });
 
+        /* FIX BUG 2: doZoom pakai needsRecompute, bukan baseScale = 1 */
         function doZoom(dir) {
             zoomFactor = dir > 0 ? Math.min(zoomFactor + ZOOM_STEP, ZOOM_MAX) : Math.max(zoomFactor - ZOOM_STEP, ZOOM_MIN);
-            needsRecompute = true;
+            needsRecompute = true; /* recalculate fit untuk viewport saat ini */
             var zvEl = document.getElementById('rpv-zoom-val'); if (zvEl) zvEl.textContent = Math.round(zoomFactor * 100) + '%';
+            /* FIX BUG 4: update sheet zoom val */
             var szv = document.getElementById('rpv-sheet-zoom-val'); if (szv) szv.textContent = Math.round(zoomFactor * 100) + '%';
             if (pdfDoc) renderPage(pageNum);
         }
         on('rpv-zoom-in', 'click', function () { doZoom(1); });
         on('rpv-zoom-out', 'click', function () { doZoom(-1); });
 
+        /* FIX BUG 2: resize pakai needsRecompute */
         var resT = null, lastW = wrap ? wrap.clientWidth : 0;
         window.addEventListener('resize', function () {
             var w = wrap ? wrap.clientWidth : 0; if (Math.abs(w - lastW) < 20) return; lastW = w;
@@ -1298,9 +1323,11 @@
         });
         if (mainCanvas) new MutationObserver(function () { syncFC(); }).observe(mainCanvas, { attributes: true, attributeFilter: ['width', 'height'] });
 
+        /* ── Load PDF ── */
         function startViewer() {
             stage.style.display = 'none';
             if (loadingEl) { loadingEl.classList.remove('hidden'); loadingEl.style.display = ''; }
+
             if (pdfDoc) {
                 console.log('[RPV] using cached PDF');
                 var ptEl = document.getElementById('rpv-page-total'); if (ptEl) ptEl.textContent = pdfDoc.numPages;
@@ -1308,8 +1335,11 @@
                 needsRecompute = true;
                 renderPage(pageNum); loadAll(); return;
             }
+
             var task = pdfjsLib.getDocument({ url: CFG.pdfUrl, withCredentials: false, verbosity: 0, rangeChunkSize: 65536 });
-            task.onProgress = function (d) { if (d.total > 0 && loadSub) loadSub.textContent = 'Mengunduh... ' + Math.min(100, Math.round(d.loaded / d.total * 100)) + '%'; };
+            task.onProgress = function (d) {
+                if (d.total > 0 && loadSub) loadSub.textContent = 'Mengunduh... ' + Math.min(100, Math.round(d.loaded / d.total * 100)) + '%';
+            };
             task.promise.then(async function (doc) {
                 pdfDoc = doc; window[CACHE_KEY] = doc;
                 console.log('[RPV] PDF loaded,', doc.numPages, 'pages');
@@ -1317,15 +1347,14 @@
                 var piEl = document.getElementById('rpv-page-input'); if (piEl) piEl.max = doc.numPages;
                 renderPage(1); await loadAll();
                 var saved = loadLast(); if (saved > 1) setTimeout(function () { showResume(saved); }, 1200);
-                console.log('[RPV] ready, reviewId=', CFG.reviewId, 'readOnly=', READ_ONLY);
+                console.log('[RPV] ready, reviewId=', CFG.reviewId);
             }).catch(function (err) {
                 console.error('[RPV] PDF load error:', err);
                 if (loadingEl) loadingEl.innerHTML = '<div style="font-size:2rem">⚠️</div><p style="color:#ef4444;font-weight:700;font-size:13px;margin:0;">Gagal memuat PDF</p><p style="color:#6b7280;font-size:11px;margin:.25rem 0;">' + err.message + '</p><button type="button" onclick="window.location.reload()" style="margin-top:.75rem;padding:.4rem .875rem;background:#FF6B18;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">🔄 Muat Ulang</button>';
             });
         }
 
-        /* READ_ONLY: set tool awal ke pan agar author tidak bisa menggambar */
-        setTool(READ_ONLY ? 'pan' : 'highlight');
+        setTool('highlight');
         startViewer();
     }
 
