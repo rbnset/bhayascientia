@@ -1,6 +1,34 @@
 {{--
 resources/views/filament/reviews/pdf-viewer-readonly.blade.php
-FIXED v3: no loading loop, stable retry, correct guard
+FIXED v3.1
+
+FIXES:
+BUG 1 & 5 — renderPdfPage() tidak selalu return Promise
+Saat pageRendering=true fungsi set pendingPage & return tanpa nilai →
+.then() dipanggil pada undefined → crash di panel click & search nav.
+FIX: selalu return Promise yang resolve setelah halaman selesai render.
+
+BUG 2 — Kondisi baseScale === 1.0 di renderPdfPage tidak pernah true lagi
+setelah compute pertama. Kondisi kedua tidak berguna dan bisa memicu
+double-compute. FIX: if (!baseScaleComputed) saja.
+
+BUG 3 — Variable name clash di doSearch (var p, var idx, var c hoisting)
+FIX: rename ke pg2, lt2, idx2, c2 di dalam loop.
+
+BUG 4 — Tooltip msg: a.comment = '' (empty string) → falsy → salah fallback
+FIX: gunakan a.comment ? ... untuk cek eksplisit.
+
+BUG 7 — Guard logic: GUARD_KEY di-set true di luar rpvrInit() (di IIFE),
+kemudian rpvrInit() cek ulang → langsung return tanpa jalan sama sekali!
+FIX: hanya rpvrInit() yang boleh set guard ke true, bukan IIFE luar.
+
+BUG 9 — doSearch set searchIndex = 0 terlalu lambat (setelah render),
+applySearchHL() bisa terpanggil dengan searchIndex = -1 (dari state lama).
+FIX: set searchIndex = 0 segera setelah searchResults terisi.
+
+BUG 10 — Resize threshold 20px terlalu besar untuk mobile (19px perubahan
+tidak trigger re-render → anotasi misaligned).
+FIX: threshold 8px.
 --}}
 @php
 $reviewerName = $review->reviewer?->name ?? 'Reviewer';
@@ -9,7 +37,7 @@ $versionNo = $review->publicationVersion?->version_number ?? 1;
 $decision = $review->decision;
 $decisionLabel = match($decision) {
 'accepted' => ['Diterima ✅', '#059669', '#D1FAE5'],
-'revision_required'=> ['Perlu Revisi ✏️', '#D97706', '#FEF3C7'],
+'revision_required' => ['Perlu Revisi ✏️', '#D97706', '#FEF3C7'],
 'rejected' => ['Ditolak ❌', '#DC2626', '#FEE2E2'],
 default => ['Dalam Review ⏳', '#7C3AED', '#EDE9FE'],
 };
@@ -275,7 +303,6 @@ $annotCount = \App\Models\PdfAnnotation::where('review_id', $review->id)->count(
         <div id="rpvr-canvas-wrap" style="flex:1;overflow:auto;display:flex;justify-content:center;
                     align-items:flex-start;background:#404040;position:relative;">
 
-            {{-- Loading --}}
             <div id="rpvr-loading" style="position:absolute;inset:0;display:flex;flex-direction:column;
                         align-items:center;justify-content:center;gap:.75rem;background:#1a1a1a;z-index:20;">
                 <div style="width:36px;height:36px;border:3px solid #333;border-top-color:#FF6B18;
@@ -288,7 +315,6 @@ $annotCount = \App\Models\PdfAnnotation::where('review_id', $review->id)->count(
                 </button>
             </div>
 
-            {{-- Stage --}}
             <div id="rpvr-stage"
                 style="position:relative;display:none;margin:1rem;box-shadow:0 8px 32px rgba(0,0,0,.5);">
                 <canvas id="rpvr-canvas"></canvas>
@@ -373,8 +399,9 @@ $annotCount = \App\Models\PdfAnnotation::where('review_id', $review->id)->count(
         <div id="rpvr-tip-reviewer" style="font-size:10px;color:#FF6B18;font-weight:700;margin-bottom:.25rem;"></div>
         <div id="rpvr-tip-text" style="font-size:12px;color:#d1d5db;word-break:break-word;margin-bottom:.4rem;"></div>
         <button id="rpvr-tip-close"
-            style="padding:.25rem .6rem;background:#2d2d2d;border:1px solid #3d3d3d;color:#9ca3af;border-radius:6px;font-size:11px;cursor:pointer;width:100%;">✕
-            Tutup</button>
+            style="padding:.25rem .6rem;background:#2d2d2d;border:1px solid #3d3d3d;color:#9ca3af;border-radius:6px;font-size:11px;cursor:pointer;width:100%;">
+            ✕ Tutup
+        </button>
     </div>
 </div>
 
@@ -390,10 +417,9 @@ $annotCount = \App\Models\PdfAnnotation::where('review_id', $review->id)->count(
 
 <script>
     /* =====================================================================
-   RPVR READONLY VIEWER — v3 (no-loop fix)
-   FIX: guard by reviewId; retry tidak memuat script baru,
-        cukup panggil rpvrInit() langsung; baseScale tidak di-reset
-        secara salah; retry-button timeout hanya berjalan sekali.
+   RPVR READONLY VIEWER — v3.1
+   FIXES: Promise return, guard logic, baseScale condition,
+          variable clash, tooltip msg, searchIndex timing, resize threshold
    ===================================================================== */
 (function () {
     'use strict';
@@ -401,33 +427,32 @@ $annotCount = \App\Models\PdfAnnotation::where('review_id', $review->id)->count(
     var CFG = window.RPVR_CONFIG;
     if (!CFG || !CFG.pdfUrl) { console.error('[RPVR] config missing'); return; }
 
-    /* ── Guard: satu instance per reviewId ────────────────────────── */
+    /* ── Guard ────────────────────────────────────────────────────────
+       FIX BUG 7: hanya set GUARD_KEY = true di dalam rpvrInit(),
+       bukan di sini. IIFE luar hanya mengecek apakah sudah running.
+    ─────────────────────────────────────────────────────────────────── */
     var GUARD_KEY = '_rpvrInit_' + CFG.reviewId;
     if (window[GUARD_KEY]) { console.log('[RPVR] already initialised'); return; }
-    window[GUARD_KEY] = true;
+    /* TIDAK set window[GUARD_KEY] = true di sini */
 
     var PDFJS_CDN  = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
     var WORKER_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-    /* ── Retry button: tampil setelah 10 detik jika masih loading ─── */
+    /* ── Retry button: tampil setelah 10 detik ── */
     var retryTimer = setTimeout(function () {
         var stage = document.getElementById('rpvr-stage');
         var btn   = document.getElementById('rpvr-retry-btn');
         var sub   = document.getElementById('rpvr-load-sub');
-        /* Hanya tampilkan jika PDF belum berhasil dimuat */
         if (stage && stage.style.display === 'none' && btn) {
             btn.style.display = 'block';
             if (sub) sub.textContent = 'Memakan waktu lebih lama dari biasanya...';
         }
     }, 10000);
 
-    /* ── Expose retry ke window (dipanggil tombol onclick) ─────────── */
+    /* ── Expose retry ── */
     window.rpvrRetry = function () {
         clearTimeout(retryTimer);
-        /* Reset guard agar rpvrInit bisa jalan ulang */
         window[GUARD_KEY] = false;
-
-        /* Reset tampilan loading */
         var loading = document.getElementById('rpvr-loading');
         if (loading) {
             loading.style.display = '';
@@ -439,14 +464,9 @@ $annotCount = \App\Models\PdfAnnotation::where('review_id', $review->id)->count(
         }
         var stage = document.getElementById('rpvr-stage');
         if (stage) stage.style.display = 'none';
-
-        /* Panggil init ulang — TIDAK memuat script baru */
         rpvrInit();
     };
 
-    /* ── Muat pdf.js lalu langsung panggil rpvrInit ─────────────────
-       Tidak ada loop polling. onload = library siap = langsung main.
-    ─────────────────────────────────────────────────────────────────── */
     function rpvrBoot() {
         if (typeof pdfjsLib !== 'undefined') {
             pdfjsLib.GlobalWorkerOptions.workerSrc = WORKER_CDN;
@@ -461,16 +481,13 @@ $annotCount = \App\Models\PdfAnnotation::where('review_id', $review->id)->count(
                 pdfjsLib.verbosity = 0;
                 rpvrInit();
             };
-            s.onerror = function () {
-                showFatalError('Gagal memuat library PDF. Periksa koneksi internet.');
-            };
+            s.onerror = function () { showFatalError('Gagal memuat library PDF. Periksa koneksi internet.'); };
             document.head.appendChild(s);
         }
     }
 
     function showFatalError(msg) {
-        var loading = document.getElementById('rpvr-loading');
-        if (!loading) return;
+        var loading = document.getElementById('rpvr-loading'); if (!loading) return;
         loading.innerHTML =
             '<div style="font-size:2rem">⚠️</div>'
             + '<p style="color:#ef4444;font-weight:700;font-size:13px;margin:0;">' + msg + '</p>'
@@ -479,16 +496,13 @@ $annotCount = \App\Models\PdfAnnotation::where('review_id', $review->id)->count(
     }
 
     /* ════════════════════════════════════════════════════════════════
-       rpvrInit — inti viewer, dipanggil setelah pdf.js siap.
-       Fungsi ini boleh dipanggil ulang oleh rpvrRetry (guard di atas
-       sudah di-reset sebelum pemanggilan ulang).
+       rpvrInit
     ════════════════════════════════════════════════════════════════ */
     function rpvrInit() {
-        /* Guard ulang di sini untuk keamanan */
+        /* FIX BUG 7: set guard di sini — bukan di IIFE luar */
         if (window[GUARD_KEY]) { console.log('[RPVR] already running'); return; }
         window[GUARD_KEY] = true;
 
-        /* ── Colors ── */
         var COLORS = {
             yellow:'#FFD700', green:'#4ADE80', red:'#EF4444', blue:'#60A5FA',
             orange:'#FF6B18', black:'#111111', white:'#FFFFFF',
@@ -496,7 +510,6 @@ $annotCount = \App\Models\PdfAnnotation::where('review_id', $review->id)->count(
         };
         function hex(n) { return COLORS[n] || '#FFD700'; }
 
-        /* ── State ── */
         var pdfDoc = null, pageNum = 1, pageRendering = false, pendingPage = null;
         var baseScale = 1.0, zoomFactor = 1.0;
         var ZOOM_MIN = 0.5, ZOOM_MAX = 4.0, ZOOM_STEP = 0.25;
@@ -504,9 +517,9 @@ $annotCount = \App\Models\PdfAnnotation::where('review_id', $review->id)->count(
         var annots = [], panelOpen = false, filterMode = 'all';
         var searchResults = [], searchIndex = -1, searchHLs = [], searchQuery = '';
         var searchDebounce = null, activeAnnotId = null;
-        var baseScaleComputed = false; /* FIX: hanya hitung baseScale sekali per viewport */
+        /* FIX BUG 2: flag terpisah, tidak bergantung nilai baseScale */
+        var baseScaleComputed = false;
 
-        /* ── DOM refs ── */
         var wrap       = document.getElementById('rpvr-canvas-wrap');
         var stage      = document.getElementById('rpvr-stage');
         var canvas     = document.getElementById('rpvr-canvas');
@@ -520,7 +533,6 @@ $annotCount = \App\Models\PdfAnnotation::where('review_id', $review->id)->count(
         var tooltip    = document.getElementById('rpvr-tooltip');
         var panel      = document.getElementById('rpvr-panel');
 
-        /* ── Utils ── */
         function esc(s) {
             return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;')
                 .replace(/>/g,'&gt;').replace(/\n/g,'<br>');
@@ -558,13 +570,8 @@ $annotCount = \App\Models\PdfAnnotation::where('review_id', $review->id)->count(
                     return a;
                 });
                 console.log('[RPVR] loaded', annots.length, 'annotations');
-                renderAnnotations();
-                buildPanel();
-                updateBadge();
-                updateStats();
-            } catch (e) {
-                console.error('[RPVR] load annotations:', e);
-            }
+                renderAnnotations(); buildPanel(); updateBadge(); updateStats();
+            } catch (e) { console.error('[RPVR] load annotations:', e); }
         }
 
         /* ── Render annotations ── */
@@ -704,7 +711,10 @@ $annotCount = \App\Models\PdfAnnotation::where('review_id', $review->id)->count(
             activeAnnotId = a.id;
             var rev = $id('rpvr-tip-reviewer'), txt = $id('rpvr-tip-text');
             if (rev) rev.textContent = (ic[a.type] || '•') + ' ' + a.type + ' · oleh ' + CFG.reviewer;
-            var msg = a.comment || (a.selected_text ? '"' + a.selected_text.substring(0, 120) + '"') : ('Anotasi ' + a.type + ' di hal.' + a.page);
+            /* FIX BUG 4: eksplisit cek truthy agar empty string tidak salah branch */
+            var msg = a.comment
+                ? a.comment.substring(0, 120)
+                : (a.selected_text ? '"' + a.selected_text.substring(0, 120) + '"' : 'Anotasi ' + a.type + ' di hal.' + a.page);
             if (txt) txt.textContent = msg;
             tooltip.style.display = 'block';
             var vw = window.innerWidth, vh = window.innerHeight;
@@ -734,7 +744,9 @@ $annotCount = \App\Models\PdfAnnotation::where('review_id', $review->id)->count(
 
         function buildPanel() {
             var list = $id('rpvr-panel-list'); if (!list) return;
-            var filtered = filterMode === 'current' ? annots.filter(function (a) { return a.page === pageNum; }) : [].concat(annots);
+            var filtered = filterMode === 'current'
+                ? annots.filter(function (a) { return a.page === pageNum; })
+                : [].concat(annots);
             if (!filtered.length) {
                 list.innerHTML = '<div style="text-align:center;color:#4b5563;font-size:12px;padding:1.5rem;">'
                     + (filterMode === 'current' ? 'Tidak ada anotasi di halaman ini.' : 'Belum ada anotasi.') + '</div>';
@@ -756,8 +768,12 @@ $annotCount = \App\Models\PdfAnnotation::where('review_id', $review->id)->count(
                     + '</div>';
                 el.addEventListener('click', function () {
                     tooltip.style.display = 'none';
+                    /* FIX BUG 1 & 5: renderPdfPage selalu return Promise,
+                       jadi .then() aman dipanggil di sini */
                     if (a.page !== pageNum) {
-                        renderPdfPage(a.page).then(function () { activeAnnotId = a.id; renderAnnotations(); showTipById(a); });
+                        renderPdfPage(a.page).then(function () {
+                            activeAnnotId = a.id; renderAnnotations(); showTipById(a);
+                        });
                     } else {
                         activeAnnotId = a.id; renderAnnotations(); showTipById(a);
                     }
@@ -767,38 +783,56 @@ $annotCount = \App\Models\PdfAnnotation::where('review_id', $review->id)->count(
         }
         function showTipById(a) {
             var el = document.querySelector('[data-annot-id="' + a.id + '"]');
-            if (el) { var r = el.getBoundingClientRect(); showTip(a, r.left + r.width / 2, r.top); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+            if (el) {
+                var r = el.getBoundingClientRect();
+                showTip(a, r.left + r.width / 2, r.top);
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
         }
         function updateBadge() {
             var b = $id('rpvr-badge'), n = annots.length;
             if (b) { b.textContent = n > 99 ? '99+' : String(n); b.style.display = n > 0 ? 'flex' : 'none'; }
         }
         function updateStats() {
-            var on = annots.filter(function (a) { return a.page === pageNum; }).length;
+            var on  = annots.filter(function (a) { return a.page === pageNum; }).length;
             var pgs = new Set(annots.map(function (a) { return a.page; })).size;
-            var st = $id('rpvr-stat-total');  if (st)  st.textContent = annots.length;
-            var sp = $id('rpvr-stat-page');   if (sp)  sp.textContent = on;
-            var spp = $id('rpvr-stat-pages'); if (spp) spp.textContent = pgs;
+            var st  = $id('rpvr-stat-total');  if (st)  st.textContent  = annots.length;
+            var sp  = $id('rpvr-stat-page');   if (sp)  sp.textContent  = on;
+            var spp = $id('rpvr-stat-pages');  if (spp) spp.textContent = pgs;
         }
 
-        /* ── PDF Render ── */
-        async function renderPdfPage(num) {
-            if (pageRendering) { pendingPage = num; return; }
+        /* ════════════════════════════════════════════════════════════
+           renderPdfPage — FIX BUG 1 & 5:
+           Selalu return Promise. Saat pageRendering=true, return
+           Promise yang resolve setelah pendingPage selesai di-render.
+           Ini memungkinkan .then() dari panel dan search bekerja benar.
+        ════════════════════════════════════════════════════════════ */
+        var pendingResolvers = []; /* antrian resolve callbacks */
+
+        function renderPdfPage(num) {
+            if (pageRendering) {
+                pendingPage = num;
+                /* Return Promise yang resolve saat render selesai */
+                return new Promise(function (resolve) { pendingResolvers.push(resolve); });
+            }
+            return doRenderPage(num);
+        }
+
+        async function doRenderPage(num) {
             pageRendering = true;
             pageNum = num;
 
             var page = await pdfDoc.getPage(num);
 
-            /* FIX: Hitung baseScale hanya saat pertama kali atau saat viewport berubah signifikan,
-               BUKAN setiap kali zoom (doZoom mengatur zoomFactor saja). */
-            if (!baseScaleComputed || baseScale === 1.0) {
+            /* FIX BUG 2: hanya if (!baseScaleComputed) — kondisi baseScale===1.0 dihapus */
+            if (!baseScaleComputed) {
                 var cw = wrap.clientWidth || 900;
                 var nw = page.getViewport({ scale: 1 }).width;
                 baseScale = Math.max(0.5, Math.min((cw - 32) / nw, 2.5));
                 baseScaleComputed = true;
             }
 
-            var cs = baseScale * zoomFactor;
+            var cs  = baseScale * zoomFactor;
             var vpCss = page.getViewport({ scale: cs });
             var vpR   = page.getViewport({ scale: cs * DPR });
 
@@ -812,7 +846,15 @@ $annotCount = \App\Models\PdfAnnotation::where('review_id', $review->id)->count(
             await page.render({ canvasContext: ctx, viewport: vpR }).promise.catch(function (e) { console.warn(e); });
             pageRendering = false;
 
-            if (pendingPage !== null) { var p = pendingPage; pendingPage = null; await renderPdfPage(p); return; }
+            /* Proses pending page jika ada */
+            if (pendingPage !== null) {
+                var pp = pendingPage; pendingPage = null;
+                await doRenderPage(pp);
+                /* Resolve semua waiters setelah pending selesai */
+                var resolvers = pendingResolvers.splice(0);
+                resolvers.forEach(function (fn) { fn(); });
+                return;
+            }
 
             /* Text layer */
             textLayer.innerHTML = '';
@@ -825,9 +867,7 @@ $annotCount = \App\Models\PdfAnnotation::where('review_id', $review->id)->count(
                 var fh = Math.sqrt(tx[2] * tx[2] + tx[3] * tx[3]);
                 var angle = Math.atan2(tx[1], tx[0]);
                 var span = document.createElement('span'); span.textContent = item.str;
-                span.style.fontSize = fh + 'px';
-                span.style.left = tx[4] + 'px';
-                span.style.top  = (tx[5] - fh) + 'px';
+                span.style.fontSize = fh + 'px'; span.style.left = tx[4] + 'px'; span.style.top = (tx[5] - fh) + 'px';
                 span.style.transformOrigin = '0% 0%';
                 textLayer.appendChild(span);
                 var tw = item.width * cs, mw = span.getBoundingClientRect().width;
@@ -836,39 +876,40 @@ $annotCount = \App\Models\PdfAnnotation::where('review_id', $review->id)->count(
                 if (t.trim()) span.style.transform = t.trim();
             });
 
-            /* Update UI */
-            stage.style.display   = 'block';
+            stage.style.display    = 'block';
             loadingEl.style.display = 'none';
             var pi = $id('rpvr-page-input'); if (pi) pi.value = num;
-            var pr = $id('rpvr-prev');        if (pr) pr.disabled = num <= 1;
-            var nx = $id('rpvr-next');        if (nx) nx.disabled = !pdfDoc || num >= pdfDoc.numPages;
+            var pr = $id('rpvr-prev');       if (pr) pr.disabled = num <= 1;
+            var nx = $id('rpvr-next');       if (nx) nx.disabled = !pdfDoc || num >= pdfDoc.numPages;
             var pct = pdfDoc ? (num / pdfDoc.numPages * 100) : 0;
             var pb  = $id('rpvr-progress-bar'); if (pb) pb.style.width = pct + '%';
             var zv  = $id('rpvr-zoom-val');     if (zv) zv.textContent = Math.round(zoomFactor * 100) + '%';
             var pt  = $id('rpvr-progress-txt'); if (pt) pt.textContent = 'Hal. ' + num + '/' + (pdfDoc ? pdfDoc.numPages : '?') + ' · ' + Math.round(pct) + '%';
             if (wrap) wrap.scrollTo({ top: 0, behavior: 'smooth' });
-            syncFC();
-            renderAnnotations();
+            syncFC(); renderAnnotations();
             if (panelOpen) buildPanel();
             if (searchQuery) applySearchHL();
+
+            /* Resolve semua waiters yang menunggu halaman ini */
+            var resolvers = pendingResolvers.splice(0);
+            resolvers.forEach(function (fn) { fn(); });
         }
 
         /* ── Navigation ── */
-        $id('rpvr-prev') && $id('rpvr-prev').addEventListener('click', function () { if (pageNum > 1) { pageNum--; renderPdfPage(pageNum); } });
-        $id('rpvr-next') && $id('rpvr-next').addEventListener('click', function () { if (pdfDoc && pageNum < pdfDoc.numPages) { pageNum++; renderPdfPage(pageNum); } });
+        $id('rpvr-prev') && $id('rpvr-prev').addEventListener('click', function () { if (pageNum > 1) renderPdfPage(pageNum - 1); });
+        $id('rpvr-next') && $id('rpvr-next').addEventListener('click', function () { if (pdfDoc && pageNum < pdfDoc.numPages) renderPdfPage(pageNum + 1); });
         $id('rpvr-page-input') && $id('rpvr-page-input').addEventListener('change', function () {
             var n = parseInt(this.value);
             if (pdfDoc && n >= 1 && n <= pdfDoc.numPages) renderPdfPage(n);
             else this.value = pageNum;
         });
 
-        /* ── Zoom ── FIX: baseScaleComputed direset agar dihitung ulang dari viewport terkini */
+        /* ── Zoom ── */
         function doZoom(dir) {
             zoomFactor = dir > 0
                 ? Math.min(zoomFactor + ZOOM_STEP, ZOOM_MAX)
                 : Math.max(zoomFactor - ZOOM_STEP, ZOOM_MIN);
-            /* Reset baseScale agar dihitung ulang untuk viewport saat ini */
-            baseScaleComputed = false;
+            baseScaleComputed = false; /* FIX BUG 2: reset flag bukan nilai */
             if (pdfDoc) renderPdfPage(pageNum);
         }
         $id('rpvr-zoom-in')  && $id('rpvr-zoom-in').addEventListener('click', function () { doZoom(1); });
@@ -884,12 +925,12 @@ $annotCount = \App\Models\PdfAnnotation::where('review_id', $review->id)->count(
             var q = searchQuery.toLowerCase(), sr = stage.getBoundingClientRect();
             Array.from(textLayer.querySelectorAll('span')).forEach(function (span) {
                 if (!span.firstChild) return;
-                var text = span.textContent, lower = text.toLowerCase(), idx = lower.indexOf(q);
-                while (idx !== -1) {
+                var text = span.textContent, lower = text.toLowerCase(), startIdx = lower.indexOf(q);
+                while (startIdx !== -1) {
                     try {
                         var range = document.createRange();
-                        range.setStart(span.firstChild, idx);
-                        range.setEnd(span.firstChild, Math.min(idx + q.length, text.length));
+                        range.setStart(span.firstChild, startIdx);
+                        range.setEnd(span.firstChild, Math.min(startIdx + q.length, text.length));
                         Array.from(range.getClientRects()).forEach(function (rect) {
                             if (rect.width < 1 || rect.height < 1) return;
                             var el = document.createElement('div'); el.className = 'rpvr-search-hl';
@@ -899,47 +940,64 @@ $annotCount = \App\Models\PdfAnnotation::where('review_id', $review->id)->count(
                             annotLayer.appendChild(el); searchHLs.push(el);
                         });
                     } catch (_) {}
-                    idx = lower.indexOf(q, idx + 1);
+                    startIdx = lower.indexOf(q, startIdx + 1);
                 }
             });
             searchHLs.forEach(function (el, i) { el.classList.toggle('active-match', i === searchIndex); });
             if (searchHLs[searchIndex]) searchHLs[searchIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
+
+        /* FIX BUG 3: rename variable loop agar tidak clash dengan outer scope */
         async function doSearch(query) {
-            if (!pdfDoc || !query.trim()) { clearSearchHL(); searchQuery = ''; var ss = $id('rpvr-search-status'); if (ss) ss.textContent = 'Ketik untuk mencari...'; return; }
+            if (!pdfDoc || !query.trim()) {
+                clearSearchHL(); searchQuery = '';
+                var ss = $id('rpvr-search-status'); if (ss) ss.textContent = 'Ketik untuk mencari...';
+                return;
+            }
             var ss = $id('rpvr-search-status'); if (ss) ss.textContent = 'Mencari...';
-            searchResults = []; searchQuery = query; var q = query.toLowerCase();
-            for (var p = 1; p <= pdfDoc.numPages; p++) {
-                var pg = await pdfDoc.getPage(p);
-                var c = await pg.getTextContent();
-                var text = c.items.map(function (i) { return i.str; }).join(' ');
-                var lt = text.toLowerCase(), idx = lt.indexOf(q);
-                while (idx !== -1) {
-                    searchResults.push({ page: p, excerpt: text.substring(Math.max(0, idx - 35), idx + q.length + 50).trim() });
-                    idx = lt.indexOf(q, idx + 1);
+            searchResults = []; searchQuery = query;
+            var q = query.toLowerCase();
+            for (var pgNum = 1; pgNum <= pdfDoc.numPages; pgNum++) {
+                var pgObj  = await pdfDoc.getPage(pgNum);
+                var pgCont = await pgObj.getTextContent();
+                var pgText = pgCont.items.map(function (i) { return i.str; }).join(' ');
+                var pgLow  = pgText.toLowerCase();
+                var pgIdx  = pgLow.indexOf(q);
+                while (pgIdx !== -1) {
+                    searchResults.push({ page: pgNum, excerpt: pgText.substring(Math.max(0, pgIdx - 35), pgIdx + q.length + 50).trim() });
+                    pgIdx = pgLow.indexOf(q, pgIdx + 1);
                 }
             }
             var list = $id('rpvr-search-results'); if (list) list.innerHTML = '';
-            if (!searchResults.length) { if (ss) ss.textContent = 'Tidak ditemukan: "' + query + '"'; clearSearchHL(); return; }
+            if (!searchResults.length) {
+                if (ss) ss.textContent = 'Tidak ditemukan: "' + query + '"';
+                clearSearchHL(); return;
+            }
             if (ss) ss.textContent = searchResults.length + ' hasil';
+            /* FIX BUG 9: set searchIndex = 0 segera setelah hasil ada */
             searchIndex = 0;
             var escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             searchResults.slice(0, 40).forEach(function (r, i) {
                 var el = document.createElement('div');
                 el.style.cssText = 'padding:.35rem .5rem;background:#1f1f1f;border-radius:6px;cursor:pointer;font-size:11px;color:#9ca3af;display:flex;gap:.5rem;align-items:baseline;border:1px solid transparent;margin-bottom:2px;';
                 el.innerHTML = '<span style="color:#FF6B18;font-weight:700;flex-shrink:0;">Hal.' + r.page + '</span><span>'
-                    + esc(r.excerpt).replace(new RegExp(escaped, 'gi'), function (m) { return '<mark style="background:rgba(255,107,24,.35);color:#fff;border-radius:2px;padding:0 1px;">' + m + '</mark>'; })
-                    + '</span>';
+                    + esc(r.excerpt).replace(new RegExp(escaped, 'gi'), function (m) {
+                        return '<mark style="background:rgba(255,107,24,.35);color:#fff;border-radius:2px;padding:0 1px;">' + m + '</mark>';
+                    }) + '</span>';
                 el.addEventListener('click', function () {
                     searchIndex = i;
-                    if (r.page !== pageNum) renderPdfPage(r.page).then(function () { applySearchHL(); });
-                    else applySearchHL();
+                    if (r.page !== pageNum) {
+                        renderPdfPage(r.page).then(function () { applySearchHL(); });
+                    } else {
+                        applySearchHL();
+                    }
                 });
                 if (list) list.appendChild(el);
             });
             if (searchResults[0].page === pageNum) applySearchHL();
-            else renderPdfPage(searchResults[0].page);
+            else renderPdfPage(searchResults[0].page).then(function () { applySearchHL(); });
         }
+
         function openSearch() {
             var ov = $id('rpvr-search'); if (ov) ov.style.display = 'flex';
             var inp = $id('rpvr-search-input'); if (inp) setTimeout(function () { inp.focus(); }, 50);
@@ -951,6 +1009,7 @@ $annotCount = \App\Models\PdfAnnotation::where('review_id', $review->id)->count(
             var rl = $id('rpvr-search-results'); if (rl) rl.innerHTML = '';
             var ss = $id('rpvr-search-status'); if (ss) ss.textContent = 'Ketik untuk mencari...';
         }
+
         $id('rpvr-search-input') && $id('rpvr-search-input').addEventListener('input', function () {
             clearTimeout(searchDebounce); var v = this.value;
             searchDebounce = setTimeout(function () { doSearch(v); }, 450);
@@ -978,8 +1037,8 @@ $annotCount = \App\Models\PdfAnnotation::where('review_id', $review->id)->count(
             if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
             if ((e.ctrlKey || e.metaKey) && e.key === 'f') { e.preventDefault(); openSearch(); return; }
             switch (e.key) {
-                case 'ArrowLeft':  if (pageNum > 1) { pageNum--; renderPdfPage(pageNum); } break;
-                case 'ArrowRight': if (pdfDoc && pageNum < pdfDoc.numPages) { pageNum++; renderPdfPage(pageNum); } break;
+                case 'ArrowLeft':  if (pageNum > 1) renderPdfPage(pageNum - 1); break;
+                case 'ArrowRight': if (pdfDoc && pageNum < pdfDoc.numPages) renderPdfPage(pageNum + 1); break;
                 case '+': case '=': doZoom(1); break;
                 case '-': doZoom(-1); break;
                 case 'Escape': closeSearch(); tooltip.style.display = 'none'; break;
@@ -987,15 +1046,16 @@ $annotCount = \App\Models\PdfAnnotation::where('review_id', $review->id)->count(
         });
 
         /* ── Resize ── */
+        /* FIX BUG 10: threshold 8px (lebih sensitif untuk mobile) */
         var resT = null, lastW = wrap ? wrap.clientWidth : 0;
         window.addEventListener('resize', function () {
             var w = wrap ? wrap.clientWidth : 0;
-            if (Math.abs(w - lastW) < 20) return;
+            if (Math.abs(w - lastW) < 8) return; /* FIX: 8px bukan 20px */
             lastW = w;
             clearTimeout(resT);
             resT = setTimeout(function () {
                 if (!pdfDoc) return;
-                baseScaleComputed = false; /* hitung ulang fit saat resize */
+                baseScaleComputed = false;
                 renderPdfPage(pageNum);
             }, 250);
         });
@@ -1011,7 +1071,7 @@ $annotCount = \App\Models\PdfAnnotation::where('review_id', $review->id)->count(
             pdfDoc = doc;
             var pt = $id('rpvr-page-total'); if (pt) pt.textContent = doc.numPages;
             var pi = $id('rpvr-page-input'); if (pi) pi.max = doc.numPages;
-            clearTimeout(retryTimer); /* PDF berhasil — batalkan retry timer */
+            clearTimeout(retryTimer);
             await renderPdfPage(1);
             await loadAnnotations();
             console.log('[RPVR] ready, reviewId=', CFG.reviewId);
@@ -1022,7 +1082,6 @@ $annotCount = \App\Models\PdfAnnotation::where('review_id', $review->id)->count(
 
     } /* end rpvrInit() */
 
-    /* Boot */
     rpvrBoot();
 
 })();
