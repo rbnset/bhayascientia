@@ -94,12 +94,7 @@ class ReviewForm
                                     View::make('filament.reviews.publication-preview')
                                         ->columnSpanFull(),
                                 ]),
-                        ]),
 
-                    Step::make('Tulis review')
-                        ->description('Baca PDF + isi catatan & komentar')
-                        ->icon('heroicon-o-pencil-square')
-                        ->schema([
                             Section::make('Manuscript PDF')
                                 ->description('Baca naskah versi yang dipilih')
                                 ->icon('heroicon-o-document-text')
@@ -107,7 +102,12 @@ class ReviewForm
                                     View::make('filament.reviews.pdf-viewer')
                                         ->columnSpanFull(),
                                 ]),
+                        ]),
 
+                    Step::make('Tulis review')
+                        ->description('Baca PDF + isi catatan & komentar')
+                        ->icon('heroicon-o-pencil-square')
+                        ->schema([
                             Section::make('Detailed Review Notes')
                                 ->description('Catatan per bagian naskah')
                                 ->icon('heroicon-o-clipboard-document-list')
