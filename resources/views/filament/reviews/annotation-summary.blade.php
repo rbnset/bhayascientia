@@ -9,7 +9,7 @@ tanpa render PDF (ringan).
 use App\Models\PdfAnnotation;
 
 // Ambil record dari Filament livewire component
-$review = $this->record ?? null;
+$review = $record ?? null;
 $annots = $review
 ? PdfAnnotation::where('review_id', $review->id)
 ->orderBy('page')->orderBy('created_at')
