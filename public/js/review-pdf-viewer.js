@@ -14,9 +14,22 @@
 (function () {
     'use strict';
 
-    /* ── Guard double-init (Livewire re-render) ── */
-    if (window._rpvActive) { console.log('[RPV] already active'); return; }
-    window._rpvActive = true;
+    /* ── Guard double-init ────────────────────────────────────────────
+       Masalah: Livewire wizard re-render → script jalan ulang TAPI
+       _guardKey masih true → viewer tidak init → harus refresh.
+       Solusi: cek apakah rpv-stage DOM masih ada.
+       Jika TIDAK ada berarti Livewire sudah rebuild DOM → reset guard.
+    ─────────────────────────────────────────────────────────────── */
+    var _gk = '_rpvA_' + ((window.RPV_CONFIG && window.RPV_CONFIG.reviewId) || 'x');
+    if (window[_gk]) {
+        if (document.getElementById('rpv-stage')) {
+            console.log('[RPV] already running');
+            return;
+        }
+        /* DOM di-rebuild Livewire — reset dan re-init */
+        console.log('[RPV] Livewire rebuilt DOM, re-initializing');
+    }
+    window[_gk] = true;
 
     /* ── Wait for pdfjsLib ── */
     var _w = 0;
@@ -175,7 +188,12 @@
                 path_points: Array.isArray(raw.path_points) ? raw.path_points : null,
                 shape_type: VS.includes(raw.shape_type) ? raw.shape_type : null,
                 stroke_width: (typeof raw.stroke_width === 'number' && raw.stroke_width > 0) ? raw.stroke_width : 2,
-                fill_opacity: typeof raw.fill_opacity === 'number' ? raw.fill_opacity : 0
+                fill_opacity: typeof raw.fill_opacity === 'number' ? raw.fill_opacity : 0,
+                /* Arrow direction points */
+                arrow_x1: typeof raw.arrow_x1 === 'number' ? raw.arrow_x1 : null,
+                arrow_y1: typeof raw.arrow_y1 === 'number' ? raw.arrow_y1 : null,
+                arrow_x2: typeof raw.arrow_x2 === 'number' ? raw.arrow_x2 : null,
+                arrow_y2: typeof raw.arrow_y2 === 'number' ? raw.arrow_y2 : null,
             };
             if (p.type === 'shape' && !p.shape_type) p.shape_type = 'rect';
             return p;
@@ -190,7 +208,24 @@
                 var r = await fetch(API, { credentials: 'same-origin', headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
                 if (!r.ok) throw new Error(r.status);
                 var j = await r.json();
-                return Array.isArray(j.data) ? j.data : [];
+                var rows = Array.isArray(j.data) ? j.data : [];
+                /* Normalisasi: pastikan a.rect ada dan arrow coords terpetakan */
+                return rows.map(function (a) {
+                    if (!a.rect && a.rect_x != null) {
+                        a.rect = { x: +a.rect_x, y: +a.rect_y, w: +a.rect_w, h: +a.rect_h };
+                    }
+                    /* arrow coords dari server (kolom extra atau meta JSON) */
+                    if (a.arrow_x1 == null && a.extra_data) {
+                        try {
+                            var ex = typeof a.extra_data === 'string' ? JSON.parse(a.extra_data) : a.extra_data;
+                            if (ex && ex.arrow_x1 != null) {
+                                a.arrow_x1 = +ex.arrow_x1; a.arrow_y1 = +ex.arrow_y1;
+                                a.arrow_x2 = +ex.arrow_x2; a.arrow_y2 = +ex.arrow_y2;
+                            }
+                        } catch (_) { }
+                    }
+                    return a;
+                });
             } catch (e) { console.error('[RPV] load:', e); return []; }
         }
 
@@ -337,7 +372,7 @@
             var el = document.createElement('div'); el.dataset.annotId = String(a.id);
             var t = Math.max(1.5, 2 * s);
             /* Tengah visual teks Latin ~ 35% dari tinggi dari atas */
-            var top = a.rect.y * s + a.rect.h * s * 0.35 - t / 2;
+            var top = a.rect.y * s + a.rect.h * s * 0.55 - t / 2; // 55%=tengah visual teks Latin PDF
             el.style.cssText = 'position:absolute;left:' + (a.rect.x * s) + 'px;top:' + top + 'px;width:' + (a.rect.w * s) + 'px;height:' + t + 'px;background:' + hex(a.color) + ';pointer-events:auto;cursor:pointer;z-index:5;opacity:.9;border-radius:1px;';
             attachEv(el, a); annotLayer.appendChild(el);
         }
@@ -360,16 +395,52 @@
 
         function rSH(a, s) {
             if (!a.rect) return;
-            var x = a.rect.x * s, y = a.rect.y * s, w = Math.max(4, a.rect.w * s), h = Math.max(4, a.rect.h * s);
-            var sw = Math.max(1, (a.stroke_width || 2) * s), col = hex(a.color), sel = selectedId == a.id;
+            var col = hex(a.color), sel = selectedId == a.id;
+            var sw = Math.max(1, (a.stroke_width || 2) * s);
+            var st = a.shape_type || 'rect';
             var el = document.createElement('div'); el.dataset.annotId = String(a.id);
-            el.style.cssText = 'position:absolute;left:' + x + 'px;top:' + y + 'px;width:' + w + 'px;height:' + h + 'px;pointer-events:auto;cursor:pointer;z-index:5;outline:' + (sel ? '2px dashed #FF6B18' : 'none') + ';';
-            var st = a.shape_type || 'rect', svg = '';
-            if (st === 'rect') svg = '<rect x="' + (sw / 2) + '" y="' + (sw / 2) + '" width="' + Math.max(1, w - sw) + '" height="' + Math.max(1, h - sw) + '" rx="2" fill="none" stroke="' + col + '" stroke-width="' + sw + '"/>';
-            else if (st === 'ellipse') svg = '<ellipse cx="' + (w / 2) + '" cy="' + (h / 2) + '" rx="' + Math.max(1, w / 2 - sw / 2) + '" ry="' + Math.max(1, h / 2 - sw / 2) + '" fill="none" stroke="' + col + '" stroke-width="' + sw + '"/>';
-            else if (st === 'arrow') { var hh = Math.max(4, h * .35), hx = Math.max(sw * 3, w * .25); svg = '<line x1="' + sw + '" y1="' + (h / 2) + '" x2="' + (w - hx + sw) + '" y2="' + (h / 2) + '" stroke="' + col + '" stroke-width="' + sw + '" stroke-linecap="round"/><polygon points="' + (w - sw / 2) + ',' + (h / 2) + ' ' + (w - hx) + ',' + (h / 2 - hh) + ' ' + (w - hx) + ',' + (h / 2 + hh) + '" fill="' + col + '"/>'; }
-            else if (st === 'line') svg = '<line x1="' + sw + '" y1="' + (h / 2) + '" x2="' + (w - sw) + '" y2="' + (h / 2) + '" stroke="' + col + '" stroke-width="' + sw + '" stroke-linecap="round"/>';
-            el.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '" style="overflow:visible;display:block;pointer-events:none">' + svg + '</svg>';
+
+            /* Arrow & Line: gunakan titik asal (bukan bounding box) supaya arah benar */
+            if (st === 'arrow' || st === 'line') {
+                /* Pakai arrow_x1/y1/x2/y2 jika ada, fallback ke bounding box horizontal */
+                var ax1 = a.arrow_x1 != null ? a.arrow_x1 * s : a.rect.x * s;
+                var ay1 = a.arrow_y1 != null ? a.arrow_y1 * s : (a.rect.y + a.rect.h / 2) * s;
+                var ax2 = a.arrow_x2 != null ? a.arrow_x2 * s : (a.rect.x + a.rect.w) * s;
+                var ay2 = a.arrow_y2 != null ? a.arrow_y2 * s : (a.rect.y + a.rect.h / 2) * s;
+                /* Hitung bounding box untuk posisi div */
+                var bx = Math.min(ax1, ax2) - sw * 2, by = Math.min(ay1, ay2) - sw * 2;
+                var bw = Math.abs(ax2 - ax1) + sw * 4, bh = Math.abs(ay2 - ay1) + sw * 4;
+                /* Koordinat relatif terhadap div */
+                var lx1 = ax1 - bx, ly1 = ay1 - by, lx2 = ax2 - bx, ly2 = ay2 - by;
+                el.style.cssText = 'position:absolute;left:' + bx + 'px;top:' + by + 'px;width:' + bw + 'px;height:' + bh + 'px;pointer-events:auto;cursor:pointer;z-index:5;outline:' + (sel ? '2px dashed #FF6B18' : 'none') + ';';
+                var svg = '';
+                if (st === 'line') {
+                    svg = '<line x1="' + lx1 + '" y1="' + ly1 + '" x2="' + lx2 + '" y2="' + ly2 + '" stroke="' + col + '" stroke-width="' + sw + '" stroke-linecap="round"/>';
+                } else { /* arrow */
+                    var dx = lx2 - lx1, dy = ly2 - ly1, len = Math.sqrt(dx * dx + dy * dy);
+                    if (len > 1) {
+                        var headLen = Math.min(len * 0.35, Math.max(10, sw * 5));
+                        var ang = Math.atan2(dy, dx);
+                        var hx1 = lx2 - headLen * Math.cos(ang - Math.PI / 6);
+                        var hy1 = ly2 - headLen * Math.sin(ang - Math.PI / 6);
+                        var hx2 = lx2 - headLen * Math.cos(ang + Math.PI / 6);
+                        var hy2 = ly2 - headLen * Math.sin(ang + Math.PI / 6);
+                        svg = '<line x1="' + lx1 + '" y1="' + ly1 + '" x2="' + lx2 + '" y2="' + ly2 + '" stroke="' + col + '" stroke-width="' + sw + '" stroke-linecap="round"/>'
+                            + '<polyline points="' + hx1 + ',' + hy1 + ' ' + lx2 + ',' + ly2 + ' ' + hx2 + ',' + hy2 + '" fill="none" stroke="' + col + '" stroke-width="' + sw + '" stroke-linecap="round" stroke-linejoin="round"/>';
+                    }
+                }
+                el.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="' + bw + '" height="' + bh + '" style="overflow:visible;display:block;pointer-events:none">' + svg + '</svg>';
+            } else {
+                /* rect / ellipse */
+                var x = a.rect.x * s, y = a.rect.y * s, w = Math.max(4, a.rect.w * s), h = Math.max(4, a.rect.h * s);
+                el.style.cssText = 'position:absolute;left:' + x + 'px;top:' + y + 'px;width:' + w + 'px;height:' + h + 'px;pointer-events:auto;cursor:pointer;z-index:5;outline:' + (sel ? '2px dashed #FF6B18' : 'none') + ';';
+                var svg = '';
+                if (st === 'rect')
+                    svg = '<rect x="' + (sw / 2) + '" y="' + (sw / 2) + '" width="' + Math.max(1, w - sw) + '" height="' + Math.max(1, h - sw) + '" rx="2" fill="none" stroke="' + col + '" stroke-width="' + sw + '"/>';
+                else if (st === 'ellipse')
+                    svg = '<ellipse cx="' + (w / 2) + '" cy="' + (h / 2) + '" rx="' + Math.max(1, w / 2 - sw / 2) + '" ry="' + Math.max(1, h / 2 - sw / 2) + '" fill="none" stroke="' + col + '" stroke-width="' + sw + '"/>';
+                el.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '" style="overflow:visible;display:block;pointer-events:none">' + svg + '</svg>';
+            }
             attachEv(el, a); annotLayer.appendChild(el);
         }
 
@@ -465,8 +536,12 @@
             if (id) { var a = annots.find(function (x) { return String(x.id) === id; }); if (a) openEditPopup(a); }
         });
         document.addEventListener('click', function (e) {
-            if (tooltip && !tooltip.contains(e.target) && !e.target.closest('[data-annot-id],.rpv-sticky-note'))
+            /* Jangan tutup tooltip saat klik tombol di dalam tooltip */
+            if (tooltip && tooltip.classList.contains('show')) {
+                if (tooltip.contains(e.target)) return; /* klik dalam tooltip - biarkan handler button jalan */
+                if (e.target.closest('[data-annot-id],.rpv-sticky-note')) return;
                 tooltip.classList.remove('show');
+            }
         });
 
         /* ── Edit popup ── */
@@ -703,9 +778,92 @@
         async function fhEnd(e) { if (!isDrawing || (activeTool !== 'freehand' && activeTool !== 'brush')) return; if (e.cancelable) e.preventDefault(); isDrawing = false; if (freePoints.length < 2) return; var xs = freePoints.map(function (p) { return p[0]; }), ys = freePoints.map(function (p) { return p[1]; }), bx = Math.min.apply(null, xs), by = Math.min.apply(null, ys); await addAnnot({ page: pageNum, type: 'freehand', color: activeColor, stroke_width: getFHSize(), path_points: freePoints, rect_x: bx, rect_y: by, rect_w: Math.max.apply(null, xs) - bx, rect_h: Math.max.apply(null, ys) - by }); }
 
         /* ── Shape ── */
-        function shStart(e) { if (activeTool !== 'shape') return; if (e.cancelable) e.preventDefault(); isDrawing = true; drawStart = stageXY(e); shapePreviewEl = document.createElement('div'); shapePreviewEl.style.cssText = 'position:absolute;pointer-events:none;z-index:25;border:' + activeSize + 'px solid ' + hex(activeColor) + ';' + (activeShape === 'ellipse' ? 'border-radius:50%;' : '') + 'left:' + drawStart.x + 'px;top:' + drawStart.y + 'px;width:0;height:0;'; stage.appendChild(shapePreviewEl); }
-        function shMove(e) { if (!isDrawing || activeTool !== 'shape' || !shapePreviewEl || !drawStart) return; if (e.cancelable) e.preventDefault(); var c = stageXY(e); shapePreviewEl.style.left = Math.min(drawStart.x, c.x) + 'px'; shapePreviewEl.style.top = Math.min(drawStart.y, c.y) + 'px'; shapePreviewEl.style.width = Math.abs(c.x - drawStart.x) + 'px'; shapePreviewEl.style.height = Math.abs(c.y - drawStart.y) + 'px'; }
-        async function shEnd(e) { if (!isDrawing || activeTool !== 'shape') return; if (e.cancelable) e.preventDefault(); isDrawing = false; if (shapePreviewEl) shapePreviewEl.remove(); shapePreviewEl = null; var c = stageXY(e), s = baseScale * zoomFactor; if (!drawStart) return; var x = Math.min(drawStart.x, c.x) / s, y = Math.min(drawStart.y, c.y) / s, w = Math.abs(c.x - drawStart.x) / s, h = Math.abs(c.y - drawStart.y) / s; drawStart = null; if (w < 4 && h < 4) return; await addAnnot({ page: pageNum, type: 'shape', color: activeColor, shape_type: activeShape, stroke_width: activeSize, rect_x: x, rect_y: y, rect_w: w, rect_h: activeShape === 'line' ? 1 : h }); }
+        /* FIX: Preview pakai SVG canvas bukan CSS div — arrow/line tampil benar */
+        var shapePreviewSVG = null; // SVG overlay untuk preview
+
+        function shapePreviewSVGEl() {
+            if (!shapePreviewSVG) {
+                shapePreviewSVG = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                shapePreviewSVG.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:26;overflow:visible;';
+                shapePreviewSVG.setAttribute('width', stage.offsetWidth);
+                shapePreviewSVG.setAttribute('height', stage.offsetHeight);
+                stage.appendChild(shapePreviewSVG);
+            }
+            return shapePreviewSVG;
+        }
+
+        function updateShapePreview(x1, y1, x2, y2) {
+            var svg = shapePreviewSVGEl();
+            var col = hex(activeColor);
+            var sw = Math.max(1, activeSize);
+            var w = Math.abs(x2 - x1), h = Math.abs(y2 - y1);
+            var minX = Math.min(x1, x2), minY = Math.min(y1, y2);
+            var st = activeShape;
+            var inner = '';
+            if (st === 'rect') {
+                inner = '<rect x="' + (minX + sw / 2) + '" y="' + (minY + sw / 2) + '" width="' + Math.max(1, w - sw) + '" height="' + Math.max(1, h - sw) + '" rx="2" fill="none" stroke="' + col + '" stroke-width="' + sw + '" stroke-dasharray="4 3"/>';
+            } else if (st === 'ellipse') {
+                inner = '<ellipse cx="' + (minX + w / 2) + '" cy="' + (minY + h / 2) + '" rx="' + Math.max(1, w / 2 - sw / 2) + '" ry="' + Math.max(1, h / 2 - sw / 2) + '" fill="none" stroke="' + col + '" stroke-width="' + sw + '" stroke-dasharray="4 3"/>';
+            } else if (st === 'line') {
+                inner = '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="' + col + '" stroke-width="' + sw + '" stroke-linecap="round" stroke-dasharray="4 3"/>';
+            } else if (st === 'arrow') {
+                /* FIX: Arrow dari titik awal ke titik akhir — mendukung semua arah */
+                var dx = x2 - x1, dy = y2 - y1;
+                var len = Math.sqrt(dx * dx + dy * dy);
+                if (len < 4) { svg.innerHTML = ''; return; }
+                var headLen = Math.min(len * 0.35, Math.max(12, sw * 5));
+                var angle = Math.atan2(dy, dx);
+                var ax1 = x2 - headLen * Math.cos(angle - Math.PI / 6);
+                var ay1 = y2 - headLen * Math.sin(angle - Math.PI / 6);
+                var ax2 = x2 - headLen * Math.cos(angle + Math.PI / 6);
+                var ay2 = y2 - headLen * Math.sin(angle + Math.PI / 6);
+                inner = '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="' + col + '" stroke-width="' + sw + '" stroke-linecap="round" stroke-dasharray="4 3"/>'
+                    + '<polyline points="' + ax1 + ',' + ay1 + ' ' + x2 + ',' + y2 + ' ' + ax2 + ',' + ay2 + '" fill="none" stroke="' + col + '" stroke-width="' + sw + '" stroke-linecap="round" stroke-linejoin="round"/>';
+            }
+            svg.innerHTML = inner;
+        }
+
+        function clearShapePreview() {
+            if (shapePreviewSVG) { shapePreviewSVG.innerHTML = ''; }
+        }
+
+        /* drawStart menyimpan titik awal TEPAT (bukan min), untuk arrow direction */
+        var shDrawX1 = 0, shDrawY1 = 0;
+
+        function shStart(e) {
+            if (activeTool !== 'shape') return;
+            if (e.cancelable) e.preventDefault();
+            isDrawing = true;
+            var p = stageXY(e);
+            drawStart = p; shDrawX1 = p.x; shDrawY1 = p.y;
+            shapePreviewSVGEl(); // pastikan SVG ada
+        }
+        function shMove(e) {
+            if (!isDrawing || activeTool !== 'shape' || !drawStart) return;
+            if (e.cancelable) e.preventDefault();
+            var c = stageXY(e);
+            updateShapePreview(shDrawX1, shDrawY1, c.x, c.y);
+        }
+        async function shEnd(e) {
+            if (!isDrawing || activeTool !== 'shape') return;
+            if (e.cancelable) e.preventDefault();
+            isDrawing = false; clearShapePreview();
+            var c = stageXY(e), s = baseScale * zoomFactor;
+            if (!drawStart) return;
+            var x1 = shDrawX1 / s, y1 = shDrawY1 / s, x2 = c.x / s, y2 = c.y / s;
+            var dx = x2 - x1, dy = y2 - y1;
+            drawStart = null;
+            if (Math.abs(dx) < 2 && Math.abs(dy) < 2) return;
+            /* Simpan rect sebagai bounding box, tapi juga simpan x2_raw,y2_raw untuk arrow */
+            var rx = Math.min(x1, x2), ry = Math.min(y1, y2), rw = Math.abs(dx), rh = Math.abs(dy);
+            await addAnnot({
+                page: pageNum, type: 'shape', color: activeColor, shape_type: activeShape,
+                stroke_width: activeSize,
+                rect_x: rx, rect_y: ry, rect_w: rw, rect_h: rh,
+                /* Simpan titik asal untuk arrow */
+                arrow_x1: x1, arrow_y1: y1, arrow_x2: x2, arrow_y2: y2,
+            });
+        }
 
         if (freeCanvas) {
             freeCanvas.addEventListener('mousedown', function (e) { fhStart(e); shStart(e); }, { passive: false });
@@ -949,11 +1107,120 @@
         });
 
         function drawOnCanvas(c, a, s) {
-            if (!a.rect && a.type !== 'freehand') return; c.save(); var col = hex(a.color);
-            if (a.type === 'highlight' || a.type === 'comment') { if (!a.rect) return; c.globalAlpha = .38; c.fillStyle = col; c.fillRect(a.rect.x * s, a.rect.y * s, a.rect.w * s, a.rect.h * s); }
-            else if (a.type === 'underline') { if (!a.rect) return; c.globalAlpha = .9; c.fillStyle = col; var ut = Math.max(1.5, 2 * s); c.fillRect(a.rect.x * s, (a.rect.y + a.rect.h) * s - 1, a.rect.w * s, ut); }
-            else if (a.type === 'strikethrough') { if (!a.rect) return; c.globalAlpha = .9; c.fillStyle = col; var st2 = Math.max(1.5, 2 * s); c.fillRect(a.rect.x * s, a.rect.y * s + a.rect.h * s * 0.35 - st2 / 2, a.rect.w * s, st2); }
-            else if (a.type === 'freehand') { if (!a.path_points || !a.path_points.length) return; c.globalAlpha = .92; c.strokeStyle = col; c.lineWidth = (a.stroke_width || 2) * s; c.lineCap = 'round'; c.lineJoin = 'round'; c.beginPath(); c.moveTo(a.path_points[0][0] * s, a.path_points[0][1] * s); for (var i = 1; i < a.path_points.length; i++)c.lineTo(a.path_points[i][0] * s, a.path_points[i][1] * s); c.stroke(); }
+            if (!a.rect && a.type !== 'freehand') return;
+            c.save();
+            var col = hex(a.color);
+
+            if (a.type === 'highlight' || a.type === 'comment') {
+                if (!a.rect) return;
+                c.globalAlpha = .38; c.fillStyle = col;
+                c.fillRect(a.rect.x * s, a.rect.y * s, a.rect.w * s, a.rect.h * s);
+
+            } else if (a.type === 'underline') {
+                if (!a.rect) return;
+                c.globalAlpha = .9; c.fillStyle = col;
+                var ut = Math.max(1.5, 2 * s);
+                c.fillRect(a.rect.x * s, (a.rect.y + a.rect.h) * s - 1, a.rect.w * s, ut);
+
+            } else if (a.type === 'strikethrough') {
+                if (!a.rect) return;
+                c.globalAlpha = .9; c.fillStyle = col;
+                var st2 = Math.max(1.5, 2 * s);
+                c.fillRect(a.rect.x * s, a.rect.y * s + a.rect.h * s * 0.55 - st2 / 2, a.rect.w * s, st2);
+
+            } else if (a.type === 'freehand') {
+                if (!a.path_points || !a.path_points.length) return;
+                c.globalAlpha = .92; c.strokeStyle = col;
+                c.lineWidth = (a.stroke_width || 2) * s;
+                c.lineCap = 'round'; c.lineJoin = 'round';
+                c.beginPath();
+                c.moveTo(a.path_points[0][0] * s, a.path_points[0][1] * s);
+                for (var i = 1; i < a.path_points.length; i++)
+                    c.lineTo(a.path_points[i][0] * s, a.path_points[i][1] * s);
+                c.stroke();
+
+            } else if (a.type === 'shape') {
+                /* FIX: shape sekarang ikut tersimpan di PDF download */
+                if (!a.rect) return;
+                var sw = (a.stroke_width || 2) * s;
+                c.globalAlpha = 1; c.strokeStyle = col; c.lineWidth = sw;
+                c.lineCap = 'round'; c.lineJoin = 'round';
+                var st = a.shape_type || 'rect';
+
+                if (st === 'rect') {
+                    var rx = a.rect.x * s + sw / 2, ry = a.rect.y * s + sw / 2;
+                    var rw = Math.max(1, a.rect.w * s - sw), rh = Math.max(1, a.rect.h * s - sw);
+                    c.strokeRect(rx, ry, rw, rh);
+
+                } else if (st === 'ellipse') {
+                    c.beginPath();
+                    c.ellipse(
+                        (a.rect.x + a.rect.w / 2) * s, (a.rect.y + a.rect.h / 2) * s,
+                        Math.max(1, a.rect.w * s / 2 - sw / 2), Math.max(1, a.rect.h * s / 2 - sw / 2),
+                        0, 0, Math.PI * 2
+                    );
+                    c.stroke();
+
+                } else if (st === 'line') {
+                    /* Pakai arrow_x1/y1/x2/y2 jika ada */
+                    var lx1 = a.arrow_x1 != null ? a.arrow_x1 * s : a.rect.x * s;
+                    var ly1 = a.arrow_y1 != null ? a.arrow_y1 * s : (a.rect.y + a.rect.h / 2) * s;
+                    var lx2 = a.arrow_x2 != null ? a.arrow_x2 * s : (a.rect.x + a.rect.w) * s;
+                    var ly2 = a.arrow_y2 != null ? a.arrow_y2 * s : (a.rect.y + a.rect.h / 2) * s;
+                    c.beginPath(); c.moveTo(lx1, ly1); c.lineTo(lx2, ly2); c.stroke();
+
+                } else if (st === 'arrow') {
+                    var ax1 = a.arrow_x1 != null ? a.arrow_x1 * s : a.rect.x * s;
+                    var ay1 = a.arrow_y1 != null ? a.arrow_y1 * s : (a.rect.y + a.rect.h / 2) * s;
+                    var ax2 = a.arrow_x2 != null ? a.arrow_x2 * s : (a.rect.x + a.rect.w) * s;
+                    var ay2 = a.arrow_y2 != null ? a.arrow_y2 * s : (a.rect.y + a.rect.h / 2) * s;
+                    var adx = ax2 - ax1, ady = ay2 - ay1;
+                    var alen = Math.sqrt(adx * adx + ady * ady);
+                    if (alen < 2) { c.restore(); return; }
+                    var headLen = Math.min(alen * 0.35, Math.max(10, sw * 5));
+                    var aang = Math.atan2(ady, adx);
+                    c.beginPath(); c.moveTo(ax1, ay1); c.lineTo(ax2, ay2); c.stroke();
+                    /* Kepala panah */
+                    c.beginPath();
+                    c.moveTo(ax2 - headLen * Math.cos(aang - Math.PI / 6), ay2 - headLen * Math.sin(aang - Math.PI / 6));
+                    c.lineTo(ax2, ay2);
+                    c.lineTo(ax2 - headLen * Math.cos(aang + Math.PI / 6), ay2 - headLen * Math.sin(aang + Math.PI / 6));
+                    c.stroke();
+                }
+
+            } else if (a.type === 'sticky') {
+                /* FIX: sticky note ikut tersimpan di PDF download */
+                if (!a.rect || !a.comment) return;
+                var stickyW = Math.max(130, 180 * s), stickyH = Math.max(60, 90 * s);
+                var sx = a.rect.x * s, sy = a.rect.y * s;
+                /* Background warna */
+                var stickyColors = { yellow: '#FEF9C3', green: '#DCFCE7', red: '#FEE2E2', blue: '#DBEAFE', orange: '#FFEDD5', pink: '#FCE7F3', purple: '#EDE9FE', cyan: '#CFFAFE', black: '#1F2937', white: '#F9FAFB' };
+                c.globalAlpha = .95;
+                c.fillStyle = stickyColors[a.color] || '#FEF9C3';
+                if (c.roundRect) c.roundRect(sx, sy, stickyW, stickyH, 4);
+                else c.rect(sx, sy, stickyW, stickyH);
+                c.fill();
+                /* Border */
+                c.globalAlpha = 1; c.strokeStyle = col; c.lineWidth = 1.5;
+                if (c.roundRect) c.roundRect(sx, sy, stickyW, stickyH, 4);
+                else c.rect(sx, sy, stickyW, stickyH);
+                c.stroke();
+                /* Teks */
+                c.globalAlpha = 1;
+                c.fillStyle = a.color === 'black' ? '#D1D5DB' : 'rgba(0,0,0,.8)';
+                var fs = Math.max(9, 11 * s);
+                c.font = '600 ' + fs + 'px ui-sans-serif,sans-serif';
+                var words = a.comment.split(' '), lineH = fs * 1.4, ly = sy + fs + 8, lx = sx + 6;
+                var line = '';
+                for (var wi = 0; wi < words.length; wi++) {
+                    var test = line + words[wi] + ' ';
+                    if (c.measureText(test).width > stickyW - 12 && line !== '') {
+                        c.fillText(line, lx, ly); line = words[wi] + ' '; ly += lineH;
+                        if (ly > sy + stickyH - 4) break;
+                    } else { line = test; }
+                }
+                if (line.trim()) c.fillText(line, lx, ly);
+            }
             c.restore();
         }
 
@@ -1060,7 +1327,7 @@
             });
 
             task.onProgress = function (d) {
-                if (d.total > 0 && loadSub) loadSub.textContent = 'Mengunduh... ' + Math.round(d.loaded / d.total * 100) + '%';
+                if (d.total > 0 && loadSub) loadSub.textContent = 'Mengunduh... ' + Math.min(100, Math.round(d.loaded / d.total * 100)) + '%';
             };
 
             task.promise.then(async function (doc) {
