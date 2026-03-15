@@ -64,6 +64,16 @@ return $arr;
         background: #141414;
     }
 
+    /* ── Cegah scroll horizontal ── */
+    #rpv-ro-wrap #rpv-canvas-wrap {
+        overflow-x: hidden !important;
+    }
+
+    #rpv-ro-wrap #rpv-stage {
+        margin: 0 auto;
+        max-width: 100%;
+    }
+
     /* ── Fullscreen ── */
     #rpv-ro-wrap.is-fullscreen {
         position: fixed !important;
@@ -752,9 +762,10 @@ return $arr;
        NAVIGASI & ZOOM
     ══════════════════════════════════════════════════════════════ */
     function computeBase(page) {
-        var cw = wrap ? wrap.clientWidth : 800;
         var nw = page.getViewport({ scale: 1 }).width;
-        baseScale = Math.max(.5, Math.min((cw - 24) / nw, 2.5));
+        var cw = wrap ? wrap.clientWidth : 800;
+        baseScale = Math.max(.5, Math.min((cw - 8) / nw, 2.5));
+        /* Kurangi sedikit padding agar tidak trigger scrollbar */
         needsRecompute = false;
     }
 
