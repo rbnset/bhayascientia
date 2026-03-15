@@ -815,66 +815,259 @@ return $arr;
         isFullscreen ? exitFS() : enterFS();
     });
 
-    /* ══════════════════════════════════════════════════════
-       DOWNLOAD PDF + ANOTASI
+/* ══════════════════════════════════════════════════════
+   DOWNLOAD PDF + ANOTASI
+══════════════════════════════════════════════════════ */
+document.getElementById('rpv-ro-download-btn').addEventListener('click', async function () {
+    if (exportBusy) { snack('⏳ Sedang proses...'); return; }
+    if (!pdfDoc)    { snack('PDF belum dimuat!'); return; }
+    var jsPDFLib = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+    if (!jsPDFLib) { snack('⚠️ Library belum siap', '#F59E0B'); return; }
+
+    exportBusy = true;
+    if (exportOL) exportOL.classList.add('show');
+
+    try {
+        /* Gunakan scale lebih tinggi untuk kualitas,
+           tapi anotasi di-render dengan scale yang sama */
+        var EXPORT_DPR = Math.max(2, DPR);
+        var offC       = document.createElement('canvas');
+        var offCtx     = offC.getContext('2d');
+        var pdf        = null;
+        var status     = document.getElementById('rpv-ro-export-status');
+
+        for (var p = 1; p <= pdfDoc.numPages; p++) {
+            if (status) status.textContent = 'Halaman ' + p + ' / ' + pdfDoc.numPages;
+
+            var pg = await pdfDoc.getPage(p);
+
+            /* ── Scale untuk export: fit lebar A4 @ 150dpi ── */
+            var vpBase  = pg.getViewport({ scale: 1 });
+            var exportS = 2.0; /* scale PDF render untuk export */
+            var vpExp   = pg.getViewport({ scale: exportS });
+
+            offC.width  = Math.floor(vpExp.width);
+            offC.height = Math.floor(vpExp.height);
+            offCtx.clearRect(0, 0, offC.width, offC.height);
+
+            /* Render halaman PDF */
+            await pg.render({ canvasContext: offCtx, viewport: vpExp }).promise;
+
+            /* Gambar semua anotasi di halaman ini dengan scale yang sama */
+            annots.filter(function (a) { return a.page === p; })
+                  .forEach(function (a) { drawAnnotOnCanvas(offCtx, a, exportS); });
+
+            var wMm = vpExp.width  * .264583;
+            var hMm = vpExp.height * .264583;
+            if (!pdf) {
+                pdf = new jsPDFLib({
+                    orientation: vpExp.width > vpExp.height ? 'landscape' : 'portrait',
+                    unit: 'mm', format: [wMm, hMm]
+                });
+            } else {
+                pdf.addPage([wMm, hMm], vpExp.width > vpExp.height ? 'landscape' : 'portrait');
+            }
+            pdf.addImage(offC.toDataURL('image/jpeg', .92), 'JPEG', 0, 0, wMm, hMm, '', 'FAST');
+        }
+
+        var fname = (CFG.title || 'naskah').replace(/[^a-z0-9]/gi, '-').toLowerCase();
+        pdf.save(fname + '-annotated-' + Date.now() + '.pdf');
+        snack('✅ PDF + anotasi berhasil didownload!', '#22c55e');
+
+    } catch (err) {
+        console.error('[RPV-RO] download error:', err);
+        snack('❌ Gagal: ' + err.message, '#ef4444');
+    } finally {
+        exportBusy = false;
+        if (exportOL) exportOL.classList.remove('show');
+    }
+});
+
+/* ══════════════════════════════════════════════════════
+   DRAW ANOTASI KE CANVAS (untuk export PDF)
+   Semua koordinat dalam "PDF unit space" (sebelum scale),
+   lalu dikali s saat menggambar — persis sama dengan doRender()
     ══════════════════════════════════════════════════════ */
-    document.getElementById('rpv-ro-download-btn').addEventListener('click', async function () {
-        if (exportBusy) { snack('⏳ Sedang proses...'); return; }
-        if (!pdfDoc)    { snack('PDF belum dimuat!'); return; }
-        var jsPDFLib = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
-        if (!jsPDFLib) { snack('⚠️ Library belum siap', '#F59E0B'); return; }
+    function drawAnnotOnCanvas(c, a, s) {
+        if (!a.rect && a.type !== 'freehand') return;
+        c.save();
+        var col = hex(a.color);
 
-        exportBusy = true;
-        if (exportOL) exportOL.classList.add('show');
-
-        try {
-            var SCALE  = 2;
-            var offC   = document.createElement('canvas');
-            var offCtx = offC.getContext('2d');
-            var pdf    = null;
-            var status = document.getElementById('rpv-ro-export-status');
-
-            for (var p = 1; p <= pdfDoc.numPages; p++) {
-                if (status) status.textContent = 'Halaman ' + p + ' / ' + pdfDoc.numPages;
-
-                var pg = await pdfDoc.getPage(p);
-                var vp = pg.getViewport({ scale: SCALE });
-                offC.width  = Math.floor(vp.width);
-                offC.height = Math.floor(vp.height);
-                offCtx.clearRect(0, 0, offC.width, offC.height);
-
-                /* Render halaman PDF */
-                await pg.render({ canvasContext: offCtx, viewport: vp }).promise;
-
-                /* Gambar anotasi reviewer di atas PDF */
-                annots.filter(function (a) { return a.page === p; })
-                      .forEach(function (a) { drawAnnotOnCanvas(offCtx, a, SCALE); });
-
-                var wMm = vp.width  * .264583;
-                var hMm = vp.height * .264583;
-                if (!pdf) {
-                    pdf = new jsPDFLib({
-                        orientation: vp.width > vp.height ? 'landscape' : 'portrait',
-                        unit: 'mm', format: [wMm, hMm]
-                    });
-                } else {
-                    pdf.addPage([wMm, hMm], vp.width > vp.height ? 'landscape' : 'portrait');
-                }
-                pdf.addImage(offC.toDataURL('image/jpeg', .92), 'JPEG', 0, 0, wMm, hMm, '', 'FAST');
+        if (a.type === 'highlight' || a.type === 'comment') {
+            if (!a.rect) { c.restore(); return; }
+            c.globalAlpha = .38;
+            c.fillStyle   = col;
+            c.fillRect(a.rect.x*s, a.rect.y*s, a.rect.w*s, a.rect.h*s);
+            /* dot biru untuk comment */
+            if (a.type === 'comment' && a.comment) {
+                c.globalAlpha = 1;
+                c.fillStyle   = '#60A5FA';
+                c.beginPath();
+                c.arc((a.rect.x + a.rect.w)*s - 4*s/2,
+                    a.rect.y*s + 4*s/2,
+                    4*s/2, 0, Math.PI*2);
+                c.fill();
             }
 
-            var fname = (CFG.title || 'naskah').replace(/[^a-z0-9]/gi, '-').toLowerCase();
-            pdf.save(fname + '-annotated-' + Date.now() + '.pdf');
-            snack('✅ PDF + anotasi berhasil didownload!', '#22c55e');
+        } else if (a.type === 'underline') {
+            if (!a.rect) { c.restore(); return; }
+            c.globalAlpha = .9;
+            c.fillStyle   = col;
+            var ut = Math.max(1.5, 2*s);
+            c.fillRect(a.rect.x*s, (a.rect.y + a.rect.h)*s - 1, a.rect.w*s, ut);
 
-        } catch (err) {
-            console.error('[RPV-RO] download error:', err);
-            snack('❌ Gagal: ' + err.message, '#ef4444');
-        } finally {
-            exportBusy = false;
-            if (exportOL) exportOL.classList.remove('show');
+        } else if (a.type === 'strikethrough') {
+            if (!a.rect) { c.restore(); return; }
+            c.globalAlpha = .9;
+            c.fillStyle   = col;
+            var st2 = Math.max(1.5, 2*s);
+            c.fillRect(a.rect.x*s, a.rect.y*s + a.rect.h*s*0.62 - st2/2, a.rect.w*s, st2);
+
+        } else if (a.type === 'freehand') {
+            if (!a.path_points || !a.path_points.length) { c.restore(); return; }
+            c.globalAlpha = .92;
+            c.strokeStyle = col;
+            c.lineWidth   = (a.stroke_width||2) * s;
+            c.lineCap     = 'round';
+            c.lineJoin    = 'round';
+            c.beginPath();
+            c.moveTo(a.path_points[0][0]*s, a.path_points[0][1]*s);
+            for (var i = 1; i < a.path_points.length; i++) {
+                c.lineTo(a.path_points[i][0]*s, a.path_points[i][1]*s);
+            }
+            c.stroke();
+
+        } else if (a.type === 'shape') {
+            if (!a.rect) { c.restore(); return; }
+            var sw    = (a.stroke_width||2) * s;
+            var stype = a.shape_type || 'rect';
+            c.globalAlpha = .85;
+            c.strokeStyle = col;
+            c.lineWidth   = sw;
+            c.lineCap     = 'round';
+            c.lineJoin    = 'round';
+
+            if (stype === 'rect') {
+                c.strokeRect(
+                    a.rect.x*s + sw/2, a.rect.y*s + sw/2,
+                    Math.max(1, a.rect.w*s - sw), Math.max(1, a.rect.h*s - sw)
+                );
+            } else if (stype === 'ellipse') {
+                c.beginPath();
+                c.ellipse(
+                    (a.rect.x + a.rect.w/2)*s, (a.rect.y + a.rect.h/2)*s,
+                    Math.max(1, a.rect.w*s/2 - sw/2),
+                    Math.max(1, a.rect.h*s/2 - sw/2),
+                    0, 0, Math.PI*2
+                );
+                c.stroke();
+            } else if (stype === 'line') {
+                var lx1 = a.arrow_x1!=null ? a.arrow_x1*s : a.rect.x*s;
+                var ly1 = a.arrow_y1!=null ? a.arrow_y1*s : (a.rect.y + a.rect.h/2)*s;
+                var lx2 = a.arrow_x2!=null ? a.arrow_x2*s : (a.rect.x + a.rect.w)*s;
+                var ly2 = a.arrow_y2!=null ? a.arrow_y2*s : (a.rect.y + a.rect.h/2)*s;
+                c.beginPath(); c.moveTo(lx1, ly1); c.lineTo(lx2, ly2); c.stroke();
+            } else if (stype === 'arrow') {
+                var ax1 = a.arrow_x1!=null ? a.arrow_x1*s : a.rect.x*s;
+                var ay1 = a.arrow_y1!=null ? a.arrow_y1*s : (a.rect.y + a.rect.h/2)*s;
+                var ax2 = a.arrow_x2!=null ? a.arrow_x2*s : (a.rect.x + a.rect.w)*s;
+                var ay2 = a.arrow_y2!=null ? a.arrow_y2*s : (a.rect.y + a.rect.h/2)*s;
+                var adx = ax2-ax1, ady = ay2-ay1;
+                var alen = Math.sqrt(adx*adx + ady*ady);
+                if (alen < 2) { c.restore(); return; }
+                var headLen = Math.min(alen*.35, Math.max(10, sw*5));
+                var aang    = Math.atan2(ady, adx);
+                c.beginPath(); c.moveTo(ax1, ay1); c.lineTo(ax2, ay2); c.stroke();
+                c.beginPath();
+                c.moveTo(ax2 - headLen*Math.cos(aang - Math.PI/6),
+                        ay2 - headLen*Math.sin(aang - Math.PI/6));
+                c.lineTo(ax2, ay2);
+                c.lineTo(ax2 - headLen*Math.cos(aang + Math.PI/6),
+                        ay2 - headLen*Math.sin(aang + Math.PI/6));
+                c.stroke();
+            }
+
+        } else if (a.type === 'sticky') {
+            if (!a.rect || !a.comment) { c.restore(); return; }
+
+            /* ── Ukuran sticky SAMA dengan yang dirender di layar ──
+            rSticky() pakai: left = rect.x * screenScale, top = rect.y * screenScale
+            CSS class rpv-sticky-note punya width/height tetap (tidak scale)
+            Jadi di export kita pakai lebar tetap yang di-scale proporsional */
+            var STICKY_W_BASE = 180; /* px di scale=1 — sesuai rpv-sticky-note CSS */
+            var STICKY_H_BASE = 100;
+            var sW = STICKY_W_BASE * s;
+            var sH = STICKY_H_BASE * s;
+            var sx = a.rect.x * s;
+            var sy = a.rect.y * s;
+
+            var bgMap = {
+                yellow:'#FEF9C3', green:'#DCFCE7', red:'#FEE2E2', blue:'#DBEAFE',
+                orange:'#FFEDD5', pink:'#FCE7F3', purple:'#EDE9FE', cyan:'#CFFAFE',
+                black:'#1F2937',  white:'#F9FAFB'
+            };
+
+            /* Background */
+            c.globalAlpha = .85;
+            c.fillStyle   = bgMap[a.color] || '#FEF9C3';
+            c.beginPath();
+            if (c.roundRect) c.roundRect(sx, sy, sW, sH, 6*s);
+            else c.rect(sx, sy, sW, sH);
+            c.fill();
+
+            /* Border */
+            c.globalAlpha = 1;
+            c.strokeStyle = col;
+            c.lineWidth   = Math.max(1.5, 1.5*s);
+            c.beginPath();
+            if (c.roundRect) c.roundRect(sx, sy, sW, sH, 6*s);
+            else c.rect(sx, sy, sW, sH);
+            c.stroke();
+
+            /* Header strip warna */
+            c.globalAlpha = .5;
+            c.fillStyle   = col;
+            var headerH   = 22 * s;
+            c.beginPath();
+            if (c.roundRect) c.roundRect(sx, sy, sW, headerH, [6*s, 6*s, 0, 0]);
+            else c.rect(sx, sy, sW, headerH);
+            c.fill();
+
+            /* Icon 📌 di header */
+            c.globalAlpha = 1;
+            c.font        = Math.round(13*s) + 'px serif';
+            c.fillText('📌', sx + 6*s, sy + headerH - 5*s);
+
+            /* Teks komentar */
+            c.globalAlpha = 1;
+            c.fillStyle   = a.color === 'black' ? '#E5E7EB' : '#1F2937';
+            var fs        = Math.max(11, 12*s);
+            c.font        = '500 ' + fs + 'px ui-sans-serif,system-ui,sans-serif';
+            var padX      = 8 * s;
+            var padY      = headerH + fs + 4*s;
+            var maxTxtW   = sW - padX*2;
+            var lineH     = fs * 1.5;
+            var lY        = sy + padY;
+            var lX        = sx + padX;
+            var words     = a.comment.split(' ');
+            var line      = '';
+
+            for (var wi = 0; wi < words.length; wi++) {
+                var test = line + words[wi] + ' ';
+                if (c.measureText(test).width > maxTxtW && line !== '') {
+                    c.fillText(line.trimEnd(), lX, lY);
+                    line = words[wi] + ' ';
+                    lY  += lineH;
+                    if (lY > sy + sH - 4*s) { c.fillText('...', lX, lY - lineH + fs); break; }
+                } else {
+                    line = test;
+                }
+            }
+            if (line.trim() && lY <= sy + sH - 4*s) c.fillText(line.trimEnd(), lX, lY);
         }
-    });
+
+        c.restore();
+    }
 
     /* ══════════════════════════════════════════════════════
        NAVIGASI & ZOOM
