@@ -398,7 +398,7 @@ class ViewReview extends ViewRecord
 
                     return view('filament.reviews.pdf-viewer-readonly', compact('review', 'pdfUrl', 'apiUrl'));
                 })
-                ->modalWidth(\Filament\Support\Enums\MaxWidth::SevenXl)
+                ->modalWidth('7xl')
                 ->modalSubmitAction(false)
                 ->modalCancelActionLabel('Tutup'),
 
