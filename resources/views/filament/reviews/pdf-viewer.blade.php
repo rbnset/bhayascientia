@@ -8,13 +8,14 @@ Depends on:
 - public/js/pdf-viewer.js
 - public/js/pdf-annotations.js
 - public/css/pdf-viewer.css
-- Route: manuscripts.view → /manuscripts/{version}
+- Route: manuscripts.view -> /manuscripts/{version}
 - Route: api/review-annotations/{reviewId}/...
 
 Cara kerja:
 1. Form Filament menyimpan publication_version_id via livewire
-2. Blade ini membaca state tersebut via $this->data['publication_version_id']
-yang di-inject Filament ke view component
+2. Blade ini membaca state dari $this (Filament page component)
+Di Filament v3, $this di dalam View::make() adalah page-nya langsung,
+bukan sub-component. Tidak perlu getLivewire().
 3. Semua anotasi dikirim ke ReviewPdfAnnotationController dengan review_id
 sehingga terisolasi per-review
 --}}
@@ -23,19 +24,15 @@ sehingga terisolasi per-review
 use App\Models\PublicationVersion;
 use App\Models\Review;
 
-/*
-┌──────────────────────────────────────────────────────────────┐
-│ Resolve state dari Filament Livewire │
-│ Saat edit: $this->record ada │
-│ Saat create: hanya $this->data yang ada │
-└──────────────────────────────────────────────────────────────*/
-$livewireComponent = $this->getLivewire();
+// Di Filament v3, $this di dalam View::make() sudah merupakan
+// page component itu sendiri (EditReview / CreateReview).
+// Saat edit: $this->record ada | Saat create: hanya $this->data
 
 // Ambil review record (null saat create baru)
-$review = $livewireComponent->record ?? null;
+$review = $this->record ?? null;
 
 // Ambil publication_version_id dari form state
-$formState = $livewireComponent->data ?? [];
+$formState = $this->data ?? [];
 $versionId = $formState['publication_version_id'] ?? null;
 $reviewId = $review?->id ?? null;
 
@@ -58,15 +55,12 @@ $pdfUrl = $version->pdf_file_path
 }
 }
 
-// API endpoint untuk annotasi — berbasis review_id
-// Jika review belum disimpan (create baru), annotasi belum bisa disimpan
-// JS akan menangani ini dengan snack warning
+// API endpoint untuk annotasi berbasis review_id
+// Jika review belum disimpan (create baru), JS akan tampilkan warning
 $annotApiBase = $reviewId
 ? url("/api/review-annotations/{$reviewId}")
 : null;
 @endphp
-
-{{-- ══════ WRAPPER UTAMA ══════ --}}
 <div id="review-pdf-viewer-wrap" class="relative w-full overflow-hidden rounded-xl"
     style="background:#1A1A1A; min-height: 700px;" x-data="{
         versionId: @js($versionId),
