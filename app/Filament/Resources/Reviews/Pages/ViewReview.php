@@ -267,7 +267,20 @@ class ViewReview extends ViewRecord
                         ->placeholder('Belum ada keputusan'),
                 ]),
 
-            // ── ✅ BARU: Section Anotasi PDF Reviewer ─────────────
+            // ── ✅ PDF VIEWER READ-ONLY untuk Author ──────────────────
+            Section::make('Manuscript PDF')
+                ->description('Baca naskah versi yang direview')
+                ->icon('heroicon-o-document-text')
+                ->columnSpanFull()
+                ->visible(fn() => filled($this->record->publicationVersion?->pdf_file_path))
+                ->schema([
+                    \Filament\Infolists\Components\ViewEntry::make('pdf_viewer')
+                        ->label('')
+                        ->view('filament.reviews.pdf-viewer')
+                        ->columnSpanFull(),
+                ]),
+            // ──────────────────────────────────────────────────────────
+
             Section::make('Anotasi PDF Reviewer')
                 ->icon('heroicon-o-pencil-square')
                 ->columnSpanFull()
@@ -276,7 +289,6 @@ class ViewReview extends ViewRecord
                     View::make('filament.reviews.annotation-summary')
                         ->columnSpanFull(),
                 ]),
-            // ──────────────────────────────────────────────────────
 
             Section::make('')
                 ->columnSpanFull()

@@ -1,13 +1,5 @@
 {{--
 resources/views/filament/reviews/pdf-viewer.blade.php
-
-FIX v5.1:
-- Hapus <script>
-    pdf.js dari blade — sekarang di-load dinamis oleh review-pdf-viewer.js
-  (menghindari race condition: script muncul SEBELUM JS siap memproses)
-- Hapus whitespace di <script src="...">
-</script> agar tidak ada isi yang terparse
-- jsPDF tetap di-load dari blade (tidak ada onload callback di JS untuk ini)
 --}}
 
 @php
@@ -17,6 +9,23 @@ $review = $this->record ?? null;
 $formState = $this->data ?? [];
 $versionId = $formState['publication_version_id'] ?? null;
 $reviewId = $review?->id ?? null;
+
+// ── MODE DETEKSI ──────────────────────────────────────────
+// Jika dipanggil dari ViewReview (infolist/view page),
+// $review sudah ada dan $formState kosong → pakai data dari $review langsung.
+$isReadOnly = false;
+
+if ($review && $reviewId && empty($versionId)) {
+// Dipanggil dari ViewReview (author mode)
+$versionId = $review->publication_version_id;
+$isReadOnly = true;
+}
+
+// Bisa juga di-override eksplisit dari parent component jika perlu
+if (isset($readOnly) && $readOnly === true) {
+$isReadOnly = true;
+}
+// ─────────────────────────────────────────────────────────
 
 $version = null;
 $pdfUrl = null;
@@ -63,8 +72,8 @@ $annotApiBase = $reviewId
         </div>
     </div>
 
-    {{-- ── STATE 2: Review belum disimpan ──────────────────────────── --}}
-    @elseif (!$reviewId)
+    {{-- ── STATE 2: Review belum disimpan (hanya untuk reviewer/non-readOnly) ── --}}
+    @elseif (!$reviewId && !$isReadOnly)
     <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
                 gap:1rem;text-align:center;padding:3rem 2rem;min-height:400px;">
         <div style="font-size:3rem;">⚠️</div>
@@ -87,6 +96,15 @@ $annotApiBase = $reviewId
         <span class="rpv-title" title="{{ $publicationTitle }}">
             📄 {{ Str::limit($publicationTitle ?? 'Naskah', 38) }}
         </span>
+
+        {{-- Badge read-only untuk author --}}
+        @if ($isReadOnly)
+        <span style="background:#374151;color:#9CA3AF;font-size:10px;font-weight:700;
+                     padding:2px 10px;border-radius:20px;border:1px solid #4B5563;
+                     letter-spacing:.5px;text-transform:uppercase;">
+            👁 Read Only
+        </span>
+        @endif
 
         <div class="rpv-page-group">
             <button type="button" class="rpv-btn" id="rpv-prev" title="Halaman sebelumnya (←)">‹</button>
@@ -122,6 +140,8 @@ $annotApiBase = $reviewId
             <span>Layar Penuh</span>
         </button>
 
+        {{-- Tombol Download + Anotasi hanya untuk reviewer (non read-only) --}}
+        @if (!$isReadOnly)
         <button type="button" class="rpv-btn primary" id="rpv-download-btn" title="Download PDF dengan anotasi">
             <svg style="width:13px;height:13px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1
@@ -129,6 +149,7 @@ $annotApiBase = $reviewId
             </svg>
             <span>Download + Anotasi</span>
         </button>
+        @endif
 
     </div>{{-- /#rpv-toolbar --}}
 
@@ -182,7 +203,8 @@ $annotApiBase = $reviewId
 
     </div>{{-- /#rpv-canvas-wrap --}}
 
-    {{-- ══ ANNOTATION BAR ══ --}}
+    {{-- ══ ANNOTATION BAR — DISEMBUNYIKAN untuk author (read-only) ══ --}}
+    @if (!$isReadOnly)
     <div id="rpv-annot-bar">
         <div class="rpv-annot-label" id="rpv-active-label">✏️ Highlight</div>
         <div class="rpv-ab-tools">
@@ -333,6 +355,7 @@ $annotApiBase = $reviewId
 
         </div>{{-- /.rpv-ab-tools --}}
     </div>{{-- /#rpv-annot-bar --}}
+    @endif {{-- end !$isReadOnly --}}
 
     {{-- ══ OVERLAYS ══ --}}
 
@@ -439,26 +462,17 @@ $annotApiBase = $reviewId
     <div id="rpv-eraser-cursor"></div>
 
     {{-- ══ SCRIPTS ══ --}}
-
-    {{-- Config --}}
     <script>
         window.RPV_CONFIG = {
             pdfUrl      : @json($pdfUrl),
             reviewId    : @json($reviewId),
             apiBase     : @json($annotApiBase),
             reviewerName: @json($reviewerName),
+            readOnly    : @json($isReadOnly),   // ← TAMBAHAN: JS juga tahu mode read-only
         };
     </script>
 
-    {{--
-    FIX: pdf.js TIDAK lagi di-load di sini.
-    review-pdf-viewer.js akan memuat pdf.js secara dinamis via onload callback,
-    sehingga tidak ada race condition antara script load order.
-
-    jsPDF tetap di-load di sini karena tidak ada async dependency pada timing boot.
-    --}}
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>
-
     <script src="{{ asset('js/review-pdf-viewer.js') }}?v={{ filemtime(public_path('js/review-pdf-viewer.js')) }}">
     </script>
 
