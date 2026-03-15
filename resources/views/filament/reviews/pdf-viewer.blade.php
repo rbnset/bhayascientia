@@ -351,154 +351,124 @@ $annotApiBase = $reviewId ? url("/api/review-annotations/{$reviewId}") : null;
     {{-- Tooltip --}}
     <div id="rpv-tooltip">
         <div class="rpv-tip-text" id="rpv-tip-text"></div>
+        <div class="rpv-tip-actions">
+            <button type="button" class="rpv-tip-del" id="rpv-tip-del">🗑 Hapus</button>
+            <button type="button" class="rpv-tip-close" id="rpv-tip-close">✕ Tutup</button>
+        </div>
+    </div>
 
-        {{-- ══ OVERLAYS ══ --}}
+    {{-- Comment popup --}}
+    <div class="rpv-popup" id="rpv-comment-pop">
+        <p class="rpv-popup-title">💬 Tambah Komentar</p>
+        <textarea id="rpv-comment-txt" placeholder="Catatan reviewer untuk teks ini..."></textarea>
+        <div class="rpv-popup-actions">
+            <button type="button" class="rpv-popup-save" id="rpv-comment-save">Simpan</button>
+            <button type="button" class="rpv-popup-cancel" id="rpv-comment-cancel">Batal</button>
+        </div>
+    </div>
 
-        {{-- Tooltip — dengan tombol Edit --}}
-        <div id="rpv-tooltip">
-            <div class="rpv-tip-text" id="rpv-tip-text"></div>
-            <div class="rpv-tip-actions">
-                <button type="button" class="rpv-tip-edit" id="rpv-tip-edit"
-                    style="flex:1;padding:.3rem;background:rgba(96,165,250,.12);border:1px solid #60a5fa;color:#60a5fa;border-radius:6px;font-size:11px;cursor:pointer;">✏️
-                    Edit</button>
-                <button type="button" class="rpv-tip-del" id="rpv-tip-del">🗑 Hapus</button>
-                <button type="button" class="rpv-tip-close" id="rpv-tip-close">✕ Tutup</button>
+    {{-- Sticky popup --}}
+    <div class="rpv-popup" id="rpv-sticky-pop">
+        <p class="rpv-popup-title">📌 Tambah Sticky Note</p>
+        <textarea id="rpv-sticky-txt" placeholder="Catatan untuk bagian ini..."></textarea>
+        <div class="rpv-popup-actions">
+            <button type="button" class="rpv-popup-save" id="rpv-sticky-save">Tempel</button>
+            <button type="button" class="rpv-popup-cancel" id="rpv-sticky-cancel">Batal</button>
+        </div>
+    </div>
+
+    {{-- Search overlay --}}
+    <div id="rpv-search">
+        <div id="rpv-search-box">
+            <div class="rpv-search-row">
+                <input type="text" id="rpv-search-input" placeholder="Cari kata atau kalimat...">
+                <button type="button" class="rpv-snav" id="rpv-sprev">↑</button>
+                <button type="button" class="rpv-snav" id="rpv-snext">↓</button>
+                <button type="button" class="rpv-snav" id="rpv-sclose">✕</button>
+            </div>
+            <div id="rpv-search-status">Ketik untuk mencari...</div>
+            <div id="rpv-search-results"></div>
+        </div>
+    </div>
+
+    {{-- Mobile Bottom Sheet --}}
+    <div id="rpv-sheet-backdrop"></div>
+    <div id="rpv-bottom-sheet">
+        <div class="rpv-sheet-handle"></div>
+        <p style="font-size:12px;font-weight:700;color:#fff;margin:0 0 .75rem;truncate;">{{ Str::limit($publicationTitle
+            ?? 'Naskah', 40) }}</p>
+
+        <div class="rpv-sheet-sec">
+            <span class="rpv-sheet-lbl">Navigasi</span>
+            <div class="rpv-sheet-page-row">
+                <button type="button" class="rpv-sheet-page-btn" id="rpv-sheet-prev">‹</button>
+                <div class="rpv-sheet-page-display">
+                    <strong id="rpv-sheet-page">1</strong>
+                    <small>halaman</small>
+                </div>
+                <button type="button" class="rpv-sheet-page-btn" id="rpv-sheet-next">›</button>
             </div>
         </div>
 
-
-        {{-- Comment popup --}}
-        <div class="rpv-popup" id="rpv-comment-pop">
-            <p class="rpv-popup-title">💬 Tambah Komentar</p>
-            <textarea id="rpv-comment-txt" placeholder="Catatan reviewer untuk teks ini..."></textarea>
-            <div class="rpv-popup-actions">
-                <button type="button" class="rpv-popup-save" id="rpv-comment-save">Simpan</button>
-                <button type="button" class="rpv-popup-cancel" id="rpv-comment-cancel">Batal</button>
+        <div class="rpv-sheet-sec">
+            <span class="rpv-sheet-lbl">Zoom</span>
+            <div class="rpv-sheet-zoom-row">
+                <button type="button" class="rpv-sheet-zoom-btn" id="rpv-sheet-zoom-out">−</button>
+                <span class="rpv-sheet-zoom-val" id="rpv-sheet-zoom-val">100%</span>
+                <button type="button" class="rpv-sheet-zoom-btn" id="rpv-sheet-zoom-in">+</button>
             </div>
         </div>
 
-        {{-- Sticky popup --}}
-        <div class="rpv-popup" id="rpv-sticky-pop">
-            <p class="rpv-popup-title">📌 Tambah Sticky Note</p>
-            <textarea id="rpv-sticky-txt" placeholder="Catatan untuk bagian ini..."></textarea>
-            <div class="rpv-popup-actions">
-                <button type="button" class="rpv-popup-save" id="rpv-sticky-save">Tempel</button>
-                <button type="button" class="rpv-popup-cancel" id="rpv-sticky-cancel">Batal</button>
+        <div class="rpv-sheet-sec">
+            <span class="rpv-sheet-lbl">Mode Baca</span>
+            <div class="rpv-sheet-mode-row">
+                <div class="rpv-sheet-mode-card active" data-rpv-sheet-mode="normal">☀️ Normal</div>
+                <div class="rpv-sheet-mode-card" data-rpv-sheet-mode="sepia">📜 Sepia</div>
+                <div class="rpv-sheet-mode-card" data-rpv-sheet-mode="night">🌙 Night</div>
             </div>
         </div>
 
-        {{-- Search overlay --}}
-        <div id="rpv-search">
-            <div id="rpv-search-box">
-                <div class="rpv-search-row">
-                    <input type="text" id="rpv-search-input" placeholder="Cari kata atau kalimat...">
-                    <button type="button" class="rpv-snav" id="rpv-sprev">↑</button>
-                    <button type="button" class="rpv-snav" id="rpv-snext">↓</button>
-                    <button type="button" class="rpv-snav" id="rpv-sclose">✕</button>
-                </div>
-                <div id="rpv-search-status">Ketik untuk mencari...</div>
-                <div id="rpv-search-results"></div>
-            </div>
+        <div class="rpv-sheet-sec" style="display:flex;gap:.5rem;">
+            <button type="button" id="rpv-sheet-fs"
+                style="flex:1;padding:.5rem;background:#2d2d2d;border:1px solid #3d3d3d;color:#d1d5db;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;">🔲
+                Fullscreen</button>
+            <button type="button" id="rpv-sheet-search"
+                style="flex:1;padding:.5rem;background:#2d2d2d;border:1px solid #3d3d3d;color:#d1d5db;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;">🔍
+                Cari</button>
         </div>
 
-        {{-- Mobile Bottom Sheet --}}
-        <div id="rpv-sheet-backdrop"></div>
-        <div id="rpv-bottom-sheet">
-            <div class="rpv-sheet-handle"></div>
-            <p style="font-size:12px;font-weight:700;color:#fff;margin:0 0 .75rem;truncate;">{{
-                Str::limit($publicationTitle ?? 'Naskah', 40) }}</p>
+        <button type="button" class="rpv-sheet-close" id="rpv-sheet-close">Tutup</button>
+    </div>
 
-            <div class="rpv-sheet-sec">
-                <span class="rpv-sheet-lbl">Navigasi</span>
-                <div class="rpv-sheet-page-row">
-                    <button type="button" class="rpv-sheet-page-btn" id="rpv-sheet-prev">‹</button>
-                    <div class="rpv-sheet-page-display">
-                        <strong id="rpv-sheet-page">1</strong>
-                        <small>halaman</small>
-                    </div>
-                    <button type="button" class="rpv-sheet-page-btn" id="rpv-sheet-next">›</button>
-                </div>
-            </div>
+    {{-- Sync indicator --}}
+    <div id="rpv-sync">
+        <div class="rpv-sync-dot"></div>
+        <span id="rpv-sync-txt">Menyimpan...</span>
+    </div>
 
-            <div class="rpv-sheet-sec">
-                <span class="rpv-sheet-lbl">Zoom</span>
-                <div class="rpv-sheet-zoom-row">
-                    <button type="button" class="rpv-sheet-zoom-btn" id="rpv-sheet-zoom-out">−</button>
-                    <span class="rpv-sheet-zoom-val" id="rpv-sheet-zoom-val">100%</span>
-                    <button type="button" class="rpv-sheet-zoom-btn" id="rpv-sheet-zoom-in">+</button>
-                </div>
-            </div>
+    {{-- Eraser cursor --}}
+    <div id="rpv-eraser-cursor"></div>
 
-            <div class="rpv-sheet-sec">
-                <span class="rpv-sheet-lbl">Mode Baca</span>
-                <div class="rpv-sheet-mode-row">
-                    <div class="rpv-sheet-mode-card active" data-rpv-sheet-mode="normal">☀️ Normal</div>
-                    <div class="rpv-sheet-mode-card" data-rpv-sheet-mode="sepia">📜 Sepia</div>
-                    <div class="rpv-sheet-mode-card" data-rpv-sheet-mode="night">🌙 Night</div>
-                </div>
-            </div>
-
-            <div class="rpv-sheet-sec" style="display:flex;gap:.5rem;">
-
-                <div class="rpv-sheet-sec">
-                    <span class="rpv-sheet-lbl">Mode Baca</span>
-                    <div class="rpv-sheet-mode-row">
-                        <div class="rpv-sheet-mode-card active" data-rpv-sheet-mode="normal">☀️ Normal</div>
-                        <div class="rpv-sheet-mode-card" data-rpv-sheet-mode="sepia">📜 Sepia</div>
-                        <div class="rpv-sheet-mode-card" data-rpv-sheet-mode="night">🌙 Night</div>
-                    </div>
-                </div>
-
-                <div class="rpv-sheet-sec">
-                    <span class="rpv-sheet-lbl">Tampilan</span>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;">
-                        <div class="rpv-sheet-mode-card active" data-rpv-readmode="slide" style="font-size:11px;">📄
-                            Slide</div>
-                        <div class="rpv-sheet-mode-card" data-rpv-readmode="scroll" style="font-size:11px;">📜 Scroll
-                        </div>
-                    </div>
-                </div>
-
-                <div class="rpv-sheet-sec" style="display:flex;gap:.5rem;">
-                    <button type="button" id="rpv-sheet-fs"
-                        style="flex:1;padding:.5rem;background:#2d2d2d;border:1px solid #3d3d3d;color:#d1d5db;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;">🔲
-                        Fullscreen</button>
-                    <button type="button" id="rpv-sheet-search"
-                        style="flex:1;padding:.5rem;background:#2d2d2d;border:1px solid #3d3d3d;color:#d1d5db;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;">🔍
-                        Cari</button>
-                </div>
-
-                <button type="button" class="rpv-sheet-close" id="rpv-sheet-close">Tutup</button>
-            </div>
-
-            {{-- Sync indicator --}}
-            <div id="rpv-sync">
-                <div class="rpv-sync-dot"></div>
-                <span id="rpv-sync-txt">Menyimpan...</span>
-            </div>
-
-            {{-- Eraser cursor --}}
-            <div id="rpv-eraser-cursor"></div>
-
-            {{-- Config --}}
-            <script>
-                window.RPV_CONFIG = {
+    {{-- Config --}}
+    <script>
+        window.RPV_CONFIG = {
                 pdfUrl      : @json($pdfUrl),
                 reviewId    : @json($reviewId),
                 apiBase     : @json($annotApiBase),
                 reviewerName: @json($reviewerName),
             };
-            </script>
+    </script>
 
-            {{-- pdf.js --}}
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-            {{-- jsPDF UMD --}}
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-            {{-- Review PDF Viewer JS --}}
-            <script
-                src="{{ asset('js/review-pdf-viewer.js') }}?v={{ filemtime(public_path('js/review-pdf-viewer.js')) }}">
-            </script>
+    {{-- pdf.js --}}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
-            @endif
+    {{-- jsPDF (UMD build yang benar) --}}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-        </div>
+    {{-- Review PDF Viewer JS --}}
+    <script src="{{ asset('js/review-pdf-viewer.js') }}?v={{ filemtime(public_path('js/review-pdf-viewer.js')) }}">
+    </script>
+
+    @endif
+
+</div>
