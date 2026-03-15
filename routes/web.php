@@ -27,6 +27,7 @@ use App\Models\PublicationVersion;
 use App\Support\PdfStamper;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+use App\Http\Controllers\ReviewPdfAnnotationController;
 
 
 /*
@@ -296,4 +297,18 @@ Route::middleware(['auth'])->prefix('api/annotations')->group(function () {
     Route::put('/{slug}/{id}',           [PdfAnnotationController::class, 'update'])->whereNumber('id');
     Route::delete('/{slug}/page/{page}', [PdfAnnotationController::class, 'destroyPage'])->whereNumber('page');
     Route::delete('/{slug}/{id}',        [PdfAnnotationController::class, 'destroy'])->whereNumber('id');
+});
+
+
+Route::middleware(['auth'])->prefix('api/review-annotations/{reviewId}')->group(function () {
+
+    // Reviewer: CRUD anotasi milik sendiri
+    Route::get('/',                ReviewPdfAnnotationController::class . '@index');
+    Route::post('/',               ReviewPdfAnnotationController::class . '@store');
+    Route::put('/{id}',            ReviewPdfAnnotationController::class . '@update')->whereNumber('id');
+    Route::delete('/page/{page}',  ReviewPdfAnnotationController::class . '@destroyPage')->whereNumber('page');
+    Route::delete('/{id}',         ReviewPdfAnnotationController::class . '@destroy')->whereNumber('id');
+
+    // Author/Admin: baca anotasi reviewer (read-only)
+    Route::get('/readonly',        ReviewPdfAnnotationController::class . '@indexReadonly');
 });

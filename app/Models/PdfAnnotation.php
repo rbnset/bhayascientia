@@ -9,17 +9,6 @@ class PdfAnnotation extends Model
 {
     protected $table = 'pdf_annotations';
 
-    /**
-     * Semua type yang valid.
-     * highlight    : stabilo teks
-     * underline    : garis bawah teks
-     * strikethrough: garis tengah teks
-     * freehand     : pen bebas
-     * comment      : highlight + catatan
-     * sticky       : sticky note
-     * shape        : kotak/lingkaran/panah/garis
-     * text         : teks bebas di canvas
-     */
     public const VALID_TYPES = [
         'highlight',
         'underline',
@@ -54,6 +43,7 @@ class PdfAnnotation extends Model
     protected $fillable = [
         'user_id',
         'publication_id',
+        'review_id',
         'page',
         'type',
         'color',
@@ -92,6 +82,15 @@ class PdfAnnotation extends Model
         return $this->belongsTo(Publication::class);
     }
 
+    /**
+     * Jika annotasi dibuat dalam konteks review, terhubung ke review ini.
+     * Null = annotasi pembaca biasa (bukan reviewer).
+     */
+    public function review(): BelongsTo
+    {
+        return $this->belongsTo(Review::class);
+    }
+
     // ── Scopes ────────────────────────────────────────────────────────
 
     public function scopeForPage($query, int $page)
@@ -102,5 +101,21 @@ class PdfAnnotation extends Model
     public function scopeForPublication($query, int $publicationId)
     {
         return $query->where('publication_id', $publicationId);
+    }
+
+    /**
+     * Scope: hanya annotasi reviewer (bukan pembaca biasa).
+     */
+    public function scopeForReview($query, int $reviewId)
+    {
+        return $query->where('review_id', $reviewId);
+    }
+
+    /**
+     * Scope: hanya annotasi pembaca biasa (bukan reviewer).
+     */
+    public function scopePublicOnly($query)
+    {
+        return $query->whereNull('review_id');
     }
 }

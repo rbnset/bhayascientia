@@ -19,11 +19,11 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RolesAndUsersSeeder::class,
             PublicationTypeSeeder::class,
-            MethodSeeder::class,
-            CategorySeeder::class,
-            KeywordSeeder::class,
-            AuthorSeeder::class,
-            PublicationSeeder::class,
+            // MethodSeeder::class,
+            // CategorySeeder::class,
+            // KeywordSeeder::class,
+            // AuthorSeeder::class,
+            // PublicationSeeder::class,
         ]);
     }
 }
