@@ -40,7 +40,7 @@ class ViewReview extends ViewRecord
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Mount
+    // Mount — reviewer & admin redirect ke edit
     // ─────────────────────────────────────────────────────────────
 
     public function mount(int|string $record): void
@@ -68,19 +68,19 @@ class ViewReview extends ViewRecord
         return $this->publicationStatus() === 'published';
     }
 
-    /**
-     * Cek apakah review ini punya anotasi PDF dari reviewer.
-     * Hasilnya di-cache agar tidak double-query dengan annotation-summary blade.
-     */
     protected function hasAnnotations(): bool
     {
-        // FIX BUG 6: cache result agar tidak double query
         static $cache = [];
         $id = $this->record->id;
-        if (!isset($cache[$id])) {
+        if (! isset($cache[$id])) {
             $cache[$id] = \App\Models\PdfAnnotation::where('review_id', $id)->exists();
         }
         return $cache[$id];
+    }
+
+    protected function hasPdf(): bool
+    {
+        return filled($this->record->publicationVersion?->pdf_file_path);
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -102,35 +102,23 @@ class ViewReview extends ViewRecord
                 : '-';
 
             return new HtmlString("
-                <div style='
-                    background:#ECFDF5;
-                    border:1.5px solid #6EE7B7;
-                    border-left:5px solid #059669;
-                    border-radius:10px;
-                    padding:16px 20px;
-                    margin-bottom:4px;
-                '>
+                <div style='background:#ECFDF5;border:1.5px solid #6EE7B7;border-left:5px solid #059669;
+                            border-radius:10px;padding:16px 20px;margin-bottom:4px;'>
                     <div style='display:flex;align-items:flex-start;gap:12px;'>
                         <span style='font-size:24px;line-height:1;flex-shrink:0;'>🎉</span>
                         <div style='flex:1;'>
                             <div style='display:flex;align-items:center;gap:8px;margin-bottom:6px;'>
-                                <span style='
-                                    background:#059669;color:white;font-size:11px;
-                                    font-weight:700;padding:2px 10px;border-radius:20px;
-                                    text-transform:uppercase;letter-spacing:0.5px;
-                                '>Published</span>
+                                <span style='background:#059669;color:white;font-size:11px;font-weight:700;
+                                             padding:2px 10px;border-radius:20px;text-transform:uppercase;
+                                             letter-spacing:0.5px;'>Published</span>
                             </div>
                             <div style='font-size:14px;font-weight:600;color:#1F2937;margin-bottom:4px;'>Naskah Anda sudah diterbitkan!</div>
                             <div style='font-size:13px;color:#4B5563;line-height:1.6;'>
                                 Naskah Anda sudah <strong>live dan dapat diakses publik</strong>.
-                                Klik tombol <strong>Lihat Halaman Publikasi</strong> di atas untuk melihat tampilan publikasinya.
+                                Klik tombol <strong>Lihat Halaman Publikasi</strong> di atas.
                             </div>
-                            <div style='
-                                display:flex;flex-wrap:wrap;gap:16px;
-                                margin-top:10px;padding-top:10px;
-                                border-top:1px solid #6EE7B7;
-                                font-size:12px;color:#6B7280;
-                            '>
+                            <div style='display:flex;flex-wrap:wrap;gap:16px;margin-top:10px;padding-top:10px;
+                                        border-top:1px solid #6EE7B7;font-size:12px;color:#6B7280;'>
                                 <span>🕐 Diterbitkan: <strong>{$publishedAt}</strong></span>
                             </div>
                         </div>
@@ -142,37 +130,37 @@ class ViewReview extends ViewRecord
         $map = [
             null => [
                 'color'   => '#8B5CF6',
-                'bg'      => '#F5F3FF',
-                'border'  => '#DDD6FE',
+                'bg' => '#F5F3FF',
+                'border' => '#DDD6FE',
                 'icon'    => '⏳',
-                'label'   => 'Dalam Review',
+                'label' => 'Dalam Review',
                 'title'   => 'Naskah Anda sedang direview',
                 'message' => 'Reviewer sedang memeriksa naskah Anda. Harap tunggu hasil keputusan.',
             ],
             'revision_required' => [
                 'color'   => '#F59E0B',
-                'bg'      => '#FFFBEB',
-                'border'  => '#FDE68A',
+                'bg' => '#FFFBEB',
+                'border' => '#FDE68A',
                 'icon'    => '✏️',
-                'label'   => 'Revisi Diperlukan',
+                'label' => 'Revisi Diperlukan',
                 'title'   => 'Naskah Anda perlu direvisi',
                 'message' => 'Reviewer memberikan catatan revisi. Pelajari komentar di bawah, perbaiki naskah, lalu klik tombol <strong>Upload Revisi</strong> di atas.',
             ],
             'accepted' => [
                 'color'   => '#10B981',
-                'bg'      => '#ECFDF5',
-                'border'  => '#A7F3D0',
+                'bg' => '#ECFDF5',
+                'border' => '#A7F3D0',
                 'icon'    => '✅',
-                'label'   => 'Diterima',
+                'label' => 'Diterima',
                 'title'   => 'Selamat! Naskah Anda diterima',
-                'message' => 'Naskah Anda telah diterima oleh reviewer. Tim editor sedang menjadwalkan penerbitan. Anda akan mendapat notifikasi saat naskah diterbitkan.',
+                'message' => 'Naskah Anda telah diterima oleh reviewer. Tim editor sedang menjadwalkan penerbitan.',
             ],
             'rejected' => [
                 'color'   => '#EF4444',
-                'bg'      => '#FEF2F2',
-                'border'  => '#FECACA',
+                'bg' => '#FEF2F2',
+                'border' => '#FECACA',
                 'icon'    => '😞',
-                'label'   => 'Ditolak',
+                'label' => 'Ditolak',
                 'title'   => 'Naskah tidak dapat diterima',
                 'message' => 'Mohon maaf, naskah Anda tidak dapat diterima. Pelajari catatan reviewer di bawah sebagai bahan perbaikan untuk submission berikutnya.',
             ],
@@ -186,32 +174,21 @@ class ViewReview extends ViewRecord
         $reviewer = $this->record->reviewer?->name ?? '-';
 
         return new HtmlString("
-            <div style='
-                background:{$cfg['bg']};
-                border:1.5px solid {$cfg['border']};
-                border-left:5px solid {$cfg['color']};
-                border-radius:10px;
-                padding:16px 20px;
-                margin-bottom:4px;
-            '>
+            <div style='background:{$cfg['bg']};border:1.5px solid {$cfg['border']};
+                        border-left:5px solid {$cfg['color']};border-radius:10px;
+                        padding:16px 20px;margin-bottom:4px;'>
                 <div style='display:flex;align-items:flex-start;gap:12px;'>
                     <span style='font-size:24px;line-height:1;flex-shrink:0;'>{$cfg['icon']}</span>
                     <div style='flex:1;'>
                         <div style='display:flex;align-items:center;gap:8px;margin-bottom:6px;'>
-                            <span style='
-                                background:{$cfg['color']};color:white;font-size:11px;
-                                font-weight:700;padding:2px 10px;border-radius:20px;
-                                text-transform:uppercase;letter-spacing:0.5px;
-                            '>{$cfg['label']}</span>
+                            <span style='background:{$cfg['color']};color:white;font-size:11px;font-weight:700;
+                                         padding:2px 10px;border-radius:20px;text-transform:uppercase;
+                                         letter-spacing:0.5px;'>{$cfg['label']}</span>
                         </div>
                         <div style='font-size:14px;font-weight:600;color:#1F2937;margin-bottom:4px;'>{$cfg['title']}</div>
                         <div style='font-size:13px;color:#4B5563;line-height:1.6;'>{$cfg['message']}</div>
-                        <div style='
-                            display:flex;flex-wrap:wrap;gap:16px;
-                            margin-top:10px;padding-top:10px;
-                            border-top:1px solid {$cfg['border']};
-                            font-size:12px;color:#6B7280;
-                        '>
+                        <div style='display:flex;flex-wrap:wrap;gap:16px;margin-top:10px;padding-top:10px;
+                                    border-top:1px solid {$cfg['border']};font-size:12px;color:#6B7280;'>
                             <span>📄 <strong>{$pubType}</strong> · {$version}</span>
                             <span>👤 Reviewer: <strong>{$reviewer}</strong></span>
                         </div>
@@ -230,26 +207,32 @@ class ViewReview extends ViewRecord
         $hasDecision = filled($this->record->decision);
         $hasNotes    = $this->record->notes()->exists();
         $hasComment  = filled($this->record->overall_comment);
+        $hasAnnots   = $this->hasAnnotations();
+        $hasPdf      = $this->hasPdf();
+        $record      = $this->record;
 
-        /*
-         * FIX BUG 8: Pre-compute nilai boolean di luar closure agar
-         * arrow function tidak perlu capture $this (aman di PHP 7.4+).
-         * Sekaligus menghindari masalah context capture di berbagai versi PHP.
-         */
-        $hasAnnots = $this->hasAnnotations();
-        $record    = $this->record;
+        // Siapkan data untuk PDF viewer inline
+        $pdfViewerData = null;
+        if ($hasPdf && $record->publicationVersion) {
+            $record->loadMissing([
+                'publicationVersion.publication.publicationType',
+                'reviewer',
+            ]);
+            $pdfViewerData = [
+                'review' => $record,
+                'pdfUrl' => route('manuscripts.view', $record->publicationVersion),
+                'apiUrl' => url("/api/review-annotations/{$record->id}/readonly"),
+            ];
+        }
 
         return $schema->components([
 
-            /*
-             * FIX BUG 10: Placeholder adalah Forms component, tidak bisa dipakai
-             * di infolist Schema. Ganti dengan View::make() yang di-render sebagai
-             * HTML mentah agar status banner tetap tampil.
-             */
+            // Status banner
             View::make('filament.reviews.status-banner')
                 ->viewData(['bannerHtml' => $this->renderStatusBanner()])
                 ->columnSpanFull(),
 
+            // Hasil Review
             Section::make('Hasil Review')
                 ->icon('heroicon-o-clipboard-document-check')
                 ->columnSpanFull()
@@ -285,38 +268,7 @@ class ViewReview extends ViewRecord
                         ->placeholder('Belum ada keputusan'),
                 ]),
 
-            /*
-             * FIX BUG 3 & 8: inject $record ke view lewat viewData() agar
-             * annotation-summary.blade.php mendapat $record dengan benar.
-             * visible() pakai $hasAnnots (pre-computed) bukan closure $this.
-             */
-            Section::make('Anotasi PDF Reviewer')
-                ->icon('heroicon-o-pencil-square')
-                ->columnSpanFull()
-                ->visible($hasAnnots)
-                ->schema([
-                    View::make('filament.reviews.annotation-summary')
-                        ->viewData(['record' => $record])
-                        ->columnSpanFull(),
-                ]),
-
-            Section::make('')
-                ->columnSpanFull()
-                ->visible(! $hasDecision)
-                ->schema([
-                    TextEntry::make('waiting_info')
-                        ->label('')
-                        ->default(
-                            'Reviewer belum memberikan keputusan. ' .
-                                'Halaman ini akan diperbarui setelah proses review selesai. ' .
-                                'Anda akan mendapat notifikasi ketika hasilnya tersedia.'
-                        )
-                        ->extraAttributes([
-                            'style' => 'color:#6B7280;font-style:italic;text-align:center;padding:16px 0;',
-                        ])
-                        ->columnSpanFull(),
-                ]),
-
+            // Catatan & komentar reviewer
             Grid::make()
                 ->columns(['default' => 1, 'lg' => 2])
                 ->columnSpanFull()
@@ -380,6 +332,35 @@ class ViewReview extends ViewRecord
                                 ->extraAttributes(['style' => 'color:#9CA3AF;font-style:italic;']),
                         ]),
                 ]),
+
+            // Belum ada keputusan
+            Section::make('')
+                ->columnSpanFull()
+                ->visible(! $hasDecision)
+                ->schema([
+                    TextEntry::make('waiting_info')
+                        ->label('')
+                        ->default(
+                            'Reviewer belum memberikan keputusan. ' .
+                                'Halaman ini akan diperbarui setelah proses review selesai. ' .
+                                'Anda akan mendapat notifikasi ketika hasilnya tersedia.'
+                        )
+                        ->extraAttributes([
+                            'style' => 'color:#6B7280;font-style:italic;text-align:center;padding:16px 0;',
+                        ])
+                        ->columnSpanFull(),
+                ]),
+
+            // ── PDF Viewer + Anotasi — embed langsung di halaman ──
+            Section::make('PDF Naskah & Anotasi Reviewer')
+                ->icon('heroicon-o-document-text')
+                ->columnSpanFull()
+                ->visible($hasPdf && $pdfViewerData !== null)
+                ->schema([
+                    View::make('filament.reviews.pdf-viewer-readonly-inline')
+                        ->viewData($pdfViewerData ?? [])
+                        ->columnSpanFull(),
+                ]),
         ]);
     }
 
@@ -390,74 +371,6 @@ class ViewReview extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
-            Action::make('lihatAnotasiPdf')
-                ->label(function () {
-                    $count = \App\Models\PdfAnnotation::where('review_id', $this->record->id)->count();
-                    return $count > 0
-                        ? "Lihat Anotasi Reviewer ({$count})"
-                        : 'Lihat Anotasi Reviewer';
-                })
-                ->icon('heroicon-o-pencil-square')
-                ->color('info')
-                ->visible(
-                    fn() => filled($this->record->publicationVersion?->pdf_file_path)
-                )
-                ->modalHeading(function () {
-                    $title = $this->record->publicationVersion?->publication?->title ?? 'Naskah';
-                    $v     = $this->record->publicationVersion?->version_number;
-                    return 'Anotasi Reviewer — ' . \Illuminate\Support\Str::limit($title, 50) . ($v ? " (v{$v})" : '');
-                })
-                ->modalContent(function () {
-                    /*
-                     * FIX BUG 2: guard null publicationVersion agar tidak crash
-                     * saat route() dipanggil dengan null model.
-                     */
-                    $review = $this->record->load([
-                        'publicationVersion.publication.publicationType',
-                        'reviewer',
-                        'notes',
-                    ]);
-
-                    // Guard: jika publicationVersion tidak ada, modal tidak bisa dibuka
-                    if (! $review->publicationVersion) {
-                        return view('filament.reviews.pdf-viewer-missing');
-                    }
-
-                    /*
-                     * FIX BUG 4: pastikan route 'manuscripts.view' memang return
-                     * file binary PDF (bukan HTML viewer). Jika route return HTML,
-                     * pdfjsLib.getDocument() akan gagal parse.
-                     *
-                     * route('manuscripts.view', $version) harus terdaftar di web.php
-                     * dan return response()->file(...) atau Storage::response(...)
-                     * BUKAN return view(...)
-                     *
-                     * Jika route belum ada atau return HTML, gunakan Storage URL langsung:
-                     * $pdfUrl = Storage::url($review->publicationVersion->pdf_file_path);
-                     */
-                    $pdfUrl = route('manuscripts.view', $review->publicationVersion);
-
-                    /*
-                     * FIX BUG 5: gunakan route() helper untuk apiUrl jika route terdaftar,
-                     * sehingga APP_URL mismatch tidak menjadi masalah.
-                     * Jika belum ada named route, url() tetap dipakai tapi
-                     * tambahkan pengecekan config APP_URL di .env.
-                     *
-                     * Nama route yang direkomendasikan: 'api.review-annotations.readonly'
-                     * Daftarkan di routes/api.php:
-                     *   Route::get('/review-annotations/{review}/readonly', [...])
-                     *       ->name('api.review-annotations.readonly');
-                     *
-                     * Untuk sementara tetap pakai url() tapi dengan format yang konsisten:
-                     */
-                    $apiUrl = url("/api/review-annotations/{$review->id}/readonly");
-
-                    return view('filament.reviews.pdf-viewer-readonly', compact('review', 'pdfUrl', 'apiUrl'));
-                })
-                ->modalWidth('7xl')
-                ->modalSubmitAction(false)
-                ->modalCancelActionLabel('Tutup'),
-
             Action::make('previewPdf')
                 ->label(function () {
                     $v = $this->record->publicationVersion?->version_number;
@@ -465,7 +378,7 @@ class ViewReview extends ViewRecord
                 })
                 ->icon('heroicon-o-eye')
                 ->color('gray')
-                ->visible(fn() => filled($this->record->publicationVersion?->pdf_file_path))
+                ->visible(fn() => $this->hasPdf())
                 ->url(fn() => PublicationVersionResource::getUrl('pdf', [
                     'record' => $this->record->publicationVersion,
                 ]))
