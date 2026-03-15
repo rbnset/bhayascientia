@@ -134,15 +134,15 @@ $annotApiBase = $reviewId
     }
 </style>
 
-<div id="rpv-outer-wrap" x-data="{ _rpvBooted: false }" x-intersect.once="
+<div id="rpv-outer-wrap" x-data="{ _rpvBooted: false }" x-intersect="
         if (!_rpvBooted) {
             _rpvBooted = true;
             $nextTick(function() {
-                if (typeof window.RPV_boot === 'function') {
-                    window.RPV_boot();
-                }
+                if (typeof window.RPV_boot === 'function') window.RPV_boot();
             });
         }
+    " x-on:reset-pdf-viewer.window="
+        _rpvBooted = false;
     ">
 
     {{-- ── STATE 1: Belum pilih naskah ─────────────────────────────── --}}

@@ -57,16 +57,10 @@
 (function () {
     'use strict';
 
-    /* ── Guard double-init ────────────────────────────────────────── */
+    /* ── selalu reset guard, biarkan boot ulang ────────────────────────────────────────── */
     var _gk = '_rpvA_' + ((window.RPV_CONFIG && window.RPV_CONFIG.reviewId) || 'x');
-    if (window[_gk]) {
-        if (document.getElementById('rpv-stage')) {
-            console.log('[RPV] already running');
-            return;
-        }
-        console.log('[RPV] Livewire rebuilt DOM, re-initializing');
-        window[_gk] = false;
-    }
+    // Reset guard setiap kali boot dipanggil (bisa dari x-intersect berkali-kali)
+    window[_gk] = false;
 
     /* ── FIX BUG 7: Paksa overflow-x hidden pada canvas-wrap ── */
     (function applyOverflowFix() {

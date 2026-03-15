@@ -311,6 +311,22 @@ class EditReview extends EditRecord
             ));
     }
 
+    // Step Rules
+
+    public function previousWizardStep(): void
+    {
+        parent::previousWizardStep();
+        // Reset viewer agar bisa boot ulang saat kembali ke step PDF
+        $this->dispatch('reset-pdf-viewer');
+    }
+
+    public function nextWizardStep(): void
+    {
+        parent::nextWizardStep();
+        // Reset viewer agar bisa boot ulang saat maju ke step PDF
+        $this->dispatch('reset-pdf-viewer');
+    }
+
     // ─────────────────────────────────────────────────────────────
     // Saved notification
     // ─────────────────────────────────────────────────────────────
