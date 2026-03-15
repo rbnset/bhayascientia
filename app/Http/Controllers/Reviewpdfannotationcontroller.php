@@ -220,7 +220,7 @@ class ReviewPdfAnnotationController extends Controller
     }
 
     // ─────────────────────────────────────────────────────────────────
-    // Serializerr
+    // Serializer
     // ─────────────────────────────────────────────────────────────────
 
     private function serialize(PdfAnnotation $a): array
