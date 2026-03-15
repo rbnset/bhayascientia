@@ -781,7 +781,7 @@ return $arr;
                 c.fillStyle = '#60A5FA';
                 c.beginPath();
                 c.arc(a.rect.x*s + a.rect.w*s - 4, a.rect.y*s + 4, 5, 0, Math.PI*2);
-                c.fill();
+                c.fill(); }}
 
     /* ══════════════════════════════════════════════════════════════
        NAVIGASI & ZOOM
