@@ -314,9 +314,15 @@ $annotCount = \App\Models\PdfAnnotation::where('review_id', $review->id)->count(
                         align-items:center;justify-content:center;gap:.75rem;
                         background:#1a1a1a;z-index:20;">
                 <div style="width:36px;height:36px;border:3px solid #333;border-top-color:#FF6B18;
-                            border-radius:50%;animation:rpvr-spin .8s linear infinite;"></div>
+                            border-radius:50%;animation:rpvr-spin .8s linear infinite;" id="rpvr-spin-icon"></div>
                 <p style="color:#fff;font-size:13px;font-weight:600;margin:0;">Memuat dokumen...</p>
                 <p id="rpvr-load-sub" style="color:#6b7280;font-size:11px;margin:0;">Harap tunggu sebentar</p>
+                {{-- Tombol retry muncul setelah 8 detik jika masih loading --}}
+                <button id="rpvr-retry-btn" type="button" onclick="rpvrRetry()" style="display:none;margin-top:.5rem;padding:.4rem .875rem;
+                               background:#FF6B18;color:#fff;border:none;border-radius:8px;
+                               font-size:12px;font-weight:700;cursor:pointer;">
+                    🔄 Muat Ulang Dokumen
+                </button>
             </div>
 
             {{-- Stage --}}
@@ -426,43 +432,49 @@ $annotCount = \App\Models\PdfAnnotation::where('review_id', $review->id)->count(
 </script>
 
 {{-- pdf.js CDN --}}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" crossorigin="anonymous"></script>
-
 {{-- ══ READONLY VIEWER SCRIPT ══ --}}
 <script>
     (function () {
     'use strict';
 
-    /* ── FIX: Guard double-init ───────────────────────────────
-       Filament re-render modal → script jalan 2x → 2 spinner
-    ─────────────────────────────────────────────────────────── */
+    /* ── Guard double-init ─────────────────────────────────── */
     var _gk = '_rpvrA_' + ((window.RPVR_CONFIG && window.RPVR_CONFIG.reviewId) || 'x');
     if (window[_gk]) {
-        /* Cek apakah DOM masih ada — jika ya, skip */
         if (document.getElementById('rpvr-stage')) {
-            console.log('[RPVR] already running');
-            return;
+            console.log('[RPVR] already running'); return;
         }
-        /* DOM rebuild — reset dan lanjut */
         console.log('[RPVR] DOM rebuilt, re-initializing');
     }
     window[_gk] = true;
 
-    /* ── FIX: Wait for pdfjsLib dengan retry ─────────────────
-       Tanpa ini: pdfjsLib belum siap → error → blank forever
+    /* ── Load pdf.js dynamically dengan onload callback ───────
+       Ini MENJAMIN pdfjsLib sudah siap sebelum main() dipanggil.
+       Tidak perlu retry loop — onload = library sudah ada.
     ─────────────────────────────────────────────────────────── */
-    var _wt = 0;
-    function waitAndRun() {
-        if (typeof pdfjsLib === 'undefined') {
-            if (_wt++ > 200) { console.error('[RPVR] pdfjsLib timeout'); return; }
-            return setTimeout(waitAndRun, 100);
-        }
-        pdfjsLib.GlobalWorkerOptions.workerSrc =
-            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    var PDFJS_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    var WORKER_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    if (typeof pdfjsLib !== 'undefined') {
+        /* Sudah dimuat sebelumnya (mis. halaman reviewer) */
+        pdfjsLib.GlobalWorkerOptions.workerSrc = WORKER_URL;
         pdfjsLib.verbosity = 0;
         main();
+    } else {
+        /* Muat dinamis — onload callback menjamin library siap */
+        var s = document.createElement('script');
+        s.src = PDFJS_URL;
+        s.crossOrigin = 'anonymous';
+        s.onload = function() {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = WORKER_URL;
+            pdfjsLib.verbosity = 0;
+            main();
+        };
+        s.onerror = function() {
+            var el = document.getElementById('rpvr-loading');
+            if (el) el.innerHTML = '<div style="font-size:2rem">⚠️</div><p style="color:#ef4444;font-weight:700;font-size:13px;margin:0;">Gagal memuat library PDF</p><p style="color:#6b7280;font-size:11px;margin:.5rem 0;">Periksa koneksi internet.</p><button onclick="window['_rpvrA_'+(window.RPVR_CONFIG&&window.RPVR_CONFIG.reviewId||'x')]=false;document.getElementById('rpvr-loading').innerHTML='<div style=\"width:36px;height:36px;border:3px solid #333;border-top-color:#FF6B18;border-radius:50%;animation:rpvr-spin .8s linear infinite;\"></div><p style=\"color:#fff;font-size:13px;font-weight:600;margin:0;\">Memuat dokumen...</p><p style=\"color:#6b7280;font-size:11px;margin:0;\" id=\"rpvr-load-sub\">Harap tunggu sebentar</p>';document.head.appendChild(document.createElement('script')).src='' + PDFJS_URL + ''" style="margin-top:.75rem;padding:.4rem .875rem;background:#FF6B18;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">🔄 Coba Lagi</button>';
+        };
+        document.head.appendChild(s);
     }
-    waitAndRun();
 
     function main() {
         var CFG = window.RPVR_CONFIG;
@@ -910,9 +922,114 @@ $annotCount = \App\Models\PdfAnnotation::where('review_id', $review->id)->count(
             console.log('[RPVR] ready, reviewId=',CFG.reviewId);
         }).catch(function(err){
             console.error('[RPVR] load error:',err);
-            if(loadingEl)loadingEl.innerHTML='<div style="font-size:2rem">⚠️</div><p style="color:#ef4444;font-weight:700;font-size:13px;">Gagal memuat PDF</p><p style="color:#6b7280;font-size:11px;">'+err.message+'</p><button type="button" onclick="window.location.reload()" style="margin-top:.75rem;padding:.4rem .875rem;background:#FF6B18;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">🔄 Muat Ulang</button>';
+            if(loadingEl)loadingEl.innerHTML='<div style="font-size:2rem">⚠️</div><p style="color:#ef4444;font-weight:700;font-size:13px;">Gagal memuat PDF</p><p style="color:#6b7280;font-size:11px;">'+err.message+'</p><button type="button" onclick="rpvrRetry()" style="margin-top:.75rem;padding:.4rem .875rem;background:#FF6B18;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">🔄 Muat Ulang</button>';
         });
     } /* end main() */
 
+
+    /* ── Auto-show retry button after 8s ── */
+    setTimeout(function() {
+        var btn = document.getElementById('rpvr-retry-btn');
+        var loading = document.getElementById('rpvr-loading');
+        /* Hanya tampilkan jika masih loading (stage belum visible) */
+        if (btn && loading && loading.style.display !== 'none' && stage && stage.style.display === 'none') {
+            btn.style.display = 'block';
+            var sub = document.getElementById('rpvr-load-sub');
+            if (sub) sub.textContent = 'Memakan waktu lebih lama dari biasanya...';
+        }
+    }, 8000);
+
 })();
+</script>
+
+<script>
+    /**
+ * rpvrRetry() — Muat ulang PDF viewer TANPA reload halaman.
+ * Dipanggil dari tombol "🔄 Muat Ulang Dokumen" di dalam modal.
+ *
+ * Cara kerja:
+ * 1. Reset semua state DOM (loading visible, stage hidden)
+ * 2. Reset guard agar script bisa jalan ulang
+ * 3. Re-inisialisasi dengan memanggil kembali fungsi init
+ */
+window.rpvrRetry = function() {
+    var cfg = window.RPVR_CONFIG;
+    if (!cfg) return;
+    var reviewId = cfg.reviewId || 'x';
+    var gk = '_rpvrA_' + reviewId;
+
+    /* 1. Reset DOM */
+    var loading = document.getElementById('rpvr-loading');
+    if (loading) {
+        loading.style.display = '';
+        loading.innerHTML = '<div style="width:36px;height:36px;border:3px solid #333;'
+            + 'border-top-color:#FF6B18;border-radius:50%;animation:rpvr-spin .8s linear infinite;"></div>'
+            + '<p style="color:#fff;font-size:13px;font-weight:600;margin:0;">Memuat ulang...</p>'
+            + '<p id="rpvr-load-sub" style="color:#6b7280;font-size:11px;margin:0;">Harap tunggu sebentar</p>';
+    }
+    var stage = document.getElementById('rpvr-stage');
+    if (stage) stage.style.display = 'none';
+
+    /* 2. Reset guard */
+    window[gk] = false;
+
+    /* 3. Re-run init — panggil ulang IIFE dengan reset guard */
+    var PDFJS_URL  = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    var WORKER_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    function startMain() {
+        /* Guard */
+        if (window[gk]) {
+            if (document.getElementById('rpvr-stage')) return;
+        }
+        window[gk] = true;
+
+        /* Re-set workerSrc */
+        if (typeof pdfjsLib !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = WORKER_URL;
+            pdfjsLib.verbosity = 0;
+            /* Dispatch custom event agar main() IIFE asli jalan ulang
+               Tidak bisa panggil main() langsung karena ada di closure,
+               jadi kita trigger dengan cara reload script block */
+        }
+
+        /* Cara paling reliable: reload seluruh script block inline */
+        /* Ambil script tag dengan konten RPVR_CONFIG dan jalankan ulang */
+        var allScripts = document.querySelectorAll('script');
+        var found = false;
+        for (var i = allScripts.length - 1; i >= 0; i--) {
+            var sc = allScripts[i];
+            if (sc.textContent && sc.textContent.indexOf('waitAndRun') !== -1) {
+                var newSc = document.createElement('script');
+                newSc.textContent = sc.textContent;
+                document.head.appendChild(newSc);
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            /* Fallback: load ulang pdf.js lalu re-run */
+            var s = document.createElement('script');
+            s.src = PDFJS_URL + '?t=' + Date.now(); /* cache bust */
+            s.crossOrigin = 'anonymous';
+            s.onload = function() {
+                pdfjsLib.GlobalWorkerOptions.workerSrc = WORKER_URL;
+                /* Find and re-run the init script */
+                var scripts = document.querySelectorAll('script');
+                for (var j = scripts.length - 1; j >= 0; j--) {
+                    if (scripts[j].textContent.indexOf('RPVR_CONFIG') !== -1
+                        && scripts[j].textContent.indexOf('waitAndRun') !== -1) {
+                        window[gk] = false;
+                        var ns = document.createElement('script');
+                        ns.textContent = scripts[j].textContent;
+                        document.head.appendChild(ns);
+                        break;
+                    }
+                }
+            };
+            document.head.appendChild(s);
+        }
+    }
+    startMain();
+};
 </script>
