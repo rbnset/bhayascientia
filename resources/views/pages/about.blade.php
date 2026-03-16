@@ -85,6 +85,10 @@
        4. TEAM CARD + TEAM IMAGE
        ============================================= */
 
+    /* =============================================
+       GRID & CARD BASE
+       ============================================= */
+
     .leadership-grid {
         display: flex;
         flex-wrap: wrap;
@@ -342,6 +346,59 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
+    }
+
+    /* =============================================
+       FIX: Foto selalu tampil
+       Override animate-hidden & pastikan img tidak collapse
+       ============================================= */
+
+    /* Paksa img dalam card selalu visible */
+    .leadership-card img,
+    .management-card img,
+    .department-card img {
+        opacity: 1 !important;
+        visibility: visible !important;
+        display: block !important;
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: cover !important;
+    }
+
+    /* Wrapper foto eksplisit — leadership */
+    .leadership-card .photo-box {
+        width: 96px;
+        height: 96px;
+        min-width: 96px;
+        min-height: 96px;
+        border-radius: 1rem;
+        overflow: hidden;
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        background: rgba(255, 255, 255, 0.2);
+        position: relative;
+    }
+
+    /* Wrapper foto eksplisit — management */
+    .management-card .photo-box {
+        width: 88px;
+        height: 88px;
+        min-width: 88px;
+        min-height: 88px;
+        border-radius: 1rem;
+        overflow: hidden;
+        border: 4px solid #FFF7F2;
+        background: #FFF7F2;
+        position: relative;
+    }
+
+    @media (min-width: 640px) {
+        .management-card .photo-box {
+            width: 96px;
+            height: 96px;
+            min-width: 96px;
+            min-height: 96px;
+        }
     }
 
     /* "Lihat Profil" hint */
@@ -1684,16 +1741,16 @@ SECTION KONTEN
             <div class="leadership-card" onclick='openProfileModal({{ json_encode($modalData) }})'>
                 <div class="card-inner">
                     <div class="card-photo">
-                        <div class="relative">
+                        <div style="position:relative; display:inline-block;">
                             <div
-                                class="w-24 h-24 overflow-hidden border-4 shadow-xl rounded-2xl border-white/30 bg-white/20">
+                                style="width:96px;height:96px;border-radius:16px;overflow:hidden;border:4px solid rgba(255,255,255,0.3);box-shadow:0 8px 24px rgba(0,0,0,0.2);background:rgba(255,255,255,0.2);">
                                 <img src="{{ $finalPhoto }}" alt="{{ $member->name }}"
-                                    class="object-cover w-full h-full" loading="lazy"
-                                    onerror="this.onerror=null;this.src='{{ $fallbackUrl }}';" />
+                                    style="width:100%;height:100%;object-fit:cover;display:block;opacity:1;"
+                                    loading="lazy" onerror="this.onerror=null;this.src='{{ $fallbackUrl }}';" />
                             </div>
                             <div
-                                class="absolute flex items-center justify-center bg-white shadow-lg -bottom-2 -right-2 w-9 h-9 rounded-xl">
-                                <svg class="w-5 h-5 text-[#FF6B18]" fill="currentColor" viewBox="0 0 20 20">
+                                style="position:absolute;bottom:-8px;right:-8px;width:36px;height:36px;background:white;border-radius:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.15);">
+                                <svg style="width:20px;height:20px;" fill="#FF6B18" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd"
                                         d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"
                                         clip-rule="evenodd" />
@@ -1780,14 +1837,15 @@ SECTION KONTEN
             ];
             @endphp
             <div class="management-card" onclick='openProfileModal({{ json_encode($modalData) }})'>
-                <div class="relative inline-block mx-auto mb-4">
+                <div style="position:relative; display:inline-block; margin:0 auto 1rem;">
                     <div
-                        class="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-4 border-[#FFF7F2] bg-[#FFF7F2]">
-                        <img src="{{ $finalPhoto }}" alt="{{ $member->name }}" class="object-cover w-full h-full"
-                            loading="lazy" onerror="this.onerror=null;this.src='{{ $fallbackUrl }}';" />
+                        style="width:88px;height:88px;border-radius:16px;overflow:hidden;border:4px solid #FFF7F2;background:#FFF7F2;">
+                        <img src="{{ $finalPhoto }}" alt="{{ $member->name }}"
+                            style="width:100%;height:100%;object-fit:cover;display:block;opacity:1;" loading="lazy"
+                            onerror="this.onerror=null;this.src='{{ $fallbackUrl }}';" />
                     </div>
                     <div
-                        class="absolute -bottom-2 -right-2 w-8 h-8 bg-gradient-to-br from-[#FF6B18] to-[#E64627] rounded-lg flex items-center justify-center shadow">
+                        style="position:absolute;bottom:-8px;right:-8px;width:32px;height:32px;background:linear-gradient(135deg,#FF6B18,#E64627);border-radius:10px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(255,107,24,0.4);">
                         @switch($member->icon_type ?? null)
                         @case('code')<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor"
                             viewBox="0 0 24 24">
