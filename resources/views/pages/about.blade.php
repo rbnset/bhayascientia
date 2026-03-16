@@ -85,23 +85,553 @@
        4. TEAM CARD + TEAM IMAGE
        ============================================= */
 
-    .team-card {
+    .leadership-grid {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 1.5rem;
+    }
+
+    .leadership-card {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        max-width: 340px;
+    }
+
+    @media (min-width: 640px) {
+        .leadership-card {
+            width: calc(50% - 0.75rem);
+        }
+    }
+
+    @media (min-width: 1024px) {
+        .leadership-card {
+            width: calc(33.333% - 1rem);
+            max-width: 360px;
+        }
+    }
+
+    .leadership-card .card-inner {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        padding: 1.75rem 1.5rem;
+        border-radius: 1rem;
+        background: linear-gradient(135deg, #FF6B18 0%, #E64627 100%);
+        border: 2px solid #FF6B18;
+        box-shadow: 0 8px 32px rgba(255, 107, 24, 0.2);
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
     }
 
-    .team-card:hover {
-        transform: translateY(-8px);
-        box-shadow: 0 20px 40px rgba(255, 107, 24, 0.15);
+    .leadership-card:hover .card-inner {
+        transform: translateY(-6px);
+        box-shadow: 0 20px 48px rgba(255, 107, 24, 0.3);
     }
 
-    /* ✅ opacity 1 !important — tidak ikut animate-hidden */
-    .team-image {
-        opacity: 1 !important;
-        transition: transform 0.3s ease;
+    .leadership-card .card-photo {
+        flex-shrink: 0;
+        display: flex;
+        justify-content: center;
+        margin-bottom: 1.25rem;
     }
 
-    .team-card:hover .team-image {
-        transform: scale(1.05);
+    .leadership-card .card-name {
+        font-size: 1.1rem;
+        font-weight: 900;
+        color: white;
+        text-align: center;
+        line-height: 1.35;
+        min-height: 3rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 0.375rem;
+    }
+
+    .leadership-card .card-title {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.9);
+        text-align: center;
+        margin-bottom: 0.75rem;
+        padding: 0.25rem 0.75rem;
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 999px;
+        display: inline-flex;
+        align-self: center;
+    }
+
+    .leadership-card .card-description {
+        flex-grow: 1;
+        font-size: 0.8rem;
+        line-height: 1.6;
+        color: rgba(255, 255, 255, 0.85);
+        text-align: center;
+        margin-bottom: 1.25rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 4;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .leadership-card .card-footer {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-top: 1rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.2);
+        margin-top: auto;
+    }
+
+    .leadership-card .card-contact {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    /* Management */
+    .management-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1.25rem;
+        max-width: 64rem;
+        margin: 0 auto;
+    }
+
+    @media (min-width: 640px) {
+        .management-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (min-width: 1024px) {
+        .management-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+
+    .management-card {
+        display: flex;
+        flex-direction: column;
+        background: white;
+        border-radius: 1rem;
+        border: 2px solid #EEF0F7;
+        padding: 1.5rem;
+        text-align: center;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+    }
+
+    .management-card:hover {
+        transform: translateY(-4px);
+        border-color: rgba(255, 107, 24, 0.3);
+        box-shadow: 0 12px 32px rgba(255, 107, 24, 0.1);
+    }
+
+    .management-card .card-name {
+        font-size: 1rem;
+        font-weight: 900;
+        color: #1A1A1A;
+        line-height: 1.35;
+        min-height: 2.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 0.375rem;
+    }
+
+    .management-card .card-title {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #FF6B18;
+        margin-bottom: 0.75rem;
+        min-height: 1.25rem;
+    }
+
+    .management-card .card-description {
+        flex-grow: 1;
+        font-size: 0.8rem;
+        line-height: 1.6;
+        color: #737373;
+        margin-bottom: 1rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 4;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .management-card .card-footer {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-top: 0.875rem;
+        border-top: 1px solid #EEF0F7;
+        margin-top: auto;
+    }
+
+    .management-card .card-contact {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    /* Department */
+    .department-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    @media (min-width: 640px) {
+        .department-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (min-width: 1024px) {
+        .department-grid {
+            grid-template-columns: repeat(4, 1fr);
+        }
+    }
+
+    .department-card {
+        display: flex;
+        flex-direction: column;
+        background: white;
+        border-radius: 0.875rem;
+        border: 2px solid #EEF0F7;
+        padding: 1.25rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .department-card:hover {
+        transform: translateY(-3px);
+        border-color: rgba(255, 107, 24, 0.3);
+        box-shadow: 0 8px 24px rgba(255, 107, 24, 0.08);
+    }
+
+    .department-card .card-name {
+        font-size: 0.9375rem;
+        font-weight: 900;
+        color: #1A1A1A;
+        line-height: 1.35;
+        min-height: 2.5rem;
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+
+    .department-card .card-description {
+        flex-grow: 1;
+        font-size: 0.8rem;
+        color: #737373;
+        line-height: 1.6;
+        margin-bottom: 0.875rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .department-card .card-footer {
+        flex-shrink: 0;
+        margin-top: auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    /* "Lihat Profil" hint */
+    .card-view-hint {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        opacity: 0.6;
+        transition: opacity 0.2s ease;
+        pointer-events: none;
+    }
+
+    .leadership-card:hover .card-view-hint,
+    .management-card:hover .card-view-hint,
+    .department-card:hover .card-view-hint {
+        opacity: 1;
+    }
+
+    /* Org connector & badge */
+    .org-connector {
+        display: flex;
+        justify-content: center;
+        margin: 1.25rem 0;
+    }
+
+    .org-connector-line {
+        width: 2px;
+        height: 2rem;
+        background: linear-gradient(to bottom, #FF6B18, #EEF0F7);
+        border-radius: 999px;
+    }
+
+    .org-level-badge {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        justify-content: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .org-level-badge::before,
+    .org-level-badge::after {
+        content: '';
+        flex: 1;
+        max-width: 120px;
+        height: 1px;
+        background: linear-gradient(to right, transparent, #EEF0F7);
+    }
+
+    .org-level-badge::after {
+        background: linear-gradient(to left, transparent, #EEF0F7);
+    }
+
+    .org-level-badge span {
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: #A3A6AE;
+        padding: 0.25rem 0.875rem;
+        border: 1.5px solid #EEF0F7;
+        border-radius: 999px;
+        white-space: nowrap;
+    }
+
+    /* =============================================
+       PROFILE MODAL
+       ============================================= */
+
+    #profile-modal-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        background: rgba(10, 10, 10, 0.65);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s ease;
+    }
+
+    #profile-modal-backdrop.is-open {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    #profile-modal {
+        background: white;
+        border-radius: 1.5rem;
+        width: 100%;
+        max-width: 540px;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 32px 80px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.08);
+        transform: translateY(24px) scale(0.97);
+        transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        scrollbar-width: thin;
+        scrollbar-color: #FF6B18 #f5f5f5;
+    }
+
+    #profile-modal-backdrop.is-open #profile-modal {
+        transform: translateY(0) scale(1);
+    }
+
+    #profile-modal::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    #profile-modal::-webkit-scrollbar-track {
+        background: #f5f5f5;
+    }
+
+    #profile-modal::-webkit-scrollbar-thumb {
+        background: #FF6B18;
+        border-radius: 999px;
+    }
+
+    /* Modal header banner */
+    .modal-header-banner {
+        position: relative;
+        overflow: hidden;
+        border-radius: 1.5rem 1.5rem 0 0;
+        padding: 2.25rem 1.75rem 1.75rem;
+        background: linear-gradient(135deg, #FF6B18 0%, #E64627 100%);
+    }
+
+    .modal-header-banner::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M40 0L0 0 0 40' fill='none' stroke='white' stroke-width='0.5' opacity='0.15'/%3E%3C/svg%3E");
+        background-size: 40px 40px;
+    }
+
+    .modal-close-btn {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        width: 2rem;
+        height: 2rem;
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        border-radius: 50%;
+        color: white;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s ease;
+        z-index: 10;
+    }
+
+    .modal-close-btn:hover {
+        background: rgba(255, 255, 255, 0.35);
+    }
+
+    .modal-photo-wrap {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 1rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    .modal-photo-wrap img {
+        width: 100px;
+        height: 100px;
+        border-radius: 1.25rem;
+        object-fit: cover;
+        border: 4px solid rgba(255, 255, 255, 0.35);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    }
+
+    .modal-body {
+        padding: 1.5rem 1.75rem 2rem;
+    }
+
+    .modal-name {
+        font-size: 1.35rem;
+        font-weight: 900;
+        color: #1A1A1A;
+        line-height: 1.3;
+        margin-bottom: 0.375rem;
+        text-align: center;
+    }
+
+    .modal-title-badge {
+        display: inline-flex;
+        align-self: center;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #FF6B18;
+        background: #FFF7F2;
+        border: 1.5px solid #FFE2D2;
+        padding: 0.25rem 0.875rem;
+        border-radius: 999px;
+        margin-bottom: 1.25rem;
+    }
+
+    .modal-section-label {
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: #A3A6AE;
+        margin-bottom: 0.625rem;
+    }
+
+    .modal-bio {
+        font-size: 0.9rem;
+        line-height: 1.8;
+        color: #4A5568;
+        padding: 1rem 1.125rem;
+        background: #FAFAFA;
+        border-radius: 0.75rem;
+        border-left: 3px solid #FF6B18;
+        margin-bottom: 1.25rem;
+        white-space: pre-line;
+    }
+
+    .modal-divider {
+        height: 1px;
+        background: #EEF0F7;
+        margin: 1.25rem 0;
+    }
+
+    .modal-contact-row {
+        display: flex;
+        align-items: center;
+        gap: 0.875rem;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #F5F5F5;
+    }
+
+    .modal-contact-row:last-child {
+        border-bottom: none;
+    }
+
+    .modal-contact-icon {
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: 0.625rem;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #FFF7F2;
+    }
+
+    .modal-contact-label {
+        font-size: 0.7rem;
+        color: #A3A6AE;
+        font-weight: 600;
+        margin-bottom: 0.1rem;
+    }
+
+    .modal-contact-value {
+        font-size: 0.875rem;
+        font-weight: 700;
+        color: #1A1A1A;
+    }
+
+    .modal-contact-value a {
+        color: #FF6B18;
+        text-decoration: none;
+        word-break: break-all;
+    }
+
+    .modal-contact-value a:hover {
+        text-decoration: underline;
+    }
+
+    .modal-dept-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #737373;
+        background: #F5F5F5;
+        padding: 0.375rem 0.875rem;
+        border-radius: 999px;
     }
 
     /* =============================================
@@ -987,300 +1517,456 @@
     </div>
 </section>
 
-{{-- Team Structure / Organizational Chart --}}
-<section class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px] mb-12 sm:mb-16">
+{{-- ===================================================== --}}
+{{-- TEAM STRUCTURE SECTION --}}
+{{-- ===================================================== --}}
 
-    {{-- Header --}}
-    <div class="mb-8 text-center sm:mb-12">
-        <h2 class="text-2xl sm:text-3xl md:text-4xl font-black text-[#1A1A1A] mb-3 sm:mb-4">
-            👥 Struktur Organisasi
-        </h2>
-        <p class="text-sm sm:text-base md:text-lg text-[#737373] max-w-2xl mx-auto">
-            Tim profesional yang berdedikasi untuk memberikan layanan terbaik
-        </p>
-    </div>
+{{-- ════════════════════════════════════════════════════════════════
+PROFILE MODAL (satu instance, di-reuse untuk semua member)
+════════════════════════════════════════════════════════════════ --}}
+<div id="profile-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-member-name"
+    onclick="if(event.target===this) closeProfileModal()">
+    <div id="profile-modal">
 
-    {{-- ===================================================== --}}
-    {{-- LEADERSHIP --}}
-    {{-- ===================================================== --}}
-    @if(isset($leadership) && $leadership->isNotEmpty())
-    <div class="mb-8 sm:mb-12">
-        <div class="flex flex-wrap justify-center gap-6">
-            @foreach($leadership as $member)
-            @php
-            // ✅ Resolve foto: storage path atau UI Avatars fallback
-            $photoUrl = (!empty($member->photo) && !filter_var($member->photo, FILTER_VALIDATE_URL))
-            ? asset('storage/' . ltrim($member->photo, '/'))
-            : ($member->photo ?? null);
+        {{-- Header dengan foto --}}
+        <div class="modal-header-banner">
+            <button class="modal-close-btn" onclick="closeProfileModal()" aria-label="Tutup modal">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <path d="M1 1L11 11M11 1L1 11" stroke="white" stroke-width="2" stroke-linecap="round" />
+                </svg>
+            </button>
+            <div class="modal-photo-wrap">
+                <img id="modal-photo" src="" alt="" />
+            </div>
+        </div>
 
-            $fallbackUrl = 'https://ui-avatars.com/api/?name=' . urlencode($member->name)
-            . '&size=200&background=ffffff&color=FF6B18&bold=true';
+        {{-- Body --}}
+        <div class="modal-body">
 
-            $finalPhoto = $photoUrl ?? $fallbackUrl;
-            @endphp
-            <div
-                class="team-card bg-gradient-to-br from-[#FF6B18] to-[#E64627] rounded-2xl border-2 border-[#FF6B18] p-6 sm:p-8 text-center max-w-sm w-full shadow-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
-
-                {{-- Foto --}}
-                <div class="relative inline-block mb-4">
-                    <div
-                        class="w-24 h-24 mx-auto overflow-hidden border-4 border-white shadow-lg sm:w-28 sm:h-28 rounded-2xl bg-white/20">
-                        <img src="{{ $finalPhoto }}" alt="{{ $member->name }}"
-                            class="object-cover w-full h-full team-image" loading="lazy"
-                            onerror="this.onerror=null;this.src='{{ $fallbackUrl }}';" />
-                    </div>
-                    <div
-                        class="absolute flex items-center justify-center w-10 h-10 bg-white shadow-lg -bottom-2 -right-2 rounded-xl">
-                        <svg class="w-6 h-6 text-[#FF6B18]" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd"
-                                d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"
-                                clip-rule="evenodd" />
+            {{-- Nama + jabatan + badges --}}
+            <div style="display:flex; flex-direction:column; align-items:center; margin-bottom:1rem;">
+                <h2 class="modal-name" id="modal-member-name">—</h2>
+                <span class="modal-title-badge" id="modal-member-title">—</span>
+                <div style="display:flex; gap:0.5rem; flex-wrap:wrap; justify-content:center;">
+                    <span class="modal-dept-badge" id="modal-member-dept" style="display:none;">
+                        <svg style="width:12px;height:12px;flex-shrink:0;" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 00-1-1h-2a1 1 0 00-1 1v5m4 0H9" />
                         </svg>
-                    </div>
+                        <span id="modal-dept-text">—</span>
+                    </span>
+                    <span class="modal-dept-badge" id="modal-member-level" style="display:none;">
+                        <svg style="width:12px;height:12px;flex-shrink:0;" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                        </svg>
+                        <span id="modal-level-text">—</span>
+                    </span>
                 </div>
+            </div>
 
-                {{-- Info --}}
-                <h3 class="mb-1 text-xl font-black text-white sm:text-2xl">{{ $member->name }}</h3>
-                <p class="mb-2 text-sm font-semibold sm:text-base text-white/90">{{ $member->title }}</p>
-                @if($member->description)
-                <p class="mb-4 text-xs leading-relaxed sm:text-sm text-white/80">{{ $member->description }}</p>
-                @endif
+            {{-- Bio lengkap (tidak terpotong) --}}
+            <div id="modal-bio-section" style="display:none;">
+                <p class="modal-section-label">Bio</p>
+                <p class="modal-bio" id="modal-bio-text">—</p>
+            </div>
 
-                {{-- Kontak --}}
-                <div class="flex items-center justify-center gap-2">
-                    @if($member->email)
-                    <a href="mailto:{{ $member->email }}"
-                        class="flex items-center justify-center transition-all rounded-lg w-9 h-9 bg-white/20 hover:bg-white/40"
-                        title="Email {{ $member->name }}">
-                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {{-- Kontak --}}
+            <div id="modal-contact-section" style="display:none;">
+                <div class="modal-divider"></div>
+                <p class="modal-section-label">Kontak</p>
+                <div id="modal-email-row" class="modal-contact-row" style="display:none;">
+                    <div class="modal-contact-icon">
+                        <svg style="width:16px;height:16px;color:#FF6B18;" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                         </svg>
-                    </a>
-                    @endif
-                    @if($member->linkedin)
-                    <a href="{{ $member->linkedin }}" target="_blank" rel="noopener noreferrer"
-                        class="flex items-center justify-center transition-all rounded-lg w-9 h-9 bg-white/20 hover:bg-white/40"
-                        title="LinkedIn {{ $member->name }}">
-                        <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    </div>
+                    <div style="min-width:0;">
+                        <p class="modal-contact-label">Email</p>
+                        <p class="modal-contact-value"><a id="modal-email-link" href="#">—</a></p>
+                    </div>
+                </div>
+                <div id="modal-linkedin-row" class="modal-contact-row" style="display:none;">
+                    <div class="modal-contact-icon">
+                        <svg style="width:16px;height:16px;color:#FF6B18;" fill="currentColor" viewBox="0 0 24 24">
                             <path
                                 d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
                         </svg>
-                    </a>
+                    </div>
+                    <div>
+                        <p class="modal-contact-label">LinkedIn</p>
+                        <p class="modal-contact-value"><a id="modal-linkedin-link" href="#" target="_blank"
+                                rel="noopener noreferrer">Lihat Profil →</a></p>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Member count khusus department --}}
+            <div id="modal-member-count-section" style="display:none;">
+                <div class="modal-divider"></div>
+                <div
+                    style="display:flex; align-items:center; gap:0.75rem; padding:0.875rem; background:#F9F9F9; border-radius:0.875rem;">
+                    <div
+                        style="width:2.25rem;height:2.25rem;border-radius:0.625rem;background:#FFF7F2;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <svg style="width:1rem;height:1rem;" fill="currentColor" viewBox="0 0 20 20">
+                            <path
+                                d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"
+                                style="color:#FF6B18;fill:#FF6B18;" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p
+                            style="font-size:0.7rem;color:#A3A6AE;font-weight:600;margin:0 0 0.1rem;letter-spacing:0.05em;text-transform:uppercase;">
+                            Total Anggota Aktif</p>
+                        <p style="font-size:0.95rem;font-weight:900;color:#1A1A1A;margin:0;"><span
+                                id="modal-member-count">0</span> orang</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+{{-- ════════════════════════════════════════════════════════════════
+SECTION KONTEN
+════════════════════════════════════════════════════════════════ --}}
+<section class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px] mb-12 sm:mb-16">
+
+    {{-- Header --}}
+    <div class="mb-10 text-center sm:mb-14">
+        <div
+            class="inline-flex items-center gap-2 px-4 py-2 mb-4 text-xs font-bold rounded-full bg-gradient-to-r from-[#FFF7F2] to-[#FFE2D2] text-[#FF6B18] border border-[#FFE2D2] shadow-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Struktur Organisasi
+        </div>
+        <h2 class="text-2xl sm:text-3xl md:text-4xl font-black text-[#1A1A1A] mb-3">👥 Struktur Organisasi</h2>
+        <p class="text-sm sm:text-base text-[#737373] max-w-2xl mx-auto">
+            Tim profesional yang berdedikasi untuk memberikan layanan terbaik.
+            <span class="font-semibold text-[#FF6B18]">Klik kartu</span> untuk melihat profil lengkap.
+        </p>
+    </div>
+
+    {{-- ═══════════════════ LEADERSHIP ═══════════════════ --}}
+    @if(isset($leadership) && $leadership->isNotEmpty())
+    <div class="mb-2">
+        <div class="org-level-badge"><span>⚡ Leadership</span></div>
+        <div class="leadership-grid">
+            @foreach($leadership as $member)
+            @php
+            $photoUrl = (!empty($member->photo) && !filter_var($member->photo, FILTER_VALIDATE_URL))
+            ? asset('storage/' . ltrim($member->photo, '/'))
+            : ($member->photo ?? null);
+            $fallbackUrl = 'https://ui-avatars.com/api/?name=' . urlencode($member->name)
+            . '&size=200&background=ffffff&color=FF6B18&bold=true';
+            $finalPhoto = $photoUrl ?? $fallbackUrl;
+            $modalData = [
+            'name' => $member->name,
+            'title' => $member->title,
+            'photo' => $finalPhoto,
+            'fallback' => $fallbackUrl,
+            'description' => $member->description ?? '',
+            'email' => $member->email ?? '',
+            'linkedin' => $member->linkedin ?? '',
+            'department' => $member->department ?? '',
+            'level' => 'Leadership',
+            'member_count' => null,
+            ];
+            @endphp
+            <div class="leadership-card" onclick='openProfileModal({{ json_encode($modalData) }})'>
+                <div class="card-inner">
+                    <div class="card-photo">
+                        <div class="relative">
+                            <div
+                                class="w-24 h-24 overflow-hidden border-4 shadow-xl rounded-2xl border-white/30 bg-white/20">
+                                <img src="{{ $finalPhoto }}" alt="{{ $member->name }}"
+                                    class="object-cover w-full h-full" loading="lazy"
+                                    onerror="this.onerror=null;this.src='{{ $fallbackUrl }}';" />
+                            </div>
+                            <div
+                                class="absolute flex items-center justify-center bg-white shadow-lg -bottom-2 -right-2 w-9 h-9 rounded-xl">
+                                <svg class="w-5 h-5 text-[#FF6B18]" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd"
+                                        d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"
+                                        clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    <h3 class="card-name">{{ $member->name }}</h3>
+                    <span class="card-title">{{ $member->title }}</span>
+                    @if($member->description)
+                    <p class="card-description">{{ $member->description }}</p>
+                    @else
+                    <div class="card-description"></div>
                     @endif
+                    <div class="card-footer">
+                        <div class="card-contact" onclick="event.stopPropagation()">
+                            @if($member->email)
+                            <a href="mailto:{{ $member->email }}"
+                                class="flex items-center justify-center transition-all rounded-lg w-9 h-9 bg-white/20 hover:bg-white/40"
+                                title="Email">
+                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                </svg>
+                            </a>
+                            @endif
+                            @if($member->linkedin)
+                            <a href="{{ $member->linkedin }}" target="_blank" rel="noopener noreferrer"
+                                class="flex items-center justify-center transition-all rounded-lg w-9 h-9 bg-white/20 hover:bg-white/40"
+                                title="LinkedIn">
+                                <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                    <path
+                                        d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+                                </svg>
+                            </a>
+                            @endif
+                        </div>
+                        <span class="card-view-hint text-white/70">
+                            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            Lihat Profil
+                        </span>
+                    </div>
                 </div>
             </div>
             @endforeach
         </div>
-
-        @if(isset($management) && $management->isNotEmpty())
-        <div class="flex justify-center my-4 sm:my-6">
-            <div class="w-0.5 h-8 bg-gradient-to-b from-[#FF6B18] to-[#EEF0F7]"></div>
-        </div>
-        @endif
+    </div>
+    @if(isset($management) && $management->isNotEmpty())
+    <div class="org-connector">
+        <div class="org-connector-line"></div>
     </div>
     @endif
+    @endif
 
-    {{-- ===================================================== --}}
-    {{-- MANAGEMENT --}}
-    {{-- ===================================================== --}}
+    {{-- ═══════════════════ MANAGEMENT ═══════════════════ --}}
     @if(isset($management) && $management->isNotEmpty())
-    <div class="mb-8 sm:mb-12">
-        <div class="grid max-w-5xl grid-cols-1 gap-6 mx-auto sm:grid-cols-2 lg:grid-cols-3">
+    <div class="mb-2">
+        <div class="org-level-badge"><span>🏢 Management</span></div>
+        <div class="management-grid">
             @foreach($management as $member)
             @php
             $photoUrl = (!empty($member->photo) && !filter_var($member->photo, FILTER_VALIDATE_URL))
             ? asset('storage/' . ltrim($member->photo, '/'))
             : ($member->photo ?? null);
-
             $fallbackUrl = 'https://ui-avatars.com/api/?name=' . urlencode($member->name)
             . '&size=200&background=FFF7F2&color=FF6B18&bold=true';
-
             $finalPhoto = $photoUrl ?? $fallbackUrl;
+            $modalData = [
+            'name' => $member->name,
+            'title' => $member->title,
+            'photo' => $finalPhoto,
+            'fallback' => $fallbackUrl,
+            'description' => $member->description ?? '',
+            'email' => $member->email ?? '',
+            'linkedin' => $member->linkedin ?? '',
+            'department' => $member->department ?? '',
+            'level' => 'Management',
+            'member_count' => null,
+            ];
             @endphp
-            <div
-                class="team-card bg-white rounded-2xl border-2 border-[#EEF0F7] p-6 text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-[#FF6B18]/30">
-
-                {{-- Foto --}}
-                <div class="relative inline-block mb-4">
+            <div class="management-card" onclick='openProfileModal({{ json_encode($modalData) }})'>
+                <div class="relative inline-block mx-auto mb-4">
                     <div
-                        class="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-4 border-[#FFF7F2] mx-auto bg-[#FFF7F2]">
-                        <img src="{{ $finalPhoto }}" alt="{{ $member->name }}"
-                            class="object-cover w-full h-full team-image" loading="lazy"
-                            onerror="this.onerror=null;this.src='{{ $fallbackUrl }}';" />
+                        class="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-4 border-[#FFF7F2] bg-[#FFF7F2]">
+                        <img src="{{ $finalPhoto }}" alt="{{ $member->name }}" class="object-cover w-full h-full"
+                            loading="lazy" onerror="this.onerror=null;this.src='{{ $fallbackUrl }}';" />
                     </div>
-                    {{-- Icon badge per icon_type --}}
                     <div
-                        class="absolute -bottom-2 -right-2 w-8 h-8 bg-gradient-to-br from-[#FF6B18] to-[#E64627] rounded-lg flex items-center justify-center shadow-lg">
-                        @switch($member->icon_type)
-                        @case('code')
-                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        class="absolute -bottom-2 -right-2 w-8 h-8 bg-gradient-to-br from-[#FF6B18] to-[#E64627] rounded-lg flex items-center justify-center shadow">
+                        @switch($member->icon_type ?? null)
+                        @case('code')<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                        </svg>
-                        @break
-                        @case('operations')
-                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                        </svg>
-                        @break
-                        @case('marketing')
-                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
-                        </svg>
-                        @break
-                        @case('content')
-                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        </svg>@break
+                        @case('content')<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                        @break
-                        @case('support')
-                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        </svg>@break
+                        @case('marketing')<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                        </svg>@break
+                        @case('operations')<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                        </svg>@break
+                        @case('support')<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
-                        </svg>
-                        @break
-                        @default
-                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        </svg>@break
+                        @default<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                         </svg>
                         @endswitch
                     </div>
                 </div>
-
-                {{-- Info --}}
-                <h3 class="text-lg sm:text-xl font-black text-[#1A1A1A] mb-1">{{ $member->name }}</h3>
-                <p class="text-sm text-[#FF6B18] font-semibold mb-2">{{ $member->title }}</p>
+                <h3 class="card-name">{{ $member->name }}</h3>
+                <p class="card-title">{{ $member->title }}</p>
                 @if($member->description)
-                <p class="text-xs sm:text-sm text-[#737373] leading-relaxed mb-4">{{ $member->description }}</p>
+                <p class="card-description">{{ $member->description }}</p>
+                @else
+                <div class="card-description"></div>
                 @endif
-
-                {{-- Kontak --}}
-                <div class="flex items-center justify-center gap-2">
-                    @if($member->email)
-                    <a href="mailto:{{ $member->email }}"
-                        class="w-8 h-8 bg-[#EEF0F7] hover:bg-[#FF6B18] rounded-lg flex items-center justify-center transition-all group"
-                        title="Email {{ $member->name }}">
-                        <svg class="w-4 h-4 text-[#6B7280] group-hover:text-white transition-colors" fill="none"
-                            stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                <div class="card-footer">
+                    <div class="card-contact" onclick="event.stopPropagation()">
+                        @if($member->email)
+                        <a href="mailto:{{ $member->email }}"
+                            class="w-8 h-8 bg-[#EEF0F7] hover:bg-[#FF6B18] rounded-lg flex items-center justify-center transition-all group"
+                            title="Email">
+                            <svg class="w-4 h-4 text-[#6B7280] group-hover:text-white transition-colors" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                        </a>
+                        @endif
+                        @if($member->linkedin)
+                        <a href="{{ $member->linkedin }}" target="_blank" rel="noopener noreferrer"
+                            class="w-8 h-8 bg-[#EEF0F7] hover:bg-[#FF6B18] rounded-lg flex items-center justify-center transition-all group"
+                            title="LinkedIn">
+                            <svg class="w-4 h-4 text-[#6B7280] group-hover:text-white transition-colors"
+                                fill="currentColor" viewBox="0 0 24 24">
+                                <path
+                                    d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+                            </svg>
+                        </a>
+                        @endif
+                    </div>
+                    <span class="card-view-hint text-[#A3A6AE]">
+                        <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                         </svg>
-                    </a>
-                    @endif
-                    @if($member->linkedin)
-                    <a href="{{ $member->linkedin }}" target="_blank" rel="noopener noreferrer"
-                        class="w-8 h-8 bg-[#EEF0F7] hover:bg-[#FF6B18] rounded-lg flex items-center justify-center transition-all group"
-                        title="LinkedIn {{ $member->name }}">
-                        <svg class="w-4 h-4 text-[#6B7280] group-hover:text-white transition-colors" fill="currentColor"
-                            viewBox="0 0 24 24">
-                            <path
-                                d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
-                        </svg>
-                    </a>
-                    @endif
+                        Lihat Profil
+                    </span>
                 </div>
             </div>
             @endforeach
         </div>
-
-        @if(isset($departments) && $departments->isNotEmpty())
-        <div class="flex justify-center my-4 sm:my-6">
-            <div class="w-0.5 h-8 bg-gradient-to-b from-[#EEF0F7] to-transparent"></div>
-        </div>
-        @endif
+    </div>
+    @if(isset($departments) && $departments->isNotEmpty())
+    <div class="org-connector">
+        <div class="org-connector-line"></div>
     </div>
     @endif
+    @endif
 
-    {{-- ===================================================== --}}
-    {{-- DEPARTMENTS --}}
-    {{-- ===================================================== --}}
+    {{-- ═══════════════════ DEPARTMENTS ═══════════════════ --}}
     @if(isset($departments) && $departments->isNotEmpty())
     <div>
-        <div class="mb-6 text-center sm:mb-8">
-            <h3 class="text-xl sm:text-2xl font-black text-[#1A1A1A] mb-2">Tim Departemen</h3>
-            <p class="text-sm text-[#737373]">Tim ahli di setiap bidang yang mendukung kesuksesan kami</p>
-        </div>
-
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+        <div class="org-level-badge"><span>👥 Tim Departemen</span></div>
+        <p class="text-center text-sm text-[#737373] mb-6">Tim ahli di setiap bidang yang mendukung kesuksesan kami</p>
+        <div class="department-grid">
             @foreach($departments as $dept)
-            <div
-                class="team-card bg-white rounded-xl border-2 border-[#EEF0F7] p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-[#FF6B18]/30">
-
-                {{-- Icon --}}
+            @php
+            $deptModalData = [
+            'name' => $dept->name,
+            'title' => $dept->title ?? '',
+            'photo' => 'https://ui-avatars.com/api/?name=' . urlencode($dept->name) .
+            '&size=200&background=FFF7F2&color=FF6B18&bold=true',
+            'fallback' => 'https://ui-avatars.com/api/?name=' . urlencode($dept->name) .
+            '&size=200&background=FFF7F2&color=FF6B18&bold=true',
+            'description' => $dept->description ?? '',
+            'email' => $dept->email ?? '',
+            'linkedin' => $dept->linkedin ?? '',
+            'department' => $dept->department ?? $dept->name,
+            'level' => 'Department',
+            'member_count' => $dept->member_count ?? 0,
+            ];
+            @endphp
+            <div class="department-card" onclick='openProfileModal({{ json_encode($deptModalData) }})'>
                 <div
-                    class="w-12 h-12 bg-gradient-to-br from-[#FF6B18]/10 to-[#E64627]/10 rounded-xl flex items-center justify-center mb-4">
-                    @switch($dept->icon_type)
-                    @case('code')
-                    <svg class="w-6 h-6 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    class="w-12 h-12 bg-gradient-to-br from-[#FF6B18]/10 to-[#E64627]/10 rounded-xl flex items-center justify-center mb-4 flex-shrink-0">
+                    @switch($dept->icon_type ?? null)
+                    @case('code')<svg class="w-6 h-6 text-[#FF6B18]" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                    </svg>
-                    @break
-                    @case('content')
-                    <svg class="w-6 h-6 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    </svg>@break
+                    @case('content')<svg class="w-6 h-6 text-[#FF6B18]" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                    @break
-                    @case('marketing')
-                    <svg class="w-6 h-6 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    </svg>@break
+                    @case('marketing')<svg class="w-6 h-6 text-[#FF6B18]" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
-                    </svg>
-                    @break
-                    @case('operations')
-                    <svg class="w-6 h-6 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    </svg>@break
+                    @case('operations')<svg class="w-6 h-6 text-[#FF6B18]" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                    </svg>
-                    @break
-                    @case('support')
-                    <svg class="w-6 h-6 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    </svg>@break
+                    @case('support')<svg class="w-6 h-6 text-[#FF6B18]" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
-                    </svg>
-                    @break
-                    @default
-                    <svg class="w-6 h-6 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    </svg>@break
+                    @default<svg class="w-6 h-6 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                     @endswitch
                 </div>
-
-                {{-- Info --}}
-                <h4 class="text-base sm:text-lg font-black text-[#1A1A1A] mb-2">{{ $dept->name }}</h4>
+                <h4 class="card-name">{{ $dept->name }}</h4>
                 @if($dept->description)
-                <p class="text-xs sm:text-sm text-[#737373] mb-3 leading-relaxed">{{ $dept->description }}</p>
+                <p class="card-description">{{ $dept->description }}</p>
+                @else
+                <div class="card-description"></div>
                 @endif
-                @if($dept->member_count > 0)
-                <div class="flex items-center gap-2 text-xs text-[#737373]">
-                    <svg class="w-4 h-4 text-[#FF6B18]" fill="currentColor" viewBox="0 0 20 20">
-                        <path
-                            d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
-                    </svg>
-                    <span class="font-semibold">{{ $dept->member_count }} Anggota</span>
+                <div class="card-footer">
+                    @if(isset($dept->member_count) && $dept->member_count > 0)
+                    <div class="flex items-center gap-2 text-xs text-[#737373]">
+                        <svg class="w-4 h-4 text-[#FF6B18]" fill="currentColor" viewBox="0 0 20 20">
+                            <path
+                                d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                        </svg>
+                        <span class="font-semibold">{{ $dept->member_count }} Anggota</span>
+                    </div>
+                    @endif
+                    <span class="card-view-hint text-[#A3A6AE] ml-auto">
+                        <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        Detail
+                    </span>
                 </div>
-                @endif
             </div>
             @endforeach
         </div>
     </div>
     @endif
 
-    {{-- ===================================================== --}}
     {{-- EMPTY STATE --}}
-    {{-- ===================================================== --}}
-    @if(
-    (!isset($leadership) || $leadership->isEmpty()) &&
-    (!isset($management) || $management->isEmpty()) &&
-    (!isset($departments) || $departments->isEmpty())
-    )
+    @if((!isset($leadership)||$leadership->isEmpty()) && (!isset($management)||$management->isEmpty()) &&
+    (!isset($departments)||$departments->isEmpty()))
     <div class="flex flex-col items-center justify-center py-16 text-center">
         <div class="flex h-20 w-20 items-center justify-center rounded-2xl bg-[#FFF5ED] mb-4">
             <svg class="w-10 h-10 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1289,9 +1975,7 @@
             </svg>
         </div>
         <h3 class="text-lg font-black text-[#1A1A1A] mb-2">Data tim belum ditambahkan</h3>
-        <p class="text-sm text-[#A3A6AE] max-w-xs leading-relaxed">
-            Tambahkan anggota tim melalui panel admin untuk menampilkan struktur organisasi.
-        </p>
+        <p class="text-sm text-[#A3A6AE] max-w-xs leading-relaxed">Tambahkan anggota tim melalui panel admin.</p>
     </div>
     @endif
 
@@ -1424,6 +2108,107 @@
     document.querySelectorAll('[data-count]').forEach(el => {
         counterObserver.observe(el);
     });
+
+})();
+</script>
+<script>
+    (function () {
+
+    function openProfileModal(data) {
+        const backdrop = document.getElementById('profile-modal-backdrop');
+
+        // Foto
+        const photoEl = document.getElementById('modal-photo');
+        photoEl.src   = data.photo || data.fallback;
+        photoEl.alt   = data.name || '';
+        photoEl.onerror = function () { this.src = data.fallback; this.onerror = null; };
+
+        // Nama & jabatan
+        document.getElementById('modal-member-name').textContent  = data.name  || '—';
+        document.getElementById('modal-member-title').textContent = data.title || '—';
+
+        // Departemen badge
+        const deptBadge = document.getElementById('modal-member-dept');
+        if (data.department) {
+            document.getElementById('modal-dept-text').textContent = data.department;
+            deptBadge.style.display = 'inline-flex';
+        } else {
+            deptBadge.style.display = 'none';
+        }
+
+        // Level badge
+        const levelBadge = document.getElementById('modal-member-level');
+        if (data.level) {
+            document.getElementById('modal-level-text').textContent = data.level;
+            levelBadge.style.display = 'inline-flex';
+        } else {
+            levelBadge.style.display = 'none';
+        }
+
+        // Bio (tampil penuh, tidak terpotong)
+        const bioSection = document.getElementById('modal-bio-section');
+        const bioText    = document.getElementById('modal-bio-text');
+        if (data.description && data.description.trim() !== '') {
+            bioText.textContent   = data.description;
+            bioSection.style.display = 'block';
+        } else {
+            bioSection.style.display = 'none';
+        }
+
+        // Kontak
+        const contactSection = document.getElementById('modal-contact-section');
+        const emailRow       = document.getElementById('modal-email-row');
+        const emailLink      = document.getElementById('modal-email-link');
+        const linkedinRow    = document.getElementById('modal-linkedin-row');
+        const linkedinLink   = document.getElementById('modal-linkedin-link');
+
+        const hasContact = !!(data.email || data.linkedin);
+        contactSection.style.display = hasContact ? 'block' : 'none';
+
+        if (data.email) {
+            emailLink.href        = 'mailto:' + data.email;
+            emailLink.textContent = data.email;
+            emailRow.style.display = 'flex';
+        } else {
+            emailRow.style.display = 'none';
+        }
+
+        if (data.linkedin) {
+            linkedinLink.href        = data.linkedin;
+            linkedinLink.textContent = 'Lihat Profil LinkedIn →';
+            linkedinRow.style.display = 'flex';
+        } else {
+            linkedinRow.style.display = 'none';
+        }
+
+        // Member count (department)
+        const countSection = document.getElementById('modal-member-count-section');
+        if (data.member_count && data.member_count > 0) {
+            document.getElementById('modal-member-count').textContent = data.member_count;
+            countSection.style.display = 'block';
+        } else {
+            countSection.style.display = 'none';
+        }
+
+        // Buka
+        backdrop.classList.add('is-open');
+        document.body.style.overflow = 'hidden';
+        document.getElementById('profile-modal').scrollTop = 0;
+    }
+
+    function closeProfileModal() {
+        document.getElementById('profile-modal-backdrop').classList.remove('is-open');
+        document.body.style.overflow = '';
+    }
+
+    // Escape key
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeProfileModal();
+    });
+
+    // Expose global
+    window.openProfileModal  = openProfileModal;
+    window.closeProfileModal = closeProfileModal;
 
 })();
 </script>
