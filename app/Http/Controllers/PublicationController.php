@@ -171,6 +171,7 @@ class PublicationController extends Controller
 
         $popularPubs = Publication::with(['authors.user', 'publicationType', 'categories'])
             ->withCount([
+                // ✅ Pakai semua waktu (bukan 7 hari) untuk homepage — lebih stabil
                 'viewLogs as total_views',
                 'downloadLogs as total_downloads',
             ])
@@ -180,19 +181,16 @@ class PublicationController extends Controller
             ->whereHas('publicationType', function ($q) use ($selectedType) {
                 $q->where('slug', $selectedType)->where('is_active', true);
             })
-            ->get()
-            ->map(function ($pub) {
-                $pub->trending_score = (int) $pub->total_views + ((int) $pub->total_downloads * 2);
-                return $pub;
-            })
-            ->sortByDesc('trending_score')
+            // ✅ Sort di DB langsung — bukan di PHP setelah get()
+            ->orderByRaw('(total_views + total_downloads * 2) DESC')
             ->take(6)
-            ->values();
+            ->get();
 
         $featuredPublication = null;
 
         $popularPublications = $popularPubs->map(function ($pub) {
-            $pubType = $pub->publicationType?->name ?? 'Publikasi';
+            $pubType       = $pub->publicationType?->name ?? 'Publikasi';
+            $trendingScore = (int) $pub->total_views + ((int) $pub->total_downloads * 2);
 
             return [
                 'id'               => $pub->id,
@@ -204,7 +202,7 @@ class PublicationController extends Controller
                 'formatted_date'   => $pub->formatted_date ?? ($pub->published_at?->locale('id')->isoFormat('D MMMM YYYY') ?? ''),
                 'download_count'   => (int) $pub->total_downloads,
                 'views_count'      => (int) $pub->total_views,
-                'trending_score'   => (int) $pub->trending_score,
+                'trending_score'   => $trendingScore,
                 'detail_url'       => route('publikasi.show', $pub->slug),
                 'authors'          => $pub->authors->take(6)->map(fn($a) => [
                     'id'       => $a->id,
