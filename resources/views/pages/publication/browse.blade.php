@@ -895,7 +895,7 @@ $years, $stats) {
 
                             {{-- Abstract --}}
                             <p class="card-abstract text-xs sm:text-sm text-[#737373] line-clamp-2 mb-3">
-                                {{ $publication['abstract'] ?? 'Tidak ada abstrak' }}
+                                {{ Str::limit(strip_tags($publication['abstract'] ?? ''), 150) }}
                             </p>
 
                             {{-- Authors --}}
