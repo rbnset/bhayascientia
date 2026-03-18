@@ -11,15 +11,31 @@
 @push('styles')
 <style>
     #publication-detail-grid {
+        display: block !important;
+        width: 100% !important;
+    }
+
+    #publication-detail-grid.has-file {
         display: grid !important;
         grid-template-columns: 1fr !important;
         gap: 1.5rem !important;
+        width: 100% !important;
     }
 
     @media (min-width: 1024px) {
         #publication-detail-grid.has-file {
             grid-template-columns: 1fr 380px !important;
         }
+    }
+
+    #publication-detail-grid:not(.has-file)>* {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-bottom: 1.5rem;
+    }
+
+    #publication-detail-grid:not(.has-file)>*:last-child {
+        margin-bottom: 0;
     }
 
     #publication-sidebar {
