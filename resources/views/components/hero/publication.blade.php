@@ -139,6 +139,19 @@ PERFORMA FIX:
                 @endforeach
             </div>
 
+            {{-- Custom progress bar dots — posisi bawah tengah --}}
+            <div class="absolute bottom-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 pointer-events-auto">
+                @foreach($slides as $i => $slide)
+                <button type="button" data-dot="{{ $i }}" aria-label="Slide {{ $i + 1 }}"
+                    class="relative overflow-hidden transition-all duration-300 ease-out rounded-full fc-dot-btn"
+                    style="height:3px; width:{{ $i === 0 ? '28px' : '14px' }}; background:rgba(255,255,255,0.3); border:none; padding:0; cursor:pointer;">
+                    <span data-bar="{{ $i }}" class="absolute inset-0 rounded-full"
+                        style="background:#FF6B18; transform:scaleX(0); transform-origin:left; transition:none;">
+                    </span>
+                </button>
+                @endforeach
+            </div>
+
             {{-- Tombol navigasi (desktop) --}}
             <div class="absolute inset-0 z-30 hidden pointer-events-none md:block">
                 <div class="mx-auto flex h-full w-full max-w-[1130px] items-center justify-end px-4 sm:px-6 lg:px-8">
@@ -168,10 +181,10 @@ PERFORMA FIX:
         cellAlign      : 'left',
         contain        : true,
         prevNextButtons: false,
-        pageDots       : true,       // dot bawaan Flickity
+        pageDots       : false,      // ✅ matikan dot bawaan — pakai custom progress bar
         wrapAround     : true,
         autoPlay       : 5000,
-        imagesLoaded   : false,      // ✅ jangan tunggu semua gambar — langsung init
+        imagesLoaded   : false,
         lazyLoad       : false,
         adaptiveHeight : false,
         draggable      : true,
@@ -180,37 +193,55 @@ PERFORMA FIX:
         setGallerySize : true,
     });
 
-    // ── Nav buttons ──────────────────────────────────────────────────────────
-    document.querySelector('[data-carousel-prev]')
-        ?.addEventListener('click', () => flkty.previous());
-    document.querySelector('[data-carousel-next]')
-        ?.addEventListener('click', () => flkty.next());
+    // ── Custom progress bar ───────────────────────────────────────────────
+    const DURATION   = 5000; // harus sama dengan autoPlay
+    const dotBtns    = document.querySelectorAll('.fc-dot-btn');
+    const dotBars    = document.querySelectorAll('[data-bar]');
+    let   barTimer   = null;
 
-    // ── Pause on hover (desktop) ──────────────────────────────────────────
-    carousel.addEventListener('mouseenter', () => flkty.stopPlayer());
-    carousel.addEventListener('mouseleave', () => flkty.playPlayer());
+    function setActiveDot(index) {
+        dotBtns.forEach(function (btn, i) {
+            const isActive = i === index;
+            // Lebar: aktif 28px, tidak aktif 14px
+            btn.style.width      = isActive ? '28px' : '14px';
+            btn.style.background = isActive ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.3)';
+        });
+    }
 
-    // ── FIX MOBILE AUTOPLAY ───────────────────────────────────────────────
-    // Flickity autoPlay berhenti saat tab tidak aktif atau layar terkunci.
-    // Page Visibility API: resume autoPlay saat tab aktif kembali.
-    document.addEventListener('visibilitychange', function () {
-        if (document.visibilityState === 'visible') {
-            flkty.playPlayer();
-        } else {
-            flkty.stopPlayer();
-        }
+    function startBar(index) {
+        // Reset semua bar
+        dotBars.forEach(function (bar) {
+            bar.style.transition = 'none';
+            bar.style.transform  = 'scaleX(0)';
+        });
+
+        clearTimeout(barTimer);
+
+        // Mulai animasi bar yang aktif setelah reflow
+        const activeBar = document.querySelector('[data-bar="' + index + '"]');
+        if (!activeBar) return;
+
+        // Force reflow agar reset terlihat
+        activeBar.getBoundingClientRect();
+
+        activeBar.style.transition = 'transform ' + DURATION + 'ms linear';
+        activeBar.style.transform  = 'scaleX(1)';
+    }
+
+    // Klik dot → pindah slide
+    dotBtns.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const idx = parseInt(btn.dataset.dot);
+            flkty.select(idx);
+        });
     });
 
-    // Flickity di mobile kadang berhenti setelah touch.
-    // Resume autoPlay setelah user selesai swipe.
-    flkty.on('dragEnd', function () {
-        flkty.playPlayer();
-    });
-
-    // ── Prefetch gambar slide berikutnya saat slide berubah ──────────────
-    // Slide 2 & 3 pakai loading="lazy" — kita trigger prefetch
-    // saat Flickity hampir menampilkan slide tersebut
+    // Saat slide berubah → update dot + mulai progress bar
     flkty.on('change', function (index) {
+        setActiveDot(index);
+        startBar(index);
+
+        // Prefetch gambar slide berikutnya
         const nextIndex = (index + 1) % flkty.slides.length;
         const nextCell  = flkty.slides[nextIndex]?.cells[0]?.element;
         if (nextCell) {
@@ -219,6 +250,49 @@ PERFORMA FIX:
                 img.setAttribute('loading', 'eager');
             }
         }
+    });
+
+    // Init: mulai dari slide 0
+    setActiveDot(0);
+    startBar(0);
+
+    // ── Nav buttons ──────────────────────────────────────────────────────────
+    document.querySelector('[data-carousel-prev]')
+        ?.addEventListener('click', () => flkty.previous());
+    document.querySelector('[data-carousel-next]')
+        ?.addEventListener('click', () => flkty.next());
+
+    // ── Pause on hover (desktop) ──────────────────────────────────────────
+    carousel.addEventListener('mouseenter', function () {
+        flkty.stopPlayer();
+        // Freeze progress bar saat hover
+        dotBars.forEach(function (bar) {
+            const computed = getComputedStyle(bar).transform;
+            bar.style.transition = 'none';
+            bar.style.transform  = computed;
+        });
+    });
+
+    carousel.addEventListener('mouseleave', function () {
+        flkty.playPlayer();
+        // Resume progress bar dari posisi sekarang tidak bisa sempurna
+        // — restart bar saja supaya UX konsisten
+        startBar(flkty.selectedIndex);
+    });
+
+    // ── FIX MOBILE AUTOPLAY ───────────────────────────────────────────────
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') {
+            flkty.playPlayer();
+            startBar(flkty.selectedIndex);
+        } else {
+            flkty.stopPlayer();
+        }
+    });
+
+    // Resume setelah swipe di mobile
+    flkty.on('dragEnd', function () {
+        flkty.playPlayer();
     });
 });
     </script>
