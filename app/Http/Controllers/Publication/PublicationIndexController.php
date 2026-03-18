@@ -173,16 +173,21 @@ class PublicationIndexController extends Controller
 
         $bestAuthors = $this->getBestAuthorsAction->execute($selectedType, 6);
 
-        $popularPubs = Publication::with('authors.user', 'publicationType', 'categories')
-            ->withCount('downloadLogs')
+        $popularPubs = Publication::with(['authors.user', 'publicationType', 'categories'])
+            ->withCount([
+                // ✅ Pakai semua waktu (bukan 7 hari) untuk homepage — lebih stabil
+                'viewLogs as total_views',
+                'downloadLogs as total_downloads',
+            ])
             ->where('status', 'published')
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now())
-            ->whereHas('publicationType', function ($query) use ($selectedType) {
-                $query->where('slug', $selectedType)->where('is_active', true);
+            ->whereHas('publicationType', function ($q) use ($selectedType) {
+                $q->where('slug', $selectedType)->where('is_active', true);
             })
-            ->orderByDesc('download_logs_count')
-            ->take(7)
+            // ✅ Sort di DB langsung — bukan di PHP setelah get()
+            ->orderByRaw('(total_views + total_downloads * 2) DESC')
+            ->take(6)
             ->get();
 
         $featuredPublication = null;
@@ -205,25 +210,28 @@ class PublicationIndexController extends Controller
         }
 
         $skipCount          = $featuredTypeContent ? 0 : 1;
-        $popularPublications = $popularPubs->skip($skipCount)->take(6)->map(function ($pub) {
-            $pubType = $pub->publicationType?->name ?? 'Publikasi';
+        $popularPublications = $popularPubs->map(function ($pub) {
+            $pubType       = $pub->publicationType?->name ?? 'Publikasi';
+            $trendingScore = (int) $pub->total_views + ((int) $pub->total_downloads * 2);
 
             return [
                 'id'               => $pub->id,
                 'title'            => $pub->title,
                 'slug'             => $pub->slug,
                 'cover_url'        => $this->getCoverUrl($pub),
-                'category'         => $pub->category_name,
+                'category'         => $pub->category_name ?? ($pub->categories->first()?->name ?? 'Umum'),
                 'publication_type' => $pubType,
-                'formatted_date'   => $pub->formatted_date,
-                'download_count'   => $pub->download_logs_count,
-                'views_count'      => $pub->views_count ?? 0,
+                'formatted_date'   => $pub->formatted_date ?? ($pub->published_at?->locale('id')->isoFormat('D MMMM YYYY') ?? ''),
+                // ✅ Key konsisten dengan yang dipakai blade popular-item
+                'download_count'   => (int) $pub->total_downloads,
+                'views_count'      => (int) $pub->total_views,
+                'trending_score'   => $trendingScore,
                 'detail_url'       => route('publikasi.show', $pub->slug),
-                'authors'          => $pub->authors->take(6)->map(fn($author) => [
-                    'id'       => $author->id,
-                    'name'     => $author->name,
-                    'photo'    => $author->photo_url,
-                    'initials' => $author->initials,
+                'authors'          => $pub->authors->take(6)->map(fn($a) => [
+                    'id'       => $a->id,
+                    'name'     => $a->name,
+                    'photo'    => $a->photo_url,
+                    'initials' => $a->initials,
                 ])->toArray(),
                 'total_authors'    => $pub->authors->count(),
             ];
