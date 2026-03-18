@@ -4,15 +4,15 @@ namespace App\Filament\Resources\Authors\Schemas;
 
 use App\Models\Author;
 use App\Models\User;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Placeholder;
-use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\Grid;
-use Filament\Schemas\Schema;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\DB;
 
 class AuthorForm
@@ -76,10 +76,9 @@ class AuthorForm
                                     ->label('')
                                     ->content(function ($get, $record) {
                                         $selectedUserId = $get('user_id');
-
                                         if (!$selectedUserId) return null;
 
-                                        // Tidak ada perubahan → tidak perlu warning
+                                        // Tidak ada perubahan user_id → tidak perlu warning
                                         if ($record?->user_id == $selectedUserId) return null;
 
                                         // Cek apakah user yang dipilih sudah punya author profile lain
@@ -95,8 +94,8 @@ class AuthorForm
                                         $totalCount = $theirCount + $myCount;
 
                                         return "⚠️ Perhatian! {$userName} sudah punya profil author dengan {$theirCount} publikasi. "
-                                            . "Jika kamu menyimpan perubahan ini, {$myCount} publikasi dari profil saat ini akan "
-                                            . "digabungkan ke profil milik {$userName}, sehingga total menjadi {$totalCount} publikasi. "
+                                            . "Jika kamu menyimpan perubahan ini, {$myCount} publikasi dari profil saat ini "
+                                            . "akan digabungkan ke profil milik {$userName}, sehingga total menjadi {$totalCount} publikasi. "
                                             . "Profil yang sedang dibuka ini akan otomatis dihapus. "
                                             . "Pastikan kamu yakin sebelum melanjutkan — tindakan ini tidak dapat dibatalkan.";
                                     })
@@ -182,28 +181,27 @@ class AuthorForm
                                     ->relationship(
                                         name: 'user',
                                         titleAttribute: 'name',
-                                        modifyQueryUsing: fn($query, $record) => $query
-                                            ->whereDoesntHave(
-                                                'author',
-                                                fn($q) => $q->when(
-                                                    $record?->id,
-                                                    fn($q) => $q->where('id', '!=', $record->id)
-                                                )
-                                            )
-                                            ->orderBy('name')
+
+                                        // ✅ FIX: tidak ada filter apapun — semua user boleh dipilih
+                                        // Sebelumnya whereDoesntHave('author') menyebabkan user yang
+                                        // sudah punya author profile tidak muncul di dropdown.
+                                        // Logika merge sudah ditangani sepenuhnya di handleAfterSave().
+                                        modifyQueryUsing: fn($query) => $query->orderBy('name'),
                                     )
-                                    ->getOptionLabelFromRecordUsing(
-                                        fn(User $user) => "{$user->name} — {$user->email}"
-                                    )
+                                    ->getOptionLabelFromRecordUsing(function (User $user) {
+                                        // Tampilkan info apakah user sudah punya author profile
+                                        $hasProfile = $user->authorProfile()->exists();
+                                        $badge      = $hasProfile ? ' (sudah punya profil author)' : ' (belum punya profil author)';
+                                        return "{$user->name} — {$user->email}{$badge}";
+                                    })
                                     ->searchable(['name', 'email'])
                                     ->preload()
                                     ->nullable()
                                     ->placeholder('— Tidak terhubung (External Author) —')
                                     ->prefixIcon('heroicon-o-link')
                                     ->helperText(
-                                        'Opsional. Hubungkan ke akun user yang ada. '
-                                            . 'Jika diisi, nama & email author otomatis diambil dari akun tersebut. '
-                                            . 'Semua publikasi tetap terjaga.'
+                                        'Pilih akun pengguna untuk dihubungkan ke profil author ini. '
+                                            . 'Jika pengguna sudah punya profil author, publikasi akan digabungkan secara otomatis.'
                                     )
                                     ->live()
                                     ->visible(fn() => auth()->user()?->hasAnyRole(['admin', 'super_admin']))
@@ -227,15 +225,17 @@ class AuthorForm
     /**
      * Dipanggil di EditAuthor::afterSave().
      *
-     * Skenario yang ditangani:
-     * - User yang dipilih belum punya author profile lain → tidak perlu merge, skip.
-     * - User yang dipilih sudah punya author profile lain → pindahkan semua
-     *   publikasi dari profil duplikat ke $record, lalu hapus profil duplikat.
+     * Skenario 1 — user belum punya author profile lain:
+     *   Tidak ada yang perlu dilakukan, claim biasa sudah selesai saat save.
      *
-     * Yang dipertahankan setelah merge:
-     * - $record (author yang sedang diedit) — linked ke user, nama/email dari users
-     * - Semua publikasi dari profil duplikat dipindah ke $record
-     * - Profil duplikat di-soft delete
+     * Skenario 2 — user sudah punya author profile lain (linked):
+     *   - Pindahkan semua publikasi dari profil duplikat ke $record (yang sedang diedit)
+     *   - Soft delete profil duplikat
+     *   - Kirim notifikasi sukses dengan detail publikasi yang dipindahkan
+     *
+     * Yang dipertahankan setelah merge adalah $record (profil yang sedang diedit),
+     * karena admin memilih untuk menghubungkan profil ini ke user tersebut.
+     * Data nama, email, foto → otomatis dari tabel users via accessor.
      */
     public static function handleAfterSave(Author $record): void
     {
@@ -249,7 +249,7 @@ class AuthorForm
             ->where('id', '!=', $record->id)
             ->first();
 
-        // Tidak ada duplikat → tidak perlu merge
+        // Tidak ada duplikat → tidak perlu merge, selesai
         if (!$duplicate) return;
 
         // ── Ada duplikat → jalankan merge dalam transaction ──
@@ -263,17 +263,18 @@ class AuthorForm
 
             foreach ($publicationIds as $pubId) {
 
-                // Cegah duplikat di pivot author_publication
+                // Cegah duplikat di tabel pivot author_publication
                 $alreadyLinked = $record->publications()
                     ->where('publications.id', $pubId)
                     ->exists();
 
                 if (!$alreadyLinked) {
-                    // Ambil data pivot asli (order, is_corresponding)
+                    // Ambil data pivot asli (order, is_corresponding) dari profil duplikat
                     $pivotData = $duplicate->authorPublications()
                         ->where('publication_id', $pubId)
                         ->first();
 
+                    // Pindahkan ke $record dengan data pivot yang sama
                     $record->publications()->attach($pubId, [
                         'order'            => $pivotData?->order ?? 99,
                         'is_corresponding' => $pivotData?->is_corresponding ?? false,
@@ -286,11 +287,11 @@ class AuthorForm
             // Lepas semua relasi publikasi dari profil duplikat
             $duplicate->publications()->detach();
 
-            // Soft delete profil duplikat
+            // Soft delete profil duplikat — bisa di-restore jika ada kesalahan
             $duplicate->delete();
 
             // ── Notifikasi sukses dengan info detail ──
-            $authorName = $record->getRawOriginal('name') ?? $record->user?->name ?? "Author #{$record->id}";
+            $authorName = $record->user?->name ?? $record->getRawOriginal('name') ?? "Author #{$record->id}";
 
             Notification::make()
                 ->title('Profil author berhasil digabungkan! 🎉')

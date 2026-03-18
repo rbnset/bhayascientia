@@ -19,9 +19,8 @@ class EditAuthor extends EditRecord
     }
 
     /**
-     * ✅ Dipanggil setelah data tersimpan ke DB.
-     * Jika user yang dipilih sudah punya author profile lain,
-     * publikasi dari profil lama dipindah ke sini, lalu profil lama dihapus.
+     * ✅ Dipanggil otomatis setelah data tersimpan ke DB.
+     * Menangani merge jika user yang dipilih sudah punya author profile lain.
      */
     protected function afterSave(): void
     {
@@ -29,29 +28,31 @@ class EditAuthor extends EditRecord
     }
 
     /**
-     * ✅ Notifikasi sukses default saat save tanpa merge.
-     * Jika terjadi merge, notifikasi ditangani oleh handleAfterSave().
+     * ✅ Notifikasi sukses default — hanya tampil jika tidak terjadi merge.
+     * Jika merge terjadi, notifikasi lebih detail sudah dikirim dari handleAfterSave().
      */
     protected function getSavedNotification(): ?Notification
     {
-        // Jika ada merge (user sudah punya author profile lain),
-        // notifikasi lebih detail sudah dikirim dari handleAfterSave().
-        // Di sini kita cek apakah ada duplikat — jika ya, skip notifikasi default ini.
         $userId = $this->record->user_id;
+
+        // Jika akan ada merge, skip notifikasi default ini
+        // karena handleAfterSave() sudah kirim notifikasi yang lebih informatif
         if ($userId) {
-            $hasDuplicate = \App\Models\Author::where('user_id', $userId)
+            $willMerge = \App\Models\Author::where('user_id', $userId)
                 ->where('id', '!=', $this->record->id)
                 ->exists();
 
-            if ($hasDuplicate) {
-                // Akan segera di-merge oleh afterSave, biarkan notifikasi dari sana
-                return null;
-            }
+            if ($willMerge) return null;
         }
 
-        $authorLabel = $this->record->name ?: ($this->record->email ?: "Author #{$this->record->id}");
-        $userLabel   = $this->record->user?->name
-            ?? ($this->record->user_id ? "User ID: {$this->record->user_id}" : 'Tanpa akun');
+        $authorLabel = $this->record->name
+            ?: ($this->record->email
+                ?: "Author #{$this->record->id}");
+
+        $userLabel = $this->record->user?->name
+            ?? ($this->record->user_id
+                ? "User ID: {$this->record->user_id}"
+                : 'Tanpa akun');
 
         return Notification::make()
             ->success()
@@ -69,9 +70,12 @@ class EditAuthor extends EditRecord
             DeleteAction::make()
                 ->requiresConfirmation()
                 ->modalHeading('Hapus profil author ini?')
-                ->modalDescription('Profil author akan dihapus permanen. Publikasi yang terhubung tidak ikut terhapus, namun nama author tidak akan muncul lagi.')
+                ->modalDescription(
+                    'Profil author akan dihapus. Publikasi yang terhubung tidak ikut terhapus, '
+                        . 'namun nama author tidak akan muncul lagi di publikasi tersebut.'
+                )
                 ->modalSubmitActionLabel('Ya, hapus sekarang')
-                ->modalCancelActionLabel('Batal')
+                ->modalCancelActionLabel('Batal, saya tidak jadi')
                 ->successNotification(
                     fn() => Notification::make()
                         ->success()
