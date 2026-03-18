@@ -89,7 +89,18 @@ class PublicationSearchController extends Controller
                 $q->where('title', 'LIKE', "%{$searchQuery}%")
                     ->orWhere('abstract', 'LIKE', "%{$searchQuery}%")
                     ->orWhereHas('authors', function ($authorQuery) use ($searchQuery) {
-                        $authorQuery->where('name', 'LIKE', "%{$searchQuery}%");
+                        $authorQuery->where(function ($aq) use ($searchQuery) {
+
+                            // ✅ Kasus 1: External author (tidak punya akun)
+                            // name tersimpan langsung di kolom authors.name
+                            $aq->where('authors.name', 'LIKE', "%{$searchQuery}%");
+
+                            // ✅ Kasus 2: Linked author (punya akun / user_id tidak NULL)
+                            // name ada di users.name, bukan di authors.name (authors.name = NULL)
+                            $aq->orWhereHas('user', function ($uq) use ($searchQuery) {
+                                $uq->where('name', 'LIKE', "%{$searchQuery}%");
+                            });
+                        });
                     });
             });
         }
