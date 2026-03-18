@@ -17,23 +17,47 @@ class PlaceholderCoverController extends Controller
         $author   = Str::limit(strip_tags($request->input('author', 'Anonymous')), 100);
 
         $typeNormalized = mb_strtolower(trim($type));
-        $version        = $request->input('v', '1');
-        $cacheKey       = 'placeholder_svg_v7_' . md5($initials . $typeNormalized . $title . $category . $author . $version);
 
-        $svg = Cache::remember($cacheKey, now()->addDays(7), function () use ($initials, $type, $typeNormalized, $title, $category, $author) {
+        // ✅ FIX 1: Hapus $version dari cache key
+        // Sebelumnya pakai $request->input('v', '1') yang berisi time()
+        // → setiap request beda key → cache tidak pernah hit → generate terus
+        // Sekarang cache key hanya dari konten yang benar-benar relevan
+        $cacheKey = 'placeholder_svg_v7_' . md5(
+            $initials . $typeNormalized . $title . $category . $author
+        );
+
+        // ✅ FIX 2: ETag untuk HTTP conditional request
+        // Browser kirim If-None-Match → server cek → kalau sama return 304 Not Modified
+        // Tidak perlu kirim body SVG sama sekali → lebih cepat
+        $etag = '"' . $cacheKey . '"';
+
+        if ($request->header('If-None-Match') === $etag) {
+            return response('', 304, [
+                'ETag'          => $etag,
+                'Cache-Control' => 'public, max-age=2592000, immutable',
+            ]);
+        }
+
+        $svg = Cache::remember($cacheKey, now()->addDays(30), function () use ($initials, $type, $typeNormalized, $title, $category, $author) {
             return $this->createSVG($initials, $type, $typeNormalized, $title, $category, $author);
         });
 
-        return response($svg)
-            ->header('Content-Type', 'image/svg+xml')
-            ->header('Cache-Control', 'public, max-age=604800')
-            ->header('X-Content-Type-Options', 'nosniff');
+        // ✅ FIX 3: Cache-Control header yang benar
+        // max-age=2592000 = 30 hari
+        // immutable = browser tidak perlu revalidate sama sekali selama 30 hari
+        // ETag = untuk conditional request jika cache expired
+        return response($svg, 200, [
+            'Content-Type'    => 'image/svg+xml; charset=utf-8',
+            'Cache-Control'   => 'public, max-age=2592000, immutable',
+            'ETag'            => $etag,
+            'Vary'            => 'Accept-Encoding',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 
     // ─── Ambil logo sebagai Base64 ──────────────────────────────────────────
     private function getLogoBase64(): string
     {
-        // Cache logo Base64 agar tidak baca file berulang kali
         return Cache::remember('placeholder_logo_base64', now()->addDay(), function () {
             $logoPath = public_path('assets/images/logos/logo.svg');
 
@@ -83,7 +107,7 @@ class PlaceholderCoverController extends Controller
             'report'       => ['start' => '#A855F7', 'end' => '#7C3AED'],
             'proceeding'   => ['start' => '#F97316', 'end' => '#EA580C'],
             // Default
-            'default'      => ['start' => '#122966', 'end' => '#1a3a8a'], // ← sesuai brand kamu
+            'default'      => ['start' => '#122966', 'end' => '#1a3a8a'],
         ];
 
         $gradient = $gradients[$typeNormalized] ?? $gradients['default'];
