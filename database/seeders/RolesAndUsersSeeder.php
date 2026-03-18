@@ -30,15 +30,15 @@ class RolesAndUsersSeeder extends Seeder
             [
                 'name'            => 'Robin Setiyawan',
                 'email'           => 'rbn.setiyawan@gmail.com',
-                'password'        => '@SahabatDabraka19.com',
+                'password'        => '@SahabatDabraka19.org',
                 'whatsapp_number' => '+6285869877959',
                 'job_title'       => 'Super Administrator',
                 'role'            => 'super_admin',
             ],
             [
                 'name'            => 'Dabraka ',
-                'email'           => 'dabraka.org@gmail.com',
-                'password'        => '@SahabatDabraka19.com',
+                'email'           => 'dabraka.org@gmail.org',
+                'password'        => '@SahabatDabraka19.org',
                 'whatsapp_number' => '+6285869877959',
                 'job_title'       => 'Super Administrator',
                 'role'            => 'super_admin',
