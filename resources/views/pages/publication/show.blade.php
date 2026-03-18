@@ -17,7 +17,7 @@
     }
 
     @media (min-width: 1024px) {
-        #publication-detail-grid {
+        #publication-detail-grid.has-file {
             grid-template-columns: 1fr 380px !important;
         }
     }
@@ -172,6 +172,29 @@
         animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     }
 
+    /* ── No-file layout: cover horizontal ── */
+    .no-file-cover-row {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    @media (min-width: 640px) {
+        .no-file-cover-row {
+            flex-direction: row;
+            align-items: flex-start;
+        }
+
+        .no-file-cover-row .cover-col {
+            width: 160px;
+            flex-shrink: 0;
+        }
+
+        .no-file-cover-row .info-col {
+            flex: 1;
+        }
+    }
+
     /* ── Authors Modal ── */
     .modal-overlay {
         position: fixed;
@@ -321,7 +344,6 @@
         }
     }
 
-    /* ── Auto-trigger pulse animation ── */
     @keyframes actionPulse {
         0% {
             box-shadow: 0 0 0 0 rgba(255, 107, 24, 0.5);
@@ -343,6 +365,11 @@
 @endpush
 
 @section('content')
+
+@php
+$latestVersion = $publication->versions->first();
+$hasFile = $latestVersion && !empty($latestVersion->pdf_file_path);
+@endphp
 
 {{-- Breadcrumb --}}
 <nav class="px-4 sm:px-6 lg:px-8 mx-auto max-w-[1130px] mt-8" aria-label="Breadcrumb">
@@ -369,7 +396,7 @@
             </span>
             <div class="flex items-center gap-2">
 
-                {{-- ✅ Favorite Button --}}
+                {{-- Favorite Button --}}
                 <button type="button" id="btnFavorite" onclick="toggleFavorite(event)"
                     class="p-2.5 rounded-full bg-[#F8F9FC] hover:bg-[#FFF7F2] hover:scale-110 transition-all duration-300 group"
                     title="Tambah ke favorit">
@@ -380,7 +407,7 @@
                     </svg>
                 </button>
 
-                {{-- ✅ Save Button --}}
+                {{-- Save Button --}}
                 <button type="button" id="btnSave" onclick="saveForLater(event)"
                     class="p-2.5 rounded-full bg-[#F8F9FC] hover:bg-[#FFF7F2] hover:scale-110 transition-all duration-300 group"
                     title="Simpan untuk nanti">
@@ -499,25 +526,47 @@
         </div>
     </div>
 
-    {{-- Two Column Layout --}}
-    <div id="publication-detail-grid">
+    @php
+    $pubTypeSlug = $publication->publicationType?->slug ?? '';
+    $abstractLabel = match($pubTypeSlug) {
+    'buku' => 'Sinopsis',
+    'opini' => 'Isi Opini',
+    default => 'Abstract',
+    };
+    $keywordLabel = match($pubTypeSlug) {
+    'buku' => 'Tags',
+    'opini' => 'Topik',
+    default => 'Keywords',
+    };
+
+    $words = array_filter(explode(' ', $publication->title));
+    $initials = '';
+    foreach (array_slice($words, 0, 2) as $word) {
+    $initials .= mb_strtoupper(mb_substr(trim($word), 0, 1));
+    }
+    if (empty($initials)) {
+    $initials = mb_strtoupper(mb_substr($publication->title, 0, 2));
+    }
+    $firstAuthor = $authors->count() > 0 ? ($authors->first()['name'] ?? 'Unknown') : 'Anonymous';
+    $publicationType = $publication->publicationType->name ?? 'Publikasi';
+    $placeholderUrl = route('placeholder.cover', [
+    'initials' => $initials,
+    'type' => $publicationType,
+    'title' => $publication->title,
+    'category' => $category,
+    'author' => $firstAuthor,
+    'v' => time(),
+    ]);
+    @endphp
+
+    @if($hasFile)
+    {{-- ══════════════════════════════════════════════════════
+    ADA FILE: Layout 2 kolom (konten kiri, sidebar kanan)
+    ══════════════════════════════════════════════════════ --}}
+    <div id="publication-detail-grid" class="has-file">
 
         {{-- LEFT: Abstract + Keywords --}}
         <div class="space-y-6">
-
-            @php
-            $pubTypeSlug = $publication->publicationType?->slug ?? '';
-            $abstractLabel = match($pubTypeSlug) {
-            'buku' => 'Sinopsis',
-            'opini' => 'Isi Opini',
-            default => 'Abstract',
-            };
-            $keywordLabel = match($pubTypeSlug) {
-            'buku' => 'Tags',
-            'opini' => 'Topik',
-            default => 'Keywords',
-            };
-            @endphp
 
             @if($publication->abstract)
             <div
@@ -558,30 +607,10 @@
 
         </div>
 
-        {{-- RIGHT: Cover + Action Buttons --}}
+        {{-- RIGHT: Cover + Action Buttons + Version Badge --}}
         <aside id="publication-sidebar">
-            @php
-            $publicationType = $publication->publicationType->name ?? 'Publikasi';
-            $words = array_filter(explode(' ', $publication->title));
-            $initials = '';
-            foreach (array_slice($words, 0, 2) as $word) {
-            $initials .= mb_strtoupper(mb_substr(trim($word), 0, 1));
-            }
-            if (empty($initials)) {
-            $initials = mb_strtoupper(mb_substr($publication->title, 0, 2));
-            }
-            $firstAuthor = $authors->count() > 0 ? ($authors->first()['name'] ?? 'Unknown') : 'Anonymous';
-            $placeholderUrl = route('placeholder.cover', [
-            'initials' => $initials,
-            'type' => $publicationType,
-            'title' => $publication->title,
-            'category' => $category,
-            'author' => $firstAuthor,
-            'v' => time(),
-            ]);
-            @endphp
-
             <div class="sticky-cover">
+
                 {{-- Cover Image --}}
                 <div class="mb-6 cover-image-wrapper aspect-[2/3] relative overflow-hidden rounded-xl">
                     @if($cover_url)
@@ -604,16 +633,10 @@
                     @endif
                 </div>
 
-                @php
-                $latestVersion = $publication->versions->first();
-                $hasFile = $latestVersion && !empty($latestVersion->pdf_file_path);
-                @endphp
-
-                {{-- Action Buttons --}}
-                {{-- Action Buttons --}}
+                {{-- Action Buttons — ada file --}}
                 <div class="action-buttons-container">
 
-                    {{-- Baca Sekarang --}}
+                    {{-- Baca Sekarang / Preview Gratis --}}
                     @auth
                     <a href="{{ route('publikasi.read', $publication->slug) }}"
                         class="btn-ripple w-full px-5 py-3.5 bg-gradient-to-r from-[#FF6B18] to-[#E64627] text-white font-bold text-base rounded-xl hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 flex items-center justify-center gap-3 group">
@@ -627,7 +650,6 @@
                         <span>Baca Sekarang</span>
                     </a>
                     @else
-                    {{-- Guest: bisa baca tapi dengan watermark preview --}}
                     <a href="{{ route('publikasi.read', $publication->slug) }}"
                         class="btn-ripple w-full px-5 py-3.5 bg-gradient-to-r from-[#FF6B18] to-[#E64627] text-white font-bold text-base rounded-xl hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 flex items-center justify-center gap-3 group">
                         <svg class="w-5 h-5 transition-transform duration-300 group-hover:rotate-12" fill="none"
@@ -639,7 +661,6 @@
                         </svg>
                         <span>Preview Gratis</span>
                     </a>
-                    {{-- Badge info watermark --}}
                     <div class="flex items-center gap-2 px-3 py-2 bg-[#FFF7F2] rounded-lg border border-[#FFD6B8]">
                         <svg class="w-4 h-4 text-[#FF6B18] flex-shrink-0" fill="none" stroke="currentColor"
                             viewBox="0 0 24 24">
@@ -655,7 +676,6 @@
                     @endauth
 
                     {{-- Download PDF --}}
-                    @if($hasFile)
                     @auth
                     <a href="{{ route('publikasi.download', $publication->slug) }}"
                         class="btn-ripple w-full px-5 py-3.5 bg-white border-2 border-[#FF6B18] text-[#FF6B18] font-bold text-base rounded-xl hover:bg-[#FF6B18] hover:text-white hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 flex items-center justify-center gap-3 group">
@@ -666,7 +686,6 @@
                         <span>Download PDF</span>
                     </a>
                     @else
-                    {{-- Guest: perlu login untuk download --}}
                     <button type="button" onclick="showLoginModal('download')"
                         class="btn-ripple w-full px-5 py-3.5 bg-white border-2 border-[#FF6B18] text-[#FF6B18] font-bold text-base rounded-xl hover:bg-[#FFF7F2] hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-3 group">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -680,16 +699,6 @@
                         </svg>
                     </button>
                     @endauth
-                    @else
-                    <button type="button" disabled
-                        class="w-full px-5 py-3.5 bg-gray-100 border-2 border-gray-300 text-gray-400 font-bold text-base rounded-xl cursor-not-allowed flex items-center justify-center gap-3 opacity-60">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                        </svg>
-                        <span>PDF Not Available</span>
-                    </button>
-                    @endif
 
                 </div>
 
@@ -710,15 +719,9 @@
                                 <p class="text-lg font-bold text-[#1A1A1A]">v{{ $latestVersion->version_number }}</p>
                             </div>
                         </div>
-                        @if($hasFile)
                         <span
                             class="px-3 py-1 bg-[#FFF7F2] text-xs font-bold text-[#FF6B18] rounded-full">Published</span>
-                        @else
-                        <span
-                            class="px-3 py-1 text-xs font-bold text-gray-500 bg-gray-100 rounded-full">Unpublished</span>
-                        @endif
                     </div>
-
                     <div class="grid grid-cols-2 gap-3">
                         <div class="bg-[#FAFBFC] p-3 rounded-lg border border-[#EEF0F7]">
                             <p class="text-xs text-[#737373] font-semibold mb-1.5 flex items-center gap-1">
@@ -767,42 +770,149 @@
                             </p>
                         </div>
                     </div>
-
                     <div class="mt-3 pt-3 border-t border-[#EEF0F7]">
-                        @if($hasFile)
                         <div class="flex items-center gap-2 px-3 py-2 bg-[#F0FDF4] rounded-lg border border-[#DCFCE7]">
                             <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                             <span class="text-xs font-semibold text-green-700">File ready for download</span>
                         </div>
-                        @else
-                        <div class="flex items-center gap-2 px-3 py-2 bg-[#FEF2F2] rounded-lg border border-[#FECACA]">
-                            <div class="w-2 h-2 bg-red-500 rounded-full"></div>
-                            <span class="text-xs font-semibold text-red-700">File not uploaded yet</span>
-                        </div>
-                        @endif
                     </div>
                 </div>
                 @endif
+
             </div>
         </aside>
 
     </div>
+
+    @else
+    {{-- ══════════════════════════════════════════════════════
+    TIDAK ADA FILE: Layout 1 kolom penuh
+    ══════════════════════════════════════════════════════ --}}
+    <div id="publication-detail-grid">
+
+        {{-- Cover + Info "file tidak tersedia" — horizontal row --}}
+        <div class="bg-white rounded-2xl border border-[#EEF0F7] p-6 md:p-8">
+            <div class="no-file-cover-row">
+
+                {{-- Cover kecil di kiri --}}
+                <div class="cover-col">
+                    <div class="cover-image-wrapper aspect-[2/3] relative overflow-hidden rounded-xl">
+                        @if($cover_url)
+                        <img src="{{ $cover_url }}" alt="Cover {{ $publication->title }}"
+                            class="object-cover w-full h-full"
+                            onerror="this.onerror=null; this.src='{{ $placeholderUrl }}';">
+                        @else
+                        <img src="{{ $placeholderUrl }}" alt="Cover {{ $publication->title }}"
+                            class="object-cover w-full h-full">
+                        @endif
+                    </div>
+                </div>
+
+                {{-- Info file tidak tersedia di kanan --}}
+                <div class="flex flex-col justify-center gap-4 info-col">
+
+                    {{-- Status badge --}}
+                    <div
+                        class="inline-flex items-center gap-2 px-4 py-2 bg-[#FEF2F2] border border-[#FECACA] rounded-full w-fit">
+                        <div class="w-2 h-2 bg-red-400 rounded-full"></div>
+                        <span class="text-xs font-bold text-red-600">File belum tersedia</span>
+                    </div>
+
+                    <div>
+                        <h3 class="text-base font-bold text-[#1A1A1A] mb-1">Dokumen sedang diproses</h3>
+                        <p class="text-sm text-[#737373] leading-relaxed">
+                            File PDF publikasi ini belum diunggah atau masih dalam proses persiapan.
+                            Silakan kembali lagi dalam beberapa waktu — kami akan segera menyediakannya untuk kamu.
+                        </p>
+                    </div>
+
+                    {{-- Version info ringkas --}}
+                    @if($latestVersion)
+                    <div class="flex items-center gap-3 pt-3 border-t border-[#EEF0F7]">
+                        <div class="flex items-center gap-1.5 text-xs text-[#737373]">
+                            <svg class="w-4 h-4 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span class="font-semibold">v{{ $latestVersion->version_number }}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 text-xs text-[#737373]">
+                            <svg class="w-4 h-4 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <span>{{ $latestVersion->created_at->locale('id_ID')->isoFormat('D MMM YYYY') }}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 text-xs text-[#737373]">
+                            <svg class="w-4 h-4 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            <span>{{ number_format($viewsCount ?? 0) }} views</span>
+                        </div>
+                    </div>
+                    @endif
+
+                </div>
+            </div>
+        </div>
+
+        {{-- Abstract — full width --}}
+        @if($publication->abstract)
+        <div
+            class="bg-white rounded-2xl border border-[#EEF0F7] p-6 md:p-8 hover:shadow-lg transition-shadow duration-300">
+            <h2 class="text-xl font-bold text-[#1A1A1A] mb-4 flex items-center gap-2">
+                <svg class="w-6 h-6 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                {{ $abstractLabel }}
+            </h2>
+            <div class="prose prose-sm md:prose-base max-w-none text-[#1A1A1A] leading-relaxed text-justify">
+                {!! $publication->abstract !!}
+            </div>
+        </div>
+        @endif
+
+        {{-- Keywords — full width --}}
+        @if($keywords && count($keywords) > 0)
+        <div
+            class="bg-white rounded-2xl border border-[#EEF0F7] p-6 md:p-8 hover:shadow-lg transition-shadow duration-300">
+            <h2 class="text-xl font-bold text-[#1A1A1A] mb-4 flex items-center gap-2">
+                <svg class="w-6 h-6 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+                {{ $keywordLabel }}
+            </h2>
+            <div class="flex flex-wrap gap-2">
+                @foreach($keywords as $keyword)
+                <span
+                    class="px-4 py-2 bg-[#F8F9FC] text-sm font-medium text-[#1A1A1A] rounded-full hover:bg-[#FFF7F2] hover:text-[#FF6B18] hover:shadow-md hover:scale-105 transition-all duration-300 cursor-pointer">
+                    {{ $keyword }}
+                </span>
+                @endforeach
+            </div>
+        </div>
+        @endif
+
+    </div>
+    @endif
+
 </article>
 
-{{-- ✅ Login Required Modal --}}
+{{-- Login Required Modal --}}
 <div id="loginRequiredModal">
     <div id="loginModalBackdrop" onclick="closeLoginModal()"></div>
     <div id="loginModalContainer">
         <div class="relative w-full max-w-sm p-8 overflow-hidden text-center bg-white shadow-2xl rounded-2xl"
             onclick="event.stopPropagation()">
-
-            {{-- Decorative bg circles --}}
             <div class="absolute -top-8 -left-8 w-32 h-32 rounded-full bg-[#FFF7F2] opacity-60 pointer-events-none">
             </div>
             <div class="absolute -bottom-8 -right-8 w-24 h-24 rounded-full bg-[#FFF7F2] opacity-60 pointer-events-none">
             </div>
-
-            {{-- Close --}}
             <button onclick="closeLoginModal()"
                 class="absolute top-4 right-4 p-1.5 rounded-full hover:bg-[#F8F9FC] transition-colors group z-10">
                 <svg class="w-5 h-5 text-[#737373] group-hover:text-[#FF6B18]" fill="none" stroke="currentColor"
@@ -810,8 +920,6 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
             </button>
-
-            {{-- Icon --}}
             <div
                 class="relative z-10 w-20 h-20 bg-gradient-to-br from-[#FFF7F2] to-[#FFE8D6] rounded-full flex items-center justify-center mx-auto mb-5 shadow-inner">
                 <svg id="loginModalIcon" class="w-10 h-10 text-[#FF6B18]" fill="none" stroke="currentColor"
@@ -820,16 +928,10 @@
                         d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
             </div>
-
-            {{-- Text --}}
-            <h3 id="loginModalTitle" class="relative z-10 text-xl font-bold text-[#1A1A1A] mb-2">
-                Masuk untuk melanjutkan
+            <h3 id="loginModalTitle" class="relative z-10 text-xl font-bold text-[#1A1A1A] mb-2">Masuk untuk melanjutkan
             </h3>
-            <p id="loginModalDesc" class="relative z-10 text-[#737373] text-sm mb-7 leading-relaxed px-2">
-                Yuk login dulu untuk menggunakan fitur ini!
-            </p>
-
-            {{-- Buttons --}}
+            <p id="loginModalDesc" class="relative z-10 text-[#737373] text-sm mb-7 leading-relaxed px-2">Yuk login dulu
+                untuk menggunakan fitur ini!</p>
             <div class="relative z-10 flex flex-col gap-3">
                 <a id="loginModalBtn" href="{{ route('login') }}"
                     class="w-full py-3.5 bg-gradient-to-r from-[#FF6B18] to-[#E64627] text-white font-bold rounded-xl hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2">
@@ -929,350 +1031,263 @@
         </div>
     </div>
 </div>
+
 @endsection
 
 @push('scripts')
 <script>
     const csrfToken  = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-const isLoggedIn = {{ auth()->check() ? 'true' : 'false' }};
+    const isLoggedIn = {{ auth()->check() ? 'true' : 'false' }};
 
-// =============================================================
-// ✅ LOGIN MODAL
-// =============================================================
-const loginMessages = {
-    favorite: {
-        title: 'Tambahkan ke Favorit? ⭐',
-        desc:  'Login dulu untuk menandai publikasi favoritmu. Temukan lagi dengan mudah kapan saja!',
-    },
-    save: {
-        title: 'Simpan untuk Dibaca Nanti? 📚',
-        desc:  'Login dulu agar publikasi ini tersimpan di koleksimu dan bisa kamu baca kapan pun.',
-    },
-    download: {
-        title: 'Download PDF? 📥',
-        desc:  'Login dulu untuk mengunduh PDF publikasi ini secara gratis. Daftar hanya butuh 1 menit!',
-    },
-};
-
-function showLoginModal(action = 'default') {
-    const msg = loginMessages[action] ?? {
-        title: 'Masuk untuk Melanjutkan',
-        desc:  'Kamu perlu login untuk menggunakan fitur ini.',
+    const loginMessages = {
+        favorite: {
+            title: 'Tambahkan ke Favorit? ⭐',
+            desc:  'Login dulu untuk menandai publikasi favoritmu. Temukan lagi dengan mudah kapan saja!',
+        },
+        save: {
+            title: 'Simpan untuk Dibaca Nanti? 📚',
+            desc:  'Login dulu agar publikasi ini tersimpan di koleksimu dan bisa kamu baca kapan pun.',
+        },
+        download: {
+            title: 'Download PDF? 📥',
+            desc:  'Login dulu untuk mengunduh PDF publikasi ini secara gratis. Daftar hanya butuh 1 menit!',
+        },
     };
 
-    document.getElementById('loginModalTitle').textContent = msg.title;
-    document.getElementById('loginModalDesc').textContent  = msg.desc;
-
-    // ✅ Pakai query param ?after_login= bukan hash #
-    // Hash tidak pernah dikirim ke server, jadi tidak bisa survive OAuth redirect
-    const baseUrl   = window.location.href.split('#')[0].split('?')[0];
-    const returnUrl = encodeURIComponent(baseUrl + '?after_login=' + action);
-
-    document.getElementById('loginModalBtn').href =
-        `{{ route('login') }}?redirect=${returnUrl}`;
-
-    const modal     = document.getElementById('loginRequiredModal');
-    const backdrop  = document.getElementById('loginModalBackdrop');
-    const container = document.getElementById('loginModalContainer');
-
-    modal.style.display = 'block';
-    document.body.style.overflow = 'hidden';
-
-    requestAnimationFrame(() => {
-        backdrop.classList.add('show');
-        container.classList.add('show');
-    });
-}
-
-function closeLoginModal() {
-    const modal     = document.getElementById('loginRequiredModal');
-    const backdrop  = document.getElementById('loginModalBackdrop');
-    const container = document.getElementById('loginModalContainer');
-
-    backdrop.classList.remove('show');
-    container.classList.remove('show');
-
-    setTimeout(() => {
-        modal.style.display = 'none';
-        document.body.style.overflow = '';
-    }, 300);
-}
-
-// =============================================================
-// ✅ TOGGLE FAVORITE — wrapper
-// =============================================================
-function toggleFavorite(e) {
-    if (!isLoggedIn) {
-        showLoginModal('favorite');
-        return;
-    }
-    doToggleFavorite();
-}
-
-function doToggleFavorite() {
-    const button = document.getElementById('btnFavorite');
-
-    if (button.disabled) return;
-    button.disabled = true;
-    button.classList.add('opacity-60');
-
-    fetch('{{ route("publikasi.favorite", $publication->slug) }}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': csrfToken,
-            'Accept': 'application/json',
-        }
-    })
-    .then(res => res.json())
-    .then(data => {
-        button.disabled = false;
-        button.classList.remove('opacity-60');
-
-        if (!data.success) {
-            showNotification(data.message || 'Terjadi kesalahan', 'error');
-            return;
-        }
-
-        setFavoriteState(data.isFavorited);
-        button.classList.add('action-pulse');
-        setTimeout(() => button.classList.remove('action-pulse'), 800);
-        showNotification(data.message, data.status === 'added' ? 'success' : 'info');
-    })
-    .catch(() => {
-        button.disabled = false;
-        button.classList.remove('opacity-60');
-        showNotification('Terjadi kesalahan jaringan', 'error');
-    });
-}
-
-function setFavoriteState(active) {
-    const svg = document.getElementById('iconFavorite');
-    if (active) {
-        svg.setAttribute('fill', 'currentColor');
-        svg.setAttribute('stroke', 'none');
-        svg.classList.add('text-[#FF6B18]');
-        svg.innerHTML = '<path fill="currentColor" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>';
-    } else {
-        svg.setAttribute('fill', 'none');
-        svg.setAttribute('stroke', 'currentColor');
-        svg.classList.remove('text-[#FF6B18]');
-        svg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>';
-    }
-}
-
-// =============================================================
-// ✅ SAVE FOR LATER — wrapper
-// =============================================================
-function saveForLater(e) {
-    if (!isLoggedIn) {
-        showLoginModal('save');
-        return;
-    }
-    doSaveForLater();
-}
-
-function doSaveForLater() {
-    const button = document.getElementById('btnSave');
-
-    if (button.disabled) return;
-    button.disabled = true;
-    button.classList.add('opacity-60');
-
-    fetch('{{ route("publikasi.save", $publication->slug) }}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': csrfToken,
-            'Accept': 'application/json',
-        }
-    })
-    .then(res => res.json())
-    .then(data => {
-        button.disabled = false;
-        button.classList.remove('opacity-60');
-
-        if (!data.success) {
-            showNotification(data.message || 'Terjadi kesalahan', 'error');
-            return;
-        }
-
-        setSaveState(data.isSaved);
-        button.classList.add('action-pulse');
-        setTimeout(() => button.classList.remove('action-pulse'), 800);
-        showNotification(data.message, data.status === 'added' ? 'success' : 'info');
-    })
-    .catch(() => {
-        button.disabled = false;
-        button.classList.remove('opacity-60');
-        showNotification('Terjadi kesalahan jaringan', 'error');
-    });
-}
-
-function setSaveState(active) {
-    const svg = document.getElementById('iconSave');
-    if (active) {
-        svg.setAttribute('fill', 'currentColor');
-        svg.setAttribute('stroke', 'none');
-        svg.classList.add('text-[#FF6B18]');
-    } else {
-        svg.setAttribute('fill', 'none');
-        svg.setAttribute('stroke', 'currentColor');
-        svg.classList.remove('text-[#FF6B18]');
-    }
-}
-
-// =============================================================
-// ✅ SHARE
-// =============================================================
-function sharePublication() {
-    if (navigator.share) {
-        navigator.share({
-            title: '{{ addslashes($publication->title) }}',
-            text: 'Lihat publikasi ilmiah ini',
-            url: window.location.href
-        }).catch(err => {
-            if (err.name !== 'AbortError') console.log('Share error:', err);
+    function showLoginModal(action = 'default') {
+        const msg = loginMessages[action] ?? {
+            title: 'Masuk untuk Melanjutkan',
+            desc:  'Kamu perlu login untuk menggunakan fitur ini.',
+        };
+        document.getElementById('loginModalTitle').textContent = msg.title;
+        document.getElementById('loginModalDesc').textContent  = msg.desc;
+        const baseUrl   = window.location.href.split('#')[0].split('?')[0];
+        const returnUrl = encodeURIComponent(baseUrl + '?after_login=' + action);
+        document.getElementById('loginModalBtn').href = `{{ route('login') }}?redirect=${returnUrl}`;
+        const modal     = document.getElementById('loginRequiredModal');
+        const backdrop  = document.getElementById('loginModalBackdrop');
+        const container = document.getElementById('loginModalContainer');
+        modal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+        requestAnimationFrame(() => {
+            backdrop.classList.add('show');
+            container.classList.add('show');
         });
-    } else {
-        navigator.clipboard.writeText(window.location.href)
-            .then(() => showNotification('Link berhasil disalin ke clipboard!', 'success'))
-            .catch(()  => showNotification('Gagal menyalin link', 'error'));
     }
-}
 
-// =============================================================
-// ✅ AUTHORS MODAL
-// =============================================================
-function showAllAuthors() {
-    const modal     = document.getElementById('authorsModal');
-    const container = modal.querySelector('.modal-container');
-    modal.style.display = 'block';
-    document.body.style.overflow = 'hidden';
-    requestAnimationFrame(() => {
-        modal.classList.add('show');
-        container.classList.add('show');
-    });
-}
-
-function closeAuthorsModal(event) {
-    if (event && event.target !== event.currentTarget) return;
-    const modal     = document.getElementById('authorsModal');
-    const container = modal.querySelector('.modal-container');
-    modal.classList.remove('show');
-    container.classList.remove('show');
-    setTimeout(() => {
-        modal.style.display = 'none';
-        document.body.style.overflow = '';
-    }, 300);
-}
-
-// =============================================================
-// ✅ COVER FULLSCREEN
-// =============================================================
-function viewCoverFullscreen() {
-    window.open('{{ $cover_url }}', '_blank', 'noopener,noreferrer');
-}
-
-// =============================================================
-// ✅ NOTIFICATION
-// =============================================================
-function showNotification(message, type = 'success') {
-    const colors = { success: 'bg-green-500', info: 'bg-blue-500', error: 'bg-red-500' };
-    const icons  = {
-        success: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>',
-        info:    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>',
-        error:   '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>',
-    };
-    const el = document.createElement('div');
-    el.className = `fixed bottom-4 right-4 ${colors[type]} text-white px-5 py-3 rounded-xl shadow-xl z-[999999] flex items-center gap-2.5 font-medium text-sm`;
-    el.style.animation = 'slideInRight 0.3s ease-out';
-    el.innerHTML = `
-        <svg class="flex-shrink-0 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            ${icons[type]}
-        </svg>
-        <span>${message}</span>
-    `;
-    document.body.appendChild(el);
-    setTimeout(() => {
-        el.style.animation = 'slideOutRight 0.3s ease-in forwards';
-        setTimeout(() => el.remove(), 300);
-    }, 3000);
-}
-
-// =============================================================
-// ✅ DOM READY
-// =============================================================
-document.addEventListener('DOMContentLoaded', function () {
-
-    // ── Set initial button states ──────────────────────────
-    @auth
-        @if(auth()->user()->isFavorited($publication->id))
-            setFavoriteState(true);
-        @endif
-        @if(auth()->user()->isSaved($publication->id))
-            setSaveState(true);
-        @endif
-    @endauth
-
-    // ── Auto-trigger setelah redirect dari login/OAuth ─────
-    // Pakai ?after_login= bukan #hash karena hash tidak dikirim ke server
-    // sehingga tidak bisa survive Google/Facebook OAuth redirect
-    const urlParams  = new URLSearchParams(window.location.search);
-    const afterLogin = urlParams.get('after_login');
-
-    console.log('[AutoTrigger] after_login:', afterLogin, '| isLoggedIn:', isLoggedIn);
-
-    if (afterLogin && isLoggedIn) {
-
-        // Bersihkan query param dari URL tanpa reload halaman
-        history.replaceState(null, '', window.location.pathname);
-
-        const btnId = afterLogin === 'favorite' ? 'btnFavorite' : 'btnSave';
-        const btn   = document.getElementById(btnId);
-
-        // Scroll ke tombol + animasi pulse orange
-        if (btn) {
-            btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            btn.classList.add('action-pulse');
-            setTimeout(() => btn.classList.remove('action-pulse'), 800);
-        }
-
-        // Delay 800ms — beri waktu halaman & session fully settled
+    function closeLoginModal() {
+        const modal     = document.getElementById('loginRequiredModal');
+        const backdrop  = document.getElementById('loginModalBackdrop');
+        const container = document.getElementById('loginModalContainer');
+        backdrop.classList.remove('show');
+        container.classList.remove('show');
         setTimeout(() => {
-            console.log('[AutoTrigger] Menjalankan:', afterLogin);
-            if (afterLogin === 'favorite') {
-                doToggleFavorite();
-            } else if (afterLogin === 'save') {
-                doSaveForLater();
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }, 300);
+    }
+
+    function toggleFavorite(e) {
+        if (!isLoggedIn) { showLoginModal('favorite'); return; }
+        doToggleFavorite();
+    }
+
+    function doToggleFavorite() {
+        const button = document.getElementById('btnFavorite');
+        if (button.disabled) return;
+        button.disabled = true;
+        button.classList.add('opacity-60');
+        fetch('{{ route("publikasi.favorite", $publication->slug) }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            button.disabled = false;
+            button.classList.remove('opacity-60');
+            if (!data.success) { showNotification(data.message || 'Terjadi kesalahan', 'error'); return; }
+            setFavoriteState(data.isFavorited);
+            button.classList.add('action-pulse');
+            setTimeout(() => button.classList.remove('action-pulse'), 800);
+            showNotification(data.message, data.status === 'added' ? 'success' : 'info');
+        })
+        .catch(() => {
+            button.disabled = false;
+            button.classList.remove('opacity-60');
+            showNotification('Terjadi kesalahan jaringan', 'error');
+        });
+    }
+
+    function setFavoriteState(active) {
+        const svg = document.getElementById('iconFavorite');
+        if (active) {
+            svg.setAttribute('fill', 'currentColor');
+            svg.setAttribute('stroke', 'none');
+            svg.classList.add('text-[#FF6B18]');
+            svg.innerHTML = '<path fill="currentColor" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>';
+        } else {
+            svg.setAttribute('fill', 'none');
+            svg.setAttribute('stroke', 'currentColor');
+            svg.classList.remove('text-[#FF6B18]');
+            svg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>';
+        }
+    }
+
+    function saveForLater(e) {
+        if (!isLoggedIn) { showLoginModal('save'); return; }
+        doSaveForLater();
+    }
+
+    function doSaveForLater() {
+        const button = document.getElementById('btnSave');
+        if (button.disabled) return;
+        button.disabled = true;
+        button.classList.add('opacity-60');
+        fetch('{{ route("publikasi.save", $publication->slug) }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            button.disabled = false;
+            button.classList.remove('opacity-60');
+            if (!data.success) { showNotification(data.message || 'Terjadi kesalahan', 'error'); return; }
+            setSaveState(data.isSaved);
+            button.classList.add('action-pulse');
+            setTimeout(() => button.classList.remove('action-pulse'), 800);
+            showNotification(data.message, data.status === 'added' ? 'success' : 'info');
+        })
+        .catch(() => {
+            button.disabled = false;
+            button.classList.remove('opacity-60');
+            showNotification('Terjadi kesalahan jaringan', 'error');
+        });
+    }
+
+    function setSaveState(active) {
+        const svg = document.getElementById('iconSave');
+        if (active) {
+            svg.setAttribute('fill', 'currentColor');
+            svg.setAttribute('stroke', 'none');
+            svg.classList.add('text-[#FF6B18]');
+        } else {
+            svg.setAttribute('fill', 'none');
+            svg.setAttribute('stroke', 'currentColor');
+            svg.classList.remove('text-[#FF6B18]');
+        }
+    }
+
+    function sharePublication() {
+        if (navigator.share) {
+            navigator.share({
+                title: '{{ addslashes($publication->title) }}',
+                text: 'Lihat publikasi ilmiah ini',
+                url: window.location.href
+            }).catch(err => { if (err.name !== 'AbortError') console.log('Share error:', err); });
+        } else {
+            navigator.clipboard.writeText(window.location.href)
+                .then(() => showNotification('Link berhasil disalin ke clipboard!', 'success'))
+                .catch(()  => showNotification('Gagal menyalin link', 'error'));
+        }
+    }
+
+    function showAllAuthors() {
+        const modal     = document.getElementById('authorsModal');
+        const container = modal.querySelector('.modal-container');
+        modal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+        requestAnimationFrame(() => {
+            modal.classList.add('show');
+            container.classList.add('show');
+        });
+    }
+
+    function closeAuthorsModal(event) {
+        if (event && event.target !== event.currentTarget) return;
+        const modal     = document.getElementById('authorsModal');
+        const container = modal.querySelector('.modal-container');
+        modal.classList.remove('show');
+        container.classList.remove('show');
+        setTimeout(() => {
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }, 300);
+    }
+
+    function viewCoverFullscreen() {
+        window.open('{{ $cover_url }}', '_blank', 'noopener,noreferrer');
+    }
+
+    function showNotification(message, type = 'success') {
+        const colors = { success: 'bg-green-500', info: 'bg-blue-500', error: 'bg-red-500' };
+        const icons  = {
+            success: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>',
+            info:    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>',
+            error:   '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>',
+        };
+        const el = document.createElement('div');
+        el.className = `fixed bottom-4 right-4 ${colors[type]} text-white px-5 py-3 rounded-xl shadow-xl z-[999999] flex items-center gap-2.5 font-medium text-sm`;
+        el.style.animation = 'slideInRight 0.3s ease-out';
+        el.innerHTML = `
+            <svg class="flex-shrink-0 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">${icons[type]}</svg>
+            <span>${message}</span>
+        `;
+        document.body.appendChild(el);
+        setTimeout(() => {
+            el.style.animation = 'slideOutRight 0.3s ease-in forwards';
+            setTimeout(() => el.remove(), 300);
+        }, 3000);
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        @auth
+            @if(auth()->user()->isFavorited($publication->id))
+                setFavoriteState(true);
+            @endif
+            @if(auth()->user()->isSaved($publication->id))
+                setSaveState(true);
+            @endif
+        @endauth
+
+        const urlParams  = new URLSearchParams(window.location.search);
+        const afterLogin = urlParams.get('after_login');
+
+        if (afterLogin && isLoggedIn) {
+            history.replaceState(null, '', window.location.pathname);
+            const btnId = afterLogin === 'favorite' ? 'btnFavorite' : 'btnSave';
+            const btn   = document.getElementById(btnId);
+            if (btn) {
+                btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                btn.classList.add('action-pulse');
+                setTimeout(() => btn.classList.remove('action-pulse'), 800);
             }
-        }, 800);
-    }
-});
+            setTimeout(() => {
+                if (afterLogin === 'favorite') doToggleFavorite();
+                else if (afterLogin === 'save') doSaveForLater();
+            }, 800);
+        }
+    });
 
-// ── Tutup modal dengan Escape ───────────────────────────────
-document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') {
-        const loginModal = document.getElementById('loginRequiredModal');
-        if (loginModal.style.display === 'block') closeLoginModal();
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            const loginModal = document.getElementById('loginRequiredModal');
+            if (loginModal.style.display === 'block') closeLoginModal();
+            const authorsModal = document.getElementById('authorsModal');
+            if (authorsModal && authorsModal.style.display === 'block') closeAuthorsModal();
+        }
+    });
 
-        const authorsModal = document.getElementById('authorsModal');
-        if (authorsModal && authorsModal.style.display === 'block') closeAuthorsModal();
-    }
-});
-
-// ── CSS Animations ──────────────────────────────────────────
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideInRight {
-        from { transform: translateX(110%); opacity: 0; }
-        to   { transform: translateX(0);    opacity: 1; }
-    }
-    @keyframes slideOutRight {
-        from { transform: translateX(0);    opacity: 1; }
-        to   { transform: translateX(110%); opacity: 0; }
-    }
-`;
-document.head.appendChild(style);
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideInRight {
+            from { transform: translateX(110%); opacity: 0; }
+            to   { transform: translateX(0);    opacity: 1; }
+        }
+        @keyframes slideOutRight {
+            from { transform: translateX(0);    opacity: 1; }
+            to   { transform: translateX(110%); opacity: 0; }
+        }
+    `;
+    document.head.appendChild(style);
 </script>
 @endpush
