@@ -5,12 +5,12 @@ namespace App\Http\Controllers\Publication;
 use App\Actions\Author\GetBestAuthorsAction as AuthorGetBestAuthorsAction;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Traits\PublicationHelperTrait;
-use App\Actions\GetBestAuthorsAction;
 use App\Models\Publication;
 use App\Models\PublicationType;
 use App\Models\Category;
 use App\Models\Keyword;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class PublicationIndexController extends Controller
 {
@@ -20,7 +20,6 @@ class PublicationIndexController extends Controller
 
     public function index(Request $request)
     {
-        // ✅ Cek tour — letakkan paling atas agar tersedia di semua return path
         $showTour = ! request()->cookie('has_seen_index_tour');
 
         $publicationTypes = PublicationType::with('content')
@@ -42,7 +41,7 @@ class PublicationIndexController extends Controller
                 'topKeywords'         => collect(),
                 'filterSort'          => 'latest',
                 'searchQuery'         => null,
-                'showTour'            => $showTour, // ✅ tambahkan di empty state juga
+                'showTour'            => $showTour,
             ]);
         }
 
@@ -50,8 +49,7 @@ class PublicationIndexController extends Controller
         $filterSort   = $request->query('sort', 'latest');
         $searchQuery  = null;
 
-        $typeExists = $publicationTypes->contains('slug', $selectedType);
-        if (!$typeExists) {
+        if (!$publicationTypes->contains('slug', $selectedType)) {
             $selectedType = $publicationTypes->first()->slug;
         }
 
@@ -76,17 +74,13 @@ class PublicationIndexController extends Controller
             $query->where('status', 'published')
                 ->whereNotNull('published_at')
                 ->where('published_at', '<=', now())
-                ->whereHas('publicationType', function ($q) use ($selectedType) {
-                    $q->where('slug', $selectedType)->where('is_active', true);
-                });
+                ->whereHas('publicationType', fn($q) => $q->where('slug', $selectedType)->where('is_active', true));
         })
             ->withCount(['publications' => function ($query) use ($selectedType) {
                 $query->where('status', 'published')
                     ->whereNotNull('published_at')
                     ->where('published_at', '<=', now())
-                    ->whereHas('publicationType', function ($q) use ($selectedType) {
-                        $q->where('slug', $selectedType)->where('is_active', true);
-                    });
+                    ->whereHas('publicationType', fn($q) => $q->where('slug', $selectedType)->where('is_active', true));
             }])
             ->orderBy('name')
             ->get();
@@ -95,9 +89,7 @@ class PublicationIndexController extends Controller
             ->where('status', 'published')
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now())
-            ->whereHas('publicationType', function ($query) use ($selectedType) {
-                $query->where('slug', $selectedType)->where('is_active', true);
-            })
+            ->whereHas('publicationType', fn($q) => $q->where('slug', $selectedType)->where('is_active', true))
             ->groupBy('year')
             ->orderByDesc('year')
             ->pluck('year');
@@ -106,17 +98,13 @@ class PublicationIndexController extends Controller
             $query->where('status', 'published')
                 ->whereNotNull('published_at')
                 ->where('published_at', '<=', now())
-                ->whereHas('publicationType', function ($q) use ($selectedType) {
-                    $q->where('slug', $selectedType)->where('is_active', true);
-                });
+                ->whereHas('publicationType', fn($q) => $q->where('slug', $selectedType)->where('is_active', true));
         })
             ->withCount(['publications' => function ($query) use ($selectedType) {
                 $query->where('status', 'published')
                     ->whereNotNull('published_at')
                     ->where('published_at', '<=', now())
-                    ->whereHas('publicationType', function ($q) use ($selectedType) {
-                        $q->where('slug', $selectedType)->where('is_active', true);
-                    });
+                    ->whereHas('publicationType', fn($q) => $q->where('slug', $selectedType)->where('is_active', true));
             }])
             ->orderByDesc('publications_count')
             ->limit(20)
@@ -126,9 +114,7 @@ class PublicationIndexController extends Controller
             ->where('status', 'published')
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now())
-            ->whereHas('publicationType', function ($query) use ($selectedType) {
-                $query->where('slug', $selectedType)->where('is_active', true);
-            });
+            ->whereHas('publicationType', fn($q) => $q->where('slug', $selectedType)->where('is_active', true));
 
         switch ($filterSort) {
             case 'popular':
@@ -140,7 +126,6 @@ class PublicationIndexController extends Controller
             case 'title':
                 $publicationsQuery->orderBy('title', 'asc');
                 break;
-            case 'latest':
             default:
                 $publicationsQuery->orderBy('published_at', 'desc');
                 break;
@@ -161,11 +146,11 @@ class PublicationIndexController extends Controller
                 'status'           => $pub->publicationType?->requires_review ? 'Peer-reviewed' : 'Terverifikasi',
                 'type'             => $pubType,
                 'detail_url'       => route('publikasi.show', $pub->slug),
-                'authors'          => $pub->authors->take(6)->map(fn($author) => [
-                    'id'       => $author->id,
-                    'name'     => $author->name,
-                    'photo'    => $author->photo_url,
-                    'initials' => $author->initials,
+                'authors'          => $pub->authors->take(6)->map(fn($a) => [
+                    'id'       => $a->id,
+                    'name'     => $a->name,
+                    'photo'    => $a->photo_url,
+                    'initials' => $a->initials,
                 ])->toArray(),
                 'total_authors'    => $pub->authors->count(),
             ];
@@ -173,19 +158,17 @@ class PublicationIndexController extends Controller
 
         $bestAuthors = $this->getBestAuthorsAction->execute($selectedType, 6);
 
+        // ✅ FIX: viewLogs pakai viewed_at bukan created_at
+        // Relasi viewLogs → tabel publication_view_logs, kolom timestamp = viewed_at
         $popularPubs = Publication::with(['authors.user', 'publicationType', 'categories'])
             ->withCount([
-                // ✅ Pakai semua waktu (bukan 7 hari) untuk homepage — lebih stabil
-                'viewLogs as total_views',
+                'viewLogs as total_views',       // ← tanpa filter waktu = semua waktu
                 'downloadLogs as total_downloads',
             ])
             ->where('status', 'published')
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now())
-            ->whereHas('publicationType', function ($q) use ($selectedType) {
-                $q->where('slug', $selectedType)->where('is_active', true);
-            })
-            // ✅ Sort di DB langsung — bukan di PHP setelah get()
+            ->whereHas('publicationType', fn($q) => $q->where('slug', $selectedType)->where('is_active', true))
             ->orderByRaw('(total_views + total_downloads * 2) DESC')
             ->take(6)
             ->get();
@@ -203,13 +186,12 @@ class PublicationIndexController extends Controller
                 'category'         => $featuredPub->category_name,
                 'publication_type' => $featuredPubType,
                 'type'             => $featuredPubType,
-                'abstract'         => \Illuminate\Support\Str::limit($featuredPub->abstract, 120),
-                'download_count'   => $featuredPub->download_logs_count,
+                'abstract'         => Str::limit(strip_tags($featuredPub->abstract ?? ''), 120),
+                'download_count'   => (int) $featuredPub->total_downloads,
                 'detail_url'       => route('publikasi.show', $featuredPub->slug),
             ];
         }
 
-        $skipCount          = $featuredTypeContent ? 0 : 1;
         $popularPublications = $popularPubs->map(function ($pub) {
             $pubType       = $pub->publicationType?->name ?? 'Publikasi';
             $trendingScore = (int) $pub->total_views + ((int) $pub->total_downloads * 2);
@@ -221,8 +203,8 @@ class PublicationIndexController extends Controller
                 'cover_url'        => $this->getCoverUrl($pub),
                 'category'         => $pub->category_name ?? ($pub->categories->first()?->name ?? 'Umum'),
                 'publication_type' => $pubType,
-                'formatted_date'   => $pub->formatted_date ?? ($pub->published_at?->locale('id')->isoFormat('D MMMM YYYY') ?? ''),
-                // ✅ Key konsisten dengan yang dipakai blade popular-item
+                'formatted_date'   => $pub->formatted_date
+                    ?? ($pub->published_at?->locale('id')->isoFormat('D MMMM YYYY') ?? ''),
                 'download_count'   => (int) $pub->total_downloads,
                 'views_count'      => (int) $pub->total_views,
                 'trending_score'   => $trendingScore,
@@ -250,7 +232,7 @@ class PublicationIndexController extends Controller
             'topKeywords',
             'filterSort',
             'searchQuery',
-            'showTour', // ✅ ini yang sebelumnya hilang!
+            'showTour',
         ));
     }
 }

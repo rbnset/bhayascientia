@@ -28,9 +28,11 @@ class PublicationTrendingController extends Controller
 
         $query = Publication::with(['authors.user', 'publicationType', 'categories'])
             ->withCount([
+                // ✅ FIX: kolom timestamp di publication_view_logs adalah viewed_at bukan created_at
                 'viewLogs as recent_views' => function ($query) use ($daysAgo) {
-                    $query->where('created_at', '>=', now()->subDays($daysAgo));
+                    $query->where('viewed_at', '>=', now()->subDays($daysAgo));
                 },
+                // download_logs pakai created_at (konfirmasi dengan DESCRIBE download_logs)
                 'downloadLogs as recent_downloads' => function ($query) use ($daysAgo) {
                     $query->where('created_at', '>=', now()->subDays($daysAgo));
                 },
@@ -72,8 +74,6 @@ class PublicationTrendingController extends Controller
                     ? ($pub->authors->first()->name ?? 'Unknown')
                     : 'Anonymous';
 
-                // ✅ FIX: Hapus 'v' => time() — ini yang membunuh cache placeholder
-                // Cache key tidak pernah hit karena time() selalu berbeda tiap request
                 $placeholderUrl = route('placeholder.cover', [
                     'initials' => $initials,
                     'type'     => $pubType,
@@ -82,7 +82,6 @@ class PublicationTrendingController extends Controller
                     'author'   => $firstAuthor,
                 ]);
 
-                // ✅ Hitung trending_score sekali di sini — konsisten dengan urutan DB
                 $trendingScore = $pub->recent_views + ($pub->recent_downloads * 2);
 
                 return [
@@ -98,7 +97,6 @@ class PublicationTrendingController extends Controller
                     'type'             => $pubType,
                     'type_slug'        => $pub->publicationType?->slug ?? 'publikasi',
                     'detail_url'       => route('publikasi.show', $pub->slug),
-                    // ✅ Semua key score konsisten — dipakai blade untuk sort
                     'trending_score'   => $trendingScore,
                     'views_count'      => $pub->recent_views,
                     'download_count'   => $pub->recent_downloads,
@@ -114,7 +112,6 @@ class PublicationTrendingController extends Controller
                 ];
             });
 
-        // Type stats
         $typeStats = [];
         foreach ($publicationTypes as $type) {
             $count = $trendingPublications->where('type_slug', $type->slug)->count();

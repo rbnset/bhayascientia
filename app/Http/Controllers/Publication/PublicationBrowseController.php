@@ -23,7 +23,6 @@ class PublicationBrowseController extends Controller
         $filterSort     = $request->get('sort', 'latest');
         $perPage        = $request->get('per_page', 12);
 
-        // Get publication types
         $publicationTypes = PublicationType::where('is_active', true)
             ->withCount(['publications' => function ($q) {
                 $q->where('status', 'published')
@@ -34,41 +33,45 @@ class PublicationBrowseController extends Controller
             ->get();
 
         // Base query
+        // ✅ FIX: Ganti eager load viewLogs & downloadLogs (load semua baris = lambat)
+        // dengan withCount — hanya hitung jumlahnya di DB, jauh lebih efisien
         $query = Publication::with([
             'publicationType',
             'categories',
             'authors.user',
             'versions',
-            'viewLogs',
-            'downloadLogs',
         ])
+            ->withCount([
+                // ✅ FIX: viewLogs pakai tabel publication_view_logs, kolom viewed_at
+                // withCount tidak butuh nama kolom timestamp — hanya count() saja
+                'viewLogs as views_count',
+                'downloadLogs as downloads_count',
+            ])
             ->where('status', 'published')
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now());
 
-        // Filter by type
         if ($selectedType !== 'all') {
             $query->whereHas('publicationType', function ($q) use ($selectedType) {
                 $q->where('slug', $selectedType);
             });
         }
 
-        // Filter by category
         if ($filterCategory) {
             $query->whereHas('categories', function ($q) use ($filterCategory) {
                 $q->where('slug', $filterCategory);
             });
         }
 
-        // Filter by year
         if ($filterYear) {
             $query->whereYear('published_at', $filterYear);
         }
 
-        // Sorting
         switch ($filterSort) {
             case 'popular':
-                $query->withCount('downloadLogs')->orderByDesc('download_logs_count');
+                // ✅ FIX: sort by trending score (views + downloads * 2)
+                // konsisten dengan TrendingController dan IndexController
+                $query->orderByRaw('(views_count + downloads_count * 2) DESC');
                 break;
             case 'oldest':
                 $query->orderBy('published_at', 'asc');
@@ -84,7 +87,6 @@ class PublicationBrowseController extends Controller
 
         $publications = $query->paginate($perPage)->withQueryString();
 
-        // Get categories with publication count
         $categories = Category::whereHas('publications', function ($q) {
             $q->where('status', 'published')
                 ->whereNotNull('published_at')
@@ -99,7 +101,6 @@ class PublicationBrowseController extends Controller
             ->orderByDesc('publications_count')
             ->get();
 
-        // Get available years
         $years = Publication::where('status', 'published')
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now())
@@ -108,14 +109,11 @@ class PublicationBrowseController extends Controller
             ->orderByDesc('year')
             ->pluck('year');
 
-        // Format publications for view
         $formattedPublications = $publications->map(function ($publication) {
             $category = $publication->categories->first();
-
-            $pubType = $publication->publicationType?->name ?? 'Publikasi';
+            $pubType  = $publication->publicationType?->name ?? 'Publikasi';
             $coverUrl = $this->getCoverUrl($publication);
 
-            // ✅ FIX: strip_tags agar tag HTML seperti <p> tidak ikut tampil di card
             $abstract = $publication->abstract
                 ? Str::limit(strip_tags($publication->abstract), 150)
                 : null;
@@ -142,14 +140,14 @@ class PublicationBrowseController extends Controller
                         'profile_url' => route('author.profile', $author->user_id ?? $author->id),
                     ];
                 })->toArray(),
-                'total_authors'    => $publication->authors->count(),
-                'views_count'      => $publication->viewLogs->count(),
-                'download_count'   => $publication->downloadLogs->count(),
-                'downloads_count'  => $publication->downloadLogs->count(),
+                'total_authors'   => $publication->authors->count(),
+                // ✅ Ambil dari withCount — bukan dari relasi eager load
+                'views_count'     => (int) $publication->views_count,
+                'download_count'  => (int) $publication->downloads_count,
+                'downloads_count' => (int) $publication->downloads_count,
             ];
         });
 
-        // Statistics
         $stats = [
             'total'      => Publication::where('status', 'published')
                 ->whereNotNull('published_at')

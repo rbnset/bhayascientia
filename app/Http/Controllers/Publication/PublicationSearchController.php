@@ -23,18 +23,15 @@ class PublicationSearchController extends Controller
         $filterYear     = $request->query('year');
         $filterSort     = $request->query('sort', 'latest');
 
-        // ✅ FIX: normalize keyword jadi array
         $filterKeyword = $request->input('keyword', []);
         $filterKeyword = is_array($filterKeyword)
             ? array_values(array_filter($filterKeyword))
             : array_filter([$filterKeyword]);
 
-        // Publication types
         $publicationTypes = PublicationType::where('is_active', true)
             ->orderBy('name')
             ->get(['id', 'slug', 'name']);
 
-        // Categories
         $categories = Category::whereHas('publications', function ($query) {
             $query->where('status', 'published')
                 ->whereNotNull('published_at')
@@ -48,7 +45,6 @@ class PublicationSearchController extends Controller
             ->orderBy('name')
             ->get();
 
-        // Years
         $years = Publication::selectRaw('YEAR(published_at) as year')
             ->where('status', 'published')
             ->whereNotNull('published_at')
@@ -57,7 +53,6 @@ class PublicationSearchController extends Controller
             ->orderByDesc('year')
             ->pluck('year');
 
-        // Top keywords
         $topKeywords = Keyword::whereHas('publications', function ($query) {
             $query->where('status', 'published')
                 ->whereNotNull('published_at')
@@ -90,13 +85,9 @@ class PublicationSearchController extends Controller
                     ->orWhere('abstract', 'LIKE', "%{$searchQuery}%")
                     ->orWhereHas('authors', function ($authorQuery) use ($searchQuery) {
                         $authorQuery->where(function ($aq) use ($searchQuery) {
-
-                            // ✅ Kasus 1: External author (tidak punya akun)
-                            // name tersimpan langsung di kolom authors.name
+                            // External author — name di kolom authors.name
                             $aq->where('authors.name', 'LIKE', "%{$searchQuery}%");
-
-                            // ✅ Kasus 2: Linked author (punya akun / user_id tidak NULL)
-                            // name ada di users.name, bukan di authors.name (authors.name = NULL)
+                            // Linked author — name di users.name
                             $aq->orWhereHas('user', function ($uq) use ($searchQuery) {
                                 $uq->where('name', 'LIKE', "%{$searchQuery}%");
                             });
@@ -115,7 +106,6 @@ class PublicationSearchController extends Controller
             $query->whereYear('published_at', $filterYear);
         }
 
-        // ✅ FIX: support multi keyword (array)
         if (!empty($filterKeyword)) {
             $query->whereHas('keywords', function ($q) use ($filterKeyword) {
                 $q->whereIn('slug', $filterKeyword);
@@ -124,7 +114,12 @@ class PublicationSearchController extends Controller
 
         switch ($filterSort) {
             case 'popular':
-                $query->withCount('downloadLogs')->orderByDesc('download_logs_count');
+                // ✅ FIX: sort by trending score konsisten dengan controller lain
+                // viewLogs → tabel publication_view_logs, kolom viewed_at
+                $query->withCount([
+                    'viewLogs as total_views',
+                    'downloadLogs as total_downloads',
+                ])->orderByRaw('(total_views + total_downloads * 2) DESC');
                 break;
             case 'oldest':
                 $query->orderBy('published_at', 'asc');
@@ -138,7 +133,6 @@ class PublicationSearchController extends Controller
                 break;
         }
 
-        // ✅ 9 per halaman
         $publications = $query->paginate(9)->withQueryString();
 
         $searchResults = $publications->map(function ($pub) {
@@ -149,7 +143,12 @@ class PublicationSearchController extends Controller
                 ?? ($pub->published_at
                     ? $pub->published_at->locale('id_ID')->isoFormat('D MMM Y')
                     : 'Tanggal tidak tersedia');
-            $abstract = Str::limit($pub->abstract ?? 'Tidak ada abstrak tersedia', 150);
+
+            // ✅ FIX: strip_tags agar tag HTML seperti <p> tidak ikut tampil di card
+            $abstract = Str::limit(
+                strip_tags($pub->abstract ?? 'Tidak ada abstrak tersedia'),
+                150
+            );
 
             return [
                 'id'               => $pub->id,
