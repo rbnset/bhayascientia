@@ -407,10 +407,39 @@ keamanan, kebijakan publik, serta keilmuan terkait lainnya.',
     function closeModal() {
         if (!modal) return;
 
+        // ✅ Exit fullscreen dulu sebelum tutup modal
+        if (document.fullscreenElement) {
+            document.exitFullscreen().catch(() => {});
+        } else if (document.webkitFullscreenElement) {
+            document.webkitExitFullscreen();
+        } else if (document.mozFullScreenElement) {
+            document.mozCancelFullScreen();
+        } else if (document.msFullscreenElement) {
+            document.msExitFullscreen();
+        }
+
         modal.classList.remove('show');
         videoFrame.src = '';
         document.body.style.overflow = '';
     }
+
+    // ✅ Kalau user ESC dari fullscreen tapi modal masih terbuka — tutup modal juga
+    document.addEventListener('fullscreenchange', () => {
+        if (!document.fullscreenElement && modal?.classList.contains('show')) {
+            modal.classList.remove('show');
+            videoFrame.src = '';
+            document.body.style.overflow = '';
+        }
+    });
+
+    // Safari
+    document.addEventListener('webkitfullscreenchange', () => {
+        if (!document.webkitFullscreenElement && modal?.classList.contains('show')) {
+            modal.classList.remove('show');
+            videoFrame.src = '';
+            document.body.style.overflow = '';
+        }
+    });
 
     closeBtns.forEach(btn => {
         btn.addEventListener('click', closeModal);
