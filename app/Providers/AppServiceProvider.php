@@ -3,17 +3,20 @@
 namespace App\Providers;
 
 use App\Actions\Author\GetBestAuthorsAction;
+use App\Models\Author;
 use App\Models\Publication;
+use App\Models\User;
+use App\Observers\PublicationObserver;
+use App\Observers\UserRoleObserver;
 use App\Repositories\AuthorRepository;
 use App\Services\AuthorService;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
-use App\Observers\PublicationObserver;
-
-
+use Spatie\Permission\Events\RoleAssigned;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -39,6 +42,41 @@ class AppServiceProvider extends ServiceProvider
 
         // ── Observer: auto-generate PDF cache saat publikasi di-publish ───────
         Publication::observe(PublicationObserver::class);
+
+        // ── Observer: menangani event saved/updated biasa pada User ───────────
+        User::observe(UserRoleObserver::class);
+
+        // ── Spatie v6: auto-create author profile saat role author di-assign ──
+        // Event RoleAssigned fired setiap kali assignRole() / syncRoles() dipanggil
+        // $event->role berisi object Role yang di-assign (ada property ->name)
+        Event::listen(RoleAssigned::class, function (RoleAssigned $event) {
+            $user = $event->model;
+
+            // Pastikan yang di-assign adalah User, bukan model lain
+            if (! $user instanceof User) {
+                return;
+            }
+
+            // Cek spesifik role 'author' yang di-assign — lebih efisien
+            // daripada refresh + hasRole() yang query ulang semua roles
+            if ($event->role->name !== 'author') {
+                return;
+            }
+
+            // Jangan buat duplikat jika author profile sudah ada
+            if ($user->authorProfile()->exists()) {
+                return;
+            }
+
+            Author::create([
+                'user_id'     => $user->id,
+                'name'        => null,
+                'email'       => null,
+                'affiliation' => null,
+                'bio'         => null,
+                'photo_path'  => null,
+            ]);
+        });
 
         // ── Library badge count via View Composer ─────────────────────────────
         \Illuminate\Support\Facades\View::composer('*', function ($view) {
