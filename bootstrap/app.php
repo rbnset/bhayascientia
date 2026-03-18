@@ -14,9 +14,9 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // ── Alias Middleware ──────────────────────────────────────────────────
         // Dipanggil via ->middleware('nama') di route tertentu
-        // $middleware->alias([
-        //     'verified.otp' => \App\Http\Middleware\EnsureEmailIsVerified::class,
-        // ]);
+        $middleware->alias([
+            'verified.otp' => \App\Http\Middleware\EnsureEmailIsVerified::class,
+        ]);
 
         // ── Global Web Middleware ─────────────────────────────────────────────
         // Urutan eksekusi: dari atas ke bawah
@@ -26,12 +26,12 @@ return Application::configure(basePath: dirname(__DIR__))
 
             // 1. Security headers — ditambahkan ke semua response
             //    Tidak butuh session, aman di posisi pertama
-            // \App\Http\Middleware\SecurityHeaders::class,
+            \App\Http\Middleware\SecurityHeaders::class,
 
             // 2. Onboarding gate — cek apakah user sudah lihat onboarding
             //    Butuh: session (sudah siap), cookie (sudah didekripsi)
             //    Harus setelah semua middleware web bawaan Laravel
-            // \App\Http\Middleware\EnsureOnboardingComplete::class,
+            \App\Http\Middleware\EnsureOnboardingComplete::class,
 
         ]);
     })
