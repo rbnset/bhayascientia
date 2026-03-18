@@ -14,7 +14,7 @@
 {{-- ✨ Wrapper dengan overflow control --}}
 <div class="w-full overflow-x-hidden">
     <x-hero.home badge-icon="assets/images/icons/crown.svg" badge-text="Where Knowledge Shapes Policing."
-        youtube-id="rJQOQCe30EY" />
+        youtube-id="kBO2C2e4Az0" />
 
     <x-sections.steps />
     <x-sections.featured-tabs />

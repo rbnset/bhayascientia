@@ -90,14 +90,14 @@ keamanan, kebijakan publik, serta keilmuan terkait lainnya.',
                         {{ $primaryLabel }}
                     </a>
 
-                    {{-- <button type="button" data-video-open data-youtube-id="{{ $youtubeId }}"
+                    <button type="button" data-video-open data-youtube-id="{{ $youtubeId }}"
                         class="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-[#111827] bg-white px-6 py-3.5 text-sm font-bold text-[#111827] transition-all duration-300 hover:border-[#FF6B18] hover:bg-[#FF6B18] hover:text-white sm:text-base focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2">
                         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                             <path
                                 d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" />
                         </svg>
                         {{ $secondaryLabel }}
-                    </button> --}}
+                    </button>
                 </div>
 
                 {{-- Trust Indicators (Optional) --}}
