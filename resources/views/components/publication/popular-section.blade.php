@@ -11,14 +11,13 @@ $hasPublications = is_array($publications)
 ? count($publications) > 0
 : (method_exists($publications, 'isNotEmpty') ? $publications->isNotEmpty() : count($publications) > 0);
 
-// ✅ Sort by trending_score DESC di Blade sebagai double-safety
-$sortedPublications = collect($publications)->sortByDesc(function ($pub) {
-return (int) ($pub['trending_score'] ?? (
-(int) ($pub['views_count'] ?? 0) + ((int) ($pub['download_count'] ?? 0) * 2)
-));
-})->values();
+// ✅ FIX: Tidak re-sort di blade — urutan sudah benar dari controller
+// Sebelumnya sortByDesc di blade pakai key berbeda (views_count + download_count * 2)
+// sedangkan controller pakai recent_views + recent_downloads * 2
+// → hasilnya urutan tidak konsisten dan bisa berbeda
+// Sekarang cukup convert ke collection tanpa sort ulang
+$sortedPublications = collect($publications)->values();
 
-// ✅ Cek apakah ada TypeContent valid
 $hasFeaturedContent = $featuredTypeContent && (
 (is_object($featuredTypeContent) && ($featuredTypeContent->title || $featuredTypeContent->image_url)) ||
 (is_array($featuredTypeContent) && !empty($featuredTypeContent['title']))
@@ -59,15 +58,13 @@ $hasFeaturedContent = $featuredTypeContent && (
         @endif
     </div>
 
-    {{-- ======================== Content Layout ======================== --}}
+    {{-- Content Layout --}}
     <div class="flex flex-col gap-6 lg:flex-row lg:items-stretch lg:justify-between lg:gap-6">
 
-        {{-- ======================== KIRI: Featured Type Content SAJA ======================== --}}
-        {{-- Lebar kiri menyesuaikan: kalau tidak ada list kanan, melebar penuh --}}
+        {{-- KIRI: Featured Type Content --}}
         <div class="{{ $hasPublications ? 'w-full lg:w-[calc(100%-455px-24px)] lg:min-w-[260px]' : 'w-full' }}">
 
             @if($hasFeaturedContent && is_object($featuredTypeContent))
-            {{-- ✅ Instance model PublicationTypeContent --}}
             <x-publication.featured-card
                 :title="$featuredTypeContent->title ?? ($featuredTypeContent->publicationType?->name ?? 'Publikasi')"
                 :coverUrl="$featuredTypeContent->image_url"
@@ -77,8 +74,8 @@ $hasFeaturedContent = $featuredTypeContent && (
                 :abstract="$featuredTypeContent->description" :downloadCount="0"
                 :detailUrl="route('publikasi.browse', ['type' => $featuredTypeContent->publicationType?->slug ?? 'publikasi'])"
                 :slug="$featuredTypeContent->publicationType?->slug ?? ''" />
+
             @elseif($hasFeaturedContent && is_array($featuredTypeContent))
-            {{-- ✅ Fallback array --}}
             <x-publication.featured-card
                 :title="$featuredTypeContent['title'] ?? ($featuredTypeContent['publication_type'] ?? 'Publikasi')"
                 :coverUrl="$featuredTypeContent['cover_url'] ?? null"
@@ -87,12 +84,11 @@ $hasFeaturedContent = $featuredTypeContent && (
                 :type="$featuredTypeContent['type'] ?? 'publikasi'" :abstract="$featuredTypeContent['abstract'] ?? null"
                 :downloadCount="$featuredTypeContent['download_count'] ?? 0"
                 :detailUrl="$featuredTypeContent['detail_url'] ?? '#'" :slug="$featuredTypeContent['slug'] ?? ''" />
+
             @else
-            {{-- ✅ EMPTY STATE KIRI - Tidak ada TypeContent, TIDAK pakai publikasi populer --}}
+            {{-- Empty State Kiri --}}
             <div
                 class="h-full min-h-[320px] lg:min-h-[424px] flex flex-col items-center justify-center rounded-[28px] border-2 border-dashed border-[#EEF0F7] bg-gradient-to-br from-[#FAFBFC] to-white p-8 sm:p-10 text-center relative overflow-hidden">
-
-                {{-- Background decoration --}}
                 <div
                     class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#FFF5ED] to-transparent rounded-bl-full opacity-60 pointer-events-none">
                 </div>
@@ -100,7 +96,6 @@ $hasFeaturedContent = $featuredTypeContent && (
                     class="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-[#FFF5ED] to-transparent rounded-tr-full opacity-60 pointer-events-none">
                 </div>
 
-                {{-- Icon --}}
                 <div class="relative mb-5">
                     <div
                         class="flex h-[72px] w-[72px] items-center justify-center rounded-2xl bg-gradient-to-br from-[#FFF5ED] to-[#FFE4CC] shadow-sm">
@@ -109,7 +104,6 @@ $hasFeaturedContent = $featuredTypeContent && (
                                 d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
                     </div>
-                    {{-- Badge status --}}
                     <span
                         class="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#FF6B18] text-white shadow">
                         <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
@@ -120,16 +114,13 @@ $hasFeaturedContent = $featuredTypeContent && (
                     </span>
                 </div>
 
-                <h3 class="mb-2 font-bold text-[15px] text-[#1A1D29]">
-                    Konten Unggulan Belum Ditambahkan
-                </h3>
+                <h3 class="mb-2 font-bold text-[15px] text-[#1A1D29]">Konten Unggulan Belum Ditambahkan</h3>
                 <p class="text-[13px] text-[#A3A6AE] mb-6 max-w-[220px] leading-relaxed">
                     Tambahkan gambar & deskripsi unggulan untuk
                     <span class="font-semibold text-[#FF6B18]">{{ ucfirst($selectedType) }}</span>
                     melalui panel admin
                 </p>
 
-                {{-- Step guide --}}
                 <div class="w-full max-w-[260px] space-y-2 mb-6 text-left">
                     <div class="flex items-start gap-2.5 p-2.5 rounded-[10px] bg-[#F8F9FA]">
                         <span
@@ -164,7 +155,7 @@ $hasFeaturedContent = $featuredTypeContent && (
             @endif
         </div>
 
-        {{-- ======================== KANAN: List Popular ======================== --}}
+        {{-- KANAN: List Popular — urutan dari controller, tidak di-sort ulang --}}
         @if($hasPublications)
         <div
             class="custom-scrollbar relative w-full overflow-x-hidden overflow-y-auto lg:h-[424px] lg:w-[455px] lg:px-5">
@@ -183,8 +174,9 @@ $hasFeaturedContent = $featuredTypeContent && (
                 class="sticky bottom-0 z-10 hidden h-[100px] w-full bg-gradient-to-b from-[rgba(255,255,255,0.19)] to-[rgba(255,255,255,1)] lg:block">
             </div>
         </div>
+
         @else
-        {{-- ✅ Empty State Kanan - tidak ada publikasi sama sekali --}}
+        {{-- Empty State Kanan --}}
         <div
             class="w-full lg:w-[455px] flex flex-col items-center justify-center rounded-[24px] bg-gradient-to-br from-[#FAFBFC] to-white p-8 text-center ring-1 ring-[#EEF0F7] min-h-[320px] lg:min-h-[424px]">
             <div class="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#FFF5ED]">

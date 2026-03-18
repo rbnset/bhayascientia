@@ -14,14 +14,14 @@ class PublicationTrendingController extends Controller
 
     public function trending(Request $request)
     {
-        $period = $request->query('period', 7);
+        $period   = $request->query('period', 7);
         $typeSlug = $request->query('type', 'all');
 
         if (!in_array($period, [7, 30])) {
             $period = 7;
         }
 
-        $daysAgo = (int) $period;
+        $daysAgo          = (int) $period;
         $publicationTypes = PublicationType::where('is_active', true)
             ->orderBy('name')
             ->get(['id', 'slug', 'name']);
@@ -33,7 +33,7 @@ class PublicationTrendingController extends Controller
                 },
                 'downloadLogs as recent_downloads' => function ($query) use ($daysAgo) {
                     $query->where('created_at', '>=', now()->subDays($daysAgo));
-                }
+                },
             ])
             ->where('status', 'published')
             ->whereNotNull('published_at')
@@ -46,7 +46,7 @@ class PublicationTrendingController extends Controller
         }
 
         $trendingPublications = $query
-            ->orderByRaw('recent_views + recent_downloads * 2 DESC')
+            ->orderByRaw('(recent_views + recent_downloads * 2) DESC')
             ->orderByDesc('recent_downloads')
             ->orderByDesc('recent_views')
             ->orderByDesc('published_at')
@@ -56,17 +56,10 @@ class PublicationTrendingController extends Controller
             ->take(10)
             ->values()
             ->map(function ($pub) {
-                // ✅ Get publication type with fallback
-                $pubType = 'Publikasi';
-                if ($pub->publicationType) {
-                    $pubType = $pub->publicationType->name;
-                }
-
-                // ✅ Get cover URL using trait method (returns NULL if no cover)
+                $pubType  = $pub->publicationType?->name ?? 'Publikasi';
                 $coverUrl = $this->getCoverUrl($pub);
 
-                // ✅ Generate initials for placeholder
-                $words = array_filter(explode(' ', $pub->title));
+                $words    = array_filter(explode(' ', $pub->title));
                 $initials = '';
                 foreach (array_slice($words, 0, 2) as $word) {
                     $initials .= mb_strtoupper(mb_substr(trim($word), 0, 1));
@@ -75,56 +68,49 @@ class PublicationTrendingController extends Controller
                     $initials = mb_strtoupper(mb_substr($pub->title, 0, 2));
                 }
 
-                // ✅ Get first author
-                $firstAuthor = 'Anonymous';
-                if ($pub->authors->isNotEmpty()) {
-                    $firstAuthor = $pub->authors->first()->name ?? 'Unknown';
-                }
+                $firstAuthor = $pub->authors->isNotEmpty()
+                    ? ($pub->authors->first()->name ?? 'Unknown')
+                    : 'Anonymous';
 
-                // ✅ Generate placeholder URL
+                // ✅ FIX: Hapus 'v' => time() — ini yang membunuh cache placeholder
+                // Cache key tidak pernah hit karena time() selalu berbeda tiap request
                 $placeholderUrl = route('placeholder.cover', [
                     'initials' => $initials,
-                    'type' => $pubType,
-                    'title' => $pub->title,
+                    'type'     => $pubType,
+                    'title'    => $pub->title,
                     'category' => $pub->category_name,
-                    'author' => $firstAuthor,
-                    'v' => time(),
+                    'author'   => $firstAuthor,
                 ]);
 
-                // ✅ DEBUG LOG
-                if (config('app.debug')) {
-                    \Log::info('Trending Publication Cover Debug', [
-                        'id' => $pub->id,
-                        'title' => \Illuminate\Support\Str::limit($pub->title, 50),
-                        'cover_url' => $coverUrl,
-                        'placeholder_url' => $placeholderUrl,
-                        'is_null' => is_null($coverUrl),
-                    ]);
-                }
+                // ✅ Hitung trending_score sekali di sini — konsisten dengan urutan DB
+                $trendingScore = $pub->recent_views + ($pub->recent_downloads * 2);
 
                 return [
-                    'id' => $pub->id,
-                    'title' => $pub->title,
-                    'slug' => $pub->slug,
-                    'cover_url' => $coverUrl, // NULL jika tidak ada cover
-                    'placeholder_url' => $placeholderUrl, // ✅ ADDED: URL placeholder
-                    'initials' => $initials, // ✅ ADDED: Untuk fallback di blade
-                    'category' => $pub->category_name,
-                    'formatted_date' => $pub->formatted_date,
+                    'id'               => $pub->id,
+                    'title'            => $pub->title,
+                    'slug'             => $pub->slug,
+                    'cover_url'        => $coverUrl,
+                    'placeholder_url'  => $placeholderUrl,
+                    'initials'         => $initials,
+                    'category'         => $pub->category_name,
+                    'formatted_date'   => $pub->formatted_date,
                     'publication_type' => $pubType,
-                    'type' => $pubType,
-                    'type_slug' => $pub->publicationType->slug ?? 'publikasi',
-                    'detail_url' => route('publikasi.show', $pub->slug),
-                    'trending_score' => $pub->recent_views + $pub->recent_downloads * 2,
-                    'recent_views' => $pub->recent_views,
+                    'type'             => $pubType,
+                    'type_slug'        => $pub->publicationType?->slug ?? 'publikasi',
+                    'detail_url'       => route('publikasi.show', $pub->slug),
+                    // ✅ Semua key score konsisten — dipakai blade untuk sort
+                    'trending_score'   => $trendingScore,
+                    'views_count'      => $pub->recent_views,
+                    'download_count'   => $pub->recent_downloads,
+                    'recent_views'     => $pub->recent_views,
                     'recent_downloads' => $pub->recent_downloads,
-                    'authors' => $pub->authors->take(6)->map(fn($author) => [
-                        'id' => $author->id,
-                        'name' => $author->name,
-                        'photo' => $author->photo_url,
+                    'authors'          => $pub->authors->take(6)->map(fn($author) => [
+                        'id'       => $author->id,
+                        'name'     => $author->name,
+                        'photo'    => $author->photo_url,
                         'initials' => $author->initials,
                     ])->toArray(),
-                    'total_authors' => $pub->authors->count(),
+                    'total_authors'    => $pub->authors->count(),
                 ];
             });
 
@@ -134,8 +120,8 @@ class PublicationTrendingController extends Controller
             $count = $trendingPublications->where('type_slug', $type->slug)->count();
             if ($count > 0) {
                 $typeStats[] = [
-                    'slug' => $type->slug,
-                    'name' => $type->name,
+                    'slug'  => $type->slug,
+                    'name'  => $type->name,
                     'count' => $count,
                 ];
             }
