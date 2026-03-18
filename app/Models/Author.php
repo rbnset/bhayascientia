@@ -9,6 +9,7 @@ use App\Models\Pivots\AuthorPublication;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class Author extends Model
@@ -36,7 +37,6 @@ class Author extends Model
     public function getNameAttribute($value): string
     {
         if ($this->user_id) {
-            // Hindari infinite loop: load hanya jika belum
             if (!$this->relationLoaded('user')) {
                 $this->load('user');
             }
@@ -136,7 +136,7 @@ class Author extends Model
      */
     public function getInitialsAttribute(): string
     {
-        $name  = $this->name; // pakai accessor name yang sudah resolved
+        $name  = $this->name;
         $words = explode(' ', trim($name));
 
         if (count($words) >= 2) {
@@ -151,10 +151,10 @@ class Author extends Model
      */
     public function getShortBioAttribute(): ?string
     {
-        $bio = $this->bio; // pakai accessor bio yang sudah resolved
+        $bio = $this->bio;
 
         if (!$bio) {
-            return $this->affiliation; // pakai accessor affiliation yang sudah resolved
+            return $this->affiliation;
         }
 
         return strlen($bio) > 150
@@ -175,18 +175,19 @@ class Author extends Model
     }
 
     /**
-     * ✅ Claim author oleh user
-     * Data name/email di authors menjadi NULL karena sudah dibaca dari user
+     * ✅ Claim author oleh user — support merge jika user sudah punya author profile lain
+     *
+     * Skenario 1: User belum punya author profile
+     *   → Langsung link authors.user_id = user.id
+     *
+     * Skenario 2: User sudah punya author profile (misal dari assign role)
+     *   → Pindahkan semua publikasi dari author external (ini) ke author profile user
+     *   → Hapus author external (ini) karena sudah tidak diperlukan
+     *   → Yang dipakai adalah author profile user yang sudah ada (data dari tabel users)
      */
     public function claimBy(User $user): array
     {
-        if ($user->authorProfile()->exists()) {
-            return [
-                'success' => false,
-                'message' => 'Akun Anda sudah terhubung ke profil author lain.',
-            ];
-        }
-
+        // Pastikan author external ini belum diklaim siapapun
         if ($this->isClaimed()) {
             return [
                 'success' => false,
@@ -194,15 +195,77 @@ class Author extends Model
             ];
         }
 
+        // Cek apakah user sudah punya author profile lain
+        $existingAuthorProfile = $user->authorProfile()->first();
+
+        if ($existingAuthorProfile) {
+            // ══ Skenario 2: Merge ══
+            // User sudah punya author profile → pindahkan publikasi lalu hapus author external ini
+            return $this->mergeInto($existingAuthorProfile);
+        }
+
+        // ══ Skenario 1: Claim biasa ══
+        // User belum punya author profile → link langsung
         $this->update([
             'user_id' => $user->id,
-            'name'    => null, // tidak perlu duplikasi, baca dari user
-            'email'   => null, // tidak perlu duplikasi, baca dari user
+            'name'    => null, // tidak perlu duplikasi, dibaca dari users.name
+            'email'   => null, // tidak perlu duplikasi, dibaca dari users.email
         ]);
 
         return [
             'success' => true,
             'message' => 'Berhasil! Profil author telah terhubung ke akun Anda.',
+        ];
+    }
+
+    /**
+     * ✅ Merge: pindahkan semua publikasi dari author external (ini) ke $targetAuthor
+     * lalu hapus author external (ini)
+     *
+     * Yang dipakai setelah merge adalah $targetAuthor (author profile milik user)
+     * Data nama, email, foto → dari tabel users via accessor $targetAuthor
+     */
+    private function mergeInto(Author $targetAuthor): array
+    {
+        DB::transaction(function () use ($targetAuthor) {
+
+            // Ambil semua publikasi milik author external ini
+            $myPublicationIds = $this->publications()->pluck('publications.id')->toArray();
+
+            foreach ($myPublicationIds as $publicationId) {
+
+                // Cek apakah target author sudah terhubung ke publikasi ini
+                // (hindari duplikat di pivot author_publication)
+                $alreadyLinked = $targetAuthor->publications()
+                    ->where('publications.id', $publicationId)
+                    ->exists();
+
+                if (!$alreadyLinked) {
+                    // Ambil data pivot dari author external (order, is_corresponding)
+                    $pivotData = $this->authorPublications()
+                        ->where('publication_id', $publicationId)
+                        ->first();
+
+                    // Pindahkan ke target author dengan data pivot yang sama
+                    $targetAuthor->publications()->attach($publicationId, [
+                        'order'              => $pivotData?->order ?? 99,
+                        'is_corresponding'   => $pivotData?->is_corresponding ?? false,
+                    ]);
+                }
+            }
+
+            // Hapus semua relasi pivot author external ini
+            // (baris di tabel author_publication)
+            $this->publications()->detach();
+
+            // Hapus author external (soft delete agar bisa di-restore jika perlu)
+            $this->delete();
+        });
+
+        return [
+            'success'  => true,
+            'message'  => 'Berhasil! Semua publikasi dari profil author lama telah digabungkan ke akun Anda.',
+            'merged'   => true,
         ];
     }
 
