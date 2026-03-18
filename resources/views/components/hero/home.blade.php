@@ -380,12 +380,26 @@ keamanan, kebijakan publik, serta keilmuan terkait lainnya.',
             const youtubeId = btn.dataset.youtubeId;
             if (!youtubeId || !modal) return;
 
-            // Set video URL with autoplay
-            videoFrame.src = `https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0`;
+            // Set video URL
+            videoFrame.src = `https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0&fs=1`;
 
-            // Show modal with animation
+            // Show modal
             modal.classList.add('show');
             document.body.style.overflow = 'hidden';
+
+            // ✅ Request fullscreen setelah modal tampil
+            setTimeout(() => {
+                const el = modalContent || videoFrame;
+                if (el.requestFullscreen) {
+                    el.requestFullscreen().catch(() => {});
+                } else if (el.webkitRequestFullscreen) {
+                    el.webkitRequestFullscreen(); // Safari
+                } else if (el.mozRequestFullScreen) {
+                    el.mozRequestFullScreen(); // Firefox lama
+                } else if (el.msRequestFullscreen) {
+                    el.msRequestFullscreen(); // IE/Edge lama
+                }
+            }, 300);
         });
     });
 
