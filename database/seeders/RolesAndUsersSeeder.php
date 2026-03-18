@@ -35,22 +35,22 @@ class RolesAndUsersSeeder extends Seeder
                 'job_title'       => 'Super Administrator',
                 'role'            => 'super_admin',
             ],
-            [
-                'name'            => 'Admin',
-                'email'           => 'admin@dabraka.org',
-                'password'        => '@SahabatAdminDabraka19.org',
-                'whatsapp_number' => '+62812345678902',
-                'job_title'       => 'Administrator',
-                'role'            => 'admin',
-            ],
-            [
-                'name'            => 'Reviewer',
-                'email'           => 'reviewer@dabraka.org',
-                'password'        => '@SahabatReviewerDabraka19.org',
-                'whatsapp_number' => '+62812345678904',
-                'job_title'       => 'Manuscript Reviewer',
-                'role'            => 'reviewer',
-            ],
+            // [
+            //     'name'            => 'Admin',
+            //     'email'           => 'admin@dabraka.org',
+            //     'password'        => '@SahabatAdminDabraka19.org',
+            //     'whatsapp_number' => '+62812345678902',
+            //     'job_title'       => 'Administrator',
+            //     'role'            => 'admin',
+            // ],
+            // [
+            //     'name'            => 'Reviewer',
+            //     'email'           => 'reviewer@dabraka.org',
+            //     'password'        => '@SahabatReviewerDabraka19.org',
+            //     'whatsapp_number' => '+62812345678904',
+            //     'job_title'       => 'Manuscript Reviewer',
+            //     'role'            => 'reviewer',
+            // ],
         ];
 
         foreach ($users as $data) {
