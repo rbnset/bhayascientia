@@ -5,8 +5,8 @@ keamanan, kebijakan publik, serta keilmuan terkait lainnya.',
 'primaryLabel' => 'Mulai gratis',
 'primaryUrl' => 'https://dabraka.rbnset.me/login',
 
-// Demo video
-'secondaryLabel' => 'Lihat demo',
+// Video YouTube
+'secondaryLabel' => 'Tonton di YouTube',
 'youtubeId' => 'kBO2C2e4Az0',
 
 // Badge
@@ -90,17 +90,18 @@ keamanan, kebijakan publik, serta keilmuan terkait lainnya.',
                         {{ $primaryLabel }}
                     </a>
 
+                    {{-- ✅ Tombol YouTube — mobile --}}
                     <button type="button" data-video-open data-youtube-id="{{ $youtubeId }}"
                         class="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-[#111827] bg-white px-6 py-3.5 text-sm font-bold text-[#111827] transition-all duration-300 hover:border-[#FF6B18] hover:bg-[#FF6B18] hover:text-white sm:text-base focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2">
-                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                             <path
-                                d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" />
+                                d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
                         </svg>
                         {{ $secondaryLabel }}
                     </button>
                 </div>
 
-                {{-- Trust Indicators (Optional) --}}
+                {{-- Trust Indicators --}}
                 <div class="flex items-center gap-4 pt-2 text-xs text-[#6B7280]">
                     <div class="flex items-center gap-1.5">
                         <svg class="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
@@ -168,11 +169,12 @@ keamanan, kebijakan publik, serta keilmuan terkait lainnya.',
                         {{ $primaryLabel }}
                     </a>
 
+                    {{-- ✅ Tombol YouTube — desktop --}}
                     <button type="button" data-video-open data-youtube-id="{{ $youtubeId }}"
                         class="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-[#111827] bg-white px-7 py-4 text-base font-bold text-[#111827] transition-all duration-300 hover:border-[#FF6B18] hover:bg-[#FF6B18] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2">
-                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                             <path
-                                d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" />
+                                d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
                         </svg>
                         {{ $secondaryLabel }}
                     </button>
@@ -228,11 +230,11 @@ keamanan, kebijakan publik, serta keilmuan terkait lainnya.',
     <div class="absolute bottom-0 left-0 bg-red-200 rounded-full w-96 h-96 opacity-10 blur-3xl -z-10"></div>
 </section>
 
-{{-- ✨ ENHANCED VIDEO MODAL --}}
+{{-- ✨ VIDEO MODAL --}}
 <div id="video-modal" class="fixed inset-0 z-[9999] items-center justify-center hidden p-4 bg-black/70 backdrop-blur-sm"
     role="dialog" aria-modal="true" aria-labelledby="video-modal-title">
 
-    {{-- Overlay --}}
+    {{-- Overlay klik untuk tutup --}}
     <button type="button" data-video-close class="absolute inset-0" aria-label="Tutup video"></button>
 
     {{-- Dialog --}}
@@ -243,11 +245,12 @@ keamanan, kebijakan publik, serta keilmuan terkait lainnya.',
         <div
             class="flex items-center justify-between p-4 sm:p-5 border-b border-gray-200 bg-gradient-to-r from-[#FF6B18] to-[#E64627]">
             <h3 id="video-modal-title" class="flex items-center gap-2 text-base font-bold text-white sm:text-lg">
-                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                {{-- ✅ Icon YouTube di header modal --}}
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                     <path
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" />
+                        d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
                 </svg>
-                Demo DABRAKA
+                Tentang DABRAKA
             </h3>
 
             <button type="button" data-video-close
@@ -261,7 +264,7 @@ keamanan, kebijakan publik, serta keilmuan terkait lainnya.',
 
         {{-- Video Container --}}
         <div class="bg-black">
-            <iframe id="videoFrame" class="w-full aspect-video" src="" title="Demo DABRAKA" frameborder="0"
+            <iframe id="videoFrame" class="w-full aspect-video" src="" title="Tentang DABRAKA" frameborder="0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 referrerpolicy="strict-origin-when-cross-origin" allowfullscreen>
             </iframe>
@@ -272,7 +275,6 @@ keamanan, kebijakan publik, serta keilmuan terkait lainnya.',
 {{-- Styles --}}
 @pushOnce('styles')
 <style>
-    /* Float animations */
     @keyframes float {
 
         0%,
@@ -306,7 +308,6 @@ keamanan, kebijakan publik, serta keilmuan terkait lainnya.',
         animation-delay: 1s;
     }
 
-    /* Hero animations */
     @keyframes fadeUp {
         from {
             opacity: 0;
@@ -339,7 +340,6 @@ keamanan, kebijakan publik, serta keilmuan terkait lainnya.',
         animation: fadeIn 0.8s ease-out 0.2s both;
     }
 
-    /* Modal animations */
     #video-modal.show {
         display: flex !important;
     }
@@ -349,7 +349,6 @@ keamanan, kebijakan publik, serta keilmuan terkait lainnya.',
         transform: scale(1);
     }
 
-    /* Reduced motion */
     @media (prefers-reduced-motion: reduce) {
 
         .animate-float,
@@ -362,28 +361,26 @@ keamanan, kebijakan publik, serta keilmuan terkait lainnya.',
 </style>
 @endPushOnce
 
-{{-- Enhanced JavaScript --}}
+{{-- JavaScript --}}
 @pushOnce('scripts')
 <script>
-    (function() {
+    (function () {
     'use strict';
 
-    const modal = document.getElementById('video-modal');
+    const modal        = document.getElementById('video-modal');
     const modalContent = modal?.querySelector('[data-modal-content]');
-    const videoFrame = document.getElementById('videoFrame');
-    const openBtns = document.querySelectorAll('[data-video-open]');
-    const closeBtns = document.querySelectorAll('[data-video-close]');
+    const videoFrame   = document.getElementById('videoFrame');
+    const openBtns     = document.querySelectorAll('[data-video-open]');
+    const closeBtns    = document.querySelectorAll('[data-video-close]');
 
-    // Open modal
+    // ── Buka modal ────────────────────────────────────────────────────────────
     openBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             const youtubeId = btn.dataset.youtubeId;
             if (!youtubeId || !modal) return;
 
-            // Set video URL
             videoFrame.src = `https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0&fs=1`;
 
-            // Show modal
             modal.classList.add('show');
             document.body.style.overflow = 'hidden';
 
@@ -393,21 +390,21 @@ keamanan, kebijakan publik, serta keilmuan terkait lainnya.',
                 if (el.requestFullscreen) {
                     el.requestFullscreen().catch(() => {});
                 } else if (el.webkitRequestFullscreen) {
-                    el.webkitRequestFullscreen(); // Safari
+                    el.webkitRequestFullscreen();
                 } else if (el.mozRequestFullScreen) {
-                    el.mozRequestFullScreen(); // Firefox lama
+                    el.mozRequestFullScreen();
                 } else if (el.msRequestFullscreen) {
-                    el.msRequestFullscreen(); // IE/Edge lama
+                    el.msRequestFullscreen();
                 }
             }, 300);
         });
     });
 
-    // Close modal
+    // ── Tutup modal ───────────────────────────────────────────────────────────
     function closeModal() {
         if (!modal) return;
 
-        // ✅ Exit fullscreen dulu sebelum tutup modal
+        // ✅ Exit fullscreen dulu agar website tidak ikut fullscreen
         if (document.fullscreenElement) {
             document.exitFullscreen().catch(() => {});
         } else if (document.webkitFullscreenElement) {
@@ -423,36 +420,35 @@ keamanan, kebijakan publik, serta keilmuan terkait lainnya.',
         document.body.style.overflow = '';
     }
 
-    // ✅ Kalau user ESC dari fullscreen tapi modal masih terbuka — tutup modal juga
-    document.addEventListener('fullscreenchange', () => {
-        if (!document.fullscreenElement && modal?.classList.contains('show')) {
-            modal.classList.remove('show');
-            videoFrame.src = '';
-            document.body.style.overflow = '';
-        }
-    });
+    closeBtns.forEach(btn => btn.addEventListener('click', closeModal));
 
-    // Safari
-    document.addEventListener('webkitfullscreenchange', () => {
-        if (!document.webkitFullscreenElement && modal?.classList.contains('show')) {
-            modal.classList.remove('show');
-            videoFrame.src = '';
-            document.body.style.overflow = '';
-        }
-    });
-
-    closeBtns.forEach(btn => {
-        btn.addEventListener('click', closeModal);
-    });
-
-    // ESC key to close
-    document.addEventListener('keydown', (e) => {
+    // ✅ ESC key — tutup modal
+    document.addEventListener('keydown', e => {
         if (e.key === 'Escape' && modal?.classList.contains('show')) {
             closeModal();
         }
     });
 
-    console.log('✅ Hero component initialized');
+    // ✅ Kalau user keluar fullscreen sendiri (ESC/tombol browser)
+    // → tutup modal sekalian agar tidak setengah-setengah
+    function onFullscreenChange() {
+        const isFullscreen = document.fullscreenElement
+            || document.webkitFullscreenElement
+            || document.mozFullScreenElement
+            || document.msFullscreenElement;
+
+        if (!isFullscreen && modal?.classList.contains('show')) {
+            modal.classList.remove('show');
+            videoFrame.src = '';
+            document.body.style.overflow = '';
+        }
+    }
+
+    document.addEventListener('fullscreenchange',       onFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+    document.addEventListener('mozfullscreenchange',    onFullscreenChange);
+    document.addEventListener('MSFullscreenChange',     onFullscreenChange);
+
 })();
 </script>
 @endPushOnce
