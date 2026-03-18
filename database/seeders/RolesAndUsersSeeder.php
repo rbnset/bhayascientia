@@ -37,7 +37,7 @@ class RolesAndUsersSeeder extends Seeder
             ],
             [
                 'name'            => 'Dabraka ',
-                'email'           => 'dabraka.org@gmail.org',
+                'email'           => 'dabraka.org@gmail.com',
                 'password'        => '@SahabatDabraka19.org',
                 'whatsapp_number' => '+6285869877959',
                 'job_title'       => 'Super Administrator',
