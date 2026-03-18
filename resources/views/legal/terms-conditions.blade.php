@@ -1,4 +1,4 @@
-{{-- resources/views/terms-conditions.blade.php --}}
+{{-- resources/views/legal/terms-conditions.blade.php --}}
 <!DOCTYPE html>
 <html lang="id">
 
@@ -172,7 +172,7 @@
                         </div>
                         <div class="flex items-start gap-2 text-sm text-[#6B7280]">
                             <span class="text-[#FF6B18] mt-1 font-bold">✓</span>
-                            <span>Penggunaan konten untuk keperluan akademik wajib menyertakan atribusi/sitasi yang
+                            <span>Penggunaan konten untuk keperluan akademik wajib menyertakan atribusi dan sitasi yang
                                 tepat.</span>
                         </div>
                     </div>
@@ -191,22 +191,66 @@
                     </div>
                     <p class="text-sm text-[#6B7280] mb-4">Anda DILARANG menggunakan platform untuk:</p>
                     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        @foreach([['🚫','Plagiarisme','Mengcopy karya orang lain tanpa izin atau sitasi'],['🚫','Konten
-                        Ilegal','Melanggar hukum, menghasut kebencian, atau SARA'],['🚫','Spam & Scam','Mengirim spam,
-                        phishing, atau konten menyesatkan'],['🚫','Hacking','Mengakses sistem tanpa izin atau merusak
-                        infrastruktur'],['🚫','Data Scraping','Mengambil data secara massal dengan
-                        bot/crawler'],['🚫','Harassment','Melecehkan, mengintimidasi, atau mengancam pengguna lain']] as
-                        [$icon,$title,$desc])
                         <div class="p-4 border-2 border-red-200 bg-red-50 rounded-xl">
                             <div class="flex items-start gap-2">
-                                <span class="text-2xl">{{ $icon }}</span>
+                                <span class="text-2xl">🚫</span>
                                 <div>
-                                    <h4 class="font-bold text-[#111827] text-sm mb-1">{{ $title }}</h4>
-                                    <p class="text-xs text-[#6B7280]">{{ $desc }}</p>
+                                    <h4 class="font-bold text-[#111827] text-sm mb-1">Plagiarisme</h4>
+                                    <p class="text-xs text-[#6B7280]">Mengcopy karya orang lain tanpa izin atau sitasi
+                                    </p>
                                 </div>
                             </div>
                         </div>
-                        @endforeach
+                        <div class="p-4 border-2 border-red-200 bg-red-50 rounded-xl">
+                            <div class="flex items-start gap-2">
+                                <span class="text-2xl">🚫</span>
+                                <div>
+                                    <h4 class="font-bold text-[#111827] text-sm mb-1">Konten Ilegal</h4>
+                                    <p class="text-xs text-[#6B7280]">Melanggar hukum, menghasut kebencian, atau SARA
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-4 border-2 border-red-200 bg-red-50 rounded-xl">
+                            <div class="flex items-start gap-2">
+                                <span class="text-2xl">🚫</span>
+                                <div>
+                                    <h4 class="font-bold text-[#111827] text-sm mb-1">Spam & Scam</h4>
+                                    <p class="text-xs text-[#6B7280]">Mengirim spam, phishing, atau konten menyesatkan
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-4 border-2 border-red-200 bg-red-50 rounded-xl">
+                            <div class="flex items-start gap-2">
+                                <span class="text-2xl">🚫</span>
+                                <div>
+                                    <h4 class="font-bold text-[#111827] text-sm mb-1">Hacking</h4>
+                                    <p class="text-xs text-[#6B7280]">Mengakses sistem tanpa izin atau merusak
+                                        infrastruktur</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-4 border-2 border-red-200 bg-red-50 rounded-xl">
+                            <div class="flex items-start gap-2">
+                                <span class="text-2xl">🚫</span>
+                                <div>
+                                    <h4 class="font-bold text-[#111827] text-sm mb-1">Data Scraping</h4>
+                                    <p class="text-xs text-[#6B7280]">Mengambil data secara massal dengan bot atau
+                                        crawler</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-4 border-2 border-red-200 bg-red-50 rounded-xl">
+                            <div class="flex items-start gap-2">
+                                <span class="text-2xl">🚫</span>
+                                <div>
+                                    <h4 class="font-bold text-[#111827] text-sm mb-1">Harassment</h4>
+                                    <p class="text-xs text-[#6B7280]">Melecehkan, mengintimidasi, atau mengancam
+                                        pengguna lain</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -231,7 +275,7 @@
 
                 <div class="h-px my-8 bg-gradient-to-r from-transparent via-gray-200 to-transparent"></div>
 
-                {{-- 7. Biaya --}}
+                {{-- 7. Biaya Layanan --}}
                 <div class="mb-10">
                     <div class="flex items-start gap-3 mb-4">
                         <div
@@ -257,16 +301,37 @@
 
                 <div class="h-px my-8 bg-gradient-to-r from-transparent via-gray-200 to-transparent"></div>
 
-                {{-- 8. Hubungi Kami --}}
+                {{-- 8. Perubahan Syarat --}}
+                <div class="mb-10">
+                    <div class="flex items-start gap-3 mb-4">
+                        <div
+                            class="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FF6B18] to-[#E64627] flex items-center justify-center flex-shrink-0">
+                            <span class="text-lg font-black text-white">8</span>
+                        </div>
+                        <h2 class="text-2xl sm:text-3xl font-black text-[#111827] mt-1">Perubahan Syarat & Ketentuan
+                        </h2>
+                    </div>
+                    <p class="text-sm text-[#6B7280] leading-relaxed">
+                        Kami berhak memperbarui Syarat dan Ketentuan ini kapan saja. Perubahan signifikan akan
+                        diberitahukan melalui email notifikasi ke akun terdaftar atau notifikasi in-app saat login.
+                        Dengan terus menggunakan platform setelah perubahan diberlakukan, Anda menyetujui Syarat dan
+                        Ketentuan yang diperbarui.
+                    </p>
+                </div>
+
+                <div class="h-px my-8 bg-gradient-to-r from-transparent via-gray-200 to-transparent"></div>
+
+                {{-- Hubungi Kami --}}
                 <div
                     class="p-6 sm:p-8 bg-gradient-to-br from-[#FF6B18] to-[#E64627] rounded-2xl text-white text-center">
                     <h3 class="mb-2 text-2xl font-black">Butuh Klarifikasi?</h3>
-                    <p class="mb-6 text-sm text-white/90">Jika ada yang kurang jelas, jangan ragu menghubungi kami:</p>
+                    <p class="mb-6 text-sm text-white/90">Jika ada yang kurang jelas mengenai Syarat dan Ketentuan ini,
+                        jangan ragu menghubungi kami:</p>
                     <div class="space-y-2 text-sm">
                         <p><strong>Email:</strong> <a href="mailto:dabraka@rbnset.me"
                                 class="underline hover:text-white/80">dabraka@rbnset.me</a></p>
-                        <p><strong>Website:</strong> <a href="{{ config('app.url') }}/kontak"
-                                class="underline hover:text-white/80">{{ config('app.url') }}/kontak</a></p>
+                        <p><strong>Kontak:</strong> <a href="{{ route('kontak') }}"
+                                class="underline hover:text-white/80">Halaman Kontak DABRAKA</a></p>
                     </div>
                 </div>
 
