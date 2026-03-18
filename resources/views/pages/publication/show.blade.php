@@ -188,6 +188,14 @@
         animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     }
 
+    /* ── Prose full width saat tidak ada file (no-file mode) ── */
+    #publication-detail-grid:not(.has-file) .prose,
+    #publication-detail-grid:not(.has-file) .prose-sm,
+    #publication-detail-grid:not(.has-file) .prose-base {
+        max-width: 100% !important;
+        width: 100% !important;
+    }
+
     /* ── Authors Modal ── */
     .modal-overlay {
         position: fixed;
@@ -786,8 +794,8 @@ $hasFile = $latestVersion && !empty($latestVersion->pdf_file_path);
 
         {{-- Abstract — full width --}}
         @if($publication->abstract)
-        <div
-            class="bg-white rounded-2xl border border-[#EEF0F7] p-6 md:p-8 hover:shadow-lg transition-shadow duration-300">
+        <div class="bg-white rounded-2xl border border-[#EEF0F7] p-6 md:p-8 hover:shadow-lg transition-shadow duration-300"
+            style="width:100%">
             <h2 class="text-xl font-bold text-[#1A1A1A] mb-4 flex items-center gap-2">
                 <svg class="w-6 h-6 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -795,7 +803,9 @@ $hasFile = $latestVersion && !empty($latestVersion->pdf_file_path);
                 </svg>
                 {{ $abstractLabel }}
             </h2>
-            <div class="prose prose-sm md:prose-base max-w-none text-[#1A1A1A] leading-relaxed text-justify">
+            {{-- max-w-none + style override untuk pastikan prose tidak dibatasi lebar apapun --}}
+            <div class="prose prose-sm md:prose-base text-[#1A1A1A] leading-relaxed text-justify"
+                style="max-width:100% !important; width:100% !important">
                 {!! $publication->abstract !!}
             </div>
         </div>
@@ -803,8 +813,8 @@ $hasFile = $latestVersion && !empty($latestVersion->pdf_file_path);
 
         {{-- Keywords — full width --}}
         @if($keywords && count($keywords) > 0)
-        <div
-            class="bg-white rounded-2xl border border-[#EEF0F7] p-6 md:p-8 hover:shadow-lg transition-shadow duration-300">
+        <div class="bg-white rounded-2xl border border-[#EEF0F7] p-6 md:p-8 hover:shadow-lg transition-shadow duration-300"
+            style="width:100%">
             <h2 class="text-xl font-bold text-[#1A1A1A] mb-4 flex items-center gap-2">
                 <svg class="w-6 h-6 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
