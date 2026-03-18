@@ -172,29 +172,6 @@
         animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     }
 
-    /* ── No-file layout: cover horizontal ── */
-    .no-file-cover-row {
-        display: flex;
-        flex-direction: column;
-        gap: 1.5rem;
-    }
-
-    @media (min-width: 640px) {
-        .no-file-cover-row {
-            flex-direction: row;
-            align-items: flex-start;
-        }
-
-        .no-file-cover-row .cover-col {
-            width: 160px;
-            flex-shrink: 0;
-        }
-
-        .no-file-cover-row .info-col {
-            flex: 1;
-        }
-    }
-
     /* ── Authors Modal ── */
     .modal-overlay {
         position: fixed;
@@ -787,77 +764,9 @@ $hasFile = $latestVersion && !empty($latestVersion->pdf_file_path);
     @else
     {{-- ══════════════════════════════════════════════════════
     TIDAK ADA FILE: Layout 1 kolom penuh
+    Hanya tampilkan abstract & keywords, tanpa cover/info card
     ══════════════════════════════════════════════════════ --}}
     <div id="publication-detail-grid">
-
-        {{-- Cover + Info "file tidak tersedia" — horizontal row --}}
-        <div class="bg-white rounded-2xl border border-[#EEF0F7] p-6 md:p-8">
-            <div class="no-file-cover-row">
-
-                {{-- Cover kecil di kiri --}}
-                <div class="cover-col">
-                    <div class="cover-image-wrapper aspect-[2/3] relative overflow-hidden rounded-xl">
-                        @if($cover_url)
-                        <img src="{{ $cover_url }}" alt="Cover {{ $publication->title }}"
-                            class="object-cover w-full h-full"
-                            onerror="this.onerror=null; this.src='{{ $placeholderUrl }}';">
-                        @else
-                        <img src="{{ $placeholderUrl }}" alt="Cover {{ $publication->title }}"
-                            class="object-cover w-full h-full">
-                        @endif
-                    </div>
-                </div>
-
-                {{-- Info file tidak tersedia di kanan --}}
-                <div class="flex flex-col justify-center gap-4 info-col">
-
-                    {{-- Status badge --}}
-                    <div
-                        class="inline-flex items-center gap-2 px-4 py-2 bg-[#FEF2F2] border border-[#FECACA] rounded-full w-fit">
-                        <div class="w-2 h-2 bg-red-400 rounded-full"></div>
-                        <span class="text-xs font-bold text-red-600">File belum tersedia</span>
-                    </div>
-
-                    <div>
-                        <h3 class="text-base font-bold text-[#1A1A1A] mb-1">Dokumen sedang diproses</h3>
-                        <p class="text-sm text-[#737373] leading-relaxed">
-                            File PDF publikasi ini belum diunggah atau masih dalam proses persiapan.
-                            Silakan kembali lagi dalam beberapa waktu — kami akan segera menyediakannya untuk kamu.
-                        </p>
-                    </div>
-
-                    {{-- Version info ringkas --}}
-                    @if($latestVersion)
-                    <div class="flex items-center gap-3 pt-3 border-t border-[#EEF0F7]">
-                        <div class="flex items-center gap-1.5 text-xs text-[#737373]">
-                            <svg class="w-4 h-4 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <span class="font-semibold">v{{ $latestVersion->version_number }}</span>
-                        </div>
-                        <div class="flex items-center gap-1.5 text-xs text-[#737373]">
-                            <svg class="w-4 h-4 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            <span>{{ $latestVersion->created_at->locale('id_ID')->isoFormat('D MMM YYYY') }}</span>
-                        </div>
-                        <div class="flex items-center gap-1.5 text-xs text-[#737373]">
-                            <svg class="w-4 h-4 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                            <span>{{ number_format($viewsCount ?? 0) }} views</span>
-                        </div>
-                    </div>
-                    @endif
-
-                </div>
-            </div>
-        </div>
 
         {{-- Abstract — full width --}}
         @if($publication->abstract)
