@@ -9,22 +9,21 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 /**
- * Controller untuk anotasi PDF dalam konteks review.
+ * FIX v2 — 3 perbaikan dari versi sebelumnya:
  *
- * Perbedaan dengan PdfAnnotationController:
- * - Semua anotasi dikaitkan ke review_id SEKALIGUS publication_id
- * - Reviewer hanya bisa akses anotasi miliknya sendiri pada review tersebut
- * - Author/Admin bisa melihat semua anotasi review (GET endpoint khusus)
+ * FIX 1 — serialize() tidak mengembalikan arrow_x1/y1/x2/y2
+ *   Shape arrow & line tidak muncul setelah reload karena JS (rSH) butuh
+ *   a.arrow_x1 dst. Sekarang serialize() mengisi dari kolom langsung,
+ *   atau fallback ke path_points[[x1,y1],[x2,y2]] jika kolom belum ada.
  *
- * Routes (di web.php, prefix /api/review-annotations/{reviewId}):
- *   GET    /         -> index
- *   POST   /         -> store
- *   PUT    /{id}     -> update
- *   DELETE /page/{p} -> destroyPage
- *   DELETE /{id}     -> destroy
+ * FIX 2 — store() fatal error jika publicationVersion null
+ *   $review->publicationVersion->publication_id melempar error jika relasi
+ *   tidak ter-load. Sekarang pakai null-safe ?-> dan fallback ke null.
  *
- * Route tambahan untuk Author melihat anotasi reviewer:
- *   GET /api/review-annotations/{reviewId}/readonly -> indexReadonly
+ * FIX 3 — store() tidak menyimpan arrow_x1/y1/x2/y2
+ *   JS mengirim arrow coords tapi controller tidak menerimanya.
+ *   Sekarang divalidasi dan disimpan jika kolom sudah ada di tabel.
+ *   Jika belum di-migrate, data tetap aman via path_points.
  */
 class ReviewPdfAnnotationController extends Controller
 {
@@ -35,7 +34,6 @@ class ReviewPdfAnnotationController extends Controller
     {
         $review = Review::findOrFail($reviewId);
 
-        // Pastikan user adalah reviewer review ini atau admin/editor
         $this->authorizeReviewAccess($review);
 
         $annotations = PdfAnnotation::where('review_id', $reviewId)
@@ -50,14 +48,11 @@ class ReviewPdfAnnotationController extends Controller
 
     /**
      * Endpoint READ-ONLY untuk author/admin melihat anotasi reviewer.
-     * Mengembalikan semua anotasi dari semua reviewer pada review ini.
      */
     public function indexReadonly(int $reviewId): JsonResponse
     {
         $review = Review::with('reviewer')->findOrFail($reviewId);
 
-        // Pastikan user punya akses: reviewer itu sendiri, atau memiliki
-        // publication yang di-review, atau admin/editor
         $this->authorizeReadonlyAccess($review);
 
         $annotations = PdfAnnotation::where('review_id', $reviewId)
@@ -98,13 +93,36 @@ class ReviewPdfAnnotationController extends Controller
             'shape_type'    => 'nullable|in:' . implode(',', PdfAnnotation::VALID_SHAPE_TYPES),
             'stroke_width'  => 'nullable|numeric|min:0.5|max:50',
             'fill_opacity'  => 'nullable|numeric|min:0|max:1',
+            // FIX 3: terima arrow coords dari JS
+            'arrow_x1'      => 'nullable|numeric',
+            'arrow_y1'      => 'nullable|numeric',
+            'arrow_x2'      => 'nullable|numeric',
+            'arrow_y2'      => 'nullable|numeric',
         ]);
+
+        // FIX 2: null-safe — tidak melempar error jika relasi null
+        $publicationId = $review->publicationVersion?->publication_id
+            ?? $review->publication_version?->publication_id
+            ?? null;
+
+        // FIX 3: hanya isi kolom arrow jika sudah ada di tabel
+        // (backward-compatible — tidak error jika migration belum jalan)
+        $arrowData = [];
+        if (\Illuminate\Support\Facades\Schema::hasColumn('pdf_annotations', 'arrow_x1')) {
+            $arrowData = [
+                'arrow_x1' => $validated['arrow_x1'] ?? null,
+                'arrow_y1' => $validated['arrow_y1'] ?? null,
+                'arrow_x2' => $validated['arrow_x2'] ?? null,
+                'arrow_y2' => $validated['arrow_y2'] ?? null,
+            ];
+        }
 
         $annotation = PdfAnnotation::create([
             'user_id'        => Auth::id(),
-            'publication_id' => $review->publicationVersion->publication_id,
+            'publication_id' => $publicationId,
             'review_id'      => $reviewId,
             ...$validated,
+            ...$arrowData,
         ]);
 
         return response()->json(['data' => $this->serialize($annotation)], 201);
@@ -133,7 +151,7 @@ class ReviewPdfAnnotationController extends Controller
 
         $annotation->update($validated);
 
-        return response()->json(['data' => $this->serialize($annotation)]);
+        return response()->json(['data' => $this->serialize($annotation->fresh())]);
     }
 
     /**
@@ -168,19 +186,14 @@ class ReviewPdfAnnotationController extends Controller
     // Authorization Helpers
     // ─────────────────────────────────────────────────────────────────
 
-    /**
-     * Pastikan user adalah reviewer dari review ini (atau admin).
-     */
     private function authorizeReviewAccess(Review $review): void
     {
         $user = Auth::user();
 
-        // Admin & editor bisa akses semua
         if ($user->hasAnyRole(['super_admin', 'admin', 'editor'])) {
             return;
         }
 
-        // Reviewer hanya bisa akses review miliknya
         abort_unless(
             $review->reviewer_id === $user->id,
             403,
@@ -188,12 +201,6 @@ class ReviewPdfAnnotationController extends Controller
         );
     }
 
-    /**
-     * Pastikan user punya akses readonly:
-     * - Reviewer itu sendiri
-     * - Author dari publikasi yang di-review
-     * - Admin/editor
-     */
     private function authorizeReadonlyAccess(Review $review): void
     {
         $user = Auth::user();
@@ -206,7 +213,6 @@ class ReviewPdfAnnotationController extends Controller
             return;
         }
 
-        // Author: cek apakah user adalah author di publikasi terkait
         $publicationId = $review->publicationVersion?->publication_id;
         if ($publicationId) {
             $isAuthor = \App\Models\Author::where('user_id', $user->id)
@@ -223,25 +229,60 @@ class ReviewPdfAnnotationController extends Controller
     // Serializer
     // ─────────────────────────────────────────────────────────────────
 
+    /**
+     * FIX 1: kembalikan arrow_x1/y1/x2/y2 agar JS (rSH) bisa render
+     * shape arrow & line setelah reload. Fallback ke path_points jika
+     * kolom arrow belum ada di tabel.
+     */
     private function serialize(PdfAnnotation $a): array
     {
+        // Ambil arrow coords dari kolom langsung jika ada
+        $arrowX1 = $a->arrow_x1 ?? null;
+        $arrowY1 = $a->arrow_y1 ?? null;
+        $arrowX2 = $a->arrow_x2 ?? null;
+        $arrowY2 = $a->arrow_y2 ?? null;
+
+        // Fallback: ekstrak dari path_points jika kolom kosong
+        if (
+            $arrowX1 === null &&
+            in_array($a->shape_type, ['arrow', 'line'], true) &&
+            is_array($a->path_points) &&
+            count($a->path_points) >= 2
+        ) {
+            $arrowX1 = (float) ($a->path_points[0][0] ?? 0);
+            $arrowY1 = (float) ($a->path_points[0][1] ?? 0);
+            $arrowX2 = (float) ($a->path_points[1][0] ?? 0);
+            $arrowY2 = (float) ($a->path_points[1][1] ?? 0);
+        }
+
         return [
             'id'            => $a->id,
             'page'          => $a->page,
             'type'          => $a->type,
             'color'         => $a->color,
+            // Objek rect untuk kemudahan JS (a.rect.x)
             'rect'          => ($a->rect_x !== null) ? [
                 'x' => $a->rect_x,
                 'y' => $a->rect_y,
                 'w' => $a->rect_w,
                 'h' => $a->rect_h,
             ] : null,
+            // Flat juga untuk fallback JS
+            'rect_x'        => $a->rect_x,
+            'rect_y'        => $a->rect_y,
+            'rect_w'        => $a->rect_w,
+            'rect_h'        => $a->rect_h,
             'selected_text' => $a->selected_text,
             'comment'       => $a->comment,
             'path_points'   => $a->path_points,
             'shape_type'    => $a->shape_type,
             'stroke_width'  => $a->stroke_width,
             'fill_opacity'  => $a->fill_opacity,
+            // FIX 1: wajib ada agar rSH() di JS bisa render arrow/line
+            'arrow_x1'      => $arrowX1,
+            'arrow_y1'      => $arrowY1,
+            'arrow_x2'      => $arrowX2,
+            'arrow_y2'      => $arrowY2,
             'created_at'    => $a->created_at?->toISOString(),
         ];
     }
