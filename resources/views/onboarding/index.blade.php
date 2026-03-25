@@ -8,8 +8,12 @@
     <title>Selamat Datang — DABRAKA</title>
 
     {{-- ✅ Open Graph untuk WhatsApp --}}
-    <meta property="og:title" content="Selamat Datang - DABARKA">
-    <meta property="og:description" content="Platform Publikasi Ilmiah Indonesia Dabarka">
+    <meta property="og:title" content="DABRAKA
+portal pengabdian
+intelektual">
+    <meta property="og:description"
+        content="
+Menghimpun gagasan dan karya insan Polri yang berkolaborasi dengan intelektual di bidang kepolisian, keamanan, kebijakan publik, serta keilmuan terkait lainnya.">
     <meta property="og:image" content="https://dabraka.org/assets/images/logos/logo-brand.png">
     <meta property="og:url" content="https://dabraka.org/onboarding">
     <meta property="og:type" content="website">
