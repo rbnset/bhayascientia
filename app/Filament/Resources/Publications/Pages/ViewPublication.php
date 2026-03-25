@@ -116,7 +116,7 @@ class ViewPublication extends ViewRecord
             // ── Upload Revisi — author, revision_required ─────────
             Action::make('uploadRevisi')
                 ->label('Lihat Revisi')
-                ->icon('heroicon-o-arrow-up-tray')
+                ->icon('heroicon-o-clipboard-document-list')
                 ->color('warning')
                 ->visible(
                     fn() =>
