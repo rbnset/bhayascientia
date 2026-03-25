@@ -15,7 +15,7 @@
     {{-- ✅ Open Graph (WA, Facebook, dll) --}}
     <meta property="og:title" content="@yield('title', 'DABARKA')">
     <meta property="og:description" content="@yield('description', 'Platform Publikasi Ilmiah Indonesia Dabarka')">
-    <meta property="og:image" content="@yield('image', asset('assets/images/logos/logo-brand.png'))">
+    <meta property="og:image" content="@yield('image', asset('assets/images/logos/logo-brand.svg'))">
     <meta property="og:url" content="{{ url()->current() }}">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="DABARKA">
