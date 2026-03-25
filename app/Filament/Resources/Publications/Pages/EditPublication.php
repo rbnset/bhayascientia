@@ -141,14 +141,13 @@ class EditPublication extends EditRecord
         $latestVersion = $this->latestVersion();
 
         if ($latestVersion) {
-            // Review biasa: filter by publication_version_id
             return \App\Models\Review::query()
                 ->where('publication_version_id', $latestVersion->id)
                 ->orderByDesc('id')
                 ->first();
         }
 
-        // Opini tanpa manuskrip: filter by publication_id langsung
+        // ✅ Opini tanpa manuskrip: query by publication_id langsung
         return \App\Models\Review::query()
             ->where('publication_id', $this->record->id)
             ->whereNull('publication_version_id')
@@ -394,7 +393,7 @@ class EditPublication extends EditRecord
 
                     // ── AUTHOR: arahkan ke view review terbaru ───────────
                     if ($this->isAuthor()) {
-                        // ✅ FIXED: gunakan helper terpusat yang sudah benar
+                        // ✅ Pakai helper terpusat — support opini tanpa versi
                         $latestReview = $this->getLatestReviewForPublication();
 
                         if (!$latestReview) {
@@ -659,6 +658,7 @@ class EditPublication extends EditRecord
                 ->visible(fn() => $this->record->status === 'revision_required' && !$this->isReviewer())
                 ->modalHeading('Upload Revisi Manuskrip')
                 ->modalDescription(function () {
+                    // ✅ Info tambahan untuk opini yang sebelumnya tanpa manuskrip
                     if ($this->isOpini() && !$this->latestVersion()) {
                         return new HtmlString(
                             '📝 Opini ini sebelumnya dikirim <strong>tanpa manuskrip PDF</strong>.<br><br>' .
@@ -677,6 +677,7 @@ class EditPublication extends EditRecord
                         ->disk('public')
                         ->directory('publications/versions')
                         ->acceptedFileTypes(['application/pdf'])
+                        // ✅ Tidak wajib untuk opini yang sebelumnya tanpa manuskrip
                         ->required(fn() => !($this->isOpini() && !$this->latestVersion()))
                         ->maxSize(10240)
                         ->helperText(
@@ -687,9 +688,11 @@ class EditPublication extends EditRecord
 
                     Checkbox::make('confirm_reviewed')
                         ->label('Saya telah meninjau berkas PDF revisi dan memastikan semua catatan reviewer sudah diperbaiki')
+                        // ✅ Tidak wajib untuk opini tanpa manuskrip
                         ->required(fn() => !($this->isOpini() && !$this->latestVersion()))
                         ->accepted(),
 
+                    // ✅ Checkbox khusus opini tanpa manuskrip
                     Checkbox::make('confirm_opini_revision')
                         ->label('Saya telah memperbaiki isi opini di form sesuai catatan reviewer')
                         ->visible(fn() => $this->isOpini() && !$this->latestVersion())
@@ -699,6 +702,7 @@ class EditPublication extends EditRecord
                     $hasPdf = filled($data['pdf_file_path'] ?? null);
 
                     if ($hasPdf) {
+                        // ✅ Ada PDF: buat versi baru
                         $nextVersion = ($this->record->versions()->max('version_number') ?? 0) + 1;
 
                         $this->record->versions()->create([
@@ -709,6 +713,8 @@ class EditPublication extends EditRecord
 
                         $versionInfo = 'v' . $nextVersion;
                     } else {
+                        // ✅ Tidak ada PDF (opini tanpa manuskrip): tidak buat versi baru,
+                        //    cukup ubah status ke submitted untuk direview ulang
                         $versionInfo = 'konten opini';
                     }
 
@@ -735,6 +741,7 @@ class EditPublication extends EditRecord
                                     reviewIdToOpen: $reviewIdToOpen,
                                 ));
                             } else {
+                                // ✅ Opini tanpa PDF: kirim notifikasi submitted biasa
                                 \Illuminate\Support\Facades\Notification::send(
                                     collect([$reviewer]),
                                     new \App\Notifications\PublicationSubmitted($publication)
