@@ -43,6 +43,14 @@ class RolesAndUsersSeeder extends Seeder
                 'job_title'       => 'Super Administrator',
                 'role'            => 'super_admin',
             ],
+            [
+                'name'            => 'Dabraka ',
+                'email'           => 'waterlaw98@gmail.com',
+                'password'        => '@SahabatDabraka19.org',
+                'whatsapp_number' => '+6285601005817',
+                'job_title'       => 'Super Administrator',
+                'role'            => 'super_admin',
+            ],
             // [
             //     'name'            => 'Admin',
             //     'email'           => 'admin@dabraka.org',
