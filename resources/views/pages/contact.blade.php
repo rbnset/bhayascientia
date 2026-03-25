@@ -335,7 +335,7 @@
         </div>
 
         <div class="grid max-w-4xl grid-cols-1 gap-3 mx-auto sm:grid-cols-3 sm:gap-4">
-            <a href="mailto:info@dabraka.id"
+            <a href="mailto:hallodabraka@dabraka.org"
                 class="flex items-center gap-3 p-4 border-2 hero-contact-btn group sm:gap-4 sm:p-5 bg-white/15 border-white/30 rounded-xl sm:rounded-2xl">
                 <div
                     class="flex items-center justify-center flex-shrink-0 w-12 h-12 transition-colors sm:w-14 sm:h-14 bg-white/20 rounded-xl group-hover:bg-white/30">
@@ -346,7 +346,7 @@
                 </div>
                 <div class="flex-1 min-w-0 text-left">
                     <p class="text-[10px] sm:text-xs text-white/70 font-semibold mb-1">EMAIL</p>
-                    <p class="text-xs font-bold text-white truncate sm:text-sm">info@dabraka.id</p>
+                    <p class="text-xs font-bold text-white truncate sm:text-sm">hallodabraka@dabraka.org</p>
                 </div>
             </a>
 
