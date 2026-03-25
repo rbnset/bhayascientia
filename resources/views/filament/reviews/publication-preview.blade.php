@@ -2,18 +2,24 @@
 use Illuminate\Support\Facades\Storage;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
-/** Ambil publicationVersion dari pilihan reviewer */
 $pvId = $get('publication_version_id');
 
+// ✅ Coba ambil dari publication_version_id dulu
 $version = $pvId
 ? \App\Models\PublicationVersion::query()
-->with(['publication', 'publication.authors', 'publication.authorPublications', 'publication.categories',
-'publication.keywords'])
+->with(['publication', 'publication.authors', 'publication.authorPublications',
+'publication.categories', 'publication.keywords'])
 ->find($pvId)
 : null;
 
 $publication = $version?->publication;
-$record = $publication; // Untuk kompatibilitas dengan design lama
+
+// ✅ Fallback: untuk opini, ambil publication langsung dari record
+if (!$publication && isset($record) && $record?->publication_id) {
+$publication = \App\Models\Publication::query()
+->with(['authors', 'authorPublications', 'categories', 'keywords', 'publicationType'])
+->find($record->publication_id);
+}
 
 $title = $publication?->title ?? '-';
 $status = $publication?->status ?? '-';
@@ -28,9 +34,10 @@ $authorPubs = $publication?->authorPublications
 ->values();
 
 $authorIds = $authorPubs->pluck('author_id')->filter()->unique()->values();
-$categoryIds = $publication?->categories?->pluck('id')->values() ?? collect($get('categories') ??
-[])->filter()->values();
-$keywordIds = $publication?->keywords?->pluck('id')->values() ?? collect($get('keywords') ?? [])->filter()->values();
+$categoryIds = $publication?->categories?->pluck('id')->values()
+?? collect($get('categories') ?? [])->filter()->values();
+$keywordIds = $publication?->keywords?->pluck('id')->values()
+?? collect($get('keywords') ?? [])->filter()->values();
 
 $authorMap = $authorIds->isEmpty()
 ? collect()
@@ -56,28 +63,26 @@ $statusLabel = strtoupper(str_replace('_', ' ', $status));
 
 $coverState = $publication?->cover_image_path ?? $get('cover_image_path');
 $resolveCoverUrl = function ($value) {
-if ($value instanceof TemporaryUploadedFile) {
-return $value->temporaryUrl();
-}
-if (is_string($value) && filled($value)) {
-return Storage::disk('public')->url($value);
-}
+if ($value instanceof TemporaryUploadedFile) return $value->temporaryUrl();
+if (is_string($value) && filled($value)) return Storage::disk('public')->url($value);
 return null;
 };
-
 $coverUrl = is_array($coverState)
 ? $resolveCoverUrl($coverState[0] ?? null)
 : $resolveCoverUrl($coverState);
 
-/** download/view URL dari version yang dipilih */
 $downloadUrl = $version ? route('manuscripts.download', $version) : null;
-
 $abstractHtml = filled($abstract) ? str($abstract)->sanitizeHtml() : null;
+
+// ✅ Untuk opini: tidak ada version, tapi tetap bisa tampil
+$isOpiniTanpaManuscript = $publication && is_null($version);
 @endphp
 
-@if(! $version)
+{{-- ✅ Tampilkan jika ada publication (termasuk opini tanpa version) --}}
+@if(!$publication)
 <div class="text-sm text-gray-500">Pilih Publication Version untuk melihat preview.</div>
 @else
+
 <div class="bookx">
     <div class="bookx-wrap">
         {{-- COVER COLUMN --}}
@@ -163,7 +168,9 @@ $abstractHtml = filled($abstract) ? str($abstract)->sanitizeHtml() : null;
                 </div>
                 <div class="bookx-meta-item">
                     <div class="bookx-meta-label">Version</div>
-                    <div class="bookx-meta-value">{{ $version?->version_number ?? '-' }}</div>
+                    <div class="bookx-meta-value">
+                        {{ $version?->version_number ?? ($isOpiniTanpaManuscript ? 'Opini' : '-') }}
+                    </div>
                 </div>
             </div>
 
