@@ -6,7 +6,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>@yield('title', 'BHAYASCIENTIA') - Platform Publikasi Ilmiah Indonesia</title>
+    {{-- ✅ Title --}}
+    <title>@yield('title', 'DABARKA') - Platform Publikasi Ilmiah Indonesia</title>
+
+    {{-- ✅ SEO Basic --}}
+    <meta name="description" content="@yield('description', 'Platform Publikasi Ilmiah Indonesia Dabarka')">
+
+    {{-- ✅ Open Graph (WA, Facebook, dll) --}}
+    <meta property="og:title" content="@yield('title', 'DABARKA')">
+    <meta property="og:description" content="@yield('description', 'Platform Publikasi Ilmiah Indonesia Dabarka')">
+    <meta property="og:image" content="@yield('image', asset('assets/images/logos/logo-brand.png'))">
+    <meta property="og:url" content="{{ url()->current() }}">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="DABARKA">
+
+    {{-- ✅ Twitter Card --}}
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="@yield('title', 'DABARKA')">
+    <meta name="twitter:description" content="@yield('description', 'Platform Publikasi Ilmiah Indonesia Dabarka')">
+    <meta name="twitter:image" content="@yield('image', asset('assets/images/logos/logo-brand.png'))">
+
+    {{-- ✅ Favicon --}}
+    <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
