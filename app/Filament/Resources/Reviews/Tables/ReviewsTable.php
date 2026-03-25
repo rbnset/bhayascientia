@@ -4,6 +4,9 @@ namespace App\Filament\Resources\Reviews\Tables;
 
 use App\Filament\Resources\Reviews\ReviewResource;
 use App\Models\Review;
+use Filament\Actions\DeleteAction as ActionsDeleteAction;
+use Filament\Actions\EditAction as ActionsEditAction;
+use Filament\Actions\ViewAction as ActionsViewAction;
 use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -140,13 +143,13 @@ class ReviewsTable
             ])
 
             ->actions([
-                ViewAction::make()
+                ActionsViewAction::make()
                     ->visible(fn() => (bool) auth()->user()?->hasRole('author')),
 
-                EditAction::make()
+                ActionsEditAction::make()
                     ->visible(fn() => ! (bool) auth()->user()?->hasRole('author')),
 
-                DeleteAction::make()
+                ActionsDeleteAction::make()
                     ->visible(fn() => ! (bool) auth()->user()?->hasRole('author')),
             ])
 
