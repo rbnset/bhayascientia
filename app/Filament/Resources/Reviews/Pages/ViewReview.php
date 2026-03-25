@@ -11,7 +11,6 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\HtmlString;
@@ -40,6 +39,33 @@ class ViewReview extends ViewRecord
     }
 
     // ─────────────────────────────────────────────────────────────
+    // ✅ Helper terpusat — support opini (publication_version_id null)
+    // ─────────────────────────────────────────────────────────────
+
+    protected function getPublication(): ?\App\Models\Publication
+    {
+        if (is_null($this->record->publication_version_id)) {
+            return $this->record->publication ?? null;
+        }
+        return $this->record->publicationVersion?->publication ?? null;
+    }
+
+    protected function publicationStatus(): ?string
+    {
+        return $this->getPublication()?->status;
+    }
+
+    protected function isPublished(): bool
+    {
+        return $this->publicationStatus() === 'published';
+    }
+
+    protected function isOpini(): bool
+    {
+        return is_null($this->record->publication_version_id);
+    }
+
+    // ─────────────────────────────────────────────────────────────
     // Mount — reviewer & admin redirect ke edit
     // ─────────────────────────────────────────────────────────────
 
@@ -55,36 +81,14 @@ class ViewReview extends ViewRecord
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Helpers
-    // ─────────────────────────────────────────────────────────────
-
-    protected function publicationStatus(): ?string
-    {
-        return $this->record->publicationVersion?->publication?->status;
-    }
-
-    protected function isPublished(): bool
-    {
-        return $this->publicationStatus() === 'published';
-    }
-
-    /**
-     * Cek apakah review ini punya anotasi PDF dari reviewer.
-     */
-    protected function hasAnnotations(): bool
-    {
-        return \App\Models\PdfAnnotation::where('review_id', $this->record->id)->exists();
-    }
-
-    // ─────────────────────────────────────────────────────────────
-    // Status banner
+    // Status banner — ✅ support opini
     // ─────────────────────────────────────────────────────────────
 
     protected function renderStatusBanner(): HtmlString
     {
-        $decision          = $this->record->decision ?? null;
-        $publication       = $this->record->publicationVersion?->publication;
-        $isPublished       = $this->isPublished();
+        $decision    = $this->record->decision ?? null;
+        $publication = $this->getPublication();
+        $isPublished = $this->isPublished();
 
         // Jika sudah published, override banner
         if ($isPublished) {
@@ -150,7 +154,10 @@ class ViewReview extends ViewRecord
                 'icon'    => '✏️',
                 'label'   => 'Revisi Diperlukan',
                 'title'   => 'Naskah Anda perlu direvisi',
-                'message' => 'Reviewer memberikan catatan revisi. Pelajari komentar di bawah, perbaiki naskah, lalu klik tombol <strong>Upload Revisi</strong> di atas.',
+                // ✅ Pesan berbeda untuk opini (tanpa upload PDF) vs biasa
+                'message' => $this->isOpini()
+                    ? 'Reviewer memberikan catatan revisi. Pelajari komentar di bawah, perbaiki <strong>isi opini</strong> di halaman publikasi, lalu klik <strong>Upload Revisi</strong>.'
+                    : 'Reviewer memberikan catatan revisi. Pelajari komentar di bawah, perbaiki naskah, lalu klik tombol <strong>Upload Revisi</strong> di atas.',
             ],
             'accepted' => [
                 'color'   => '#10B981',
@@ -172,11 +179,15 @@ class ViewReview extends ViewRecord
             ],
         ];
 
-        $cfg      = $map[$decision] ?? $map[null];
+        $cfg = $map[$decision] ?? $map[null];
+
+        // ✅ Support opini: versi fleksibel
         $pubType  = $publication?->publicationType?->name ?? 'Publikasi';
-        $version  = $this->record->publicationVersion?->version_number
-            ? 'v' . $this->record->publicationVersion->version_number
-            : '-';
+        $version  = $this->isOpini()
+            ? 'Opini'
+            : ($this->record->publicationVersion?->version_number
+                ? 'v' . $this->record->publicationVersion->version_number
+                : '-');
         $reviewer = $this->record->reviewer?->name ?? '-';
 
         return new HtmlString("
@@ -216,7 +227,7 @@ class ViewReview extends ViewRecord
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Infolist
+    // Infolist — ✅ support opini
     // ─────────────────────────────────────────────────────────────
 
     public function infolist(Schema $schema): Schema
@@ -257,9 +268,14 @@ class ViewReview extends ViewRecord
                             default             => 'Menunggu keputusan...',
                         }),
 
-                    TextEntry::make('publicationVersion.version_number')
+                    // ✅ Support opini: tampilkan "Opini" jika tidak ada versi
+                    TextEntry::make('version_label')
                         ->label('Versi yang Direview')
-                        ->formatStateUsing(fn($state) => 'v' . $state),
+                        ->getStateUsing(function () {
+                            if ($this->isOpini()) return 'Opini';
+                            $v = $this->record->publicationVersion?->version_number;
+                            return $v ? 'v' . $v : '-';
+                        }),
 
                     TextEntry::make('updated_at')
                         ->label('Tanggal Keputusan')
@@ -267,8 +283,7 @@ class ViewReview extends ViewRecord
                         ->placeholder('Belum ada keputusan'),
                 ]),
 
-            // ── ✅ PDF VIEWER read-only — author bisa lihat anotasi reviewer ──
-            // ── PDF Viewer read-only untuk Author ──────────────────────────
+            // ── PDF Viewer — hanya tampil jika ada manuskrip (bukan opini murni) ──
             Section::make('Manuscript PDF & Anotasi Reviewer')
                 ->description('Lihat naskah beserta anotasi yang diberikan reviewer')
                 ->icon('heroicon-o-document-text')
@@ -280,8 +295,6 @@ class ViewReview extends ViewRecord
                         ->view('filament.reviews.pdf-viewer-readonly')
                         ->columnSpanFull(),
                 ]),
-            // ────────────────────────────────────────────────────────────────
-            // ─────────────────────────────────────────────────────────────────
 
             Section::make('')
                 ->columnSpanFull()
@@ -367,12 +380,13 @@ class ViewReview extends ViewRecord
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Header actions
+    // Header actions — ✅ support opini
     // ─────────────────────────────────────────────────────────────
 
     protected function getHeaderActions(): array
     {
         return [
+            // ── Lihat Manuskrip PDF — hanya jika ada versi ────────
             Action::make('previewPdf')
                 ->label(function () {
                     $v = $this->record->publicationVersion?->version_number;
@@ -399,8 +413,13 @@ class ViewReview extends ViewRecord
                 }),
 
             // ── Upload Revisi — author, revision_required ─────────
+            // ✅ Support opini: arahkan ke edit publikasi agar bisa edit abstract + klik Upload Revisi
             Action::make('uploadRevisi')
-                ->label('Upload Revisi')
+                ->label(
+                    fn() => $this->isOpini()
+                        ? 'Perbaiki & Kirim Revisi'
+                        : 'Upload Revisi'
+                )
                 ->icon('heroicon-o-arrow-up-tray')
                 ->color('warning')
                 ->visible(
@@ -409,18 +428,23 @@ class ViewReview extends ViewRecord
                         $this->record->decision === 'revision_required'
                 )
                 ->url(fn() => PublicationResource::getUrl('edit', [
-                    'record' => $this->record->publicationVersion?->publication,
+                    'record' => $this->getPublication(),
                 ]))
-                ->tooltip('Perbaiki naskah lalu upload revisi di halaman publikasi'),
+                ->tooltip(
+                    fn() => $this->isOpini()
+                        ? 'Perbaiki isi opini lalu klik "Upload Revisi" di halaman publikasi'
+                        : 'Perbaiki naskah lalu upload revisi di halaman publikasi'
+                ),
 
             // ── Lihat Halaman Publikasi — jika sudah published ────
+            // ✅ Support opini: gunakan getPublication()
             Action::make('lihatPublikasi')
                 ->label('Lihat Halaman Publikasi')
                 ->icon('heroicon-o-arrow-top-right-on-square')
                 ->color('success')
                 ->visible(fn() => $this->isPublished())
                 ->url(fn() => PublicationResource::getUrl('view', [
-                    'record' => $this->record->publicationVersion?->publication,
+                    'record' => $this->getPublication(),
                 ]))
                 ->openUrlInNewTab(false),
         ];

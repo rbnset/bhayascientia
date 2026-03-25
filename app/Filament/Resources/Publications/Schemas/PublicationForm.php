@@ -34,6 +34,43 @@ class PublicationForm
         return (bool) auth()->user()?->hasRole('reviewer');
     }
 
+    private static function isAuthor(): bool
+    {
+        return (bool) auth()->user()?->hasRole('author');
+    }
+
+    /**
+     * ✅ Apakah field konten (abstract/isi opini) boleh diedit?
+     *
+     * - Reviewer      → selalu disabled
+     * - Author        → hanya bisa edit saat draft atau revision_required
+     * - Admin/lainnya → selalu bisa edit
+     */
+    private static function isContentDisabled(?object $record): bool
+    {
+        if (self::isReviewer()) return true;
+
+        if (self::isAuthor()) {
+            // Jika record belum ada (create baru) → boleh edit
+            if (!$record?->id) return false;
+
+            // Author hanya boleh edit saat draft atau revision_required
+            return !in_array($record->status ?? 'draft', ['draft', 'revision_required'], true);
+        }
+
+        // Admin/super_admin → tidak pernah disabled
+        return false;
+    }
+
+    /**
+     * ✅ Apakah field NON-konten (judul, kategori, penulis, dll) boleh diedit?
+     * Sama seperti sebelumnya — reviewer tidak boleh, yang lain boleh.
+     */
+    private static function isFieldDisabled(): bool
+    {
+        return self::isReviewer();
+    }
+
     private static function publicationTypeSlug(callable $get): ?string
     {
         $id = $get('publication_type_id');
@@ -87,7 +124,7 @@ class PublicationForm
     {
         if (!$record) return '';
 
-        $status = $record->status ?? 'draft';
+        $status     = $record->status ?? 'draft';
         $isReviewer = self::isReviewer();
         $isAdmin    = auth()->user()?->hasAnyRole(['admin', 'super_admin']);
         $role       = match (true) {
@@ -96,14 +133,13 @@ class PublicationForm
             default     => 'author',
         };
 
-        // [status][role] => config
         $map = [
             'draft' => [
                 'color'  => '#F59E0B',
-                'bg' => '#FFFBEB',
+                'bg'     => '#FFFBEB',
                 'border' => '#FDE68A',
                 'icon'   => '✏️',
-                'label' => 'Draft',
+                'label'  => 'Draft',
                 'author'   => [
                     'title'   => 'Publikasi masih dalam tahap Draft',
                     'message' => 'Lengkapi semua informasi, lalu klik <strong>Submit Manuskrip</strong> di pojok kanan atas. Pastikan judul, abstrak, penulis, dan file sudah lengkap sebelum submit.',
@@ -123,13 +159,12 @@ class PublicationForm
                     ['done' => false, 'text' => 'Diterbitkan'],
                 ],
             ],
-
             'submitted' => [
                 'color'  => '#3B82F6',
-                'bg' => '#EFF6FF',
+                'bg'     => '#EFF6FF',
                 'border' => '#BFDBFE',
                 'icon'   => '📬',
-                'label' => 'Submitted',
+                'label'  => 'Submitted',
                 'author'   => [
                     'title'   => 'Naskah sudah dikirim ke reviewer',
                     'message' => 'Naskah kamu sudah diterima dan sedang <strong>menunggu reviewer ditugaskan</strong>. Kamu akan mendapat notifikasi saat proses review dimulai.',
@@ -149,13 +184,12 @@ class PublicationForm
                     ['done' => false, 'text' => 'Diterbitkan'],
                 ],
             ],
-
             'in_review' => [
                 'color'  => '#8B5CF6',
-                'bg' => '#F5F3FF',
+                'bg'     => '#F5F3FF',
                 'border' => '#DDD6FE',
                 'icon'   => '🔍',
-                'label' => 'In Review',
+                'label'  => 'In Review',
                 'author'   => [
                     'title'   => 'Naskah sedang diperiksa reviewer',
                     'message' => 'Reviewer sedang <strong>memeriksa naskah kamu</strong>. Harap tunggu hasilnya. Jangan mengubah konten utama selama proses review berlangsung.',
@@ -175,24 +209,23 @@ class PublicationForm
                     ['done' => false, 'text' => 'Diterbitkan'],
                 ],
             ],
-
             'revision_required' => [
                 'color'  => '#EF4444',
-                'bg' => '#FEF2F2',
+                'bg'     => '#FEF2F2',
                 'border' => '#FECACA',
                 'icon'   => '🔄',
-                'label' => 'Revisi Diperlukan',
+                'label'  => 'Revisi Diperlukan',
                 'author'   => [
                     'title'   => 'Naskah kamu perlu direvisi',
                     'message' => 'Reviewer telah memberikan <strong>catatan revisi</strong>. Buka halaman review, pelajari catatan dari reviewer, lakukan perbaikan, lalu klik <strong>Upload Revisi</strong> di pojok kanan atas.',
                 ],
                 'reviewer' => [
                     'title'   => 'Anda telah meminta revisi — menunggu author',
-                    'message' => 'Keputusan revisi sudah terkirim ke author. Anda akan mendapat notifikasi ketika author mengirimkan naskah yang telah diperbaiki. Gunakan tombol <strong>Review Revisi Terbaru</strong> saat revisi tiba.',
+                    'message' => 'Keputusan revisi sudah terkirim ke author. Anda akan mendapat notifikasi ketika author mengirimkan naskah yang telah diperbaiki.',
                 ],
                 'admin' => [
                     'title'   => 'Reviewer meminta revisi dari author',
-                    'message' => 'Author telah dinotifikasi dan perlu mengirimkan ulang naskah yang diperbaiki. Pantau apakah author merespons dalam waktu yang wajar.',
+                    'message' => 'Author telah dinotifikasi dan perlu mengirimkan ulang naskah yang diperbaiki.',
                 ],
                 'steps' => [
                     ['done' => true,  'text' => 'Buat publikasi'],
@@ -201,24 +234,23 @@ class PublicationForm
                     ['done' => false, 'text' => 'Revisi & resubmit'],
                 ],
             ],
-
             'accepted' => [
                 'color'  => '#10B981',
-                'bg' => '#ECFDF5',
+                'bg'     => '#ECFDF5',
                 'border' => '#A7F3D0',
                 'icon'   => '✅',
-                'label' => 'Accepted',
+                'label'  => 'Accepted',
                 'author'   => [
                     'title'   => 'Selamat! Naskah kamu diterima',
-                    'message' => 'Naskah kamu telah <strong>diterima oleh reviewer</strong>. Tim editor akan segera menjadwalkan penerbitan. Tidak perlu melakukan perubahan apapun.',
+                    'message' => 'Naskah kamu telah <strong>diterima oleh reviewer</strong>. Tim editor akan segera menjadwalkan penerbitan.',
                 ],
                 'reviewer' => [
                     'title'   => 'Anda telah menerima naskah ini',
-                    'message' => 'Keputusan penerimaan sudah terkirim ke author. Naskah ini menunggu jadwal penerbitan dari editor/admin.',
+                    'message' => 'Keputusan penerimaan sudah terkirim ke author.',
                 ],
                 'admin' => [
                     'title'   => 'Naskah diterima — siap dijadwalkan terbit',
-                    'message' => 'Reviewer telah menerima naskah ini. Silakan jadwalkan penerbitan dengan mengubah status ke <strong>Published</strong> pada Step Finalisasi.',
+                    'message' => 'Reviewer telah menerima naskah ini. Silakan jadwalkan penerbitan.',
                 ],
                 'steps' => [
                     ['done' => true,  'text' => 'Buat publikasi'],
@@ -227,24 +259,23 @@ class PublicationForm
                     ['done' => false, 'text' => 'Diterbitkan'],
                 ],
             ],
-
             'rejected' => [
                 'color'  => '#6B7280',
-                'bg' => '#F9FAFB',
+                'bg'     => '#F9FAFB',
                 'border' => '#E5E7EB',
                 'icon'   => '❌',
-                'label' => 'Rejected',
+                'label'  => 'Rejected',
                 'author'   => [
                     'title'   => 'Naskah tidak dapat diterima',
-                    'message' => 'Mohon maaf, naskah kamu <strong>tidak dapat diterima</strong> saat ini. Baca catatan reviewer untuk mengetahui alasannya. Kamu dapat mengajukan naskah baru melalui menu <strong>Daftar Publikasi</strong>.',
+                    'message' => 'Mohon maaf, naskah kamu <strong>tidak dapat diterima</strong> saat ini. Baca catatan reviewer untuk mengetahui alasannya.',
                 ],
                 'reviewer' => [
                     'title'   => 'Anda telah menolak naskah ini',
-                    'message' => 'Keputusan penolakan sudah terkirim ke author beserta catatan Anda. Tidak ada tindakan lebih lanjut yang diperlukan.',
+                    'message' => 'Keputusan penolakan sudah terkirim ke author.',
                 ],
                 'admin' => [
                     'title'   => 'Naskah ditolak oleh reviewer',
-                    'message' => 'Author telah dinotifikasi mengenai penolakan ini. Arsip tetap tersimpan untuk referensi.',
+                    'message' => 'Author telah dinotifikasi mengenai penolakan ini.',
                 ],
                 'steps' => [
                     ['done' => true,  'text' => 'Buat publikasi'],
@@ -253,24 +284,23 @@ class PublicationForm
                     ['done' => false, 'text' => 'Ditolak'],
                 ],
             ],
-
             'published' => [
                 'color'  => '#059669',
-                'bg' => '#ECFDF5',
+                'bg'     => '#ECFDF5',
                 'border' => '#6EE7B7',
                 'icon'   => '🎉',
-                'label' => 'Published',
+                'label'  => 'Published',
                 'author'   => [
                     'title'   => 'Naskah telah diterbitkan!',
-                    'message' => 'Naskah kamu sudah <strong>live dan dapat diakses publik</strong>. Bagikan ke rekan-rekan dan komunitas untuk memperluas dampak karya ilmiahmu.',
+                    'message' => 'Naskah kamu sudah <strong>live dan dapat diakses publik</strong>.',
                 ],
                 'reviewer' => [
                     'title'   => 'Naskah ini sudah diterbitkan',
-                    'message' => 'Proses review selesai dan naskah sudah live. Terima kasih atas kontribusi review Anda.',
+                    'message' => 'Proses review selesai dan naskah sudah live.',
                 ],
                 'admin' => [
                     'title'   => 'Naskah sudah live dan dapat diakses publik',
-                    'message' => 'Publikasi berhasil diterbitkan. Pastikan metadata dan URL sudah benar di halaman publik.',
+                    'message' => 'Publikasi berhasil diterbitkan.',
                 ],
                 'steps' => [
                     ['done' => true, 'text' => 'Buat publikasi'],
@@ -284,7 +314,6 @@ class PublicationForm
         $cfg     = $map[$status] ?? $map['draft'];
         $content = $cfg[$role] ?? $cfg['author'];
 
-        // Build step indicators
         $stepsHtml = '';
         $stepCount = count($cfg['steps']);
         foreach ($cfg['steps'] as $i => $step) {
@@ -353,12 +382,12 @@ class PublicationForm
 
     public static function configure(Schema $schema): Schema
     {
+        // ✅ Ambil record dari schema untuk diteruskan ke isContentDisabled()
+        $record = $schema->getRecord();
+
         return $schema
             ->columns(1)
             ->components([
-                // ─────────────────────────────────────────
-                // STATUS BANNER — Ditampilkan di atas Wizard
-                // ─────────────────────────────────────────
                 Placeholder::make('status_banner')
                     ->label('Status Publikasi')
                     ->content(fn($record) => new \Illuminate\Support\HtmlString(
@@ -397,10 +426,9 @@ class PublicationForm
                                         ->live()
                                         ->afterStateUpdated(fn($set) => $set('abstract', null))
                                         ->helperText('Pilih tipe publikasi terlebih dahulu agar field lain menyesuaikan.')
-                                        ->disabled(fn() => self::isReviewer())
+                                        ->disabled(fn() => self::isFieldDisabled())
                                         ->columnSpan(1),
 
-                                    // ✅ VALIDASI JUDUL UNIQUE
                                     TextInput::make('title')
                                         ->label(fn($get) => match (self::publicationTypeSlug($get)) {
                                             'jurnal' => 'Judul Artikel',
@@ -416,7 +444,6 @@ class PublicationForm
                                             'opini'  => 'Contoh: Mengapa Digitalisasi Desa Masih Lambat?',
                                             default  => 'Tulis judul yang jelas dan ringkas.',
                                         })
-                                        // ✅ Validasi unique: judul tidak boleh sama dengan publikasi lain
                                         ->unique(
                                             table: 'publications',
                                             column: 'title',
@@ -425,10 +452,10 @@ class PublicationForm
                                         ->validationMessages([
                                             'unique' => 'Judul karya ilmiah ini sudah pernah digunakan. Silakan gunakan judul yang berbeda atau tambahkan penjelasan spesifik (metode, lokasi, atau konteks).',
                                         ])
-                                        ->disabled(fn() => self::isReviewer())
+                                        ->disabled(fn() => self::isFieldDisabled())
                                         ->columnSpanFull(),
 
-                                    // Jurnal → Abstrak
+                                    // ✅ Jurnal → Abstrak
                                     RichEditor::make('abstract')
                                         ->columnSpanFull()
                                         ->label('Abstrak')
@@ -440,9 +467,10 @@ class PublicationForm
                                             ['undo', 'redo'],
                                         ])
                                         ->helperText('Wajib. Tulis abstrak sesuai standar jurnal.')
-                                        ->disabled(fn() => self::isReviewer()),
+                                        // ✅ FIXED: pakai isContentDisabled() agar bisa edit saat revision_required
+                                        ->disabled(fn($record) => self::isContentDisabled($record)),
 
-                                    // Buku → Sinopsis
+                                    // ✅ Buku → Sinopsis
                                     RichEditor::make('abstract')
                                         ->columnSpanFull()
                                         ->label('Sinopsis')
@@ -454,9 +482,10 @@ class PublicationForm
                                             ['undo', 'redo'],
                                         ])
                                         ->helperText('Opsional. Tulis sinopsis menarik.')
-                                        ->disabled(fn() => self::isReviewer()),
+                                        // ✅ FIXED
+                                        ->disabled(fn($record) => self::isContentDisabled($record)),
 
-                                    // Opini → Isi Opini
+                                    // ✅ Opini → Isi Opini — INI YANG PALING PENTING
                                     RichEditor::make('abstract')
                                         ->columnSpanFull()
                                         ->label('Isi Opini')
@@ -468,9 +497,10 @@ class PublicationForm
                                             ['undo', 'redo'],
                                         ])
                                         ->helperText('Wajib. Tulis isi opini secara lengkap.')
-                                        ->disabled(fn() => self::isReviewer()),
+                                        // ✅ FIXED: author opini bisa edit saat revision_required
+                                        ->disabled(fn($record) => self::isContentDisabled($record)),
 
-                                    // Keywords — Jurnal (min 3, maks 7)
+                                    // Keywords — Jurnal
                                     Select::make('keywords')
                                         ->label('Keywords')
                                         ->searchPrompt('Ketik kata kunci...')
@@ -486,10 +516,10 @@ class PublicationForm
                                         ->createOptionForm(self::keywordCreateOptionForm('Keyword'))
                                         ->createOptionUsing(fn(array $data) => Keyword::create($data)->getKey())
                                         ->helperText('Wajib. Pilih minimal 3 dan maksimal 7 keyword.')
-                                        ->disabled(fn() => self::isReviewer())
+                                        ->disabled(fn() => self::isFieldDisabled())
                                         ->columnSpanFull(),
 
-                                    // Tags — Buku (maks 3)
+                                    // Tags — Buku
                                     Select::make('keywords')
                                         ->label('Tags')
                                         ->searchPrompt('Ketik tag...')
@@ -504,10 +534,10 @@ class PublicationForm
                                         ->createOptionForm(self::keywordCreateOptionForm('Tag'))
                                         ->createOptionUsing(fn(array $data) => Keyword::create($data)->getKey())
                                         ->helperText('Opsional. Maksimal 3 tag.')
-                                        ->disabled(fn() => self::isReviewer())
+                                        ->disabled(fn() => self::isFieldDisabled())
                                         ->columnSpanFull(),
 
-                                    // Topik — Opini (maks 3)
+                                    // Topik — Opini
                                     Select::make('keywords')
                                         ->label('Topik')
                                         ->searchPrompt('Ketik topik...')
@@ -522,7 +552,7 @@ class PublicationForm
                                         ->createOptionForm(self::keywordCreateOptionForm('Topik'))
                                         ->createOptionUsing(fn(array $data) => Keyword::create($data)->getKey())
                                         ->helperText('Opsional. Maksimal 3 topik.')
-                                        ->disabled(fn() => self::isReviewer())
+                                        ->disabled(fn() => self::isFieldDisabled())
                                         ->columnSpanFull(),
                                 ]),
                         ]),
@@ -566,7 +596,7 @@ class PublicationForm
                                         ])
                                         ->createOptionUsing(fn(array $data) => Category::create($data)->getKey())
                                         ->helperText('Pilih 1 kategori.')
-                                        ->disabled(fn() => self::isReviewer())->columnSpan(1),
+                                        ->disabled(fn() => self::isFieldDisabled())->columnSpan(1),
 
                                     Select::make('method_id')
                                         ->label(fn($get) => match (self::publicationTypeSlug($get)) {
@@ -602,7 +632,7 @@ class PublicationForm
                                             'buku'   => 'Opsional.',
                                             default  => '',
                                         })
-                                        ->disabled(fn() => self::isReviewer())->columnSpan(1),
+                                        ->disabled(fn() => self::isFieldDisabled())->columnSpan(1),
 
                                     Placeholder::make('method_info')
                                         ->label('')
@@ -635,17 +665,11 @@ class PublicationForm
                                                 ->modalSubmitActionLabel('Ya, Hapus')
                                                 ->color('danger')
                                                 ->hidden(function (array $arguments, \Filament\Forms\Components\Repeater $component): bool {
-                                                    // Reviewer tidak boleh hapus
                                                     if (self::isReviewer()) return true;
-
                                                     $items    = $component->getState();
                                                     $authorId = $items[$arguments['item']]['author_id'] ?? null;
-
                                                     if (!$authorId) return false;
-
-                                                    // Sembunyikan jika ini author milik user yang sedang login
                                                     $myAuthorId = \App\Models\Author::where('user_id', auth()->id())->value('id');
-
                                                     return (int) $authorId === (int) $myAuthorId;
                                                 })
                                         )
@@ -655,7 +679,7 @@ class PublicationForm
                                         ->defaultItems(0)
                                         ->minItems(1)
                                         ->addActionLabel('Tambah penulis lain')
-                                        ->collapsed(false)  // ← semua item terbuka saat pertama load
+                                        ->collapsed(false)
                                         ->collapseAllAction(
                                             fn(\Filament\Actions\Action $action) => $action->label('Ciutkan semua')
                                         )
@@ -665,21 +689,17 @@ class PublicationForm
                                         ->itemLabel(function (array $state): ?string {
                                             $authorId = $state['author_id'] ?? null;
                                             if (!$authorId) return 'Penulis baru';
-
                                             $author = \App\Models\Author::find($authorId);
                                             if (!$author) return 'Penulis';
-
                                             $label = $author->name;
                                             if ($state['is_corresponding'] ?? false) {
                                                 $label .= ' · Corresponding';
                                             }
-
                                             return $label;
                                         })
                                         ->afterStateHydrated(function (?array $state, callable $set) {
                                             $state ??= [];
                                             $state = array_values($state);
-
                                             if (count($state) > 0) {
                                                 foreach ($state as $i => $row) {
                                                     $state[$i]['order'] = $i + 1;
@@ -687,10 +707,8 @@ class PublicationForm
                                                 $set('authorPublications', $state);
                                                 return;
                                             }
-
                                             $author = self::resolveCurrentAuthor();
                                             if (!$author) return;
-
                                             $set('authorPublications', [[
                                                 'author_id'        => $author->id,
                                                 'is_corresponding' => true,
@@ -739,8 +757,6 @@ class PublicationForm
                                                 })
                                                 ->dehydrated()
                                                 ->createOptionForm([
-
-                                                    // ── Foto Profil ───────────────────────────────────────────
                                                     FileUpload::make('photo_path')
                                                         ->label('Foto Profil')
                                                         ->avatar()
@@ -758,7 +774,6 @@ class PublicationForm
                                                             'class' => 'flex flex-col items-center justify-center',
                                                         ]),
 
-                                                    // ── Nama & Email ──────────────────────────────────────────
                                                     Grid::make()
                                                         ->columns(['default' => 1, 'md' => 2])
                                                         ->schema([
@@ -780,7 +795,6 @@ class PublicationForm
                                                                 ->helperText('Opsional.'),
                                                         ]),
 
-                                                    // ── Affiliasi ─────────────────────────────────────────────
                                                     TextInput::make('affiliation')
                                                         ->label('Affiliasi / Institusi')
                                                         ->maxLength(255)
@@ -788,7 +802,6 @@ class PublicationForm
                                                         ->prefixIcon('heroicon-o-building-office')
                                                         ->helperText('Opsional.'),
 
-                                                    // ── Bio ───────────────────────────────────────────────────
                                                     Textarea::make('bio')
                                                         ->label('Biografi')
                                                         ->rows(4)
@@ -796,7 +809,6 @@ class PublicationForm
                                                         ->placeholder('Tulis bio singkat penulis...')
                                                         ->helperText('Opsional. Maks. 1000 karakter.'),
 
-                                                    // ── Hubungkan ke Akun User ────────────────────────────────
                                                     Select::make('user_id')
                                                         ->label('Hubungkan ke Akun Pengguna')
                                                         ->relationship(
@@ -859,7 +871,7 @@ class PublicationForm
                                             return $state;
                                         })
                                         ->columnSpanFull()
-                                        ->disabled(fn() => self::isReviewer()),
+                                        ->disabled(fn() => self::isFieldDisabled()),
                                 ]),
                         ]),
 
@@ -893,7 +905,7 @@ class PublicationForm
                                         ->maxSize(2048)
                                         ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
                                         ->helperText('Format: JPG/PNG/WebP. Maks. 2MB. Rasio ideal 2:3.')
-                                        ->disabled(fn() => self::isReviewer())
+                                        ->disabled(fn() => self::isFieldDisabled())
                                         ->live(),
                                 ]),
 
@@ -947,7 +959,7 @@ class PublicationForm
                         ->schema([
                             View::make('filament.publications.preview')
                                 ->viewData(['titleLabel' => 'Judul']),
-                        ])
+                        ]),
 
                 ])
                     ->skippable()
