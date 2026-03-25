@@ -156,12 +156,13 @@ class EditPublication extends EditRecord
     }
 
     // ─────────────────────────────────────────────────────────────
-    // ✅ Helper: apakah publikasi ini punya review (termasuk opini tanpa versi)
+    // ✅ Helper: cek apakah ada review apapun untuk publikasi ini
+    //    Mencakup review via versi manuskrip DAN opini tanpa manuskrip
     // ─────────────────────────────────────────────────────────────
 
     protected function publicationHasAnyReview(): bool
     {
-        // Review lewat versi manuskrip
+        // Review lewat versi manuskrip (publikasi biasa / opini dengan PDF)
         $hasVersionReview = \App\Models\Review::query()
             ->whereHas(
                 'publicationVersion',
@@ -171,25 +172,11 @@ class EditPublication extends EditRecord
 
         if ($hasVersionReview) return true;
 
-        // Review langsung (opini tanpa manuskrip)
+        // Review langsung tanpa versi (opini tanpa manuskrip)
         return \App\Models\Review::query()
             ->where('publication_id', $this->record->id)
             ->whereNull('publication_version_id')
             ->exists();
-    }
-
-    // ─────────────────────────────────────────────────────────────
-    // ✅ Helper: URL daftar review untuk publikasi ini
-    //    Mengarah ke ReviewResource index dengan filter publication_id
-    // ─────────────────────────────────────────────────────────────
-
-    protected function getReviewListUrl(): string
-    {
-        return \App\Filament\Resources\Reviews\ReviewResource::getUrl('index', [
-            'tableFilters' => [
-                'publication_id' => ['value' => $this->record->id],
-            ],
-        ]);
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -398,8 +385,10 @@ class EditPublication extends EditRecord
                 ]))
                 ->openUrlInNewTab(),
 
-            // ── Lihat Detail Review (saat submitted / in_review / revision_required / accepted / published) ──
-            // ✅ PERBAIKAN: visible juga saat revision_required, semua tipe publikasi & opini tanpa manuskrip
+            // ── Lihat Detail Review ───────────────────────────────
+            // ✅ FIXED: visible mencakup semua status yang punya review,
+            //    termasuk revision_required — untuk semua tipe publikasi
+            //    (opini tanpa manuskrip, opini dengan PDF, publikasi biasa)
             Action::make('lihatReview')
                 ->label(function () {
                     $count = $this->record->reviews()->count();
@@ -408,17 +397,17 @@ class EditPublication extends EditRecord
                 ->icon('heroicon-o-clipboard-document-list')
                 ->color('info')
                 ->visible(function () {
-                    // ✅ Tampil jika ada review, dan tidak sedang menunggu reviewer baru me-review versi terbaru
+                    // Tidak tampil jika belum ada review sama sekali
                     if (!$this->publicationHasAnyReview()) return false;
 
-                    // Jika reviewer dan ada versi baru yang belum direview, sembunyikan tombol ini
-                    // (digantikan oleh tombol 'reviewRevisiTerbaru')
+                    // Reviewer yang punya versi baru untuk direview
+                    // → tombol ini disembunyikan, digantikan oleh 'reviewRevisiTerbaru'
                     if ($this->hasNewerVersionToReview()) return false;
 
                     return true;
                 })
                 ->action(function () {
-                    // ── REVIEWER: arahkan ke review miliknya sendiri ──────
+                    // ── REVIEWER: ke review miliknya sendiri ─────────────
                     if ($this->isReviewer()) {
                         $myReview = $this->getMyLatestReview();
 
@@ -430,32 +419,39 @@ class EditPublication extends EditRecord
                             return;
                         }
 
-                        $this->redirect(\App\Filament\Resources\Reviews\ReviewResource::getUrl('edit', ['record' => $myReview->id]));
+                        $this->redirect(
+                            \App\Filament\Resources\Reviews\ReviewResource::getUrl('edit', ['record' => $myReview->id])
+                        );
                         return;
                     }
 
-                    // ── AUTHOR: arahkan ke daftar review publikasi ini ───
+                    // ── AUTHOR & ADMIN: ke halaman view/edit review terbaru ──
+                    // ✅ Menggunakan getLatestReviewForPublication() yang sudah
+                    //    support opini (tanpa versi) dan publikasi biasa (dengan versi)
+                    $latestReview = $this->getLatestReviewForPublication();
+
+                    if (!$latestReview) {
+                        Notification::make()
+                            ->title('Review sedang diproses')
+                            ->body('Reviewer belum membuat catatan review. Harap tunggu notifikasi dari reviewer.')
+                            ->info()
+                            ->persistent()
+                            ->send();
+                        return;
+                    }
+
+                    // ✅ Author → 'view' (read-only, sesuai ViewReview)
                     if ($this->isAuthor()) {
-                        // ✅ Cek apakah ada review yang bisa dilihat
-                        $latestReview = $this->getLatestReviewForPublication();
-
-                        if (!$latestReview) {
-                            Notification::make()
-                                ->title('Review sedang diproses')
-                                ->body('Reviewer belum membuat catatan review. Harap tunggu notifikasi dari reviewer.')
-                                ->info()
-                                ->persistent()
-                                ->send();
-                            return;
-                        }
-
-                        // ✅ Author diarahkan ke DAFTAR review (bukan langsung satu review)
-                        $this->redirect($this->getReviewListUrl());
+                        $this->redirect(
+                            \App\Filament\Resources\Reviews\ReviewResource::getUrl('view', ['record' => $latestReview->id])
+                        );
                         return;
                     }
 
-                    // ── ADMIN: arahkan ke daftar review publikasi ini ────
-                    $this->redirect($this->getReviewListUrl());
+                    // ✅ Admin → 'edit'
+                    $this->redirect(
+                        \App\Filament\Resources\Reviews\ReviewResource::getUrl('edit', ['record' => $latestReview->id])
+                    );
                 }),
 
             // ── Review Naskah — reviewer, status submitted ────────
@@ -502,7 +498,6 @@ class EditPublication extends EditRecord
                             'reviewer_id'            => auth()->id(),
                         ]);
 
-                        // ✅ Notifikasi ke author setelah review dimulai
                         $recipients = $this->authorRecipients();
                         if ($recipients->isNotEmpty()) {
                             \Illuminate\Support\Facades\Notification::send(
@@ -537,7 +532,6 @@ class EditPublication extends EditRecord
                         'reviewer_id'            => auth()->id(),
                     ]);
 
-                    // ✅ Notifikasi ke author setelah review dimulai
                     $recipients = $this->authorRecipients();
                     if ($recipients->isNotEmpty()) {
                         \Illuminate\Support\Facades\Notification::send(
@@ -600,7 +594,6 @@ class EditPublication extends EditRecord
 
                     $this->record->update(['status' => 'in_review']);
 
-                    // ✅ Notifikasi ke author setelah review revisi dimulai
                     $recipients = $this->authorRecipients();
                     if ($recipients->isNotEmpty()) {
                         \Illuminate\Support\Facades\Notification::send(
@@ -655,7 +648,6 @@ class EditPublication extends EditRecord
                         'published_at' => $data['published_at'],
                     ]);
 
-                    // ✅ Notifikasi ke author setelah diterbitkan
                     $recipients = $this->authorRecipients();
                     if ($recipients->isNotEmpty()) {
                         \Illuminate\Support\Facades\Notification::send(
@@ -687,7 +679,7 @@ class EditPublication extends EditRecord
                 ->url(fn() => route('publikasi.show', ['slug' => $this->record->slug]))
                 ->openUrlInNewTab(),
 
-            // ── Upload Revisi — author, revision_required ─────────
+            // ── Upload Revisi — author & admin, revision_required ─
             Action::make('uploadNewVersion')
                 ->label('Upload Revisi')
                 ->icon('heroicon-o-arrow-up-tray')
@@ -695,7 +687,6 @@ class EditPublication extends EditRecord
                 ->visible(fn() => $this->record->status === 'revision_required' && !$this->isReviewer())
                 ->modalHeading('Upload Revisi Manuskrip')
                 ->modalDescription(function () {
-                    // ✅ Info tambahan untuk opini yang sebelumnya tanpa manuskrip
                     if ($this->isOpini() && !$this->latestVersion()) {
                         return new HtmlString(
                             '📝 Opini ini sebelumnya dikirim <strong>tanpa manuskrip PDF</strong>.<br><br>' .
@@ -714,7 +705,6 @@ class EditPublication extends EditRecord
                         ->disk('public')
                         ->directory('publications/versions')
                         ->acceptedFileTypes(['application/pdf'])
-                        // ✅ Tidak wajib untuk opini yang sebelumnya tanpa manuskrip
                         ->required(fn() => !($this->isOpini() && !$this->latestVersion()))
                         ->maxSize(10240)
                         ->helperText(
@@ -725,11 +715,9 @@ class EditPublication extends EditRecord
 
                     Checkbox::make('confirm_reviewed')
                         ->label('Saya telah meninjau berkas PDF revisi dan memastikan semua catatan reviewer sudah diperbaiki')
-                        // ✅ Tidak wajib untuk opini tanpa manuskrip
                         ->required(fn() => !($this->isOpini() && !$this->latestVersion()))
                         ->accepted(),
 
-                    // ✅ Checkbox khusus opini tanpa manuskrip
                     Checkbox::make('confirm_opini_revision')
                         ->label('Saya telah memperbaiki isi opini di form sesuai catatan reviewer')
                         ->visible(fn() => $this->isOpini() && !$this->latestVersion())
@@ -739,7 +727,6 @@ class EditPublication extends EditRecord
                     $hasPdf = filled($data['pdf_file_path'] ?? null);
 
                     if ($hasPdf) {
-                        // ✅ Ada PDF: buat versi baru
                         $nextVersion = ($this->record->versions()->max('version_number') ?? 0) + 1;
 
                         $this->record->versions()->create([
@@ -750,15 +737,12 @@ class EditPublication extends EditRecord
 
                         $versionInfo = 'v' . $nextVersion;
                     } else {
-                        // ✅ Tidak ada PDF (opini tanpa manuskrip): tidak buat versi baru,
-                        //    cukup ubah status ke submitted untuk direview ulang
                         $versionInfo = 'konten opini';
                         $nextVersion = null;
                     }
 
                     $this->record->update(['status' => 'submitted']);
 
-                    // ✅ Notifikasi ke reviewer yang pernah mereview publikasi ini
                     $publication = $this->record;
                     $reviewerIds = $publication->reviews()
                         ->pluck('reviews.reviewer_id')
@@ -772,19 +756,18 @@ class EditPublication extends EditRecord
                                 ->value('reviews.id');
 
                             if ($hasPdf && $nextVersion !== null) {
-                                // ✅ Revisi dengan PDF baru: notifikasi AuthorSubmittedRevision
                                 $reviewer->notify(new \App\Notifications\AuthorSubmittedRevision(
                                     publication: $publication,
                                     newVersionNumber: $nextVersion,
                                     reviewIdToOpen: $reviewIdToOpen,
                                 ));
                             } else {
-                                // ✅ Opini tanpa PDF: notifikasi PublicationSubmitted biasa
+                                // Opini tanpa PDF: notifikasi submitted biasa
                                 $reviewer->notify(new \App\Notifications\PublicationSubmitted($publication));
                             }
                         }
                     } else {
-                        // ✅ Fallback: tidak ada reviewer sebelumnya, kirim ke semua reviewer
+                        // Fallback: belum ada reviewer sebelumnya → broadcast ke semua reviewer
                         \Illuminate\Support\Facades\Notification::send(
                             \App\Models\User::role('reviewer')->get(),
                             new \App\Notifications\PublicationSubmitted($publication)
