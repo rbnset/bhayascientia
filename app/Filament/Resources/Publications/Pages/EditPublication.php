@@ -43,7 +43,7 @@ class EditPublication extends EditRecord
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Helpers
+    // Helpers — Role
     // ─────────────────────────────────────────────────────────────
 
     protected function isReviewer(): bool
@@ -66,17 +66,9 @@ class EditPublication extends EditRecord
         return $this->record->versions()->latest('version_number')->first();
     }
 
-    protected function hasNewerVersionToReview(): bool
+    protected function isOpini(): bool
     {
-        if (!$this->isReviewer()) return false;
-
-        $latestVersion = $this->latestVersion();
-        if (!$latestVersion) return false;
-
-        return !\App\Models\Review::query()
-            ->where('publication_version_id', $latestVersion->id)
-            ->where('reviewer_id', auth()->id())
-            ->exists();
+        return $this->record->publicationType?->slug === 'opini';
     }
 
     protected function authorRecipients()
@@ -90,56 +82,20 @@ class EditPublication extends EditRecord
         return \App\Models\User::whereIn('id', $authorUserIds)->get();
     }
 
-    protected function isOpini(): bool
-    {
-        return $this->record->publicationType?->slug === 'opini';
-    }
-
-    protected function reviewerHasEverReviewedThisPublication(): bool
-    {
-        if (!$this->latestVersion() && $this->isOpini()) {
-            return \App\Models\Review::query()
-                ->where('publication_id', $this->record->id)
-                ->whereNull('publication_version_id')
-                ->where('reviewer_id', auth()->id())
-                ->exists();
-        }
-
-        return \App\Models\Review::query()
-            ->whereHas(
-                'publicationVersion',
-                fn($q) => $q->where('publication_id', $this->record->id)
-            )
-            ->where('reviewer_id', auth()->id())
-            ->exists();
-    }
-
-    protected function getMyLatestReview(): ?\App\Models\Review
-    {
-        return \App\Models\Review::query()
-            ->where('reviewer_id', auth()->id())
-            ->where(function ($q) {
-                $latestVersion = $this->latestVersion();
-                if ($latestVersion) {
-                    $q->where('publication_version_id', $latestVersion->id);
-                } else {
-                    $q->where('publication_id', $this->record->id)
-                        ->whereNull('publication_version_id');
-                }
-            })
-            ->orderByDesc('id')
-            ->first();
-    }
-
     // ─────────────────────────────────────────────────────────────
-    // ✅ Helper terpusat: ambil review terbaru untuk publikasi ini
-    //    Support opini (tanpa versi) maupun review biasa (dengan versi)
+    // Helpers — Review
     // ─────────────────────────────────────────────────────────────
 
+    /**
+     * ✅ Ambil review terbaru untuk publikasi ini.
+     *    Mendukung dua jalur:
+     *    1. Review biasa     → via publication_version_id (publikasi dengan manuskrip)
+     *    2. Review opini     → via publication_id langsung (opini tanpa manuskrip)
+     */
     protected function getLatestReviewForPublication(): ?\App\Models\Review
     {
+        // Jalur 1: ada versi manuskrip → cari review via versi terbaru
         $latestVersion = $this->latestVersion();
-
         if ($latestVersion) {
             return \App\Models\Review::query()
                 ->where('publication_version_id', $latestVersion->id)
@@ -147,7 +103,7 @@ class EditPublication extends EditRecord
                 ->first();
         }
 
-        // ✅ Opini tanpa manuskrip: query by publication_id langsung
+        // Jalur 2: opini tanpa manuskrip → cari review via publication_id
         return \App\Models\Review::query()
             ->where('publication_id', $this->record->id)
             ->whereNull('publication_version_id')
@@ -155,28 +111,89 @@ class EditPublication extends EditRecord
             ->first();
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // ✅ Helper: cek apakah ada review apapun untuk publikasi ini
-    //    Mencakup review via versi manuskrip DAN opini tanpa manuskrip
-    // ─────────────────────────────────────────────────────────────
-
+    /**
+     * ✅ Cek apakah ada review untuk publikasi ini.
+     *    Query langsung — tidak bergantung pada relasi ORM agar selalu akurat
+     *    saat halaman pertama kali di-render.
+     */
     protected function publicationHasAnyReview(): bool
     {
-        // Review lewat versi manuskrip (publikasi biasa / opini dengan PDF)
-        $hasVersionReview = \App\Models\Review::query()
-            ->whereHas(
-                'publicationVersion',
-                fn($q) => $q->where('publication_id', $this->record->id)
-            )
-            ->exists();
+        // Cek via versi manuskrip (semua tipe publikasi yang punya manuskrip)
+        $versionIds = $this->record->versions()->pluck('id');
+        if ($versionIds->isNotEmpty()) {
+            $hasViaVersion = \App\Models\Review::query()
+                ->whereIn('publication_version_id', $versionIds)
+                ->exists();
+            if ($hasViaVersion) return true;
+        }
 
-        if ($hasVersionReview) return true;
-
-        // Review langsung tanpa versi (opini tanpa manuskrip)
+        // Cek via publication_id langsung (opini tanpa manuskrip)
         return \App\Models\Review::query()
             ->where('publication_id', $this->record->id)
             ->whereNull('publication_version_id')
             ->exists();
+    }
+
+    /**
+     * ✅ Reviewer: cek apakah ada versi baru yang belum direview olehnya
+     */
+    protected function hasNewerVersionToReview(): bool
+    {
+        if (!$this->isReviewer()) return false;
+
+        $latestVersion = $this->latestVersion();
+        if (!$latestVersion) return false;
+
+        return !\App\Models\Review::query()
+            ->where('publication_version_id', $latestVersion->id)
+            ->where('reviewer_id', auth()->id())
+            ->exists();
+    }
+
+    /**
+     * ✅ Reviewer: cek apakah pernah mereview publikasi ini (versi manapun)
+     */
+    protected function reviewerHasEverReviewedThisPublication(): bool
+    {
+        // Cek via versi manuskrip
+        $versionIds = $this->record->versions()->pluck('id');
+        if ($versionIds->isNotEmpty()) {
+            $reviewed = \App\Models\Review::query()
+                ->whereIn('publication_version_id', $versionIds)
+                ->where('reviewer_id', auth()->id())
+                ->exists();
+            if ($reviewed) return true;
+        }
+
+        // Cek opini tanpa manuskrip
+        return \App\Models\Review::query()
+            ->where('publication_id', $this->record->id)
+            ->whereNull('publication_version_id')
+            ->where('reviewer_id', auth()->id())
+            ->exists();
+    }
+
+    /**
+     * ✅ Reviewer: ambil review miliknya sendiri untuk publikasi ini (versi terbaru)
+     */
+    protected function getMyLatestReview(): ?\App\Models\Review
+    {
+        $latestVersion = $this->latestVersion();
+
+        if ($latestVersion) {
+            return \App\Models\Review::query()
+                ->where('publication_version_id', $latestVersion->id)
+                ->where('reviewer_id', auth()->id())
+                ->orderByDesc('id')
+                ->first();
+        }
+
+        return \App\Models\Review::query()
+            ->where('publication_id', $this->record->id)
+            ->whereNull('publication_version_id')
+            ->where('reviewer_id', auth()->id())
+            ->orderByDesc('id')
+            ->first();
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -386,22 +403,37 @@ class EditPublication extends EditRecord
                 ->openUrlInNewTab(),
 
             // ── Lihat Detail Review ───────────────────────────────
-            // ✅ FIXED: visible mencakup semua status yang punya review,
-            //    termasuk revision_required — untuk semua tipe publikasi
-            //    (opini tanpa manuskrip, opini dengan PDF, publikasi biasa)
+            // ✅ FIXED: visible menggunakan publicationHasAnyReview() yang
+            //    query langsung ke DB via version IDs + publication_id,
+            //    sehingga akurat sejak halaman pertama kali di-render.
+            //    Muncul di semua status (submitted, in_review, revision_required,
+            //    accepted, published) selama review sudah ada.
             Action::make('lihatReview')
                 ->label(function () {
-                    $count = $this->record->reviews()->count();
+                    // ✅ Hitung semua review: via versi + via publication_id langsung
+                    $versionIds = $this->record->versions()->pluck('id');
+                    $count = \App\Models\Review::query()
+                        ->where(function ($q) use ($versionIds) {
+                            if ($versionIds->isNotEmpty()) {
+                                $q->whereIn('publication_version_id', $versionIds);
+                            }
+                            $q->orWhere(function ($q2) {
+                                $q2->where('publication_id', $this->record->id)
+                                    ->whereNull('publication_version_id');
+                            });
+                        })
+                        ->count();
+
                     return $count > 1 ? "Lihat Review ({$count})" : 'Lihat Detail Review';
                 })
                 ->icon('heroicon-o-clipboard-document-list')
                 ->color('info')
                 ->visible(function () {
-                    // Tidak tampil jika belum ada review sama sekali
+                    // ✅ Tidak tampil jika belum ada review
                     if (!$this->publicationHasAnyReview()) return false;
 
-                    // Reviewer yang punya versi baru untuk direview
-                    // → tombol ini disembunyikan, digantikan oleh 'reviewRevisiTerbaru'
+                    // ✅ Reviewer yang punya versi baru untuk direview
+                    //    → sembunyikan, digantikan tombol 'reviewRevisiTerbaru'
                     if ($this->hasNewerVersionToReview()) return false;
 
                     return true;
@@ -425,9 +457,7 @@ class EditPublication extends EditRecord
                         return;
                     }
 
-                    // ── AUTHOR & ADMIN: ke halaman view/edit review terbaru ──
-                    // ✅ Menggunakan getLatestReviewForPublication() yang sudah
-                    //    support opini (tanpa versi) dan publikasi biasa (dengan versi)
+                    // ── AUTHOR & ADMIN: ke review terbaru ────────────────
                     $latestReview = $this->getLatestReviewForPublication();
 
                     if (!$latestReview) {
@@ -440,15 +470,15 @@ class EditPublication extends EditRecord
                         return;
                     }
 
-                    // ✅ Author → 'view' (read-only, sesuai ViewReview)
                     if ($this->isAuthor()) {
+                        // Author → view (read-only)
                         $this->redirect(
                             \App\Filament\Resources\Reviews\ReviewResource::getUrl('view', ['record' => $latestReview->id])
                         );
                         return;
                     }
 
-                    // ✅ Admin → 'edit'
+                    // Admin → edit
                     $this->redirect(
                         \App\Filament\Resources\Reviews\ReviewResource::getUrl('edit', ['record' => $latestReview->id])
                     );
@@ -743,8 +773,8 @@ class EditPublication extends EditRecord
 
                     $this->record->update(['status' => 'submitted']);
 
-                    $publication = $this->record;
-                    $reviewerIds = $publication->reviews()
+                    $publication    = $this->record;
+                    $reviewerIds    = $publication->reviews()
                         ->pluck('reviews.reviewer_id')
                         ->filter()->unique()->values();
 
@@ -762,7 +792,6 @@ class EditPublication extends EditRecord
                                     reviewIdToOpen: $reviewIdToOpen,
                                 ));
                             } else {
-                                // Opini tanpa PDF: notifikasi submitted biasa
                                 $reviewer->notify(new \App\Notifications\PublicationSubmitted($publication));
                             }
                         }
