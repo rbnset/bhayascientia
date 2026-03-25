@@ -8,18 +8,14 @@ use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Illuminate\Contracts\View\View as ViewContract;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Database\Eloquent\Builder;
 
 class ReviewsRelationManager extends RelationManager
 {
     protected static string $relationship = 'reviews';
 
     protected static ?string $title = 'Reviews & Feedback';
-
-    // ─────────────────────────────────────────────────────────────
-    // Role helpers
-    // ─────────────────────────────────────────────────────────────
 
     protected function isAuthor(): bool
     {
@@ -31,32 +27,52 @@ class ReviewsRelationManager extends RelationManager
         return (bool) auth()->user()?->hasRole('reviewer');
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Table
-    // ─────────────────────────────────────────────────────────────
-
     public function table(Table $table): Table
     {
         return $table
             ->defaultSort('created_at', 'desc')
+
+            // ✅ WAJIB: load kedua relasi (opini & version)
+            ->modifyQueryUsing(fn(Builder $query) => $query->with([
+                'attachments',
+                'notes',
+                'reviewer',
+                'publicationVersion.publication',
+                'publication',
+            ]))
+
             ->recordClasses(fn($record) => match ($record->decision) {
                 'rejected'          => 'bg-red-50 dark:bg-red-950/20',
                 'accepted'          => 'bg-emerald-50 dark:bg-emerald-950/20',
                 'revision_required' => 'bg-amber-50 dark:bg-amber-950/20',
                 default             => null,
             })
-            ->modifyQueryUsing(fn($query) => $query->with(['attachments', 'notes', 'reviewer', 'publicationVersion']))
+
             ->columns([
 
-                // ── Versi naskah ───────────────────────────────────────────
-                TextColumn::make('publicationVersion.version_number')
-                    ->label('Version')
-                    ->sortable()
+                // ✅ FIX: Support opini & version
+                TextColumn::make('publication_label')
+                    ->label('Publication / Version')
+                    ->getStateUsing(function ($record) {
+
+                        // OPINI (tanpa version)
+                        if (is_null($record->publication_version_id)) {
+                            $title = $record->publication?->title ?? '—';
+                            return \Illuminate\Support\Str::words($title, 6, '...') . ' — Opini';
+                        }
+
+                        // VERSION
+                        return 'v' . ($record->publicationVersion?->version_number ?? '?');
+                    })
                     ->badge()
                     ->color('gray')
-                    ->formatStateUsing(fn($state) => $state ? 'v' . $state : '—'),
+                    ->wrap()
+                    ->tooltip(function ($record) {
+                        return is_null($record->publication_version_id)
+                            ? ($record->publication?->title ?? '—')
+                            : ('Version ' . ($record->publicationVersion?->version_number ?? '?'));
+                    }),
 
-                // ── Nama reviewer ──────────────────────────────────────────
                 TextColumn::make('reviewer.name')
                     ->label('Reviewer')
                     ->searchable()
@@ -64,7 +80,6 @@ class ReviewsRelationManager extends RelationManager
                     ->placeholder('—')
                     ->description(fn($record) => $record->reviewer?->email),
 
-                // ── Keputusan review ───────────────────────────────────────
                 TextColumn::make('decision')
                     ->label('Decision')
                     ->badge()
@@ -78,13 +93,12 @@ class ReviewsRelationManager extends RelationManager
                         'accepted'          => 'heroicon-o-check-circle',
                         'revision_required' => 'heroicon-o-exclamation-circle',
                         'rejected'          => 'heroicon-o-x-circle',
-                        default             => 'heroicon-o-question-mark-circle',
+                        default             => 'heroicon-o-clock',
                     })
                     ->formatStateUsing(
                         fn(?string $state) => $state ? str($state)->headline() : 'Pending'
                     ),
 
-                // ── Tanggal review (WIB) ───────────────────────────────────
                 TextColumn::make('created_at')
                     ->label('Reviewed At')
                     ->sortable()
@@ -101,7 +115,6 @@ class ReviewsRelationManager extends RelationManager
                             ->diffForHumans()
                     ),
 
-                // ── Ringkasan komentar — strip HTML ───────────────────────
                 TextColumn::make('overall_comment')
                     ->label('Overall Comment')
                     ->words(12)
@@ -118,7 +131,6 @@ class ReviewsRelationManager extends RelationManager
                             : null
                     ),
 
-                // ── Indikator attachment ───────────────────────────────────
                 Tables\Columns\IconColumn::make('has_attachment')
                     ->label('Attachment')
                     ->state(fn($record) => $record->attachments->isNotEmpty())
@@ -126,67 +138,51 @@ class ReviewsRelationManager extends RelationManager
                     ->trueIcon('heroicon-o-paper-clip')
                     ->falseIcon('heroicon-o-minus')
                     ->trueColor('primary')
-                    ->falseColor('gray')
-                    ->tooltip(
-                        fn($record) => $record->attachments->isNotEmpty()
-                            ? $record->attachments->count() . ' file(s) attached'
-                            : 'No attachment'
-                    ),
+                    ->falseColor('gray'),
 
-                // ── Jumlah catatan review ──────────────────────────────────
                 TextColumn::make('notes_count')
                     ->label('Notes')
                     ->state(fn($record) => $record->notes->count())
                     ->badge()
                     ->color(fn($state) => $state > 0 ? 'warning' : 'gray')
                     ->formatStateUsing(
-                        fn($state) => $state > 0
-                            ? $state . ' note' . ($state > 1 ? 's' : '')
-                            : '—'
-                    )
-                    ->tooltip(
-                        fn($record) => $record->notes->count() > 0
-                            ? 'Click Detail to read reviewer notes'
-                            : 'No notes'
+                        fn($state) => $state > 0 ? $state : '—'
                     ),
             ])
 
             ->actions([
-                // ── Detail — arahkan ke view/edit sesuai role ──────────────
+
                 Action::make('detail')
                     ->label('Detail')
                     ->icon('heroicon-o-chat-bubble-left-ellipsis')
                     ->color('info')
                     ->url(function ($record): string {
-                        // Author → ViewReview (read-only)
+
                         if ($this->isAuthor()) {
                             return ReviewResource::getUrl('view', ['record' => $record->id]);
                         }
 
-                        // Reviewer & admin → EditReview
                         return ReviewResource::getUrl('edit', ['record' => $record->id]);
                     }),
 
-                // ── Download attachment ────────────────────────────────────
                 Action::make('download_revision')
                     ->label('Download')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('success')
-                    ->tooltip('Download reviewer attachment')
-                    ->visible(fn($record): bool => $record->attachments->isNotEmpty())
+                    ->visible(fn($record) => $record->attachments->isNotEmpty())
                     ->action(function ($record) {
+
                         $attachment = $record->attachments->sortByDesc('created_at')->first();
 
-                        abort_unless(
-                            $attachment && filled($attachment->file_path),
-                            404,
-                            'Attachment not found.'
-                        );
+                        abort_unless($attachment && filled($attachment->file_path), 404);
 
-                        $filename = 'review-v' .
-                            ($record->publicationVersion?->version_number ?? $record->id) .
-                            '-' . str($record->reviewer?->name ?? 'reviewer')->slug() .
-                            '.pdf';
+                        // ✅ FIX: support opini
+                        $versionLabel = is_null($record->publication_version_id)
+                            ? 'opini'
+                            : ('v' . ($record->publicationVersion?->version_number ?? $record->id));
+
+                        $filename = 'review-' . $versionLabel . '-' .
+                            str($record->reviewer?->name ?? 'reviewer')->slug() . '.pdf';
 
                         return Storage::disk('local')->download(
                             $attachment->file_path,
