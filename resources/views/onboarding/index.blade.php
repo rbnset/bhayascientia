@@ -5,12 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Selamat Datang — DABRAKA</title>
+    <title>DABRAKA - Portal Pengabdian intelektual</title>
 
     {{-- ✅ Open Graph untuk WhatsApp --}}
-    <meta property="og:title" content="DABRAKA
-portal pengabdian
-intelektual">
+    <meta property="og:title" content="DABRAKA - Portal Pengabdian intelektual">
     <meta property="og:description"
         content="
 Menghimpun gagasan dan karya insan Polri yang berkolaborasi dengan intelektual di bidang kepolisian, keamanan, kebijakan publik, serta keilmuan terkait lainnya.">
