@@ -27,6 +27,23 @@ class ReviewsRelationManager extends RelationManager
         return (bool) auth()->user()?->hasRole('reviewer');
     }
 
+    protected function getTableQuery(): Builder
+    {
+        $publicationId = $this->ownerRecord->id;
+
+        return \App\Models\Review::query()
+            ->where(function ($query) use ($publicationId) {
+
+                // ✅ review opini (langsung ke publication)
+                $query->where('publication_id', $publicationId)
+
+                    // ✅ review via version
+                    ->orWhereHas('publicationVersion', function ($q) use ($publicationId) {
+                        $q->where('publication_id', $publicationId);
+                    });
+            });
+    }
+
     public function table(Table $table): Table
     {
         return $table
