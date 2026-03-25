@@ -89,9 +89,19 @@ class Publication extends Model
             ->orderBy('order');
     }
 
-    public function reviews(): HasMany
+    public function reviews()
     {
-        return $this->hasMany(Review::class);
+        return $this->hasMany(\App\Models\Review::class)
+            ->where(function ($query) {
+
+                // ✅ Ambil review OPINI (langsung ke publication)
+                $query->where('publication_id', $this->id)
+
+                    // ✅ Ambil review dari VERSION
+                    ->orWhereHas('publicationVersion', function ($q) {
+                        $q->where('publication_id', $this->id);
+                    });
+            });
     }
 
     public function categories(): BelongsToMany
