@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -12,23 +13,23 @@ class Review extends Model
 
     protected $fillable = [
         'publication_version_id',
+        'publication_id',
         'reviewer_id',
         'decision',
         'overall_comment',
     ];
 
-    /*
-    |--------------------------------------------------------------------------
-    | Relationships
-    |--------------------------------------------------------------------------
-    */
-
-    public function publicationVersion()
+    public function publicationVersion(): BelongsTo
     {
         return $this->belongsTo(PublicationVersion::class);
     }
 
-    public function reviewer()
+    public function publication(): BelongsTo
+    {
+        return $this->belongsTo(Publication::class);
+    }
+
+    public function reviewer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewer_id');
     }
@@ -43,20 +44,10 @@ class Review extends Model
         return $this->hasMany(ReviewAttachment::class);
     }
 
-    /**
-     * Anotasi PDF yang dibuat reviewer saat mereview naskah ini.
-     * Terisolasi per-review (tidak tercampur anotasi pembaca biasa).
-     */
     public function pdfAnnotations(): HasMany
     {
         return $this->hasMany(PdfAnnotation::class);
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Scopes
-    |--------------------------------------------------------------------------
-    */
 
     public function scopeAccepted($query)
     {
