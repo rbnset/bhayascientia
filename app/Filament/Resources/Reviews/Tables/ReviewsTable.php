@@ -27,11 +27,17 @@ class ReviewsTable
             ->columns([
 
                 // ── Cover publikasi ──
+                // ✅ FIXED: support opini — fallback ke publication langsung jika version null
                 ImageColumn::make('cover_url')
                     ->label('')
-                    ->getStateUsing(
-                        fn($record) => $record->publicationVersion?->publication?->cover_url
-                    )
+                    ->getStateUsing(function ($record) {
+                        // Opini tanpa manuskrip: ambil langsung dari publication
+                        if (is_null($record->publication_version_id)) {
+                            return $record->publication?->cover_url;
+                        }
+                        // Tipe lain: via publicationVersion
+                        return $record->publicationVersion?->publication?->cover_url;
+                    })
                     ->width(44)
                     ->height(64)
                     ->extraImgAttributes([
@@ -40,15 +46,49 @@ class ReviewsTable
                     ->defaultImageUrl(fn() => asset('images/publication-placeholder.png')),
 
                 // ── Versi publikasi ──
-                TextColumn::make('publicationVersion.display_label')
+                // ✅ FIXED: support opini — tampilkan judul publikasi + label "Opini" atau "v{n}"
+                TextColumn::make('publication_label')
                     ->label('Publication / Version')
-                    ->sortable()
-                    ->searchable()
+                    ->getStateUsing(function ($record) {
+                        // Opini tanpa manuskrip: ambil langsung dari publication
+                        if (is_null($record->publication_version_id)) {
+                            $pub = $record->publication;
+                            if (!$pub) return '—';
+                            $title   = \Illuminate\Support\Str::words($pub->title ?? '', 8, '...');
+                            return $title . ' — Opini';
+                        }
+                        // Tipe lain: gunakan display_label dari publicationVersion
+                        return $record->publicationVersion?->display_label ?? '—';
+                    })
+                    ->sortable(query: function (Builder $query, string $direction) {
+                        // Sort by publication title untuk konsistensi
+                        $query->leftJoin('publication_versions as pv_sort', 'pv_sort.id', '=', 'reviews.publication_version_id')
+                            ->leftJoin('publications as pub_sort', function ($join) {
+                                $join->on('pub_sort.id', '=', 'pv_sort.publication_id')
+                                    ->orOn('pub_sort.id', '=', 'reviews.publication_id');
+                            })
+                            ->orderBy('pub_sort.title', $direction);
+                    })
+                    ->searchable(query: function (Builder $query, string $search) {
+                        $query->where(function ($q) use ($search) {
+                            $q->whereHas('publicationVersion.publication', fn($q2) => $q2->where('title', 'like', "%{$search}%"))
+                                ->orWhereHas('publication', fn($q2) => $q2->where('title', 'like', "%{$search}%"));
+                        });
+                    })
                     ->wrap()
                     ->lineClamp(2)
-                    ->words(8, end: '...')
-                    ->tooltip(fn(TextColumn $column): ?string => (string) $column->getState())
-                    ->description(fn($record) => $record->publicationVersion?->publication?->publicationType?->name),
+                    ->tooltip(
+                        fn($record) => is_null($record->publication_version_id)
+                            ? ($record->publication?->title ?? '—')
+                            : ($record->publicationVersion?->display_label ?? '—')
+                    )
+                    ->description(function ($record) {
+                        // ✅ Tampilkan tipe publikasi — support opini
+                        if (is_null($record->publication_version_id)) {
+                            return $record->publication?->publicationType?->name ?? '—';
+                        }
+                        return $record->publicationVersion?->publication?->publicationType?->name ?? '—';
+                    }),
 
                 // ── Reviewer ───────────────────────────────────────────────
                 TextColumn::make('reviewer.name')
@@ -87,8 +127,15 @@ class ReviewsTable
                     ->sortable(),
 
                 // ── Status publikasi terkait ───────────────────────────────
-                TextColumn::make('publicationVersion.publication.status')
+                // ✅ FIXED: support opini — baca status dari publication langsung jika version null
+                TextColumn::make('pub_status')
                     ->label('Pub. Status')
+                    ->getStateUsing(function ($record) {
+                        if (is_null($record->publication_version_id)) {
+                            return $record->publication?->status ?? null;
+                        }
+                        return $record->publicationVersion?->publication?->status ?? null;
+                    })
                     ->badge()
                     ->color(fn(?string $state): string => match ($state) {
                         'draft'             => 'gray',
@@ -168,7 +215,9 @@ class ReviewsTable
                 'attachments',
                 'notes',
                 'reviewer',
+                // ✅ FIXED: eager load keduanya — via version (non-opini) dan langsung (opini)
                 'publicationVersion.publication.publicationType',
+                'publication.publicationType',
             ]))
             ->striped()
             ->persistFiltersInSession()
@@ -216,10 +265,17 @@ class ReviewsTable
                     ->query(function (Builder $query, array $data): Builder {
                         $value = $data['value'] ?? null;
                         if (blank($value)) return $query;
-                        return $query->whereHas(
-                            'publicationVersion.publication',
-                            fn(Builder $q) => $q->where('status', $value)
-                        );
+
+                        // ✅ FIXED: filter status untuk kedua tipe (dengan & tanpa versi)
+                        return $query->where(function ($q) use ($value) {
+                            $q->whereHas(
+                                'publicationVersion.publication',
+                                fn(Builder $q2) => $q2->where('status', $value)
+                            )->orWhereHas(
+                                'publication',
+                                fn(Builder $q2) => $q2->where('status', $value)
+                            );
+                        });
                     }),
 
                 // Filter: range tanggal review
@@ -263,16 +319,18 @@ class ReviewsTable
                     ->icon('heroicon-o-chat-bubble-left-ellipsis')
                     ->color('info')
                     ->slideOver()
-                    ->modalHeading(
-                        fn($record) => 'Review — v' .
-                            ($record->publicationVersion?->version_number ?? '?') .
-                            '  ·  ' . ($record->reviewer?->name ?? 'Unknown')
-                    )
+                    ->modalHeading(function ($record) {
+                        // ✅ FIXED: support opini — label versi fleksibel
+                        $versionLabel = is_null($record->publication_version_id)
+                            ? 'Opini'
+                            : ('v' . ($record->publicationVersion?->version_number ?? '?'));
+                        return 'Review — ' . $versionLabel . '  ·  ' . ($record->reviewer?->name ?? 'Unknown');
+                    })
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Close')
                     ->modalContent(fn($record) => view(
                         'filament.reviews.preview',
-                        ['review' => $record->load(['notes', 'attachments', 'reviewer', 'publicationVersion'])]
+                        ['review' => $record->load(['notes', 'attachments', 'reviewer', 'publicationVersion', 'publication'])]
                     )),
 
                 // Download: langsung download attachment
@@ -287,8 +345,12 @@ class ReviewsTable
 
                         abort_unless($attachment && filled($attachment->file_path), 404);
 
-                        $filename = 'review-v' .
-                            ($record->publicationVersion?->version_number ?? $record->id) .
+                        // ✅ FIXED: label filename support opini
+                        $versionLabel = is_null($record->publication_version_id)
+                            ? 'opini'
+                            : ('v' . ($record->publicationVersion?->version_number ?? $record->id));
+
+                        $filename = 'review-' . $versionLabel .
                             '-' . str($record->reviewer?->name ?? 'reviewer')->slug() .
                             '.pdf';
 

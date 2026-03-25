@@ -42,6 +42,21 @@ class EditReview extends EditRecord
     }
 
     // ─────────────────────────────────────────────────────────────
+    // ✅ Helper: ambil publication — support opini (tanpa version)
+    // ─────────────────────────────────────────────────────────────
+
+    protected function getPublication(): ?\App\Models\Publication
+    {
+        // Opini tanpa manuskrip: langsung dari publication_id
+        if (is_null($this->record->publication_version_id)) {
+            return $this->record->publication ?? null;
+        }
+
+        // Tipe lain: via publicationVersion
+        return $this->record->publicationVersion?->publication ?? null;
+    }
+
+    // ─────────────────────────────────────────────────────────────
     // Mount — author redirect ke ViewReview
     // ─────────────────────────────────────────────────────────────
 
@@ -67,6 +82,11 @@ class EditReview extends EditRecord
 
     protected function hasNewerVersion(): bool
     {
+        // Opini tanpa manuskrip: tidak ada versi, selalu false
+        if (is_null($this->record->publication_version_id)) {
+            return false;
+        }
+
         $current = $this->record->publicationVersion?->version_number ?? 0;
         $latest  = $this->record->publicationVersion?->publication
             ?->versions()->max('version_number') ?? 0;
@@ -75,13 +95,19 @@ class EditReview extends EditRecord
 
     protected function latestPublicationVersion(): ?\App\Models\PublicationVersion
     {
+        // Opini tanpa manuskrip: tidak ada version
+        if (is_null($this->record->publication_version_id)) {
+            return null;
+        }
+
         return $this->record->publicationVersion?->publication
             ?->versions()->latest('version_number')->first();
     }
 
     protected function authorRecipients()
     {
-        $publication   = $this->record->publicationVersion?->publication;
+        // ✅ Support opini: ambil publication via helper terpusat
+        $publication   = $this->getPublication();
         $authorUserIds = $publication?->authors()
             ->pluck('authors.user_id')
             ->filter()->unique()->values();
@@ -224,12 +250,19 @@ class EditReview extends EditRecord
         ];
 
         $cfg         = $map[$decision][$role] ?? $map[null]['admin'];
-        $publication = $this->record->publicationVersion?->publication;
+
+        // ✅ Gunakan helper terpusat
+        $publication = $this->getPublication();
         $pubTitle    = e($publication?->title ?? '-');
         $pubType     = $publication?->publicationType?->name ?? 'Publikasi';
-        $version     = $this->record->publicationVersion?->version_number
-            ? 'v' . $this->record->publicationVersion->version_number
-            : '-';
+
+        // ✅ Support opini: tampilkan "Opini" atau versi jika ada
+        $version = is_null($this->record->publication_version_id)
+            ? 'Opini'
+            : ($this->record->publicationVersion?->version_number
+                ? 'v' . $this->record->publicationVersion->version_number
+                : '-');
+
         $reviewer    = $this->record->reviewer?->name ?? '-';
 
         $infoRow = match ($role) {
@@ -238,7 +271,7 @@ class EditReview extends EditRecord
             default    => "<span>📄 <strong>{$pubType}</strong> · {$version}</span><span>📝 {$pubTitle}</span><span>👤 Reviewer: <strong>{$reviewer}</strong></span>",
         };
 
-        // Alert revisi baru — hanya untuk reviewer
+        // Alert revisi baru — hanya untuk reviewer & hanya jika ada versi (bukan opini murni)
         $revisionAlert = '';
         if ($this->isReviewer() && $this->hasNewerVersion()) {
             $latestNo      = $this->latestPublicationVersion()?->version_number;
@@ -316,14 +349,12 @@ class EditReview extends EditRecord
     public function previousWizardStep(): void
     {
         parent::previousWizardStep();
-        // Reset viewer agar bisa boot ulang saat kembali ke step PDF
         $this->dispatch('reset-pdf-viewer');
     }
 
     public function nextWizardStep(): void
     {
         parent::nextWizardStep();
-        // Reset viewer agar bisa boot ulang saat maju ke step PDF
         $this->dispatch('reset-pdf-viewer');
     }
 
@@ -410,11 +441,12 @@ class EditReview extends EditRecord
                 ->modalCancelActionLabel('Batal')
                 ->action(function () {
                     $latestVersion = $this->latestPublicationVersion();
-                    $publication   = $this->record->publicationVersion?->publication;
+
+                    // ✅ Gunakan helper terpusat
+                    $publication   = $this->getPublication();
 
                     if (!$latestVersion || !$publication) return;
 
-                    // Cek review existing untuk versi ini
                     $existingReview = \App\Models\Review::query()
                         ->where('publication_version_id', $latestVersion->id)
                         ->where('reviewer_id', auth()->id())
@@ -425,16 +457,13 @@ class EditReview extends EditRecord
                         return;
                     }
 
-                    // Buat review baru
                     $newReview = \App\Models\Review::create([
                         'publication_version_id' => $latestVersion->id,
                         'reviewer_id'            => auth()->id(),
                     ]);
 
-                    // Update status publikasi → in_review
                     $publication->update(['status' => 'in_review']);
 
-                    // Notifikasi ke author bahwa revisinya sedang direview
                     $recipients = $this->authorRecipients();
                     if ($recipients->isNotEmpty()) {
                         \Illuminate\Support\Facades\Notification::send(
@@ -458,8 +487,9 @@ class EditReview extends EditRecord
                 ->icon('heroicon-o-rocket-launch')
                 ->color('success')
                 ->visible(
+                    // ✅ Gunakan helper terpusat agar opini juga bisa publish
                     fn() => ($this->isReviewer() || $this->isAdmin()) &&
-                        $this->record->publicationVersion?->publication?->status === 'accepted'
+                        $this->getPublication()?->status === 'accepted'
                 )
                 ->modalHeading('Terbitkan Naskah')
                 ->modalDescription(new HtmlString(
@@ -483,7 +513,8 @@ class EditReview extends EditRecord
                         ->accepted(),
                 ])
                 ->action(function (array $data) {
-                    $publication = $this->record->publicationVersion?->publication;
+                    // ✅ Gunakan helper terpusat
+                    $publication = $this->getPublication();
                     if (!$publication) return;
 
                     $publication->update([
@@ -491,7 +522,6 @@ class EditReview extends EditRecord
                         'published_at' => $data['published_at'],
                     ]);
 
-                    // Notifikasi ke author
                     $recipients = $this->authorRecipients();
                     if ($recipients->isNotEmpty()) {
                         \Illuminate\Support\Facades\Notification::send(
@@ -506,7 +536,6 @@ class EditReview extends EditRecord
                         ->body('Naskah sudah live sejak ' . \Carbon\Carbon::parse($data['published_at'])->locale('id')->isoFormat('D MMMM YYYY, HH:mm') . '.')
                         ->send();
 
-                    // Refresh halaman agar banner & tombol update
                     $this->redirect(request()->header('Referer') ?? static::getUrl(['record' => $this->record]));
                 }),
 
@@ -516,11 +545,11 @@ class EditReview extends EditRecord
                 ->icon('heroicon-o-arrow-top-right-on-square')
                 ->color('gray')
                 ->visible(
-                    fn() =>
-                    $this->record->publicationVersion?->publication?->status === 'published'
+                    // ✅ Gunakan helper terpusat
+                    fn() => $this->getPublication()?->status === 'published'
                 )
                 ->url(fn() => PublicationResource::getUrl('view', [
-                    'record' => $this->record->publicationVersion?->publication,
+                    'record' => $this->getPublication(),
                 ]))
                 ->openUrlInNewTab(false),
 
@@ -537,15 +566,17 @@ class EditReview extends EditRecord
     }
 
     // ─────────────────────────────────────────────────────────────
-    // After save
+    // After save — ✅ FIXED: support opini tanpa publicationVersion
     // ─────────────────────────────────────────────────────────────
 
     protected function afterSave(): void
     {
         if ($this->isAuthor()) return;
 
-        $review      = $this->record;
-        $publication = $review->publicationVersion?->publication;
+        $review = $this->record;
+
+        // ✅ Gunakan helper terpusat — support opini (publication_version_id null)
+        $publication = $this->getPublication();
 
         if (!$publication) return;
 
