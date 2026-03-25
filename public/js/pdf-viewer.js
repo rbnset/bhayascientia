@@ -1,14 +1,28 @@
 /**
- * pdf-viewer.js
+ * pdf-viewer.js — v4.0
  * public/js/pdf-viewer.js
  *
- * FIX v3.4:
- * 1. window._pdfViewer di-expose SEBELUM pdfLoadingTask dimulai,
- *    sehingga pdf-annotations.js bisa langsung pakai onReady() hook.
- * 2. Dispatch 'pdf-viewer-ready' event setelah _pdfViewer tersedia.
- * 3. baseScale: tambah flag baseScaleComputed — tidak pernah di-reset
- *    ke 1.0 secara langsung saat zoom, hanya via flag.
- *    Ini menghilangkan re-render loop saat zoom.
+ * FITUR (setara review-pdf-viewer.js v6.0):
+ * ── FIX ─────────────────────────────────────────────────────────
+ * FIX-1  Loading progress bar sampai 100% (onProgress update bar)
+ * FIX-2  Loading spinner berhenti setelah error (showLoading/hideLoading terpusat)
+ * FIX-3  Horizontal scrollbar tidak muncul (overflow-x:hidden, padding 4px)
+ * FIX-4  DPR di-cap ke 2 (tidak blur di layar retina 3x)
+ * FIX-5  Tidak ada render loop (ResizeObserver + guard syncFC)
+ * FIX-7  Resize threshold 40px + orientationchange handler
+ * FIX-11 needsRecompute/baseScaleComputed di-reset di dalam computeBase
+ * FIX-12 zoomFactor persist di localStorage
+ *
+ * ── FITUR ────────────────────────────────────────────────────────
+ * FEAT-1  Bookmark — tandai halaman, persist localStorage
+ * FEAT-2  Reading mode (Normal / Sepia / Night) — persist localStorage
+ * FEAT-3  Resume toast — lanjut baca dari halaman terakhir
+ * FEAT-4  Fullscreen mode
+ * FEAT-5  Full-text search semua halaman, navigasi ↑↓
+ * FEAT-6  Bottom sheet mobile + FAB button
+ * FEAT-7  Touch pinch-to-zoom + swipe navigasi
+ * FEAT-19 PDF cache (window[CACHE_KEY])
+ * FEAT-20 Progress bar loading 0–100%
  */
 (function () {
     'use strict';
@@ -18,8 +32,16 @@
         return;
     }
 
-    const { pdfUrl, slug, guestPageLimit: GUEST_PAGE_LIMIT, isGuest: IS_GUEST } = window.PDF_CONFIG;
+    const {
+        pdfUrl,
+        slug,
+        guestPageLimit: GUEST_PAGE_LIMIT,
+        isGuest: IS_GUEST,
+        loginUrl,
+        registerUrl,
+    } = window.PDF_CONFIG;
 
+    /* ── AUTH STATE CHECK ─────────────────────────────────────────── */
     const AUTH_KEY = 'pdf_auth_state';
     const currentAuthState = IS_GUEST ? 'guest' : 'auth';
     const prevAuthState = sessionStorage.getItem(AUTH_KEY);
@@ -30,46 +52,58 @@
     }
     sessionStorage.setItem(AUTH_KEY, currentAuthState);
 
+    /* ── STORAGE KEYS ─────────────────────────────────────────────── */
     const SK = {
         page: `bp_${slug}`,
         zoom: `bz_${slug}`,
         mode: `bm_${slug}`,
         bkmk: `bb_${slug}`,
-        annot: `ba_${slug}`,
     };
 
-    let pdfDoc = null;
+    /* ── CACHE ────────────────────────────────────────────────────── */
+    const CACHE_KEY = '_pdfv_' + btoa(pdfUrl).slice(0, 30).replace(/[^a-z0-9]/gi, '_');
+
+    /* ── CDN ──────────────────────────────────────────────────────── */
+    const WORKER_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    /* ── STATE ────────────────────────────────────────────────────── */
+    /* FIX-4: cap DPR ke 2 */
+    const DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+    let pdfDoc = window[CACHE_KEY] || null;
     let pageNum = 1;
     let pageRendering = false;
     let pageNumPending = null;
     let baseScale = 1.0;
-    let baseScaleComputed = false; /* FIX: flag, bukan reset ke 1.0 */
-    const ZOOM_MIN = 1.0;
+    let baseScaleComputed = false;
+    let needsRecompute = true;
+
+    const ZOOM_MIN = 0.5;
     const ZOOM_MAX = 4.0;
     const ZOOM_STEP = 0.25;
-    let zoomFactor = Math.max(ZOOM_MIN, parseFloat(localStorage.getItem(SK.zoom)) || 1.0);
+    /* FIX-12: restore zoom dari localStorage */
+    let zoomFactor = Math.max(ZOOM_MIN, parseFloat(localStorage.getItem(SK.zoom) || '1') || 1);
+
     let isFullscreen = false;
     let currentMode = localStorage.getItem(SK.mode) || 'normal';
     let bookmarkedPage = parseInt(localStorage.getItem(SK.bkmk)) || null;
     let savedPage = parseInt(localStorage.getItem(SK.page)) || 1;
+
+    let searchResults = [], searchIndex = -1, searchHighlightEls = [];
+    let currentSearchQuery = '';
+    let searchDebounce = null;
+    let gateShown = false;
+    let sheetIsOpen = false;
     let toolbarTimer = null;
     let tapOverlayOpen = false;
-    let sheetIsOpen = false;
-    let searchResults = [];
-    let searchIndex = -1;
-    let searchHighlightEls = [];
-    let annotations = JSON.parse(localStorage.getItem(SK.annot) || '[]');
-    let activeAnnotId = null;
-    let gateShown = false;
 
+    /* callbacks untuk pdf-annotations.js */
     let _onReadyCb = null;
     let _onPageChangeCb = null;
 
-    const DPR = window.devicePixelRatio || 1;
-    const isMobile = () => window.innerWidth < 768;
-
+    /* ── DOM ──────────────────────────────────────────────────────── */
     const canvas = document.getElementById('pdf-canvas');
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas ? canvas.getContext('2d') : null;
     const stage = document.getElementById('pdf-stage');
     const textLayer = document.getElementById('text-layer');
     const annotLayer = document.getElementById('annotation-layer');
@@ -79,48 +113,78 @@
     const iframeEl = document.getElementById('pdf-iframe');
     const fsTb = document.getElementById('pdf-fullscreen-toolbar');
     const deskHint = document.getElementById('desktop-hint');
-    const annotTb = document.getElementById('annot-toolbar');
-    const commentPop = document.getElementById('comment-popup');
     const annotTip = document.getElementById('annot-tooltip');
     const tapOverlay = document.getElementById('mobile-tap-overlay');
     const guestGate = document.getElementById('guest-gate-overlay');
     const limitWarn = document.getElementById('page-limit-warning');
 
-    const hideLoading = () => loadingEl.style.display = 'none';
-    const showCanvas = () => { canvasWrap.style.display = 'flex'; canvasWrap.classList.remove('hidden'); };
+    /* FIX-3: paksa overflow-x hidden */
+    if (canvasWrap) canvasWrap.style.overflowX = 'hidden';
 
-    function snack(msg, color = '#FF6B18') {
-        const el = Object.assign(document.createElement('div'), { textContent: msg });
-        el.style.cssText = `position:fixed;top:1rem;left:50%;transform:translateX(-50%);background:#1A1A1A;border:1px solid ${color};color:#fff;padding:.45rem 1rem;border-radius:99px;font-size:13px;font-weight:600;z-index:99999;transition:opacity .4s;pointer-events:none;white-space:nowrap;`;
-        document.body.appendChild(el);
-        setTimeout(() => { el.style.opacity = 0; setTimeout(() => el.remove(), 400); }, 2200);
+    const isMobile = () => window.innerWidth < 768;
+
+    /* ── LOADING HELPERS (FIX-2 & FIX-10) ───────────────────────── */
+    function showLoading(msg) {
+        if (!loadingEl) return;
+        loadingEl.classList.remove('hidden');
+        loadingEl.style.display = 'flex';
+        const sub = document.getElementById('pdf-load-sub');
+        if (msg && sub) sub.textContent = msg;
+    }
+    function hideLoading() {
+        if (!loadingEl) return;
+        loadingEl.classList.add('hidden');
+        loadingEl.style.display = 'none';
     }
 
-    function renderWatermark(cssW, cssH) {
-        if (!IS_GUEST) return;
-        const wm = document.getElementById('pdf-watermark'); if (!wm) return;
-        const rows = Math.ceil(cssH / 160), cols = Math.ceil(cssW / 260);
-        let rects = '';
-        for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < cols; c++) {
-                const x = c * 260 + 30, y = r * 160 + 80;
-                rects += `<text x="${x}" y="${y}" fill="#FF6B18" font-size="22" font-family="Arial" font-weight="bold" transform="rotate(-35,${x},${y})">PRATINJAU</text>`;
-                rects += `<text x="${x - 10}" y="${y + 30}" fill="#FF6B18" font-size="11" font-family="Arial" transform="rotate(-35,${x - 10},${y + 30})">Login untuk akses penuh</text>`;
-            }
-        }
-        wm.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="${cssW}" height="${cssH}">${rects}</svg>`;
+    /* FIX-1: progress bar 0-100% */
+    function updateLoadProgress(pct) {
+        const bar = document.getElementById('pdf-load-progress');
+        if (bar) bar.style.width = Math.min(100, Math.round(pct)) + '%';
+        const sub = document.getElementById('pdf-load-sub');
+        if (sub) sub.textContent = 'Mengunduh... ' + Math.min(100, Math.round(pct)) + '%';
     }
-
-    function updateProgress() {
+    function updateReadProgress() {
         if (!pdfDoc) return;
-        const pct = (pageNum / pdfDoc.numPages) * 100;
-        ['reading-progress-bar', 'fs-progress-bar'].forEach(id => { const e = document.getElementById(id); if (e) e.style.width = pct + '%'; });
-        const est = Math.ceil((pdfDoc.numPages - pageNum) * 1.5);
+        const pct = pageNum / pdfDoc.numPages * 100;
+        ['reading-progress-bar', 'fs-progress-bar'].forEach(id => {
+            const e = document.getElementById(id); if (e) e.style.width = pct + '%';
+        });
         const pt = document.getElementById('progress-text');
+        const est = Math.ceil((pdfDoc.numPages - pageNum) * 1.5);
         if (pt) pt.textContent = `Hal. ${pageNum}/${pdfDoc.numPages} · ${Math.round(pct)}%` + (est > 0 ? ` · ~${est} mnt` : '');
-        ['sheet-page-num', 'tap-page-num'].forEach(id => { const e = document.getElementById(id); if (e) e.textContent = pageNum; });
     }
 
+    /* ── SNACK ────────────────────────────────────────────────────── */
+    function snack(msg, color) {
+        color = color || '#FF6B18';
+        const el = document.createElement('div');
+        el.textContent = msg;
+        el.style.cssText =
+            'position:fixed;top:1rem;left:50%;transform:translateX(-50%);' +
+            'background:#1A1A1A;border:1px solid ' + color + ';color:#fff;' +
+            'padding:.45rem 1rem;border-radius:99px;font-size:13px;font-weight:600;' +
+            'z-index:99999;transition:opacity .4s;pointer-events:none;' +
+            'white-space:nowrap;max-width:90vw;overflow:hidden;text-overflow:ellipsis;';
+        document.body.appendChild(el);
+        setTimeout(function () { el.style.opacity = 0; setTimeout(function () { el.remove(); }, 400); }, 2200);
+    }
+
+    /* ── COMPUTE BASE SCALE (FIX-11) ─────────────────────────────── */
+    function computeBase(page) {
+        /* FIX-3: pakai cw - 4 */
+        const cw = canvasWrap ? canvasWrap.clientWidth : (viewerEl ? viewerEl.clientWidth : window.innerWidth);
+        const pad = isMobile() ? 4 : 16;
+        const avail = cw - pad;
+        const nw = page.getViewport({ scale: 1 }).width;
+        baseScale = Math.max(0.5, Math.min(avail / nw, 2.5));
+        baseScaleComputed = true;
+        needsRecompute = false; /* FIX-11 */
+    }
+
+    const getScale = () => baseScale * zoomFactor;
+
+    /* ── ZOOM DISPLAY ─────────────────────────────────────────────── */
     function updateZoomDisplay() {
         const label = Math.round(zoomFactor * 100) + '%';
         const barPct = Math.round(((zoomFactor - ZOOM_MIN) / (ZOOM_MAX - ZOOM_MIN)) * 100);
@@ -129,95 +193,189 @@
         ['sheet-zoom-fill', 'tap-zoom-fill'].forEach(id => { const e = document.getElementById(id); if (e) e.style.width = Math.max(4, barPct) + '%'; });
     }
 
+    /* ── BOOKMARK ─────────────────────────────────────────────────── */
     function updateBookmarkUI() {
         const on = bookmarkedPage === pageNum;
-        ['bkmk-icon', 'fs-bkmk-icon', 'sheet-bkmk-icon', 'tap-bkmk-icon'].forEach(id => {
+        ['bkmk-icon', 'fs-bkmk-icon', 'sheet-bkmk-icon', 'tap-bkmk-icon'].forEach(function (id) {
             const ic = document.getElementById(id); if (!ic) return;
             ic.setAttribute('fill', on ? '#FF6B18' : 'none');
             ic.setAttribute('stroke', on ? '#FF6B18' : 'currentColor');
         });
-        ['bookmark-btn', 'fs-bookmark-btn'].forEach(id => { const b = document.getElementById(id); if (b) b.classList.toggle('is-bkmk', on); });
+        ['bookmark-btn', 'fs-bookmark-btn'].forEach(function (id) {
+            const b = document.getElementById(id); if (b) b.classList.toggle('is-bkmk', on);
+        });
         const sbtn = document.getElementById('sheet-bookmark-btn'); if (sbtn) sbtn.classList.toggle('bookmarked', on);
         const slbl = document.getElementById('sheet-bkmk-label'); if (slbl) slbl.textContent = on ? '✓ Ditandai' : 'Tandai Halaman';
         const tbtn = document.getElementById('tap-bookmark-btn'); if (tbtn) tbtn.classList.toggle('bookmarked', on);
         const tlbl = document.getElementById('tap-bkmk-label'); if (tlbl) tlbl.textContent = on ? '✓ Ditandai' : 'Tandai Halaman';
+
+        /* juga update bookmark toast text */
+        showBMToast_msg && null; /* akan diisi saat toggle */
+    }
+
+    let showBMToast_msg = '';
+    function showBMToast(msg) {
+        const t = document.getElementById('bm-toast');
+        const msgEl = document.getElementById('bm-toast-msg');
+        if (!t) {
+            const el = document.createElement('div');
+            el.id = 'bm-toast';
+            el.style.cssText = 'position:fixed;bottom:5rem;left:50%;transform:translateX(-50%) translateY(60px);background:#1a1a1a;border:1.5px solid #FF6B18;color:#fff;padding:.5rem .875rem;border-radius:99px;font-size:13px;font-weight:600;z-index:20010;opacity:0;transition:all .35s;pointer-events:none;max-width:90vw;';
+            el.innerHTML = '<span id="bm-toast-msg">' + msg + '</span>';
+            document.body.appendChild(el);
+            requestAnimationFrame(function () { el.style.opacity = '1'; el.style.transform = 'translateX(-50%) translateY(0)'; });
+            setTimeout(function () { el.style.opacity = '0'; el.style.transform = 'translateX(-50%) translateY(60px)'; setTimeout(function () { el.remove(); }, 350); }, 2200);
+            return;
+        }
+        if (msgEl) msgEl.textContent = msg;
+        t.style.opacity = '1'; t.style.transform = 'translateX(-50%) translateY(0)';
+        setTimeout(function () { t.style.opacity = '0'; t.style.transform = 'translateX(-50%) translateY(60px)'; }, 2200);
     }
 
     function toggleBookmark() {
-        if (bookmarkedPage === pageNum) { bookmarkedPage = null; localStorage.removeItem(SK.bkmk); snack('Bookmark dihapus'); }
-        else { bookmarkedPage = pageNum; localStorage.setItem(SK.bkmk, pageNum); snack('🔖 Halaman ' + pageNum + ' ditandai!'); }
+        if (bookmarkedPage === pageNum) {
+            bookmarkedPage = null; localStorage.removeItem(SK.bkmk);
+            showBMToast('Tanda baca dihapus');
+        } else {
+            bookmarkedPage = pageNum; localStorage.setItem(SK.bkmk, pageNum);
+            showBMToast('🔖 Halaman ' + pageNum + ' ditandai!');
+        }
         updateBookmarkUI();
     }
 
+    /* ── READING MODE ─────────────────────────────────────────────── */
     function applyMode(mode) {
-        document.body.classList.remove('read-mode-sepia', 'read-mode-night');
-        if (mode !== 'normal') document.body.classList.add('read-mode-' + mode);
+        const ow = document.getElementById('pdf-viewer-container') || document.body;
+        ow.classList.remove('read-mode-sepia', 'read-mode-night');
+        if (mode !== 'normal') ow.classList.add('read-mode-' + mode);
         currentMode = mode; localStorage.setItem(SK.mode, mode);
-        document.querySelectorAll('.mode-opt').forEach(e => e.classList.toggle('active', e.dataset.mode === mode));
-        document.querySelectorAll('[data-sheet-mode]').forEach(e => e.classList.toggle('active', e.dataset.sheetMode === mode));
-        document.querySelectorAll('[data-tap-mode]').forEach(e => e.classList.toggle('active', e.dataset.tapMode === mode));
+        document.querySelectorAll('.mode-opt,[data-sheet-mode],[data-tap-mode]').forEach(function (e) {
+            const m = e.dataset.mode || e.dataset.sheetMode || e.dataset.tapMode;
+            e.classList.toggle('active', m === mode);
+        });
     }
     applyMode(currentMode);
 
-    const getScale = () => baseScale * zoomFactor;
-
-    /* FIX: computeBase tidak di-reset baseScale ke 1.0 dari luar.
-       Hanya dipanggil ketika baseScaleComputed = false. */
-    function computeBase(page) {
-        const containerWidth = viewerEl.clientWidth || window.innerWidth;
-        const padding = isMobile() ? 4 : 16;
-        const availW = containerWidth - padding * 2;
-        const nativeW = page.getViewport({ scale: 1 }).width;
-        baseScale = Math.max(0.6, Math.min(availW / nativeW, 2.5));
-        baseScaleComputed = true;
+    /* ── WATERMARK (guest) ────────────────────────────────────────── */
+    function renderWatermark(cssW, cssH) {
+        if (!IS_GUEST) return;
+        const wm = document.getElementById('pdf-watermark'); if (!wm) return;
+        const rows = Math.ceil(cssH / 160), cols = Math.ceil(cssW / 260);
+        let rects = '';
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                const x = c * 260 + 30, y = r * 160 + 80;
+                rects += `<text x="${x}" y="${y}" fill="#FF6B18" fill-opacity=".18" font-size="22" font-family="Arial" font-weight="bold" transform="rotate(-35,${x},${y})">PRATINJAU</text>`;
+                rects += `<text x="${x - 10}" y="${y + 30}" fill="#FF6B18" fill-opacity=".18" font-size="11" font-family="Arial" transform="rotate(-35,${x - 10},${y + 30})">Login untuk akses penuh</text>`;
+            }
+        }
+        wm.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="${cssW}" height="${cssH}" style="position:absolute;inset:0;pointer-events:none;z-index:4">${rects}</svg>`;
     }
 
+    /* ── GUEST GATE ───────────────────────────────────────────────── */
+    function checkGuestGate() {
+        if (!IS_GUEST || GUEST_PAGE_LIMIT === null || !pdfDoc) return;
+        const total = pdfDoc.numPages, limit = GUEST_PAGE_LIMIT;
+        if (limitWarn && pageNum === Math.max(1, limit - 1) && !gateShown) {
+            const remaining = limit - pageNum;
+            const te = document.getElementById('page-limit-warning-title');
+            const tx = document.getElementById('page-limit-warning-text');
+            if (te) te.textContent = `⚠️ ${remaining} halaman lagi!`;
+            if (tx) tx.textContent = `Login untuk baca semua ${total} halaman secara gratis.`;
+            limitWarn.classList.add('show'); setTimeout(function () { limitWarn.classList.remove('show'); }, 6000);
+        }
+        if (pageNum >= limit && !gateShown) {
+            gateShown = true;
+            const ids = { 'gg-pages-shown': limit + ' hal.', 'gg-total-pages': total + ' hal.', 'gg-stat-read': limit, 'gg-stat-left': (total - limit), 'gg-stat-total': total };
+            Object.entries(ids).forEach(function ([id, val]) { const e = document.getElementById(id); if (e) e.textContent = val; });
+            if (guestGate) guestGate.classList.add('show');
+        }
+        if (pageNum < limit && gateShown) { gateShown = false; if (guestGate) guestGate.classList.remove('show'); }
+    }
+
+    /* ── RENDER PAGE ──────────────────────────────────────────────── */
     function renderPage(num) {
+        if (!pdfDoc) return;
         if (IS_GUEST && GUEST_PAGE_LIMIT !== null && num > GUEST_PAGE_LIMIT) {
             num = GUEST_PAGE_LIMIT;
             if (!gateShown) checkGuestGate();
             return;
         }
-        pageRendering = true;
-        hideLoading(); showCanvas();
+        if (num < 1 || num > pdfDoc.numPages) return;
+        if (pageRendering) { pageNumPending = num; return; }
 
-        pdfDoc.getPage(num).then(async page => {
-            /* FIX: hanya compute baseScale jika belum ada atau flag di-reset */
-            if (!baseScaleComputed) computeBase(page);
+        pageRendering = true;
+        pageNum = num;
+        localStorage.setItem(SK.page, num);
+
+        /* close popups */
+        document.querySelectorAll('.rpv-popup,.show-popup').forEach(function (p) { p.classList.remove('show'); });
+        if (annotTip) annotTip.classList.remove('show');
+        if (window.getSelection) window.getSelection().removeAllRanges();
+
+        pdfDoc.getPage(num).then(async function (page) {
+            if (!baseScaleComputed || needsRecompute) computeBase(page);
 
             const cssScale = getScale();
             const renderScale = cssScale * DPR;
             const vpCss = page.getViewport({ scale: cssScale });
             const vpRender = page.getViewport({ scale: renderScale });
 
+            if (!canvas || !ctx) { pageRendering = false; return; }
+
             canvas.width = Math.floor(vpRender.width);
             canvas.height = Math.floor(vpRender.height);
             canvas.style.width = Math.floor(vpCss.width) + 'px';
             canvas.style.height = Math.floor(vpCss.height) + 'px';
-            stage.style.width = Math.floor(vpCss.width) + 'px';
-            stage.style.height = Math.floor(vpCss.height) + 'px';
+            if (stage) {
+                stage.style.width = Math.floor(vpCss.width) + 'px';
+                stage.style.height = Math.floor(vpCss.height) + 'px';
+            }
 
-            await page.render({ canvasContext: ctx, viewport: vpRender }).promise.catch(e => console.warn(e.message));
+            await page.render({ canvasContext: ctx, viewport: vpRender }).promise.catch(function (e) {
+                console.warn('[pdf-viewer] render:', e.message);
+            });
 
             pageRendering = false;
-            if (pageNumPending !== null) { const p = pageNumPending; pageNumPending = null; renderPage(p); return; }
+
+            if (pageNumPending !== null) {
+                const pp = pageNumPending; pageNumPending = null;
+                renderPage(pp); return;
+            }
+
+            /* FIX-2: hide loading setelah render */
+            hideLoading();
+            if (canvasWrap) { canvasWrap.style.display = 'flex'; canvasWrap.classList.remove('hidden'); }
+            if (stage) stage.style.display = 'block';
 
             await renderTextLayer(page, vpCss);
-            renderAnnotationsOnLayer();
             renderWatermark(Math.floor(vpCss.width), Math.floor(vpCss.height));
 
-            localStorage.setItem(SK.page, num);
-            localStorage.setItem(SK.zoom, zoomFactor);
-            document.getElementById('page-num-input').value = num;
-            document.getElementById('fs-page-num').textContent = num;
-            updateNavButtons(); updateZoomDisplay(); updateProgress(); updateBookmarkUI();
-            canvasWrap.scrollTo({ top: 0, behavior: 'smooth' });
-            if (searchResults.length > 0) applySearchHighlights();
+            /* update UI */
+            const pi = document.getElementById('page-num-input'); if (pi) pi.value = num;
+            const fp = document.getElementById('fs-page-num'); if (fp) fp.textContent = num;
+            const sp = document.getElementById('sheet-page-num'); if (sp) sp.textContent = num;
+            const tp = document.getElementById('tap-page-num'); if (tp) tp.textContent = num;
+            updateNavButtons();
+            updateZoomDisplay();
+            updateReadProgress();
+            updateBookmarkUI();
+
+            /* FIX-12: simpan zoom */
+            try { localStorage.setItem(SK.zoom, zoomFactor); } catch (e) { /* ignore */ }
+
+            if (canvasWrap) canvasWrap.scrollTo({ top: 0, behavior: 'smooth' });
+            if (searchResults.length && currentSearchQuery) applySearchHighlights();
             checkGuestGate();
 
             if (_onPageChangeCb) _onPageChangeCb(num);
 
-        }).catch(e => { console.error(e.message); pageRendering = false; hideLoading(); showCanvas(); });
+        }).catch(function (e) {
+            console.error('[pdf-viewer] render error:', e);
+            pageRendering = false;
+            hideLoading(); /* FIX-2 */
+            if (canvasWrap) { canvasWrap.style.display = 'flex'; canvasWrap.classList.remove('hidden'); }
+        });
     }
 
     function queueRender(n) {
@@ -225,92 +383,41 @@
         else renderPage(n);
     }
 
+    /* ── TEXT LAYER ───────────────────────────────────────────────── */
     async function renderTextLayer(page, viewport) {
+        if (!textLayer) return;
         textLayer.innerHTML = '';
-        textLayer.style.width = viewport.width + 'px';
-        textLayer.style.height = viewport.height + 'px';
+        textLayer.style.width = Math.floor(viewport.width) + 'px';
+        textLayer.style.height = Math.floor(viewport.height) + 'px';
         const content = await page.getTextContent();
-        content.items.forEach(item => {
+        content.items.forEach(function (item) {
             if (!item.str || !item.str.trim()) return;
             const tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
-            const fontHeight = Math.sqrt(tx[2] * tx[2] + tx[3] * tx[3]);
+            const fh = Math.sqrt(tx[2] * tx[2] + tx[3] * tx[3]);
             const angle = Math.atan2(tx[1], tx[0]);
             const span = document.createElement('span');
             span.textContent = item.str;
-            span.style.fontSize = fontHeight + 'px';
-            span.style.left = tx[4] + 'px';
-            span.style.top = (tx[5] - fontHeight) + 'px';
-            span.style.transformOrigin = '0% 0%';
+            span.style.cssText =
+                'position:absolute;left:' + tx[4] + 'px;top:' + (tx[5] - fh) + 'px;' +
+                'font-size:' + fh + 'px;line-height:1;white-space:pre;' +
+                'padding:0;margin:0;color:transparent;cursor:text;' +
+                'transform-origin:0% 0%;-webkit-touch-callout:none;';
             textLayer.appendChild(span);
-            const targetWidth = item.width * viewport.scale;
-            const measuredWidth = span.getBoundingClientRect().width;
-            let transform = angle !== 0 ? `rotate(${-angle}rad)` : '';
-            if (measuredWidth > 1 && targetWidth > 0) transform += ` scaleX(${targetWidth / measuredWidth})`;
-            if (transform.trim()) span.style.transform = transform.trim();
+            const tw = item.width * viewport.scale;
+            const mw = span.getBoundingClientRect().width || span.scrollWidth;
+            let tf = angle !== 0 ? 'rotate(' + (-angle) + 'rad)' : '';
+            if (mw > 1 && tw > 0 && Math.abs(tw - mw) > 0.5) tf += (tf ? ' ' : '') + 'scaleX(' + (tw / mw) + ')';
+            if (tf.trim()) span.style.transform = tf.trim();
         });
     }
 
-    function clearSearchHighlights() { annotLayer.querySelectorAll('.search-highlight').forEach(el => el.remove()); searchHighlightEls = []; }
-
-    function applySearchHighlights() {
-        clearSearchHighlights();
-        if (!currentSearchQuery || !pdfDoc) return;
-        const q = currentSearchQuery.toLowerCase(), stRect = stage.getBoundingClientRect();
-        const spans = Array.from(textLayer.querySelectorAll('span'));
-        let globalIdx = 0;
-        spans.forEach(span => {
-            if (!span.firstChild) return;
-            const text = span.textContent, lower = text.toLowerCase();
-            let idx = lower.indexOf(q);
-            while (idx !== -1) {
-                try {
-                    const range = document.createRange();
-                    range.setStart(span.firstChild, idx); range.setEnd(span.firstChild, Math.min(idx + q.length, text.length));
-                    Array.from(range.getClientRects()).forEach(rect => {
-                        if (rect.width < 1 || rect.height < 1) return;
-                        const el = document.createElement('div'); el.className = 'search-highlight';
-                        el.style.left = (rect.left - stRect.left) + 'px'; el.style.top = (rect.top - stRect.top) + 'px';
-                        el.style.width = rect.width + 'px'; el.style.height = rect.height + 'px';
-                        el.dataset.matchIdx = globalIdx;
-                        annotLayer.appendChild(el); searchHighlightEls.push(el);
-                    });
-                } catch (_) { }
-                globalIdx++; idx = lower.indexOf(q, idx + 1);
-            }
-        });
-        highlightActiveMatch();
-    }
-
-    function highlightActiveMatch() {
-        searchHighlightEls.forEach((el, i) => el.classList.toggle('active-match', i === searchIndex));
-        if (searchHighlightEls[searchIndex]) searchHighlightEls[searchIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
-        document.querySelectorAll('.sri').forEach((el, i) => el.classList.toggle('active-sri', i === searchIndex));
-    }
-
-    function checkGuestGate() {
-        if (!IS_GUEST || GUEST_PAGE_LIMIT === null || !pdfDoc) return;
-        const totalPages = pdfDoc.numPages, limit = GUEST_PAGE_LIMIT;
-        if (limitWarn && pageNum === Math.max(1, limit - 1) && !gateShown) {
-            const remaining = limit - pageNum;
-            const titleEl = document.getElementById('page-limit-warning-title');
-            const textEl = document.getElementById('page-limit-warning-text');
-            if (titleEl) titleEl.textContent = `⚠️ ${remaining} halaman lagi!`;
-            if (textEl) textEl.textContent = `Login untuk baca semua ${totalPages} halaman secara gratis.`;
-            limitWarn.classList.add('show'); setTimeout(() => limitWarn.classList.remove('show'), 6000);
-        }
-        if (pageNum >= limit && !gateShown) {
-            gateShown = true;
-            const ids = { 'gg-pages-shown': limit + ' hal.', 'gg-total-pages': totalPages + ' hal.', 'gg-stat-read': limit, 'gg-stat-left': (totalPages - limit), 'gg-stat-total': totalPages };
-            Object.entries(ids).forEach(([id, val]) => { const e = document.getElementById(id); if (e) e.textContent = val; });
-            if (guestGate) guestGate.classList.add('show');
-        }
-        if (pageNum < limit && gateShown) { gateShown = false; if (guestGate) guestGate.classList.remove('show'); }
-    }
-
+    /* ── NAVIGATION ───────────────────────────────────────────────── */
     function prevPage() { if (pageNum > 1) { pageNum--; queueRender(pageNum); } }
     function nextPage() {
         if (!pdfDoc) return;
-        const maxPage = (IS_GUEST && GUEST_PAGE_LIMIT !== null) ? Math.min(GUEST_PAGE_LIMIT, pdfDoc.numPages) : pdfDoc.numPages;
+        const maxPage = (IS_GUEST && GUEST_PAGE_LIMIT !== null)
+            ? Math.min(GUEST_PAGE_LIMIT, pdfDoc.numPages)
+            : pdfDoc.numPages;
         if (pageNum < maxPage) { pageNum++; queueRender(pageNum); }
         else if (IS_GUEST && GUEST_PAGE_LIMIT !== null && pageNum >= GUEST_PAGE_LIMIT) { if (!gateShown) checkGuestGate(); }
     }
@@ -319,264 +426,432 @@
         if (IS_GUEST && GUEST_PAGE_LIMIT !== null) n = Math.min(n, GUEST_PAGE_LIMIT);
         if (n >= 1 && n <= pdfDoc.numPages) { pageNum = n; queueRender(n); }
     }
-
     function updateNavButtons() {
-        ['prev-page', 'fs-prev', 'sheet-prev', 'tap-prev'].forEach(id => { const e = document.getElementById(id); if (e) e.disabled = pageNum <= 1; });
-        const maxForGuest = (IS_GUEST && GUEST_PAGE_LIMIT !== null && pdfDoc) ? Math.min(GUEST_PAGE_LIMIT, pdfDoc.numPages) : (pdfDoc ? pdfDoc.numPages : 1);
-        ['next-page', 'fs-next', 'sheet-next', 'tap-next'].forEach(id => { const e = document.getElementById(id); if (e) e.disabled = pageNum >= maxForGuest; });
-    }
-
-    /* FIX: zoom tidak menyentuh baseScale secara langsung.
-       Flag baseScaleComputed di-reset agar renderPage() menghitung ulang. */
-    function zoomIn() { zoomFactor = Math.min(zoomFactor + ZOOM_STEP, ZOOM_MAX); baseScaleComputed = false; queueRender(pageNum); }
-    function zoomOut() { zoomFactor = Math.max(zoomFactor - ZOOM_STEP, ZOOM_MIN); baseScaleComputed = false; queueRender(pageNum); }
-
-    function saveAnnotations() { localStorage.setItem(SK.annot, JSON.stringify(annotations)); }
-
-    function renderAnnotationsOnLayer() {
-        if (window._pdfAnnotations) return;
-        annotLayer.innerHTML = '';
-        const pageAnnots = annotations.filter(a => a.page === pageNum), scale = getScale();
-        pageAnnots.forEach(annot => {
-            const el = document.createElement('div'); el.className = `annot-highlight color-${annot.color}`;
-            el.style.left = (annot.rect.x * scale) + 'px'; el.style.top = (annot.rect.y * scale) + 'px';
-            el.style.width = (annot.rect.w * scale) + 'px'; el.style.height = (annot.rect.h * scale) + 'px';
-            el.dataset.id = annot.id;
-            el.addEventListener('click', e => { e.stopPropagation(); showAnnotTooltip(annot, e.clientX, e.clientY); });
-            annotLayer.appendChild(el);
+        ['prev-page', 'fs-prev', 'sheet-prev', 'tap-prev'].forEach(function (id) {
+            const e = document.getElementById(id); if (e) e.disabled = pageNum <= 1;
+        });
+        const maxForGuest = (IS_GUEST && GUEST_PAGE_LIMIT !== null && pdfDoc)
+            ? Math.min(GUEST_PAGE_LIMIT, pdfDoc.numPages)
+            : (pdfDoc ? pdfDoc.numPages : 1);
+        ['next-page', 'fs-next', 'sheet-next', 'tap-next'].forEach(function (id) {
+            const e = document.getElementById(id); if (e) e.disabled = pageNum >= maxForGuest;
         });
     }
 
-    function showAnnotTooltip(annot, x, y) {
-        activeAnnotId = annot.id;
-        document.getElementById('annot-tooltip-text').textContent = annot.comment ? `💬 ${annot.comment}` : `Stabilo ${annot.color} — "${annot.selectedText?.substring(0, 60)}..."`;
-        annotTip.classList.add('show');
-        const vw = window.innerWidth, vh = window.innerHeight;
-        annotTip.style.left = Math.min(x, vw - 272) + 'px';
-        annotTip.style.top = (y + 112 > vh ? y - 108 : y + 12) + 'px';
+    /* ── ZOOM ─────────────────────────────────────────────────────── */
+    function doZoom(dir) {
+        zoomFactor = dir > 0
+            ? Math.min(zoomFactor + ZOOM_STEP, ZOOM_MAX)
+            : Math.max(zoomFactor - ZOOM_STEP, ZOOM_MIN);
+        needsRecompute = false; /* tetap pakai baseScale yg ada, hanya zoom */
+        updateZoomDisplay();
+        try { localStorage.setItem(SK.zoom, zoomFactor); } catch (e) { /* ignore */ }
+        if (pdfDoc) queueRender(pageNum);
+    }
+    function zoomIn() { doZoom(1); }
+    function zoomOut() { doZoom(-1); }
+
+    /* ── SEARCH ───────────────────────────────────────────────────── */
+    function clearSearchHL() {
+        if (!annotLayer) return;
+        annotLayer.querySelectorAll('.search-highlight').forEach(function (e) { e.remove(); });
+        searchHighlightEls = [];
     }
 
-    document.getElementById('annot-tooltip-close').addEventListener('click', () => { annotTip.classList.remove('show'); activeAnnotId = null; });
-    document.getElementById('annot-tooltip-del').addEventListener('click', () => {
-        if (!activeAnnotId) return;
-        annotations = annotations.filter(a => a.id !== activeAnnotId);
-        saveAnnotations(); renderAnnotationsOnLayer(); annotTip.classList.remove('show'); activeAnnotId = null; snack('Anotasi dihapus');
-    });
-
-    function getSelectionRect() {
-        const sel = window.getSelection(); if (!sel || sel.isCollapsed || !sel.rangeCount) return null;
-        const range = sel.getRangeAt(0), stRect = stage.getBoundingClientRect(), rects = Array.from(range.getClientRects());
-        if (!rects.length) return null;
-        const left = Math.min(...rects.map(r => r.left)), top = Math.min(...rects.map(r => r.top));
-        const right = Math.max(...rects.map(r => r.right)), bottom = Math.max(...rects.map(r => r.bottom));
-        const scale = getScale();
-        return { x: (left - stRect.left) / scale, y: (top - stRect.top) / scale, w: (right - left) / scale, h: (bottom - top) / scale };
-    }
-
-    function showAnnotToolbar() {
-        const sel = window.getSelection(); if (!sel || sel.isCollapsed) return;
-        const rect = sel.getRangeAt(0).getBoundingClientRect();
-        const vw = window.innerWidth, vh = window.innerHeight, tbW = 300, tbH = 52;
-        let tx = Math.min(rect.left + rect.width / 2 - tbW / 2, vw - tbW - 8), ty = rect.top - tbH - 12;
-        if (ty < 8) ty = rect.top + 20;
-        annotTb.style.left = Math.max(8, tx) + 'px'; annotTb.style.top = ty + 'px'; annotTb.classList.add('show');
-    }
-    function hideAnnotToolbar() { annotTb.classList.remove('show'); }
-
-    document.addEventListener('mouseup', e => {
-        if (window._pdfAnnotations) return;
-        if (e.target.closest('#annot-toolbar, #comment-popup, #annot-tooltip')) return;
-        setTimeout(() => {
-            const sel = window.getSelection();
-            if (sel && !sel.isCollapsed && sel.rangeCount > 0) { const range = sel.getRangeAt(0); if (textLayer.contains(range.commonAncestorContainer)) showAnnotToolbar(); }
-            else hideAnnotToolbar();
-        }, 50);
-    });
-    document.addEventListener('touchend', e => {
-        if (window._pdfAnnotations) return;
-        if (e.target.closest('#annot-toolbar, #comment-popup, #annot-tooltip, #mobile-tap-overlay')) return;
-        setTimeout(() => {
-            const sel = window.getSelection();
-            if (sel && !sel.isCollapsed && sel.rangeCount > 0) { const range = sel.getRangeAt(0); if (textLayer.contains(range.commonAncestorContainer)) showAnnotToolbar(); }
-        }, 200);
-    });
-
-    document.querySelectorAll('.annot-tool-btn[data-color]').forEach(btn => {
-        btn.addEventListener('click', e => {
-            if (window._pdfAnnotations) return;
-            e.stopPropagation();
-            const color = btn.dataset.color, rect = getSelectionRect(), sel = window.getSelection();
-            if (!rect) { snack('Pilih teks dulu!'); return; }
-            annotations.push({ id: Date.now(), page: pageNum, color, rect, selectedText: sel ? sel.toString() : '', comment: '' });
-            saveAnnotations(); renderAnnotationsOnLayer(); sel?.removeAllRanges(); hideAnnotToolbar(); snack(`✏️ Stabilo ${color} diterapkan!`);
+    function applySearchHighlights() {
+        clearSearchHL();
+        if (!currentSearchQuery || !pdfDoc || !textLayer || !annotLayer) return;
+        const q = currentSearchQuery.toLowerCase();
+        const sr = stage ? stage.getBoundingClientRect() : { left: 0, top: 0 };
+        const spans = Array.from(textLayer.querySelectorAll('span'));
+        spans.forEach(function (span) {
+            if (!span.firstChild) return;
+            const text = span.textContent, lower = text.toLowerCase();
+            let idx = lower.indexOf(q);
+            while (idx !== -1) {
+                try {
+                    const range = document.createRange();
+                    range.setStart(span.firstChild, idx);
+                    range.setEnd(span.firstChild, Math.min(idx + q.length, text.length));
+                    Array.from(range.getClientRects()).forEach(function (rect) {
+                        if (rect.width < 1 || rect.height < 1) return;
+                        const el = document.createElement('div');
+                        el.className = 'search-highlight';
+                        el.style.cssText =
+                            'position:absolute;left:' + (rect.left - sr.left) + 'px;top:' + (rect.top - sr.top) +
+                            'px;width:' + rect.width + 'px;height:' + rect.height +
+                            'px;background:rgba(255,215,0,.45);border-radius:2px;pointer-events:none;z-index:7;transition:background .25s;';
+                        annotLayer.appendChild(el);
+                        searchHighlightEls.push(el);
+                    });
+                } catch (_) { /* ignore */ }
+                idx = lower.indexOf(q, idx + 1);
+            }
         });
-    });
+        highlightActiveMatch();
+    }
 
-    document.getElementById('add-comment-btn').addEventListener('click', e => {
-        if (window._pdfAnnotations) return; e.stopPropagation();
-        const rect = getSelectionRect(); if (!rect) { snack('Pilih teks dulu!'); return; }
-        const sel = window.getSelection(), br = sel?.getRangeAt(0).getBoundingClientRect();
-        const vw = window.innerWidth, vh = window.innerHeight;
-        commentPop.style.left = Math.min((br?.left || 100) - 140, vw - 296) + 'px';
-        commentPop.style.top = ((br?.bottom || 200) + 10 + 160 > vh ? (br?.top || 200) - 170 : (br?.bottom || 200) + 10) + 'px';
-        commentPop.classList.add('show');
-        document.getElementById('comment-text').value = ''; document.getElementById('comment-text').focus();
-    });
+    function highlightActiveMatch() {
+        searchHighlightEls.forEach(function (el, i) {
+            el.style.background = i === searchIndex ? 'rgba(255,107,24,.75)' : 'rgba(255,215,0,.45)';
+            el.style.outline = i === searchIndex ? '2px solid #FF6B18' : 'none';
+        });
+        if (searchHighlightEls[searchIndex])
+            searchHighlightEls[searchIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+        document.querySelectorAll('.sri').forEach(function (el, i) {
+            el.classList.toggle('active-sri', i === searchIndex);
+        });
+    }
 
-    document.getElementById('comment-save').addEventListener('click', () => {
-        if (window._pdfAnnotations) return;
-        const rect = getSelectionRect(), sel = window.getSelection(), comment = document.getElementById('comment-text').value.trim();
-        if (!rect || !comment) { snack('Tulis komentar dulu!'); return; }
-        annotations.push({ id: Date.now(), page: pageNum, color: 'yellow', rect, selectedText: sel?.toString() || '', comment });
-        saveAnnotations(); renderAnnotationsOnLayer(); sel?.removeAllRanges();
-        commentPop.classList.remove('show'); hideAnnotToolbar(); snack('💬 Komentar disimpan!');
-    });
-
-    document.getElementById('comment-cancel').addEventListener('click', () => commentPop.classList.remove('show'));
-    document.getElementById('annot-close-btn').addEventListener('click', () => { window.getSelection()?.removeAllRanges(); hideAnnotToolbar(); });
-    document.addEventListener('click', e => {
-        if (!annotTb.contains(e.target) && !commentPop.contains(e.target) && !annotTip.contains(e.target)) {
-            if (!e.target.closest('#text-layer')) hideAnnotToolbar();
-            annotTip.classList.remove('show');
-        }
-    });
-
-    let searchDebounce = null, currentSearchQuery = '';
-
-    function openSearch() { document.getElementById('search-overlay').classList.add('show'); document.getElementById('search-input').focus(); }
+    function openSearch() {
+        const ov = document.getElementById('search-overlay'); if (!ov) return;
+        ov.classList.add('show');
+        setTimeout(function () { const i = document.getElementById('search-input'); if (i) i.focus(); }, 60);
+    }
     function closeSearch() {
-        document.getElementById('search-overlay').classList.remove('show');
-        document.getElementById('search-results-list').innerHTML = '';
-        document.getElementById('search-status').textContent = 'Ketik untuk mencari...';
-        document.getElementById('search-match-info').textContent = '';
-        document.getElementById('search-input').value = '';
-        searchResults = []; searchIndex = -1; currentSearchQuery = ''; clearSearchHighlights();
+        const ov = document.getElementById('search-overlay'); if (ov) ov.classList.remove('show');
+        clearSearchHL(); currentSearchQuery = ''; searchResults = []; searchIndex = -1;
+        const inp = document.getElementById('search-input'); if (inp) inp.value = '';
+        const rl = document.getElementById('search-results-list'); if (rl) rl.innerHTML = '';
+        const rs = document.getElementById('search-status'); if (rs) rs.textContent = 'Ketik untuk mencari...';
+        const mi = document.getElementById('search-match-info'); if (mi) mi.textContent = '';
     }
 
     async function doSearch(query) {
+        const rs = document.getElementById('search-status');
+        const list = document.getElementById('search-results-list');
+        const mi = document.getElementById('search-match-info');
         if (!pdfDoc || !query.trim()) {
-            document.getElementById('search-status').textContent = 'Ketik untuk mencari...';
-            document.getElementById('search-results-list').innerHTML = '';
-            document.getElementById('search-match-info').textContent = '';
-            clearSearchHighlights(); currentSearchQuery = ''; return;
+            clearSearchHL(); currentSearchQuery = ''; searchResults = []; searchIndex = -1;
+            if (rs) rs.textContent = 'Ketik untuk mencari...';
+            if (list) list.innerHTML = ''; if (mi) mi.textContent = ''; return;
         }
-        document.getElementById('search-status').textContent = 'Mencari di semua halaman...';
+        if (rs) rs.textContent = 'Mencari di semua halaman...';
         searchResults = []; currentSearchQuery = query;
         const q = query.toLowerCase();
-        const maxSearchPage = (IS_GUEST && GUEST_PAGE_LIMIT !== null) ? Math.min(GUEST_PAGE_LIMIT, pdfDoc.numPages) : pdfDoc.numPages;
-        for (let p = 1; p <= maxSearchPage; p++) {
-            const page = await pdfDoc.getPage(p), content = await page.getTextContent();
-            const text = content.items.map(i => i.str).join(' '), lText = text.toLowerCase();
-            let idx = lText.indexOf(q);
-            while (idx !== -1) { searchResults.push({ page: p, excerpt: text.substring(Math.max(0, idx - 35), idx + q.length + 50).trim(), charIdx: idx }); idx = lText.indexOf(q, idx + 1); }
+        const maxPage = (IS_GUEST && GUEST_PAGE_LIMIT !== null)
+            ? Math.min(GUEST_PAGE_LIMIT, pdfDoc.numPages) : pdfDoc.numPages;
+        for (let p = 1; p <= maxPage; p++) {
+            const pg = await pdfDoc.getPage(p);
+            const ct = await pg.getTextContent();
+            const text = ct.items.map(function (i) { return i.str; }).join(' ');
+            const lt = text.toLowerCase();
+            let ix = lt.indexOf(q);
+            while (ix !== -1) {
+                searchResults.push({ page: p, excerpt: text.substring(Math.max(0, ix - 35), ix + q.length + 50).trim() });
+                ix = lt.indexOf(q, ix + 1);
+            }
         }
-        const list = document.getElementById('search-results-list'), status = document.getElementById('search-status');
+        if (!list) return;
         list.innerHTML = '';
-        if (!searchResults.length) { status.textContent = `Tidak ditemukan: "${query}"`; document.getElementById('search-match-info').textContent = ''; clearSearchHighlights(); return; }
-        status.textContent = `${searchResults.length} hasil ditemukan`; searchIndex = 0;
-        searchResults.slice(0, 40).forEach((r, i) => {
-            const item = document.createElement('div'); item.className = 'sri' + (i === 0 ? ' active-sri' : '');
-            const hl = r.excerpt.replace(new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), m => `<mark${i === 0 ? ' class="active-mark"' : ''}>${m}</mark>`);
-            item.innerHTML = `<span class="pg">Hal.${r.page}</span><span class="ex">${hl}</span>`;
-            item.addEventListener('click', () => { searchIndex = i; document.querySelectorAll('.sri').forEach((el, j) => el.classList.toggle('active-sri', j === i)); if (r.page !== pageNum) goTo(r.page); else { applySearchHighlights(); highlightActiveMatch(); } updateMatchInfo(); });
-            list.appendChild(item);
+        if (!searchResults.length) {
+            if (rs) rs.textContent = 'Tidak ditemukan: "' + query + '"';
+            if (mi) mi.textContent = ''; clearSearchHL(); return;
+        }
+        if (rs) rs.textContent = searchResults.length + ' hasil ditemukan';
+        searchIndex = 0;
+        const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const esc = function (s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
+        searchResults.slice(0, 40).forEach(function (r, i) {
+            const el = document.createElement('div'); el.className = 'sri' + (i === 0 ? ' active-sri' : '');
+            const hlEx = esc(r.excerpt).replace(
+                new RegExp(escaped, 'gi'),
+                function (m) { return '<mark style="background:rgba(255,107,24,.35);color:#fff;border-radius:2px;padding:0 1px;">' + m + '</mark>'; }
+            );
+            el.innerHTML = '<span class="pg">Hal.' + r.page + '</span><span class="ex">' + hlEx + '</span>';
+            el.addEventListener('click', function () {
+                searchIndex = i;
+                if (r.page !== pageNum) { goTo(r.page); setTimeout(function () { applySearchHighlights(); highlightActiveMatch(); }, 700); }
+                else { applySearchHighlights(); highlightActiveMatch(); }
+                updateSearchMatchInfo();
+            });
+            list.appendChild(el);
         });
-        updateMatchInfo();
-        if (searchResults[0].page === pageNum) applySearchHighlights(); else goTo(searchResults[0].page);
+        updateSearchMatchInfo();
+        if (searchResults[0].page === pageNum) applySearchHighlights();
+        else goTo(searchResults[0].page);
     }
 
-    function updateMatchInfo() {
-        const el = document.getElementById('search-match-info');
-        const onPage = searchResults.filter(r => r.page === pageNum);
-        if (searchResults.length) el.textContent = `${searchIndex + 1}/${searchResults.length} hasil · ${onPage.length} di halaman ini`;
+    function updateSearchMatchInfo() {
+        const mi = document.getElementById('search-match-info');
+        if (!mi || !searchResults.length) return;
+        const onPage = searchResults.filter(function (r) { return r.page === pageNum; }).length;
+        mi.textContent = (searchIndex + 1) + '/' + searchResults.length + ' hasil · ' + onPage + ' di halaman ini';
     }
-    function searchNavNext() { if (!searchResults.length) return; searchIndex = (searchIndex + 1) % searchResults.length; const r = searchResults[searchIndex]; if (r.page !== pageNum) goTo(r.page); else { applySearchHighlights(); highlightActiveMatch(); } updateMatchInfo(); }
-    function searchNavPrev() { if (!searchResults.length) return; searchIndex = (searchIndex - 1 + searchResults.length) % searchResults.length; const r = searchResults[searchIndex]; if (r.page !== pageNum) goTo(r.page); else { applySearchHighlights(); highlightActiveMatch(); } updateMatchInfo(); }
+    function searchNavNext() {
+        if (!searchResults.length) return;
+        searchIndex = (searchIndex + 1) % searchResults.length;
+        const r = searchResults[searchIndex];
+        if (r.page !== pageNum) { goTo(r.page); setTimeout(function () { applySearchHighlights(); highlightActiveMatch(); }, 700); }
+        else { applySearchHighlights(); highlightActiveMatch(); }
+        updateSearchMatchInfo();
+    }
+    function searchNavPrev() {
+        if (!searchResults.length) return;
+        searchIndex = (searchIndex - 1 + searchResults.length) % searchResults.length;
+        const r = searchResults[searchIndex];
+        if (r.page !== pageNum) { goTo(r.page); setTimeout(function () { applySearchHighlights(); highlightActiveMatch(); }, 700); }
+        else { applySearchHighlights(); highlightActiveMatch(); }
+        updateSearchMatchInfo();
+    }
 
-    document.getElementById('search-input').addEventListener('input', function () { clearTimeout(searchDebounce); searchDebounce = setTimeout(() => doSearch(this.value), 450); });
-    document.getElementById('search-close-btn').addEventListener('click', closeSearch);
-    document.getElementById('search-prev-btn').addEventListener('click', searchNavPrev);
-    document.getElementById('search-next-btn').addEventListener('click', searchNavNext);
-    document.getElementById('search-overlay').addEventListener('click', e => { if (e.target === document.getElementById('search-overlay')) closeSearch(); });
-    document.getElementById('search-input').addEventListener('keydown', e => { if (e.key === 'Enter') e.shiftKey ? searchNavPrev() : searchNavNext(); });
+    /* bind search */
+    (function () {
+        const inp = document.getElementById('search-input');
+        if (inp) {
+            inp.addEventListener('input', function () {
+                clearTimeout(searchDebounce);
+                searchDebounce = setTimeout(function () { doSearch(inp.value); }, 450);
+            });
+            inp.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') { clearTimeout(searchDebounce); e.shiftKey ? searchNavPrev() : searchNavNext(); }
+                if (e.key === 'Escape') closeSearch();
+            });
+        }
+        const ov = document.getElementById('search-overlay');
+        if (ov) ov.addEventListener('click', function (e) { if (e.target === ov) closeSearch(); });
+        const sc = document.getElementById('search-close-btn'); if (sc) sc.addEventListener('click', closeSearch);
+        const sn = document.getElementById('search-next-btn'); if (sn) sn.addEventListener('click', searchNavNext);
+        const sp = document.getElementById('search-prev-btn'); if (sp) sp.addEventListener('click', searchNavPrev);
+        const sb = document.getElementById('search-btn'); if (sb) sb.addEventListener('click', openSearch);
+    })();
 
-    function openTapOverlay() { tapOverlayOpen = true; tapOverlay.classList.add('show'); }
-    function closeTapOverlay() { tapOverlayOpen = false; tapOverlay.classList.remove('show'); }
-
-    document.getElementById('tap-close-overlay').addEventListener('click', closeTapOverlay);
-    document.getElementById('tap-prev').addEventListener('click', prevPage);
-    document.getElementById('tap-next').addEventListener('click', nextPage);
-    document.getElementById('tap-zoom-in').addEventListener('click', zoomIn);
-    document.getElementById('tap-zoom-out').addEventListener('click', zoomOut);
-    document.getElementById('tap-bookmark-btn').addEventListener('click', toggleBookmark);
-    document.getElementById('tap-exit-btn').addEventListener('click', () => { closeTapOverlay(); exitFullscreen(); });
-    document.querySelectorAll('[data-tap-mode]').forEach(el => { el.addEventListener('click', () => { applyMode(el.dataset.tapMode); snack({ normal: '☀️ Normal', sepia: '📜 Sepia', night: '🌙 Night' }[el.dataset.tapMode]); }); });
-
-    function openSheet() { sheetIsOpen = true; document.getElementById('sheet-backdrop').classList.add('show'); document.getElementById('bottom-sheet').classList.add('show'); }
-    function closeSheet() { sheetIsOpen = false; document.getElementById('sheet-backdrop').classList.remove('show'); document.getElementById('bottom-sheet').classList.remove('show'); }
-
-    document.getElementById('sheet-backdrop').addEventListener('click', closeSheet);
-    document.getElementById('sheet-close').addEventListener('click', closeSheet);
-    document.getElementById('sheet-prev').addEventListener('click', prevPage);
-    document.getElementById('sheet-next').addEventListener('click', nextPage);
-    document.getElementById('sheet-zoom-in').addEventListener('click', zoomIn);
-    document.getElementById('sheet-zoom-out').addEventListener('click', zoomOut);
-    document.getElementById('sheet-bookmark-btn').addEventListener('click', toggleBookmark);
-    document.getElementById('sheet-fs-btn').addEventListener('click', () => { closeSheet(); setTimeout(enterFullscreen, 200); });
-    document.getElementById('sheet-search-btn').addEventListener('click', () => { closeSheet(); setTimeout(openSearch, 200); });
-    document.getElementById('sheet-jump-go').addEventListener('click', () => { const n = parseInt(document.getElementById('sheet-jump').value); if (n) { goTo(n); closeSheet(); } });
-    document.getElementById('sheet-jump').addEventListener('keydown', e => { if (e.key === 'Enter') { const n = parseInt(e.target.value); if (n) { goTo(n); closeSheet(); } } });
-    document.querySelectorAll('[data-sheet-mode]').forEach(el => { el.addEventListener('click', () => { applyMode(el.dataset.sheetMode); snack({ normal: '☀️ Normal', sepia: '📜 Sepia', night: '🌙 Night' }[el.dataset.sheetMode]); }); });
-
-    document.getElementById('mobile-fab-btn').addEventListener('click', e => { e.stopPropagation(); openSheet(); });
-
+    /* ── FULLSCREEN ───────────────────────────────────────────────── */
     function enterFullscreen() {
-        isFullscreen = true; viewerEl.classList.add('fullscreen-mode'); document.body.style.overflow = 'hidden';
-        if (!isMobile()) { deskHint.classList.remove('hidden', 'fade-out'); clearTimeout(toolbarTimer); toolbarTimer = setTimeout(() => deskHint.classList.add('fade-out'), 4500); }
-        if (pdfDoc) pdfDoc.getPage(pageNum).then(() => { baseScaleComputed = false; queueRender(pageNum); });
+        isFullscreen = true;
+        if (viewerEl) viewerEl.classList.add('fullscreen-mode');
+        document.body.style.overflow = 'hidden';
+        if (fsTb) fsTb.classList.remove('toolbar-hidden');
+        if (!isMobile() && deskHint) {
+            deskHint.classList.remove('hidden', 'fade-out');
+            clearTimeout(toolbarTimer);
+            toolbarTimer = setTimeout(function () { deskHint.classList.add('fade-out'); }, 4500);
+        }
+        needsRecompute = true;
+        if (pdfDoc) queueRender(pageNum);
     }
     function exitFullscreen() {
-        isFullscreen = false; viewerEl.classList.remove('fullscreen-mode'); document.body.style.overflow = ''; deskHint.classList.add('hidden'); closeTapOverlay();
-        if (pdfDoc) pdfDoc.getPage(pageNum).then(() => { baseScaleComputed = false; queueRender(pageNum); });
+        isFullscreen = false;
+        if (viewerEl) viewerEl.classList.remove('fullscreen-mode');
+        document.body.style.overflow = '';
+        if (deskHint) deskHint.classList.add('hidden');
+        closeTapOverlay();
+        needsRecompute = true;
+        if (pdfDoc) queueRender(pageNum);
     }
 
-    viewerEl.addEventListener('mousemove', () => { if (!isFullscreen || isMobile()) return; fsTb.classList.remove('toolbar-hidden'); clearTimeout(toolbarTimer); toolbarTimer = setTimeout(() => fsTb.classList.add('toolbar-hidden'), 3000); });
-    viewerEl.addEventListener('click', e => {
-        if (!isFullscreen || !isMobile()) return;
-        if (e.target.closest('#pdf-fullscreen-toolbar,#mobile-tap-overlay,#bottom-sheet,#guest-gate-overlay')) return;
-        if (window.getSelection()?.toString()) return;
-        tapOverlayOpen ? closeTapOverlay() : openTapOverlay();
+    if (viewerEl) {
+        viewerEl.addEventListener('mousemove', function () {
+            if (!isFullscreen || isMobile()) return;
+            if (fsTb) fsTb.classList.remove('toolbar-hidden');
+            clearTimeout(toolbarTimer);
+            toolbarTimer = setTimeout(function () { if (fsTb) fsTb.classList.add('toolbar-hidden'); }, 3000);
+        });
+        viewerEl.addEventListener('click', function (e) {
+            if (!isFullscreen || !isMobile()) return;
+            if (e.target.closest('#pdf-fullscreen-toolbar,#mobile-tap-overlay,#bottom-sheet,#guest-gate-overlay')) return;
+            if (window.getSelection && window.getSelection().toString()) return;
+            tapOverlayOpen ? closeTapOverlay() : openTapOverlay();
+        });
+    }
+
+    /* ── TAP OVERLAY (mobile fullscreen) ─────────────────────────── */
+    function openTapOverlay() { tapOverlayOpen = true; if (tapOverlay) tapOverlay.classList.add('show'); }
+    function closeTapOverlay() { tapOverlayOpen = false; if (tapOverlay) tapOverlay.classList.remove('show'); }
+
+    (function () {
+        const tc = document.getElementById('tap-close-overlay'); if (tc) tc.addEventListener('click', closeTapOverlay);
+        const tp = document.getElementById('tap-prev'); if (tp) tp.addEventListener('click', prevPage);
+        const tn = document.getElementById('tap-next'); if (tn) tn.addEventListener('click', nextPage);
+        const tzi = document.getElementById('tap-zoom-in'); if (tzi) tzi.addEventListener('click', zoomIn);
+        const tzo = document.getElementById('tap-zoom-out'); if (tzo) tzo.addEventListener('click', zoomOut);
+        const tbm = document.getElementById('tap-bookmark-btn'); if (tbm) tbm.addEventListener('click', toggleBookmark);
+        const tex = document.getElementById('tap-exit-btn'); if (tex) tex.addEventListener('click', function () { closeTapOverlay(); exitFullscreen(); });
+        document.querySelectorAll('[data-tap-mode]').forEach(function (el) {
+            el.addEventListener('click', function () { applyMode(el.dataset.tapMode); snack({ normal: '☀️ Normal', sepia: '📜 Sepia', night: '🌙 Night' }[el.dataset.tapMode]); });
+        });
+    })();
+
+    /* ── BOTTOM SHEET ─────────────────────────────────────────────── */
+    function openSheet() { sheetIsOpen = true; document.getElementById('sheet-backdrop')?.classList.add('show'); document.getElementById('bottom-sheet')?.classList.add('show'); }
+    function closeSheet() { sheetIsOpen = false; document.getElementById('sheet-backdrop')?.classList.remove('show'); document.getElementById('bottom-sheet')?.classList.remove('show'); }
+
+    (function () {
+        const bd = document.getElementById('sheet-backdrop'); if (bd) bd.addEventListener('click', closeSheet);
+        const sc = document.getElementById('sheet-close'); if (sc) sc.addEventListener('click', closeSheet);
+        const sp = document.getElementById('sheet-prev'); if (sp) sp.addEventListener('click', prevPage);
+        const sn = document.getElementById('sheet-next'); if (sn) sn.addEventListener('click', nextPage);
+        const szi = document.getElementById('sheet-zoom-in'); if (szi) szi.addEventListener('click', zoomIn);
+        const szo = document.getElementById('sheet-zoom-out'); if (szo) szo.addEventListener('click', zoomOut);
+        const sbm = document.getElementById('sheet-bookmark-btn'); if (sbm) sbm.addEventListener('click', toggleBookmark);
+        const sfs = document.getElementById('sheet-fs-btn'); if (sfs) sfs.addEventListener('click', function () { closeSheet(); setTimeout(enterFullscreen, 200); });
+        const sse = document.getElementById('sheet-search-btn'); if (sse) sse.addEventListener('click', function () { closeSheet(); setTimeout(openSearch, 200); });
+        const sjg = document.getElementById('sheet-jump-go'); if (sjg) sjg.addEventListener('click', function () { const n = parseInt(document.getElementById('sheet-jump')?.value); if (n) { goTo(n); closeSheet(); } });
+        const sji = document.getElementById('sheet-jump'); if (sji) sji.addEventListener('keydown', function (e) { if (e.key === 'Enter') { const n = parseInt(sji.value); if (n) { goTo(n); closeSheet(); } } });
+        document.querySelectorAll('[data-sheet-mode]').forEach(function (el) {
+            el.addEventListener('click', function () { applyMode(el.dataset.sheetMode); snack({ normal: '☀️ Normal', sepia: '📜 Sepia', night: '🌙 Night' }[el.dataset.sheetMode]); });
+        });
+        const fab = document.getElementById('mobile-fab-btn'); if (fab) fab.addEventListener('click', function (e) { e.stopPropagation(); openSheet(); });
+    })();
+
+    /* Expose openSheet/closeSheet globally untuk script inline */
+    window.openBottomSheet = openSheet;
+    window.closeBottomSheet = closeSheet;
+
+    /* ── MODE DROPDOWN (desktop) ─────────────────────────────────── */
+    (function () {
+        const btn = document.getElementById('mode-btn');
+        if (btn) btn.addEventListener('click', function (e) { e.stopPropagation(); document.getElementById('mode-dropdown')?.classList.toggle('open'); });
+        document.querySelectorAll('.mode-opt').forEach(function (el) {
+            el.addEventListener('click', function () { applyMode(el.dataset.mode); document.getElementById('mode-dropdown')?.classList.remove('open'); });
+        });
+        document.addEventListener('click', function () { document.getElementById('mode-dropdown')?.classList.remove('open'); });
+    })();
+
+    /* ── TOOLBAR BUTTONS ──────────────────────────────────────────── */
+    (function () {
+        const prev = document.getElementById('prev-page'); if (prev) prev.addEventListener('click', prevPage);
+        const next = document.getElementById('next-page'); if (next) next.addEventListener('click', nextPage);
+        const fsPrev = document.getElementById('fs-prev'); if (fsPrev) fsPrev.addEventListener('click', prevPage);
+        const fsNext = document.getElementById('fs-next'); if (fsNext) fsNext.addEventListener('click', nextPage);
+        const zi = document.getElementById('zoom-in'); if (zi) zi.addEventListener('click', zoomIn);
+        const zo = document.getElementById('zoom-out'); if (zo) zo.addEventListener('click', zoomOut);
+        const fzi = document.getElementById('fs-zoom-in'); if (fzi) fzi.addEventListener('click', zoomIn);
+        const fzo = document.getElementById('fs-zoom-out'); if (fzo) fzo.addEventListener('click', zoomOut);
+        const bm = document.getElementById('bookmark-btn'); if (bm) bm.addEventListener('click', toggleBookmark);
+        const fsbm = document.getElementById('fs-bookmark-btn'); if (fsbm) fsbm.addEventListener('click', toggleBookmark);
+        const fsBtn = document.getElementById('fullscreen-btn'); if (fsBtn) fsBtn.addEventListener('click', enterFullscreen);
+        const exBtn = document.getElementById('exit-fs-btn'); if (exBtn) exBtn.addEventListener('click', exitFullscreen);
+        const seBtn = document.getElementById('search-btn'); if (seBtn) seBtn.addEventListener('click', openSearch);
+        const pi = document.getElementById('page-num-input');
+        if (pi) pi.addEventListener('change', function () {
+            const n = parseInt(pi.value);
+            if (pdfDoc && n >= 1 && n <= pdfDoc.numPages) goTo(n); else pi.value = pageNum;
+        });
+    })();
+
+    /* ── KEYBOARD ─────────────────────────────────────────────────── */
+    document.addEventListener('keydown', function (e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'f') { e.preventDefault(); openSearch(); return; }
+        const ov = document.getElementById('search-overlay');
+        if (ov && ov.classList.contains('show') && e.target.id === 'search-input') return;
+        if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
+        switch (e.key) {
+            case 'ArrowLeft': prevPage(); break;
+            case 'ArrowRight': nextPage(); break;
+            case 'ArrowUp': if (canvasWrap) canvasWrap.scrollBy({ top: -120, behavior: 'smooth' }); break;
+            case 'ArrowDown': if (canvasWrap) canvasWrap.scrollBy({ top: 120, behavior: 'smooth' }); break;
+            case '+': case '=': zoomIn(); break;
+            case '-': zoomOut(); break;
+            case 'b': case 'B': toggleBookmark(); break;
+            case 'f': case 'F': isFullscreen ? exitFullscreen() : enterFullscreen(); break;
+            case 'Escape':
+                if (ov && ov.classList.contains('show')) closeSearch();
+                else if (isFullscreen) exitFullscreen();
+                break;
+        }
     });
 
-    function showFallback() {
-        if (IS_GUEST) {
-            hideLoading(); canvasWrap.style.display = 'flex'; canvasWrap.classList.remove('hidden');
-            const stageEl = document.getElementById('pdf-stage'); if (stageEl) stageEl.style.display = 'none';
-            const errDiv = document.createElement('div');
-            errDiv.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;padding:2rem;text-align:center;max-width:360px;margin:auto;';
-            errDiv.innerHTML = `<div style="font-size:2.5rem">📄</div><p style="color:#fff;font-weight:700;font-size:1rem">Gagal memuat dokumen</p><p style="color:#9CA3AF;font-size:.875rem">Login untuk membaca publikasi ini secara penuh.</p><a href="${window.PDF_CONFIG.loginUrl}" style="padding:.65rem 1.5rem;background:#FF6B18;color:#fff;border-radius:10px;font-weight:700;font-size:.875rem;text-decoration:none;">🔓 Masuk Sekarang</a>`;
-            canvasWrap.appendChild(errDiv); return;
-        }
-        hideLoading(); canvasWrap.style.display = 'none'; iframeEl.style.display = 'block';
-        iframeEl.src = pdfUrl + '#toolbar=0&navpanes=0&scrollbar=0&view=FitH';
-    }
+    /* ── TOUCH (pinch + swipe) ────────────────────────────────────── */
+    (function () {
+        let tx = 0, ty = 0, pd = 0, touchMoved = false, pinching = false;
+        if (!viewerEl) return;
+        viewerEl.addEventListener('touchstart', function (e) {
+            touchMoved = false; pinching = false;
+            if (e.touches.length === 1) { tx = e.touches[0].clientX; ty = e.touches[0].clientY; }
+            if (e.touches.length === 2) { pinching = true; pd = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); }
+        }, { passive: true });
+        viewerEl.addEventListener('touchmove', function (e) {
+            touchMoved = true;
+            if (e.touches.length !== 2) return;
+            const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+            if (Math.abs(d - pd) > 14) { d > pd ? zoomIn() : zoomOut(); pd = d; }
+        }, { passive: true });
+        /* FIX-7: threshold swipe 60px */
+        viewerEl.addEventListener('touchend', function (e) {
+            if (pinching || !touchMoved) return;
+            const dx = tx - e.changedTouches[0].clientX;
+            const dy = ty - e.changedTouches[0].clientY;
+            if (Math.abs(dx) > Math.abs(dy) * 1.8 && Math.abs(dx) > 60) {
+                if (tapOverlayOpen) { closeTapOverlay(); return; }
+                if (window.getSelection && window.getSelection().toString()) return;
+                dx > 0 ? nextPage() : prevPage();
+            }
+        }, { passive: true });
+    })();
 
+    /* ── RESIZE (FIX-7: threshold 40px + orientationchange) ──────── */
+    (function () {
+        let lastW = viewerEl ? viewerEl.clientWidth : window.innerWidth, resT = null;
+        window.addEventListener('resize', function () {
+            const w = viewerEl ? viewerEl.clientWidth : window.innerWidth;
+            if (Math.abs(w - lastW) < 40) return; lastW = w;
+            clearTimeout(resT);
+            resT = setTimeout(function () { if (!pdfDoc) return; needsRecompute = true; queueRender(pageNum); }, 300);
+        });
+        window.addEventListener('orientationchange', function () {
+            setTimeout(function () { if (!pdfDoc) return; needsRecompute = true; lastW = 0; queueRender(pageNum); }, 400);
+        });
+    })();
+
+    /* ── RESUME TOAST (FEAT-3) ────────────────────────────────────── */
     function showResumeToast(page) {
         if (IS_GUEST && GUEST_PAGE_LIMIT !== null) page = Math.min(page, GUEST_PAGE_LIMIT);
-        const t = document.getElementById('resume-toast');
-        document.getElementById('resume-text').textContent = `Terakhir di halaman ${page}`;
-        t.classList.add('show');
-        document.getElementById('resume-yes').onclick = () => { goTo(page); t.classList.remove('show'); };
-        document.getElementById('resume-no').onclick = () => { goTo(1); t.classList.remove('show'); };
-        setTimeout(() => t.classList.remove('show'), 7000);
+        if (page <= 1 || !pdfDoc || page > pdfDoc.numPages) return;
+        let t = document.getElementById('resume-toast');
+        if (!t) {
+            t = document.createElement('div'); t.id = 'resume-toast';
+            t.style.cssText = 'position:fixed;bottom:5rem;left:50%;transform:translateX(-50%) translateY(80px);background:#1a1a1a;border:1.5px solid #FF6B18;color:#fff;padding:.6rem .875rem;border-radius:14px;font-size:13px;z-index:20010;display:flex;align-items:center;gap:.6rem;box-shadow:0 8px 24px rgba(0,0,0,.5);opacity:0;transition:all .4s;pointer-events:none;white-space:nowrap;max-width:90vw;';
+            t.innerHTML = '<span style="font-size:1.2rem">🔖</span><div><p style="font-weight:700;margin:0;font-size:12px;">Lanjut membaca?</p><p style="color:#9ca3af;margin:0;font-size:11px;" id="resume-text">—</p></div><button id="resume-yes" style="padding:.3rem .7rem;background:#FF6B18;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;pointer-events:auto;">Lanjut</button><button id="resume-no" style="padding:.3rem .6rem;background:#2d2d2d;color:#9ca3af;border:none;border-radius:8px;font-size:11px;cursor:pointer;pointer-events:auto;">Awal</button>';
+            document.body.appendChild(t);
+        }
+        const rt = document.getElementById('resume-text'); if (rt) rt.textContent = 'Terakhir di halaman ' + page;
+        requestAnimationFrame(function () { t.style.opacity = '1'; t.style.transform = 'translateX(-50%) translateY(0)'; t.style.pointerEvents = 'auto'; });
+        function hide() { t.style.opacity = '0'; t.style.transform = 'translateX(-50%) translateY(80px)'; t.style.pointerEvents = 'none'; }
+        const auto = setTimeout(hide, 8000);
+        const yes = document.getElementById('resume-yes'); if (yes) yes.onclick = function () { clearTimeout(auto); hide(); goTo(page); };
+        const no = document.getElementById('resume-no'); if (no) no.onclick = function () { clearTimeout(auto); hide(); goTo(1); };
     }
 
-    /* ── EXPOSE API SEBELUM pdfLoadingTask dimulai ─────────────────
-       FIX: _pdfViewer harus tersedia segera saat pdf-annotations.js
-       melakukan bootstrap(). onReady(cb) menyimpan cb dan
-       memanggilnya saat pdfDoc benar-benar siap.
-       Ini menghilangkan kebutuhan waitForViewer() polling sama sekali.
-    ─────────────────────────────────────────────────────────────── */
+    /* ── FALLBACK (iframe) ────────────────────────────────────────── */
+    function showFallback() {
+        if (IS_GUEST) {
+            hideLoading();
+            if (canvasWrap) { canvasWrap.style.display = 'flex'; canvasWrap.classList.remove('hidden'); }
+            const stEl = document.getElementById('pdf-stage'); if (stEl) stEl.style.display = 'none';
+            const errDiv = document.createElement('div');
+            errDiv.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;padding:2rem;text-align:center;max-width:360px;margin:auto;';
+            errDiv.innerHTML = '<div style="font-size:2.5rem">📄</div><p style="color:#fff;font-weight:700;font-size:1rem">Gagal memuat dokumen</p><p style="color:#9CA3AF;font-size:.875rem">Login untuk membaca publikasi ini secara penuh.</p><a href="' + (loginUrl || '/login') + '" style="padding:.65rem 1.5rem;background:#FF6B18;color:#fff;border-radius:10px;font-weight:700;font-size:.875rem;text-decoration:none;">🔓 Masuk Sekarang</a>';
+            if (canvasWrap) canvasWrap.appendChild(errDiv); return;
+        }
+        hideLoading();
+        if (canvasWrap) canvasWrap.style.display = 'none';
+        if (iframeEl) { iframeEl.style.display = 'block'; iframeEl.src = pdfUrl + '#toolbar=0&navpanes=0&scrollbar=0&view=FitH'; }
+    }
+
+    /* ── GUEST DOWNLOAD MODAL ─────────────────────────────────────── */
+    window.showGuestDownloadModal = function () {
+        const modal = document.getElementById('guestDownloadModal');
+        const backdrop = document.getElementById('guestModalBackdrop');
+        const container = document.getElementById('guestModalContainer');
+        if (!modal) return; modal.style.display = 'block'; document.body.style.overflow = 'hidden';
+        requestAnimationFrame(function () {
+            if (backdrop) { backdrop.classList.add('opacity-100'); backdrop.classList.remove('opacity-0'); }
+            if (container) { container.classList.add('opacity-100', 'scale-100'); container.classList.remove('opacity-0', 'scale-95'); }
+        });
+    };
+    window.hideGuestDownloadModal = function () {
+        const modal = document.getElementById('guestDownloadModal');
+        const backdrop = document.getElementById('guestModalBackdrop');
+        const container = document.getElementById('guestModalContainer');
+        if (!modal) return;
+        if (backdrop) { backdrop.classList.remove('opacity-100'); backdrop.classList.add('opacity-0'); }
+        if (container) { container.classList.remove('opacity-100', 'scale-100'); container.classList.add('opacity-0', 'scale-95'); }
+        setTimeout(function () { modal.style.display = 'none'; document.body.style.overflow = ''; }, 300);
+    };
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') window.hideGuestDownloadModal && window.hideGuestDownloadModal(); });
+
+    /* ── EXPOSE API (sebelum load PDF) ───────────────────────────── */
     window._pdfViewer = {
         get stage() { return stage; },
         get annotLayer() { return annotLayer; },
@@ -586,132 +861,104 @@
         getScale,
         snack,
         queueRender,
+        goTo,
+        prevPage,
+        nextPage,
         set onPageChange(fn) { _onPageChangeCb = fn; },
         get onPageChange() { return _onPageChangeCb; },
-        onReady(cb) {
-            if (pdfDoc) { cb(); }
-            else { _onReadyCb = cb; }
-        },
+        onReady: function (cb) { if (pdfDoc) { cb(); } else { _onReadyCb = cb; } },
     };
 
-    /* Dispatch event agar pdf-annotations.js bisa bootstrap via event listener */
+    /* dispatch event agar pdf-annotations.js bisa bootstrap */
     window.dispatchEvent(new CustomEvent('pdf-viewer-ready'));
 
-    /* ── Load PDF ─────────────────────────────────────────────────── */
-    const FALLBACK_TIMEOUT = IS_GUEST ? 30000 : 12000;
-    let fbTimer = setTimeout(() => { if (!pdfDoc) showFallback(); }, FALLBACK_TIMEOUT);
-    const loadingText = document.querySelector('#pdf-loading p:first-of-type');
-    const loadingSubtext = document.querySelector('#pdf-loading p:last-of-type');
+    /* ── LOAD PDF ─────────────────────────────────────────────────── */
+    function startLoad() {
+        showLoading('Memuat dokumen...');
+        if (stage) stage.style.display = 'none';
 
-    const pdfLoadingTask = pdfjsLib.getDocument({ url: pdfUrl, withCredentials: false, verbosity: 0, rangeChunkSize: 65536, disableAutoFetch: false, disableStream: false });
-
-    pdfLoadingTask.onProgress = function (data) {
-        if (data.total && data.total > 0) {
-            const pct = Math.round((data.loaded / data.total) * 100);
-            if (loadingText) loadingText.textContent = `Mengunduh dokumen... ${pct}%`;
-            if (pct >= 100 && loadingSubtext) loadingSubtext.textContent = 'Merender halaman...';
+        /* Gunakan cache jika ada (FEAT-19) */
+        if (pdfDoc) {
+            console.log('[pdf-viewer] using cached PDF');
+            updateLoadProgress(100);
+            const ptEl = document.getElementById('page-count'); if (ptEl) ptEl.textContent = pdfDoc.numPages;
+            const piEl = document.getElementById('page-num-input'); if (piEl) piEl.max = pdfDoc.numPages;
+            const ftEl = document.getElementById('fs-page-count'); if (ftEl) ftEl.textContent = pdfDoc.numPages;
+            const stEl = document.getElementById('sheet-total'); if (stEl) stEl.textContent = pdfDoc.numPages;
+            const ttEl = document.getElementById('tap-page-total'); if (ttEl) ttEl.textContent = pdfDoc.numPages;
+            needsRecompute = true;
+            renderPage(1);
+            if (_onReadyCb) { _onReadyCb(); _onReadyCb = null; }
+            return;
         }
-    };
 
-    pdfLoadingTask.promise.then(doc => {
-        clearTimeout(fbTimer); fbTimer = null;
-        pdfDoc = doc;
-        const total = doc.numPages;
-        ['page-count', 'fs-page-count', 'sheet-total', 'tap-page-total'].forEach(id => { const e = document.getElementById(id); if (e) e.textContent = total; });
-        document.getElementById('page-num-input').max = total;
-        document.getElementById('sheet-jump').max = total;
-        if (IS_GUEST && GUEST_PAGE_LIMIT !== null && total > GUEST_PAGE_LIMIT) {
-            const pc = document.getElementById('page-count'); if (pc) pc.textContent = `${GUEST_PAGE_LIMIT}* (dari ${total})`;
-        }
-        renderPage(1);
+        /* FIX-2: fallback timeout */
+        const FALLBACK_TIMEOUT = IS_GUEST ? 30000 : 12000;
+        let fbTimer = setTimeout(function () { if (!pdfDoc) showFallback(); }, FALLBACK_TIMEOUT);
 
-        /* Panggil onReady hook — pdf-annotations.js menunggu ini */
-        if (_onReadyCb) { _onReadyCb(); _onReadyCb = null; }
+        const task = pdfjsLib.getDocument({
+            url: pdfUrl, withCredentials: false, verbosity: 0,
+            rangeChunkSize: 65536, disableAutoFetch: false, disableStream: false,
+        });
 
-        if (savedPage > 1 && savedPage <= total) setTimeout(() => showResumeToast(savedPage), 900);
+        /* FIX-1: progress bar saat download */
+        task.onProgress = function (d) {
+            if (d.total > 0) updateLoadProgress(Math.min(99, Math.round(d.loaded / d.total * 100)));
+        };
 
-    }).catch(err => { clearTimeout(fbTimer); fbTimer = null; console.error('PDF load error:', err); showFallback(); });
+        task.promise.then(async function (doc) {
+            clearTimeout(fbTimer); fbTimer = null;
+            pdfDoc = doc;
+            window[CACHE_KEY] = doc; /* FEAT-19: cache */
+            console.log('[pdf-viewer] PDF loaded,', doc.numPages, 'pages');
 
-    /* ── Resize ─────────────────────────────────────────────────────
-       FIX: tidak reset baseScale = 1.0 langsung,
-       pakai flag baseScaleComputed = false.
-    ────────────────────────────────────────────────────────────── */
-    let lastW = viewerEl.clientWidth, rTimer = null;
-    window.addEventListener('resize', () => {
-        const w = viewerEl.clientWidth; if (Math.abs(w - lastW) < 20) return; lastW = w;
-        clearTimeout(rTimer);
-        rTimer = setTimeout(() => { if (!pdfDoc) return; baseScaleComputed = false; queueRender(pageNum); }, 250);
-    });
+            /* FIX-1: set 100% setelah load */
+            updateLoadProgress(100);
 
-    document.getElementById('prev-page').addEventListener('click', prevPage);
-    document.getElementById('next-page').addEventListener('click', nextPage);
-    document.getElementById('fs-prev').addEventListener('click', prevPage);
-    document.getElementById('fs-next').addEventListener('click', nextPage);
-    document.getElementById('zoom-in').addEventListener('click', zoomIn);
-    document.getElementById('zoom-out').addEventListener('click', zoomOut);
-    document.getElementById('fs-zoom-in').addEventListener('click', zoomIn);
-    document.getElementById('fs-zoom-out').addEventListener('click', zoomOut);
-    document.getElementById('bookmark-btn').addEventListener('click', toggleBookmark);
-    document.getElementById('fs-bookmark-btn').addEventListener('click', toggleBookmark);
-    document.getElementById('fullscreen-btn').addEventListener('click', enterFullscreen);
-    document.getElementById('exit-fs-btn').addEventListener('click', exitFullscreen);
-    document.getElementById('search-btn').addEventListener('click', openSearch);
-    document.getElementById('mode-btn').addEventListener('click', e => { e.stopPropagation(); document.getElementById('mode-dropdown').classList.toggle('open'); });
-    document.querySelectorAll('.mode-opt').forEach(el => { el.addEventListener('click', () => { applyMode(el.dataset.mode); document.getElementById('mode-dropdown').classList.remove('open'); }); });
-    document.addEventListener('click', () => document.getElementById('mode-dropdown')?.classList.remove('open'));
-    document.getElementById('page-num-input').addEventListener('change', function () { const n = parseInt(this.value); if (pdfDoc && n >= 1 && n <= pdfDoc.numPages) goTo(n); else this.value = pageNum; });
+            const total = doc.numPages;
+            const ptEl = document.getElementById('page-count'); if (ptEl) ptEl.textContent = total;
+            const ftEl = document.getElementById('fs-page-count'); if (ftEl) ftEl.textContent = total;
+            const stEl = document.getElementById('sheet-total'); if (stEl) stEl.textContent = total;
+            const ttEl = document.getElementById('tap-page-total'); if (ttEl) ttEl.textContent = total;
+            const piEl = document.getElementById('page-num-input'); if (piEl) { piEl.max = total; }
+            const sji = document.getElementById('sheet-jump'); if (sji) sji.max = total;
+            if (IS_GUEST && GUEST_PAGE_LIMIT !== null && total > GUEST_PAGE_LIMIT) {
+                const pc = document.getElementById('page-count');
+                if (pc) pc.textContent = GUEST_PAGE_LIMIT + '* (dari ' + total + ')';
+            }
 
-    document.addEventListener('keydown', e => {
-        if ((e.ctrlKey || e.metaKey) && e.key === 'f') { e.preventDefault(); openSearch(); return; }
-        if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
-        switch (e.key) {
-            case 'ArrowLeft': prevPage(); break;
-            case 'ArrowRight': nextPage(); break;
-            case 'ArrowUp': canvasWrap.scrollBy({ top: -120, behavior: 'smooth' }); break;
-            case 'ArrowDown': canvasWrap.scrollBy({ top: 120, behavior: 'smooth' }); break;
-            case '+': case '=': zoomIn(); break;
-            case '-': zoomOut(); break;
-            case 'b': case 'B': toggleBookmark(); break;
-            case 'f': case 'F': isFullscreen ? exitFullscreen() : enterFullscreen(); break;
-            case 'Escape':
-                if (document.getElementById('search-overlay').classList.contains('show')) closeSearch();
-                else if (commentPop.classList.contains('show')) commentPop.classList.remove('show');
-                else if (isFullscreen) exitFullscreen();
-                break;
-        }
-    });
+            renderPage(1);
 
-    let tx = 0, ty = 0, pd = 0, touchMoved = false, pinching = false;
-    viewerEl.addEventListener('touchstart', e => {
-        touchMoved = false; pinching = false;
-        if (e.touches.length === 1) { tx = e.touches[0].clientX; ty = e.touches[0].clientY; }
-        if (e.touches.length === 2) { pinching = true; pd = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); }
-    }, { passive: true });
-    viewerEl.addEventListener('touchmove', e => {
-        touchMoved = true; if (e.touches.length !== 2) return;
-        const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-        if (Math.abs(d - pd) > 14) { if (d > pd) zoomIn(); else zoomOut(); pd = d; }
-    }, { passive: true });
-    viewerEl.addEventListener('touchend', e => {
-        if (pinching || !touchMoved) return;
-        const dx = tx - e.changedTouches[0].clientX, dy = ty - e.changedTouches[0].clientY;
-        if (Math.abs(dx) > Math.abs(dy) * 1.8 && Math.abs(dx) > 65) {
-            if (tapOverlayOpen) { closeTapOverlay(); return; }
-            if (window.getSelection()?.toString()) return;
-            dx > 0 ? nextPage() : prevPage();
-        }
-    }, { passive: true });
+            /* panggil onReady hook untuk pdf-annotations.js */
+            if (_onReadyCb) { _onReadyCb(); _onReadyCb = null; }
 
-    window.showGuestDownloadModal = function () {
-        const modal = document.getElementById('guestDownloadModal'), backdrop = document.getElementById('guestModalBackdrop'), container = document.getElementById('guestModalContainer');
-        if (!modal) return; modal.style.display = 'block'; document.body.style.overflow = 'hidden';
-        requestAnimationFrame(() => { backdrop.classList.add('opacity-100'); backdrop.classList.remove('opacity-0'); container.classList.add('opacity-100', 'scale-100'); container.classList.remove('opacity-0', 'scale-95'); });
-    };
-    window.hideGuestDownloadModal = function () {
-        const modal = document.getElementById('guestDownloadModal'), backdrop = document.getElementById('guestModalBackdrop'), container = document.getElementById('guestModalContainer');
-        if (!modal) return; backdrop.classList.remove('opacity-100'); backdrop.classList.add('opacity-0'); container.classList.remove('opacity-100', 'scale-100'); container.classList.add('opacity-0', 'scale-95');
-        setTimeout(() => { modal.style.display = 'none'; document.body.style.overflow = ''; }, 300);
-    };
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') window.hideGuestDownloadModal?.(); });
+            if (savedPage > 1 && savedPage <= total) setTimeout(function () { showResumeToast(savedPage); }, 900);
+
+            /* bookmark hint */
+            const bm = parseInt(localStorage.getItem(SK.bkmk));
+            if (bm && bm !== savedPage && bm <= total) {
+                setTimeout(function () { snack('🔖 Tanda baca ada di hal.' + bm, '#60A5FA'); }, 2500);
+            }
+            updateBookmarkUI();
+
+            /* dispatch ready event */
+            window.dispatchEvent(new CustomEvent('pdf-viewer-document-ready'));
+
+        }).catch(function (err) {
+            clearTimeout(fbTimer); fbTimer = null;
+            console.error('[pdf-viewer] PDF load error:', err);
+            /* FIX-2: tampilkan error, stop spinner */
+            if (loadingEl) {
+                showLoading();
+                loadingEl.innerHTML =
+                    '<div style="font-size:2rem">⚠️</div>' +
+                    '<p style="color:#ef4444;font-weight:700;font-size:13px;margin:0;">Gagal memuat PDF</p>' +
+                    '<p style="color:#6b7280;font-size:11px;margin:.25rem 0;">' + err.message + '</p>' +
+                    '<button type="button" onclick="window.location.reload()" style="margin-top:.75rem;padding:.4rem .875rem;background:#FF6B18;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">🔄 Muat Ulang</button>';
+            }
+        });
+    }
+
+    startLoad();
 
 })();
