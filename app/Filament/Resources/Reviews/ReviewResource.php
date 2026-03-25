@@ -63,9 +63,23 @@ class ReviewResource extends Resource
                 SoftDeletingScope::class,
             ])
             ->with([
-                'publicationVersion.publication', // ← cover_url & data publikasi
-                'reviewer',                        // ← kolom reviewer.name
-                'attachments',                     // ← tombol download_revision
+                'publicationVersion.publication', // review dengan manuskrip
+                'publication',                    // ← TAMBAHAN: opini tanpa manuskrip
+                'reviewer',
+                'attachments',
             ]);
+    }
+
+    /**
+     * Helper statik: ambil Publication dari Review model,
+     * support opini (publication_version_id null) maupun review biasa.
+     */
+    public static function resolvePublication(\App\Models\Review $review): ?\App\Models\Publication
+    {
+        if (is_null($review->publication_version_id)) {
+            return $review->publication ?? null;
+        }
+
+        return $review->publicationVersion?->publication ?? null;
     }
 }

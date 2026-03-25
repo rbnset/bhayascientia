@@ -97,7 +97,6 @@ class EditPublication extends EditRecord
 
     protected function reviewerHasEverReviewedThisPublication(): bool
     {
-        // Opini tanpa manuskrip: tidak ada versi, cek via publication_id langsung
         if (!$this->latestVersion() && $this->isOpini()) {
             return \App\Models\Review::query()
                 ->where('publication_id', $this->record->id)
@@ -106,7 +105,6 @@ class EditPublication extends EditRecord
                 ->exists();
         }
 
-        // Tipe lain (dengan manuskrip): cek via relasi publicationVersion
         return \App\Models\Review::query()
             ->whereHas(
                 'publicationVersion',
@@ -125,11 +123,35 @@ class EditPublication extends EditRecord
                 if ($latestVersion) {
                     $q->where('publication_version_id', $latestVersion->id);
                 } else {
-                    // Opini tanpa manuskrip
                     $q->where('publication_id', $this->record->id)
                         ->whereNull('publication_version_id');
                 }
             })
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // ✅ Helper terpusat: ambil review terbaru untuk publikasi ini
+    //    Support opini (tanpa versi) maupun review biasa (dengan versi)
+    // ─────────────────────────────────────────────────────────────
+
+    protected function getLatestReviewForPublication(): ?\App\Models\Review
+    {
+        $latestVersion = $this->latestVersion();
+
+        if ($latestVersion) {
+            // Review biasa: filter by publication_version_id
+            return \App\Models\Review::query()
+                ->where('publication_version_id', $latestVersion->id)
+                ->orderByDesc('id')
+                ->first();
+        }
+
+        // Opini tanpa manuskrip: filter by publication_id langsung
+        return \App\Models\Review::query()
+            ->where('publication_id', $this->record->id)
+            ->whereNull('publication_version_id')
             ->orderByDesc('id')
             ->first();
     }
@@ -237,7 +259,7 @@ class EditPublication extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            // ── Submit Manuskrip — author & draft (semua tipe, termasuk opini) ──
+            // ── Submit Manuskrip — author & draft ────────────────
             Action::make('submitManuscript')
                 ->label(fn() => $this->isOpini() ? 'Submit dengan Manuskrip' : 'Submit Manuskrip')
                 ->icon('heroicon-o-paper-airplane')
@@ -286,7 +308,7 @@ class EditPublication extends EditRecord
                         ->send();
                 }),
 
-            // ── Kirim Tanpa Manuskrip — HANYA untuk tipe opini, status draft ──
+            // ── Kirim Tanpa Manuskrip — HANYA opini, status draft ─
             Action::make('submitOpiniTanpaManuscript')
                 ->label('Kirim Tanpa Manuskrip')
                 ->icon('heroicon-o-arrow-right-circle')
@@ -354,9 +376,7 @@ class EditPublication extends EditRecord
                         !$this->hasNewerVersionToReview()
                 )
                 ->action(function () {
-                    $latestVersion = $this->latestVersion();
-
-                    // Reviewer → review miliknya
+                    // ── REVIEWER: arahkan ke review miliknya sendiri ──────
                     if ($this->isReviewer()) {
                         $myReview = $this->getMyLatestReview();
 
@@ -372,19 +392,10 @@ class EditPublication extends EditRecord
                         return;
                     }
 
-                    // Author → cek apakah review untuk versi terbaru sudah ada
+                    // ── AUTHOR: arahkan ke view review terbaru ───────────
                     if ($this->isAuthor()) {
-                        // ✅ FIXED: support opini — query review fleksibel (dengan/tanpa version)
-                        $latestReview = $this->record->reviews()
-                            ->when(
-                                $latestVersion,
-                                fn($q) => $q->where('reviews.publication_version_id', $latestVersion->id),
-                                // Opini tanpa version: ambil review langsung by publication_id
-                                fn($q) => $q->where('reviews.publication_id', $this->record->id)
-                                    ->whereNull('reviews.publication_version_id')
-                            )
-                            ->orderByDesc('reviews.id')
-                            ->first();
+                        // ✅ FIXED: gunakan helper terpusat yang sudah benar
+                        $latestReview = $this->getLatestReviewForPublication();
 
                         if (!$latestReview) {
                             Notification::make()
@@ -396,21 +407,13 @@ class EditPublication extends EditRecord
                             return;
                         }
 
+                        // ✅ Author selalu ke 'view', bukan 'edit'
                         $this->redirect(\App\Filament\Resources\Reviews\ReviewResource::getUrl('view', ['record' => $latestReview->id]));
                         return;
                     }
 
-                    // Admin → review terbaru
-                    // ✅ FIXED: support opini
-                    $latestReview = $this->record->reviews()
-                        ->when(
-                            $latestVersion,
-                            fn($q) => $q->where('reviews.publication_version_id', $latestVersion->id),
-                            fn($q) => $q->where('reviews.publication_id', $this->record->id)
-                                ->whereNull('reviews.publication_version_id')
-                        )
-                        ->orderByDesc('reviews.id')
-                        ->first();
+                    // ── ADMIN: arahkan ke edit review terbaru ────────────
+                    $latestReview = $this->getLatestReviewForPublication();
 
                     if (!$latestReview) {
                         Notification::make()
@@ -432,9 +435,7 @@ class EditPublication extends EditRecord
                     if (!$this->isReviewer()) return false;
                     if ($this->record->status !== 'submitted') return false;
 
-                    $alreadyReviewed = $this->reviewerHasEverReviewedThisPublication();
-
-                    return !$alreadyReviewed;
+                    return !$this->reviewerHasEverReviewedThisPublication();
                 })
                 ->requiresConfirmation()
                 ->modalHeading('Mulai Review Naskah?')
@@ -450,7 +451,7 @@ class EditPublication extends EditRecord
 
                     $latestVersion = $this->latestVersion();
 
-                    // Opini tanpa manuskrip: buat review tanpa publication_version_id
+                    // Opini tanpa manuskrip
                     if (!$latestVersion) {
                         $existingReview = \App\Models\Review::query()
                             ->where('publication_id', $this->record->id)
@@ -487,7 +488,7 @@ class EditPublication extends EditRecord
                         return;
                     }
 
-                    // Tipe lain (dengan manuskrip)
+                    // Review biasa (dengan manuskrip)
                     $existingReview = \App\Models\Review::query()
                         ->where('publication_version_id', $latestVersion->id)
                         ->where('reviewer_id', auth()->id())
@@ -651,7 +652,6 @@ class EditPublication extends EditRecord
                 ->openUrlInNewTab(),
 
             // ── Upload Revisi — author, revision_required ─────────
-            // ✅ FIXED: support opini — bisa upload manuskrip meskipun sebelumnya tanpa manuskrip
             Action::make('uploadNewVersion')
                 ->label('Upload Revisi')
                 ->icon('heroicon-o-arrow-up-tray')
@@ -659,7 +659,6 @@ class EditPublication extends EditRecord
                 ->visible(fn() => $this->record->status === 'revision_required' && !$this->isReviewer())
                 ->modalHeading('Upload Revisi Manuskrip')
                 ->modalDescription(function () {
-                    // ✅ Jika opini yang sebelumnya tanpa manuskrip, beri info tambahan
                     if ($this->isOpini() && !$this->latestVersion()) {
                         return new HtmlString(
                             '📝 Opini ini sebelumnya dikirim <strong>tanpa manuskrip PDF</strong>.<br><br>' .
@@ -678,7 +677,6 @@ class EditPublication extends EditRecord
                         ->disk('public')
                         ->directory('publications/versions')
                         ->acceptedFileTypes(['application/pdf'])
-                        // ✅ Tidak wajib untuk opini yang sebelumnya tanpa manuskrip
                         ->required(fn() => !($this->isOpini() && !$this->latestVersion()))
                         ->maxSize(10240)
                         ->helperText(
@@ -692,7 +690,6 @@ class EditPublication extends EditRecord
                         ->required(fn() => !($this->isOpini() && !$this->latestVersion()))
                         ->accepted(),
 
-                    // ✅ Checkbox khusus opini tanpa manuskrip jika tidak upload PDF
                     Checkbox::make('confirm_opini_revision')
                         ->label('Saya telah memperbaiki isi opini di form sesuai catatan reviewer')
                         ->visible(fn() => $this->isOpini() && !$this->latestVersion())
@@ -702,7 +699,6 @@ class EditPublication extends EditRecord
                     $hasPdf = filled($data['pdf_file_path'] ?? null);
 
                     if ($hasPdf) {
-                        // ✅ Ada PDF: buat versi baru (berlaku untuk semua tipe termasuk opini)
                         $nextVersion = ($this->record->versions()->max('version_number') ?? 0) + 1;
 
                         $this->record->versions()->create([
@@ -713,8 +709,6 @@ class EditPublication extends EditRecord
 
                         $versionInfo = 'v' . $nextVersion;
                     } else {
-                        // ✅ Tidak ada PDF (hanya untuk opini): tidak buat versi baru,
-                        // tapi tetap ubah status ke submitted agar bisa direview ulang
                         $versionInfo = 'konten opini';
                     }
 
@@ -741,10 +735,6 @@ class EditPublication extends EditRecord
                                     reviewIdToOpen: $reviewIdToOpen,
                                 ));
                             } else {
-                                // ✅ Opini tanpa PDF: gunakan notifikasi yang sesuai
-                                // Jika ada kelas OpiniRevisionSubmitted, gunakan itu
-                                // Fallback: gunakan AuthorSubmittedRevision dengan version 0 / tanpa nomor
-                                // atau kirim notifikasi PublicationSubmitted biasa
                                 \Illuminate\Support\Facades\Notification::send(
                                     collect([$reviewer]),
                                     new \App\Notifications\PublicationSubmitted($publication)
@@ -756,7 +746,7 @@ class EditPublication extends EditRecord
                     Notification::make()
                         ->success()
                         ->title('Revisi berhasil dikirim')
-                        ->body('"' . $this->shortTitle() . '" ({$versionInfo}) dikirim ke reviewer.')
+                        ->body('"' . $this->shortTitle() . '" (' . $versionInfo . ') dikirim ke reviewer.')
                         ->send();
                 }),
         ];
