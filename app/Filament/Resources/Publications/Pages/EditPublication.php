@@ -91,6 +91,14 @@ class EditPublication extends EditRecord
         return \App\Models\User::whereIn('id', $authorUserIds)->get();
     }
 
+    /**
+     * Cek apakah tipe publikasi record ini adalah "opini".
+     */
+    protected function isOpini(): bool
+    {
+        return $this->record->publicationType?->slug === 'opini';
+    }
+
     // ─────────────────────────────────────────────────────────────
     // Mutate before save
     // ─────────────────────────────────────────────────────────────
@@ -194,9 +202,9 @@ class EditPublication extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            // ── Submit Manuskrip — author & draft ────────────────
+            // ── Submit Manuskrip — author & draft (semua tipe, termasuk opini) ──
             Action::make('submitManuscript')
-                ->label('Submit Manuskrip')
+                ->label(fn() => $this->isOpini() ? 'Submit dengan Manuskrip' : 'Submit Manuskrip')
                 ->icon('heroicon-o-paper-airplane')
                 ->color('success')
                 ->visible(fn() => $this->record->status === 'draft' && !$this->isReviewer())
@@ -243,6 +251,46 @@ class EditPublication extends EditRecord
                         ->send();
                 }),
 
+            // ── Kirim Tanpa Manuskrip — HANYA untuk tipe opini, status draft ──
+            Action::make('submitOpiniTanpaManuscript')
+                ->label('Kirim Tanpa Manuskrip')
+                ->icon('heroicon-o-arrow-right-circle')
+                ->color('warning')
+                ->visible(
+                    fn() => $this->record->status === 'draft'
+                        && !$this->isReviewer()
+                        && $this->isOpini()
+                )
+                ->modalHeading('Kirim Opini Tanpa Manuskrip?')
+                ->modalDescription(new HtmlString(
+                    '📝 Opini akan dikirim ke reviewer <strong>tanpa lampiran file PDF</strong>.<br><br>' .
+                        'Reviewer akan menilai berdasarkan isi opini yang sudah kamu tulis di form. ' .
+                        'Pastikan isi opini sudah lengkap sebelum melanjutkan.<br><br>' .
+                        '⚠️ Setelah dikirim, opini tidak dapat diubah hingga reviewer memberi keputusan.'
+                ))
+                ->modalSubmitActionLabel('Ya, Kirim Sekarang')
+                ->modalCancelActionLabel('Batal, Periksa Lagi')
+                ->form([
+                    Checkbox::make('confirm_no_manuscript')
+                        ->label('Saya memahami bahwa opini ini dikirim tanpa file manuskrip PDF')
+                        ->required()
+                        ->accepted(),
+                ])
+                ->action(function () {
+                    $this->record->update(['status' => 'submitted']);
+
+                    \Illuminate\Support\Facades\Notification::send(
+                        \App\Models\User::role('reviewer')->get(),
+                        new \App\Notifications\PublicationSubmitted($this->record)
+                    );
+
+                    Notification::make()
+                        ->success()
+                        ->title('Opini berhasil dikirim')
+                        ->body('"' . $this->shortTitle() . '" masuk antrian review tanpa manuskrip.')
+                        ->send();
+                }),
+
             // ── Lihat PDF Manuskrip ───────────────────────────────
             Action::make('previewPdf')
                 ->label(function () {
@@ -272,13 +320,8 @@ class EditPublication extends EditRecord
                 )
                 ->action(function () {
                     $latestVersion = $this->latestVersion();
-                    if (!$latestVersion) {
-                        Notification::make()
-                            ->title('Belum ada versi manuskrip')
-                            ->warning()->send();
-                        return;
-                    }
 
+                    // Opini tanpa manuskrip tidak memiliki versi — arahkan ke review langsung
                     // Reviewer → review miliknya
                     if ($this->isReviewer()) {
                         $myReview = $this->record->reviews()
@@ -300,15 +343,19 @@ class EditPublication extends EditRecord
 
                     // Author → cek apakah review untuk versi terbaru sudah ada
                     if ($this->isAuthor()) {
+                        // Opini tanpa manuskrip: tidak ada versi, ambil review terbaru langsung
                         $latestReview = $this->record->reviews()
-                            ->where('reviews.publication_version_id', $latestVersion->id)
+                            ->when(
+                                $latestVersion,
+                                fn($q) => $q->where('reviews.publication_version_id', $latestVersion->id)
+                            )
                             ->orderByDesc('reviews.id')
                             ->first();
 
                         if (!$latestReview) {
                             Notification::make()
                                 ->title('Review sedang diproses')
-                                ->body('Reviewer belum membuat catatan review untuk versi terbaru naskah kamu. Harap tunggu notifikasi dari reviewer.')
+                                ->body('Reviewer belum membuat catatan review. Harap tunggu notifikasi dari reviewer.')
                                 ->info()
                                 ->persistent()
                                 ->send();
@@ -321,14 +368,17 @@ class EditPublication extends EditRecord
 
                     // Admin → review terbaru
                     $latestReview = $this->record->reviews()
-                        ->where('reviews.publication_version_id', $latestVersion->id)
+                        ->when(
+                            $latestVersion,
+                            fn($q) => $q->where('reviews.publication_version_id', $latestVersion->id)
+                        )
                         ->orderByDesc('reviews.id')
                         ->first();
 
                     if (!$latestReview) {
                         Notification::make()
                             ->title('Belum ada review')
-                            ->body('Belum ada reviewer yang membuat catatan untuk versi terbaru ini.')
+                            ->body('Belum ada reviewer yang membuat catatan untuk publikasi ini.')
                             ->warning()->send();
                         return;
                     }
@@ -356,6 +406,17 @@ class EditPublication extends EditRecord
                         ->where('reviewer_id', auth()->id())
                         ->exists();
 
+                    // Untuk opini tanpa manuskrip: tidak ada versi, cek review langsung
+                    if (!$this->latestVersion()) {
+                        $alreadyReviewed = \App\Models\Review::query()
+                            ->whereHas(
+                                'publication',
+                                fn($q) => $q->where('id', $this->record->id)
+                            )
+                            ->where('reviewer_id', auth()->id())
+                            ->exists();
+                    }
+
                     return !$alreadyReviewed;
                 })
                 ->requiresConfirmation()
@@ -371,11 +432,48 @@ class EditPublication extends EditRecord
                     $this->record->update(['status' => 'in_review']);
 
                     $latestVersion = $this->latestVersion();
+
+                    // Opini tanpa manuskrip: buat review tanpa publication_version_id
                     if (!$latestVersion) {
-                        Notification::make()->title('Versi tidak ditemukan')->danger()->send();
+                        $existingReview = \App\Models\Review::query()
+                            ->whereNull('publication_version_id')
+                            ->whereHas(
+                                'publication',
+                                fn($q) => $q->where('id', $this->record->id)
+                            )
+                            ->where('reviewer_id', auth()->id())
+                            ->first();
+
+                        if ($existingReview) {
+                            $this->redirect(\App\Filament\Resources\Reviews\ReviewResource::getUrl('edit', ['record' => $existingReview->id]));
+                            return;
+                        }
+
+                        $review = \App\Models\Review::create([
+                            'publication_version_id' => null,
+                            'publication_id'         => $this->record->id,
+                            'reviewer_id'            => auth()->id(),
+                        ]);
+
+                        $recipients = $this->authorRecipients();
+                        if ($recipients->isNotEmpty()) {
+                            \Illuminate\Support\Facades\Notification::send(
+                                $recipients,
+                                new \App\Notifications\PublicationInReview($this->record)
+                            );
+                        }
+
+                        Notification::make()
+                            ->success()
+                            ->title('Review dimulai')
+                            ->body('Status berubah ke "In Review". Author telah dinotifikasi.')
+                            ->send();
+
+                        $this->redirect(\App\Filament\Resources\Reviews\ReviewResource::getUrl('edit', ['record' => $review->id]));
                         return;
                     }
 
+                    // Tipe lain (dengan manuskrip): logika existing
                     $existingReview = \App\Models\Review::query()
                         ->where('publication_version_id', $latestVersion->id)
                         ->where('reviewer_id', auth()->id())
@@ -391,7 +489,6 @@ class EditPublication extends EditRecord
                         'reviewer_id'            => auth()->id(),
                     ]);
 
-                    // Notifikasi ke author
                     $recipients = $this->authorRecipients();
                     if ($recipients->isNotEmpty()) {
                         \Illuminate\Support\Facades\Notification::send(
