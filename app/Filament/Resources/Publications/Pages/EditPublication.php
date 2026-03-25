@@ -70,7 +70,6 @@ class EditPublication extends EditRecord
     {
         if (!$this->isReviewer()) return false;
 
-        // Ada versi terbaru yang belum punya review dari reviewer ini
         $latestVersion = $this->latestVersion();
         if (!$latestVersion) return false;
 
@@ -91,12 +90,56 @@ class EditPublication extends EditRecord
         return \App\Models\User::whereIn('id', $authorUserIds)->get();
     }
 
-    /**
-     * Cek apakah tipe publikasi record ini adalah "opini".
-     */
     protected function isOpini(): bool
     {
         return $this->record->publicationType?->slug === 'opini';
+    }
+
+    /**
+     * ✅ BARU: Helper terpusat untuk cek apakah reviewer ini sudah pernah
+     * mereview publikasi ini (untuk opini tanpa manuskrip maupun dengan manuskrip).
+     * Menghindari duplikasi query yang salah di beberapa tempat.
+     */
+    protected function reviewerHasEverReviewedThisPublication(): bool
+    {
+        // Opini tanpa manuskrip: tidak ada versi, cek via publication_id langsung
+        if (!$this->latestVersion() && $this->isOpini()) {
+            return \App\Models\Review::query()
+                ->where('publication_id', $this->record->id)  // ✅ Langsung pakai kolom, bukan relasi
+                ->whereNull('publication_version_id')
+                ->where('reviewer_id', auth()->id())
+                ->exists();
+        }
+
+        // Tipe lain (dengan manuskrip): cek via relasi publicationVersion
+        return \App\Models\Review::query()
+            ->whereHas(
+                'publicationVersion',
+                fn($q) => $q->where('publication_id', $this->record->id)
+            )
+            ->where('reviewer_id', auth()->id())
+            ->exists();
+    }
+
+    /**
+     * ✅ BARU: Ambil review milik reviewer ini untuk publikasi ini (yang terbaru).
+     */
+    protected function getMyLatestReview(): ?\App\Models\Review
+    {
+        return \App\Models\Review::query()
+            ->where('reviewer_id', auth()->id())
+            ->where(function ($q) {
+                $latestVersion = $this->latestVersion();
+                if ($latestVersion) {
+                    $q->where('publication_version_id', $latestVersion->id);
+                } else {
+                    // Opini tanpa manuskrip
+                    $q->where('publication_id', $this->record->id)
+                        ->whereNull('publication_version_id');
+                }
+            })
+            ->orderByDesc('id')
+            ->first();
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -321,13 +364,10 @@ class EditPublication extends EditRecord
                 ->action(function () {
                     $latestVersion = $this->latestVersion();
 
-                    // Opini tanpa manuskrip tidak memiliki versi — arahkan ke review langsung
                     // Reviewer → review miliknya
                     if ($this->isReviewer()) {
-                        $myReview = $this->record->reviews()
-                            ->where('reviews.reviewer_id', auth()->id())
-                            ->orderByDesc('reviews.id')
-                            ->first();
+                        // ✅ PERBAIKAN: Gunakan helper terpusat, bukan query inline
+                        $myReview = $this->getMyLatestReview();
 
                         if (!$myReview) {
                             Notification::make()
@@ -343,7 +383,6 @@ class EditPublication extends EditRecord
 
                     // Author → cek apakah review untuk versi terbaru sudah ada
                     if ($this->isAuthor()) {
-                        // Opini tanpa manuskrip: tidak ada versi, ambil review terbaru langsung
                         $latestReview = $this->record->reviews()
                             ->when(
                                 $latestVersion,
@@ -395,33 +434,16 @@ class EditPublication extends EditRecord
                     if (!$this->isReviewer()) return false;
                     if ($this->record->status !== 'submitted') return false;
 
-                    // Hanya tampil jika reviewer ini BELUM PERNAH punya review
-                    // di publikasi ini sama sekali (berarti ini submission pertama)
-                    $alreadyReviewed = \App\Models\Review::query()
-                        ->whereHas(
-                            'publicationVersion',
-                            fn($q) =>
-                            $q->where('publication_id', $this->record->id)
-                        )
-                        ->where('reviewer_id', auth()->id())
-                        ->exists();
-
-                    // Untuk opini tanpa manuskrip: tidak ada versi, cek review langsung
-                    if (!$this->latestVersion()) {
-                        $alreadyReviewed = \App\Models\Review::query()
-                            ->whereHas(
-                                'publication',
-                                fn($q) => $q->where('id', $this->record->id)
-                            )
-                            ->where('reviewer_id', auth()->id())
-                            ->exists();
-                    }
+                    // ✅ PERBAIKAN: Gunakan helper terpusat, tidak ada lagi
+                    // whereHas('publication') yang berpotensi error
+                    $alreadyReviewed = $this->reviewerHasEverReviewedThisPublication();
 
                     return !$alreadyReviewed;
                 })
                 ->requiresConfirmation()
                 ->modalHeading('Mulai Review Naskah?')
-                ->modalDescription(new HtmlString(
+                ->modalDescription(fn() => new HtmlString(
+                    // ✅ PERBAIKAN: Wrap dalam fn() agar tidak dievaluasi eager saat halaman crash
                     '📄 <strong>' . e($this->record->title) . '</strong><br><br>' .
                         'Status publikasi akan berubah menjadi <strong>In Review</strong> dan ' .
                         'Anda akan diarahkan ke halaman review.'
@@ -435,12 +457,10 @@ class EditPublication extends EditRecord
 
                     // Opini tanpa manuskrip: buat review tanpa publication_version_id
                     if (!$latestVersion) {
+                        // ✅ PERBAIKAN: Gunakan where('publication_id') langsung
                         $existingReview = \App\Models\Review::query()
+                            ->where('publication_id', $this->record->id)
                             ->whereNull('publication_version_id')
-                            ->whereHas(
-                                'publication',
-                                fn($q) => $q->where('id', $this->record->id)
-                            )
                             ->where('reviewer_id', auth()->id())
                             ->first();
 
@@ -513,23 +533,10 @@ class EditPublication extends EditRecord
                 ->color('warning')
                 ->visible(function () {
                     if (!$this->isReviewer()) return false;
-
-                    // hasNewerVersionToReview() sudah cek: ada versi terbaru
-                    // yang belum punya review dari reviewer ini
-                    // Tambah: pastikan reviewer ini PERNAH review sebelumnya
-                    // (artinya ini revisi, bukan submission pertama)
                     if (!$this->hasNewerVersionToReview()) return false;
 
-                    $everReviewed = \App\Models\Review::query()
-                        ->whereHas(
-                            'publicationVersion',
-                            fn($q) =>
-                            $q->where('publication_id', $this->record->id)
-                        )
-                        ->where('reviewer_id', auth()->id())
-                        ->exists();
-
-                    return $everReviewed;
+                    // ✅ PERBAIKAN: Gunakan helper terpusat
+                    return $this->reviewerHasEverReviewedThisPublication();
                 })
                 ->requiresConfirmation()
                 ->modalHeading('Review Revisi Terbaru?')
@@ -548,7 +555,6 @@ class EditPublication extends EditRecord
                     $latestVersion = $this->latestVersion();
                     if (!$latestVersion) return;
 
-                    // Cek review existing
                     $existingReview = \App\Models\Review::query()
                         ->where('publication_version_id', $latestVersion->id)
                         ->where('reviewer_id', auth()->id())
@@ -559,16 +565,13 @@ class EditPublication extends EditRecord
                         return;
                     }
 
-                    // Buat review baru
                     $review = \App\Models\Review::create([
                         'publication_version_id' => $latestVersion->id,
                         'reviewer_id'            => auth()->id(),
                     ]);
 
-                    // Update status → in_review
                     $this->record->update(['status' => 'in_review']);
 
-                    // Notifikasi ke author bahwa revisinya sedang direview
                     $recipients = $this->authorRecipients();
                     if ($recipients->isNotEmpty()) {
                         \Illuminate\Support\Facades\Notification::send(
