@@ -3,7 +3,7 @@
 'description' => 'Menghimpun gagasan dan karya insan Polri yang berkolaborasi dengan intelektual di bidang kepolisian,
 keamanan, kebijakan publik, serta keilmuan terkait lainnya.',
 'primaryLabel' => 'Mulai gratis',
-'primaryUrl' => 'https://dabraka.rbnset.me/login',
+'primaryUrl' => 'https://dabraka.org/login',
 
 // Video YouTube
 'secondaryLabel' => 'Tonton di YouTube',
