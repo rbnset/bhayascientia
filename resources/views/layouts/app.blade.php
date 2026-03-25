@@ -11,25 +11,12 @@
 
     {{-- ✅ SEO Basic --}}
     <meta name="description" content="@yield('description', 'Platform Publikasi Ilmiah Indonesia Dabarka')">
-    {{-- ✅ Open Graph FIX --}}
-    <meta property="og:title" content="Selamat Datang - DABARKA">
-    <meta property="og:description" content="Platform Publikasi Ilmiah Indonesia Dabarka">
-    <meta property="og:image" content="https://dabraka.org/assets/images/logos/logo-brand.png">
-    <meta property="og:url" content="https://dabraka.org">
-    <meta property="og:type" content="website">
-    <meta property="og:site_name" content="DABARKA">
 
-    {{-- ✅ WA tambahan penting --}}
-    <meta property="og:image:secure_url" content="https://dabraka.org/assets/images/logos/logo-brand.png">
+    <meta property="og:image" content="https://dabraka.org/assets/images/preview.png">
+    <meta property="og:image:secure_url" content="https://dabraka.org/assets/images/preview.png">
     <meta property="og:image:type" content="image/png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
-
-    {{-- ✅ Twitter --}}
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Selamat Datang - DABARKA">
-    <meta name="twitter:description" content="Platform Publikasi Ilmiah Indonesia Dabarka">
-    <meta name="twitter:image" content="https://dabraka.org/assets/images/logos/logo-brand.png">
 
     {{-- ✅ Favicon --}}
     <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
