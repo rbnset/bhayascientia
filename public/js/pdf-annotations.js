@@ -289,7 +289,10 @@
         async function loadAll() {
             annots = await apiLoad();
             console.log('[annot] loaded', annots.length);
-            scheduleRender(); updateBadge(); updateUndoRedo();
+            updateBadge(); updateUndoRedo();
+            /* Render langsung, lalu sekali lagi setelah 200ms untuk pastikan canvas siap */
+            scheduleRender();
+            setTimeout(function () { scheduleRender(); }, 200);
         }
 
         /* ── RENDER ──────────────────────────────────────────────── */
@@ -301,6 +304,11 @@
         function doRender() {
             const s = V.getScale();
             if (!annotLayer) return;
+            /* Jika stage belum punya ukuran, retry setelah sedikit delay */
+            if (!stage || (stage.offsetWidth === 0 && stage.offsetHeight === 0)) {
+                setTimeout(scheduleRender, 100);
+                return;
+            }
             annotLayer.innerHTML = '';
             annotLayer.style.pointerEvents = 'none';
             syncFC();

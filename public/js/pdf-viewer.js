@@ -97,9 +97,17 @@
     let toolbarTimer = null;
     let tapOverlayOpen = false;
 
-    /* callbacks untuk pdf-annotations.js */
-    let _onReadyCb = null;
+    /* callbacks untuk pdf-annotations.js — array agar multiple listener ok */
+    let _onReadyCbs = [];
+    let _onReadyCb = null; /* alias tunggal (legacy) */
     let _onPageChangeCb = null;
+
+    function _fireReady() {
+        /* panggil semua callback onReady */
+        const cbs = _onReadyCbs.slice(); _onReadyCbs = [];
+        cbs.forEach(function (fn) { try { fn(); } catch (e) { console.error('[pdf-viewer] onReady cb:', e); } });
+        if (_onReadyCb) { try { _onReadyCb(); } catch (e) { } _onReadyCb = null; }
+    }
 
     /* ── DOM ──────────────────────────────────────────────────────── */
     const canvas = document.getElementById('pdf-canvas');
@@ -171,13 +179,21 @@
     }
 
     /* ── COMPUTE BASE SCALE (FIX-11) ─────────────────────────────── */
+    function getContainerWidth() {
+        /* Ambil lebar yg paling reliabel — canvasWrap bisa hidden (clientWidth=0) saat pertama load */
+        const cwW = canvasWrap ? canvasWrap.clientWidth : 0;
+        const veW = viewerEl ? viewerEl.clientWidth : 0;
+        const win = window.innerWidth;
+        /* Prioritas: viewerEl > canvasWrap > innerWidth */
+        return Math.max(cwW, veW, win) || win;
+    }
+
     function computeBase(page) {
-        /* FIX-3: pakai cw - 4 */
-        const cw = canvasWrap ? canvasWrap.clientWidth : (viewerEl ? viewerEl.clientWidth : window.innerWidth);
+        const cw = getContainerWidth();
         const pad = isMobile() ? 4 : 16;
-        const avail = cw - pad;
+        const avail = Math.max(cw - pad, 200); /* min 200px agar tidak collapse */
         const nw = page.getViewport({ scale: 1 }).width;
-        baseScale = Math.max(0.5, Math.min(avail / nw, 2.5));
+        baseScale = Math.max(0.5, Math.min(avail / nw, 3.0));
         baseScaleComputed = true;
         needsRecompute = false; /* FIX-11 */
     }
@@ -345,7 +361,7 @@
 
             /* FIX-2: hide loading setelah render */
             hideLoading();
-            if (canvasWrap) { canvasWrap.style.display = 'flex'; canvasWrap.classList.remove('hidden'); }
+            if (canvasWrap) { canvasWrap.classList.remove('hidden'); canvasWrap.style.visibility = ''; canvasWrap.style.pointerEvents = ''; }
             if (stage) stage.style.display = 'block';
 
             await renderTextLayer(page, vpCss);
@@ -374,7 +390,7 @@
             console.error('[pdf-viewer] render error:', e);
             pageRendering = false;
             hideLoading(); /* FIX-2 */
-            if (canvasWrap) { canvasWrap.style.display = 'flex'; canvasWrap.classList.remove('hidden'); }
+            if (canvasWrap) { canvasWrap.classList.remove('hidden'); canvasWrap.style.visibility = ''; canvasWrap.style.pointerEvents = ''; }
         });
     }
 
@@ -817,7 +833,7 @@
     function showFallback() {
         if (IS_GUEST) {
             hideLoading();
-            if (canvasWrap) { canvasWrap.style.display = 'flex'; canvasWrap.classList.remove('hidden'); }
+            if (canvasWrap) { canvasWrap.classList.remove('hidden'); canvasWrap.style.visibility = ''; canvasWrap.style.pointerEvents = ''; }
             const stEl = document.getElementById('pdf-stage'); if (stEl) stEl.style.display = 'none';
             const errDiv = document.createElement('div');
             errDiv.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;padding:2rem;text-align:center;max-width:360px;margin:auto;';
@@ -825,7 +841,7 @@
             if (canvasWrap) canvasWrap.appendChild(errDiv); return;
         }
         hideLoading();
-        if (canvasWrap) canvasWrap.style.display = 'none';
+        if (canvasWrap) { canvasWrap.style.visibility = 'hidden'; canvasWrap.style.pointerEvents = 'none'; }
         if (iframeEl) { iframeEl.style.display = 'block'; iframeEl.src = pdfUrl + '#toolbar=0&navpanes=0&scrollbar=0&view=FitH'; }
     }
 
@@ -866,7 +882,7 @@
         nextPage,
         set onPageChange(fn) { _onPageChangeCb = fn; },
         get onPageChange() { return _onPageChangeCb; },
-        onReady: function (cb) { if (pdfDoc) { cb(); } else { _onReadyCb = cb; } },
+        onReady: function (cb) { if (pdfDoc) { try { cb(); } catch (e) { } } else { _onReadyCbs.push(cb); } },
     };
 
     /* dispatch event agar pdf-annotations.js bisa bootstrap */
@@ -888,7 +904,7 @@
             const ttEl = document.getElementById('tap-page-total'); if (ttEl) ttEl.textContent = pdfDoc.numPages;
             needsRecompute = true;
             renderPage(1);
-            if (_onReadyCb) { _onReadyCb(); _onReadyCb = null; }
+            setTimeout(_fireReady, 100); /* beri waktu renderPage selesai dulu */
             return;
         }
 
@@ -929,8 +945,8 @@
 
             renderPage(1);
 
-            /* panggil onReady hook untuk pdf-annotations.js */
-            if (_onReadyCb) { _onReadyCb(); _onReadyCb = null; }
+            /* panggil onReady hook untuk pdf-annotations.js — delay agar renderPage selesai dulu */
+            setTimeout(_fireReady, 150);
 
             if (savedPage > 1 && savedPage <= total) setTimeout(function () { showResumeToast(savedPage); }, 900);
 
@@ -958,6 +974,25 @@
             }
         });
     }
+
+    /* ── FIX: Sinkronkan tinggi #pdf-viewer-container dengan toolbar aktual ── */
+    (function fixViewerHeight() {
+        const toolbar = document.getElementById('pdf-toolbar');
+        const container = viewerEl;
+        if (!toolbar || !container) return;
+        function applyHeight() {
+            const tbH = toolbar.getBoundingClientRect().height || toolbar.offsetHeight || 56;
+            container.style.height = 'calc(100dvh - ' + Math.round(tbH) + 'px)';
+            /* fallback */
+            if (typeof CSS === 'undefined' || !CSS.supports('height', '100dvh')) {
+                container.style.height = 'calc(100vh - ' + Math.round(tbH) + 'px)';
+            }
+        }
+        applyHeight();
+        /* update saat resize / orientasi berubah */
+        window.addEventListener('resize', applyHeight, { passive: true });
+        window.addEventListener('orientationchange', applyHeight, { passive: true });
+    })();
 
     startLoad();
 
