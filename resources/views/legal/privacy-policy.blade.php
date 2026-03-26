@@ -207,7 +207,7 @@
                         class="p-6 border-2 border-gray-200 bg-gray-50 rounded-2xl text-sm text-[#6B7280] leading-relaxed">
                         DABRAKA menerapkan enkripsi data, proteksi CSRF, validasi input, dan praktik keamanan standar
                         industri. Password disimpan dalam format hash yang tidak dapat dibalikkan. Meski demikian, tidak
-                        ada sistem yang 100% kebal — segera hubungi kami jika Anda menduga ada kebocoran data.
+                        ada sistem yang 100% kebal dan segera hubungi kami jika Anda menduga ada kebocoran data.
                     </div>
                 </div>
 

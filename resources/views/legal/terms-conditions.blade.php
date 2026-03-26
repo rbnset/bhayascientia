@@ -70,7 +70,7 @@
                         <div class="flex items-start gap-2 text-sm text-[#6B7280]">
                             <span class="text-[#FF6B18] mt-1 font-bold">✓</span>
                             <span>Platform ini beroperasi di bawah domain <strong
-                                    class="text-[#374151]">dabraka.rbnset.me</strong> dan tunduk pada hukum yang berlaku
+                                    class="text-[#374151]">dabraka.org</strong> dan tunduk pada hukum yang berlaku
                                 di Republik Indonesia.</span>
                         </div>
                         <div class="flex items-start gap-2 text-sm text-[#6B7280]">
@@ -328,8 +328,8 @@
                     <p class="mb-6 text-sm text-white/90">Jika ada yang kurang jelas mengenai Syarat dan Ketentuan ini,
                         jangan ragu menghubungi kami:</p>
                     <div class="space-y-2 text-sm">
-                        <p><strong>Email:</strong> <a href="mailto:dabraka@rbnset.me"
-                                class="underline hover:text-white/80">dabraka@rbnset.me</a></p>
+                        <p><strong>Email:</strong> <a href="mailto:hallodabraka@dabraka.org"
+                                class="underline hover:text-white/80">hallodabraka@dabraka.org</a></p>
                         <p><strong>Kontak:</strong> <a href="{{ route('kontak') }}"
                                 class="underline hover:text-white/80">Halaman Kontak DABRAKA</a></p>
                     </div>
