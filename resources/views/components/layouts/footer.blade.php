@@ -24,16 +24,16 @@ adaptif, dan berstandar global.',
 ['text' => 'Pencarian', 'href' => '/publikasi?search='],
 ],
 
-'contactEmail' => 'halo@dabraka.id',
+'contactEmail' => 'hallodabraka@dabraka.org',
 'contactWhatsapp' => '+62 812-3456-7890',
 'contactWhatsappLink' => 'https://wa.me/6281234567890',
 'contactAddress' => 'Depok, Sleman, Yogyakarta',
 'contactAddressLink' => 'https://maps.google.com/?q=Depok,Sleman,Yogyakarta', // ✨ Google Maps link
 
 'socialLinks' => [
-['label' => 'Instagram', 'text' => 'IG', 'href' => 'https://instagram.com/dabraka', 'icon' => 'instagram'],
-['label' => 'X (Twitter)', 'text' => 'X', 'href' => 'https://twitter.com/dabraka', 'icon' => 'twitter'],
-['label' => 'LinkedIn', 'text' => 'in', 'href' => 'https://linkedin.com/company/dabraka', 'icon' => 'linkedin'],
+['label' => 'Instagram', 'text' => 'IG', 'href' => 'https://instagram.com', 'icon' => 'instagram'],
+['label' => 'X (Twitter)', 'text' => 'X', 'href' => 'https://twitter.com', 'icon' => 'twitter'],
+['label' => 'LinkedIn', 'text' => 'in', 'href' => 'https://linkedin.com', 'icon' => 'linkedin'],
 ],
 
 'privacyHref' => route('privacy-policy'),
