@@ -266,8 +266,8 @@
                     <p class="mb-6 text-sm text-white/90">Jika Anda memiliki pertanyaan tentang Kebijakan Privasi ini,
                         silakan hubungi kami:</p>
                     <div class="space-y-2 text-sm">
-                        <p><strong>Email:</strong> <a href="mailto:dabraka@rbnset.me"
-                                class="underline hover:text-white/80">dabraka@rbnset.me</a></p>
+                        <p><strong>Email:</strong> <a href="mailto:hallodabraka@dabraka.org"
+                                class="underline hover:text-white/80">hallodabraka@dabraka.org</a></p>
                         <p><strong>Kontak:</strong> <a href="{{ route('kontak') }}"
                                 class="underline hover:text-white/80">Halaman Kontak DABRAKA</a></p>
                     </div>
