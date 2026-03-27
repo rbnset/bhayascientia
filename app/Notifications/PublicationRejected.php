@@ -22,7 +22,10 @@ class PublicationRejected extends Notification
 
     public function toDatabase(object $notifiable): array
     {
-        $publication  = $this->review->publicationVersion?->publication;
+        // ✅ fallback untuk opini tanpa publicationVersion
+        $publication  = $this->review->publicationVersion?->publication
+            ?? $this->review->publication;
+
         $title        = (string) ($publication?->title ?? 'Tanpa judul');
         $type         = (string) ($publication?->publicationType?->name ?? 'Publikasi');
         $reviewerName = (string) ($this->review->reviewer?->name ?? 'Reviewer');

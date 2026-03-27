@@ -77,15 +77,15 @@ class ReviewObserver
     ): void {
         $publication->update(['status' => 'accepted']);
 
-        // In-app notification
+        // ── In-app notification — sesuai konstruktor yang ada ────────
         if ($recipients->isNotEmpty()) {
             \Illuminate\Support\Facades\Notification::send(
                 $recipients,
-                new \App\Notifications\PublicationAccepted($publication)
+                new \App\Notifications\PublicationAccepted($review) // ✅ kirim $review
             );
         }
 
-        // Email
+        // ── Email ─────────────────────────────────────────────────────
         foreach ($recipients as $user) {
             if (filled($user?->email)) {
                 Mail::to($user->email, $user->name)
@@ -101,15 +101,15 @@ class ReviewObserver
     ): void {
         $publication->update(['status' => 'rejected']);
 
-        // In-app notification
+        // ── In-app notification — sesuai konstruktor yang ada ────────
         if ($recipients->isNotEmpty()) {
             \Illuminate\Support\Facades\Notification::send(
                 $recipients,
-                new \App\Notifications\PublicationRejected($publication)
+                new \App\Notifications\PublicationRejected($review) // ✅ kirim $review
             );
         }
 
-        // Email
+        // ── Email ─────────────────────────────────────────────────────
         foreach ($recipients as $user) {
             if (filled($user?->email)) {
                 Mail::to($user->email, $user->name)
