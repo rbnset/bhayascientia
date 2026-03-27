@@ -336,10 +336,27 @@ class EditPublication extends EditRecord
 
                     $this->record->update(['status' => 'submitted']);
 
+                    // ── 1. Notifikasi in-app ke semua reviewer (sudah ada sebelumnya) ──
                     \Illuminate\Support\Facades\Notification::send(
                         \App\Models\User::role('reviewer')->get(),
                         new \App\Notifications\PublicationSubmitted($this->record)
                     );
+
+                    // ── 2. Email konfirmasi ke author/creator ──────────────────────────
+                    $creator = $this->record->creator;
+                    if ($creator && filled($creator->email)) {
+                        \Illuminate\Support\Facades\Mail::to($creator->email, $creator->name)
+                            ->queue(new \App\Mail\ManuscriptSubmittedAuthor($this->record));
+                    }
+
+                    // ── 3. Email notifikasi ke semua reviewer ─────────────────────────
+                    $reviewers = \App\Models\User::role('reviewer')->get();
+                    foreach ($reviewers as $reviewer) {
+                        if (filled($reviewer->email)) {
+                            \Illuminate\Support\Facades\Mail::to($reviewer->email, $reviewer->name)
+                                ->queue(new \App\Mail\ManuscriptSubmittedReviewer($this->record));
+                        }
+                    }
 
                     Notification::make()
                         ->success()
@@ -380,6 +397,22 @@ class EditPublication extends EditRecord
                         \App\Models\User::role('reviewer')->get(),
                         new \App\Notifications\PublicationSubmitted($this->record)
                     );
+
+                    // ── Email konfirmasi ke author ─────────────────────────────────────
+                    $creator = $this->record->creator;
+                    if ($creator && filled($creator->email)) {
+                        \Illuminate\Support\Facades\Mail::to($creator->email, $creator->name)
+                            ->queue(new \App\Mail\ManuscriptSubmittedAuthor($this->record));
+                    }
+
+                    // ── Email notifikasi ke reviewer ───────────────────────────────────
+                    $reviewers = \App\Models\User::role('reviewer')->get();
+                    foreach ($reviewers as $reviewer) {
+                        if (filled($reviewer->email)) {
+                            \Illuminate\Support\Facades\Mail::to($reviewer->email, $reviewer->name)
+                                ->queue(new \App\Mail\ManuscriptSubmittedReviewer($this->record));
+                        }
+                    }
 
                     Notification::make()
                         ->success()
