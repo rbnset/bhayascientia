@@ -343,11 +343,12 @@ class EditPublication extends EditRecord
                     );
 
                     // ── 2. Email konfirmasi ke author/creator ──────────────────────────
-                    $creator = $this->record->creator;
-                    if ($creator && filled($creator->email)) {
-                        \Illuminate\Support\Facades\Mail::to($creator->email, $creator->name)
+                    $uploader = auth()->user();
+                    if ($uploader && filled($uploader->email)) {
+                        \Illuminate\Support\Facades\Mail::to($uploader->email, $uploader->name)
                             ->queue(new \App\Mail\ManuscriptSubmittedAuthor($this->record));
                     }
+
 
                     // ── 3. Email notifikasi ke semua reviewer ─────────────────────────
                     $reviewers = \App\Models\User::role('reviewer')->get();
@@ -399,9 +400,9 @@ class EditPublication extends EditRecord
                     );
 
                     // ── Email konfirmasi ke author ─────────────────────────────────────
-                    $creator = $this->record->creator;
-                    if ($creator && filled($creator->email)) {
-                        \Illuminate\Support\Facades\Mail::to($creator->email, $creator->name)
+                    $uploader = auth()->user();
+                    if ($uploader && filled($uploader->email)) {
+                        \Illuminate\Support\Facades\Mail::to($uploader->email, $uploader->name)
                             ->queue(new \App\Mail\ManuscriptSubmittedAuthor($this->record));
                     }
 
