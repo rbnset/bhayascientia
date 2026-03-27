@@ -286,8 +286,8 @@ class ReviewForm
                                         ->minDate(now()->addDay())
                                         ->seconds(false)
                                         ->native(false)
-                                        ->required(fn(\Filament\Forms\Get $get) => $get('decision') === 'revision_required')
-                                        ->visible(fn(\Filament\Forms\Get $get) => $get('decision') === 'revision_required')
+                                        ->required(fn($get) => $get('decision') === 'revision_required')
+                                        ->visible(fn($get) => $get('decision') === 'revision_required')
                                         ->columnSpanFull(),
                                 ]),
                         ]),
