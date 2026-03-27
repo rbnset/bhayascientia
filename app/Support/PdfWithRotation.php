@@ -125,4 +125,119 @@ class PdfWithRotation extends Fpdi
             ($h - $y3) * $this->k
         ));
     }
+
+    // ─────────────────────────────────────────────────────────────
+    // Circle & Arc untuk watermark
+    // ─────────────────────────────────────────────────────────────
+    public function Circle(float $x, float $y, float $r, string $style = 'D'): void
+    {
+        $this->Ellipse($x, $y, $r, $r, $style);
+    }
+
+    public function Ellipse(float $x, float $y, float $rx, float $ry, string $style = 'D'): void
+    {
+        if ($style === 'F') {
+            $op = 'f';
+        } elseif ($style === 'FD' || $style === 'DF') {
+            $op = 'B';
+        } else {
+            $op = 'S';
+        }
+
+        $lx = 4 / 3 * (M_SQRT2 - 1) * $rx;
+        $ly = 4 / 3 * (M_SQRT2 - 1) * $ry;
+        $k  = $this->k;
+        $h  = $this->h;
+
+        $this->_out(sprintf('%.2F %.2F m', ($x + $rx) * $k, ($h - $y) * $k));
+        $this->_out(sprintf(
+            '%.2F %.2F %.2F %.2F %.2F %.2F c',
+            ($x + $rx) * $k,
+            ($h - ($y - $ly)) * $k,
+            ($x + $lx) * $k,
+            ($h - ($y - $ry)) * $k,
+            $x * $k,
+            ($h - ($y - $ry)) * $k
+        ));
+        $this->_out(sprintf(
+            '%.2F %.2F %.2F %.2F %.2F %.2F c',
+            ($x - $lx) * $k,
+            ($h - ($y - $ry)) * $k,
+            ($x - $rx) * $k,
+            ($h - ($y - $ly)) * $k,
+            ($x - $rx) * $k,
+            ($h - $y) * $k
+        ));
+        $this->_out(sprintf(
+            '%.2F %.2F %.2F %.2F %.2F %.2F c',
+            ($x - $rx) * $k,
+            ($h - ($y + $ly)) * $k,
+            ($x - $lx) * $k,
+            ($h - ($y + $ry)) * $k,
+            $x * $k,
+            ($h - ($y + $ry)) * $k
+        ));
+        $this->_out(sprintf(
+            '%.2F %.2F %.2F %.2F %.2F %.2F c',
+            ($x + $lx) * $k,
+            ($h - ($y + $ry)) * $k,
+            ($x + $rx) * $k,
+            ($h - ($y + $ly)) * $k,
+            ($x + $rx) * $k,
+            ($h - $y) * $k
+        ));
+        $this->_out($op);
+    }
+
+    public function Arc(
+        float $x,
+        float $y,
+        float $r,
+        float $aStart,
+        float $aEnd,
+        string $style = ''
+    ): void {
+        $aStart = deg2rad($aStart);
+        $aEnd   = deg2rad($aEnd);
+
+        $k  = $this->k;
+        $h  = $this->h;
+
+        $cx = $x + $r * cos($aStart);
+        $cy = $y - $r * sin($aStart);
+
+        $this->_out(sprintf('%.2F %.2F m', $cx * $k, ($h - $cy) * $k));
+
+        $step    = deg2rad(30);
+        $current = $aStart;
+
+        while ($current < $aEnd) {
+            $next   = min($current + $step, $aEnd);
+            $mid    = ($current + $next) / 2;
+            $factor = (4 / 3) * tan(($next - $current) / 4);
+
+            $x1 = $x + $r * cos($current) - $factor * $r * sin($current);
+            $y1 = $y - ($r * sin($current) + $factor * $r * cos($current));
+            $x2 = $x + $r * cos($next) + $factor * $r * sin($next);
+            $y2 = $y - ($r * sin($next) - $factor * $r * cos($next));
+            $x3 = $x + $r * cos($next);
+            $y3 = $y - $r * sin($next);
+
+            $this->_out(sprintf(
+                '%.2F %.2F %.2F %.2F %.2F %.2F c',
+                $x1 * $k,
+                ($h - $y1) * $k,
+                $x2 * $k,
+                ($h - $y2) * $k,
+                $x3 * $k,
+                ($h - $y3) * $k
+            ));
+
+            $current = $next;
+        }
+
+        if (filled($style)) {
+            $this->_out('S');
+        }
+    }
 }
