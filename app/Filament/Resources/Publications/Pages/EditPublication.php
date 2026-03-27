@@ -87,6 +87,32 @@ class EditPublication extends EditRecord
                 }
             }
         }
+
+        // ── Accepted banner ──────────────────────────────────────────────
+        if ($this->record->status === 'accepted') {
+            Notification::make()
+                ->title('🎉 Naskah Anda diterima!')
+                ->body(
+                    'Selamat! Reviewer telah menyetujui naskah ini. ' .
+                        'Tunggu tim editorial untuk menerbitkannya.'
+                )
+                ->success()
+                ->persistent()
+                ->send();
+        }
+
+        // ── Rejected banner ──────────────────────────────────────────────
+        if ($this->record->status === 'rejected') {
+            Notification::make()
+                ->title('📋 Naskah tidak dapat diterima')
+                ->body(
+                    'Reviewer telah menyelesaikan peninjauan dan naskah ini belum dapat diterima. ' .
+                        'Baca catatan reviewer untuk mengetahui alasannya.'
+                )
+                ->warning()
+                ->persistent()
+                ->send();
+        }
     }
 
     // ─────────────────────────────────────────────────────────────
