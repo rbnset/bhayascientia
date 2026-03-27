@@ -42,3 +42,6 @@ Schedule::command('subscription:send-digest monthly_popular')
 
 // Cleanup OTP setiap 1 jam
 Schedule::command('otp:cleanup')->hourly();
+
+// Expired Revision
+Schedule::command('reviews:auto-reject-expired')->hourly();

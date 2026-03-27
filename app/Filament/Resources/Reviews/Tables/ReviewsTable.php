@@ -144,6 +144,20 @@ class ReviewsTable
                     ->formatStateUsing(fn(?string $state) => $state ? str($state)->headline() : '—')
                     ->toggleable(),
 
+                // Batas Revisi
+                TextColumn::make('revision_deadline')
+                    ->label('Batas Revisi')
+                    ->dateTime('d M Y, H:i')
+                    ->placeholder('—')
+                    ->color(
+                        fn($record) =>
+                        $record->decision === 'revision_required' && $record->revision_deadline?->isPast()
+                            ? 'danger'
+                            : 'warning'
+                    )
+                    ->visible(fn($record) => $record?->decision === 'revision_required')
+                    ->sortable(),
+
                 // ── Jumlah notes ──
                 TextColumn::make('notes_count')
                     ->label('Notes')

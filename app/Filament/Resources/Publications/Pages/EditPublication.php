@@ -40,6 +40,53 @@ class EditPublication extends EditRecord
 
             $this->redirect(PublicationResource::getUrl('index'));
         }
+
+        // ── Revision deadline warning ────────────────────────────────────
+        if ($this->record->status === 'revision_required') {
+            $review = $this->getLatestReviewForPublication();
+
+            if ($review?->revision_deadline) {
+                $deadline = $review->revision_deadline;
+                $sisaHari = (int) now()->diffInDays($deadline, false);
+
+                if ($deadline->isPast()) {
+                    Notification::make()
+                        ->title('🚫 Batas waktu revisi telah berakhir')
+                        ->body(
+                            'Tenggat revisi sudah terlewat pada ' .
+                                $deadline->timezone('Asia/Jakarta')->isoFormat('D MMMM YYYY, HH:mm') . ' WIB. ' .
+                                'Naskah akan segera ditolak otomatis. Hubungi editor jika ada situasi mendesak.'
+                        )
+                        ->danger()
+                        ->persistent()
+                        ->send();
+                } elseif ($sisaHari <= 2) {
+                    Notification::make()
+                        ->title('🚨 Tenggat revisi hampir berakhir!')
+                        ->body(
+                            'Sisa waktu: ' . $deadline->diffForHumans(now(), ['parts' => 2]) . '. ' .
+                                'Segera unggah revisi sebelum ' .
+                                $deadline->timezone('Asia/Jakarta')->isoFormat('D MMMM YYYY, HH:mm') . ' WIB. ' .
+                                'Melewati tenggat ini, naskah otomatis ditolak.'
+                        )
+                        ->danger()
+                        ->persistent()
+                        ->send();
+                } else {
+                    Notification::make()
+                        ->title('⏰ Revisi diperlukan')
+                        ->body(
+                            'Batas waktu revisi: ' .
+                                $deadline->timezone('Asia/Jakarta')->isoFormat('D MMMM YYYY, HH:mm') . ' WIB ' .
+                                '(' . $deadline->diffForHumans(now(), ['parts' => 2]) . '). ' .
+                                'Unggah revisi sebelum tenggat agar naskah tidak otomatis ditolak.'
+                        )
+                        ->warning()
+                        ->persistent()
+                        ->send();
+                }
+            }
+        }
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -300,12 +347,84 @@ class EditPublication extends EditRecord
     }
 
     // ─────────────────────────────────────────────────────────────
+    // Header — Revision Deadline Banner
+    // ─────────────────────────────────────────────────────────────
+
+    protected function getRevisionDeadlineBanner(): array
+    {
+        if ($this->record->status !== 'revision_required') return [];
+
+        $review = $this->getLatestReviewForPublication();
+
+        if (!$review || !$review->revision_deadline) return [];
+
+        $deadline = $review->revision_deadline;
+        $now      = now();
+
+        if ($deadline->isPast()) {
+            // Sudah lewat — tampilkan pesan ditolak
+            $html = new HtmlString('
+            <div style="
+                background:#FEF2F2;border:1.5px solid #FCA5A5;border-left:5px solid #DC2626;
+                border-radius:10px;padding:16px 20px;font-size:13px;color:#7F1D1D;line-height:1.7;
+                font-family:system-ui,sans-serif;
+            ">
+                <strong style="font-size:14px;">🚫 Batas Waktu Revisi Telah Berakhir</strong><br>
+                Tenggat revisi sudah terlewat pada
+                <strong>' . $deadline->timezone('Asia/Jakarta')->isoFormat('D MMMM YYYY, HH:mm') . ' WIB</strong>.
+                Naskah ini akan segera ditolak otomatis oleh sistem. Hubungi editor jika ada situasi mendesak.
+            </div>
+        ');
+        } else {
+            $diff        = $now->diff($deadline);
+            $sisaHari    = (int) $now->diffInDays($deadline);
+            $sisaJam     = (int) $now->copy()->addDays($sisaHari)->diffInHours($deadline);
+
+            $sisaLabel   = $sisaHari > 0
+                ? "{$sisaHari} hari {$sisaJam} jam lagi"
+                : $deadline->diffForHumans($now, ['parts' => 2]);
+
+            $warna = $sisaHari <= 2 ? '#7F1D1D' : '#78350F';
+            $bg    = $sisaHari <= 2 ? '#FEF2F2' : '#FFFBEB';
+            $bdr   = $sisaHari <= 2 ? '#FCA5A5' : '#FDE68A';
+            $accent = $sisaHari <= 2 ? '#DC2626' : '#D97706';
+            $icon  = $sisaHari <= 2 ? '🚨' : '⏰';
+
+            $html = new HtmlString('
+            <div style="
+                background:' . $bg . ';border:1.5px solid ' . $bdr . ';border-left:5px solid ' . $accent . ';
+                border-radius:10px;padding:16px 20px;font-size:13px;color:' . $warna . ';line-height:1.7;
+                font-family:system-ui,sans-serif;
+            ">
+                <strong style="font-size:14px;">' . $icon . ' Revisi Diperlukan — Tersisa ' . $sisaLabel . '</strong><br>
+                Unggah revisi Anda sebelum
+                <strong>' . $deadline->timezone('Asia/Jakarta')->isoFormat('D MMMM YYYY, HH:mm') . ' WIB</strong>.
+                Melewati tenggat ini, naskah akan <strong>otomatis ditolak</strong> oleh sistem dan
+                Anda perlu memulai pengiriman dari awal.
+            </div>
+        ');
+        }
+
+        return [
+            Action::make('revisionDeadlineBanner')
+                ->label('')
+                ->badge($deadline->isPast() ? 'Tenggat Terlewat' : 'Perlu Revisi')
+                ->badgeColor($deadline->isPast() ? 'danger' : ($now->diffInDays($deadline) <= 2 ? 'danger' : 'warning'))
+                ->disabled()
+                ->extraAttributes(['style' => 'cursor:default;pointer-events:none;'])
+                ->visible(true),
+        ];
+    }
+
+    // ─────────────────────────────────────────────────────────────
     // Header actions
     // ─────────────────────────────────────────────────────────────
 
     protected function getHeaderActions(): array
     {
         return [
+            // ── Revision Deadline Banner ─────────────────────────────────────
+            ...$this->getRevisionDeadlineBanner(),
 
             // ── Submit Manuskrip — author & draft ────────────────────────────
             Action::make('submitManuscript')

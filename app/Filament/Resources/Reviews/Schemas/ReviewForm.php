@@ -276,7 +276,19 @@ class ReviewForm
                                             'rejected'          => 'Rejected',
                                         ])
                                         ->native(false)
+                                        ->live() // field deadline reaktif
                                         ->helperText('Keputusan akhir reviewer terhadap versi ini'),
+
+                                    // ✅ batas waktu revisi
+                                    \Filament\Forms\Components\DateTimePicker::make('revision_deadline')
+                                        ->label('Batas Waktu Revisi')
+                                        ->helperText('Jika melewati batas ini, sistem otomatis menolak submission.')
+                                        ->minDate(now()->addDay())
+                                        ->seconds(false)
+                                        ->native(false)
+                                        ->required(fn(\Filament\Forms\Get $get) => $get('decision') === 'revision_required')
+                                        ->visible(fn(\Filament\Forms\Get $get) => $get('decision') === 'revision_required')
+                                        ->columnSpanFull(),
                                 ]),
                         ]),
                 ])

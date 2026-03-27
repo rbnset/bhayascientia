@@ -17,6 +17,11 @@ class Review extends Model
         'reviewer_id',
         'decision',
         'overall_comment',
+        'revision_deadline',
+    ];
+
+    protected $casts = [
+        'revision_deadline' => 'datetime',
     ];
 
     public function publicationVersion(): BelongsTo

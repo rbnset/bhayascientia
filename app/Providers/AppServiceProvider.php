@@ -5,8 +5,10 @@ namespace App\Providers;
 use App\Actions\Author\GetBestAuthorsAction;
 use App\Models\Author;
 use App\Models\Publication;
+use App\Models\Review;
 use App\Models\User;
 use App\Observers\PublicationObserver;
+use App\Observers\ReviewObserver;
 use App\Observers\UserRoleObserver;
 use App\Repositories\AuthorRepository;
 use App\Services\AuthorService;
@@ -45,6 +47,9 @@ class AppServiceProvider extends ServiceProvider
 
         // ── Observer: menangani event saved/updated biasa pada User ───────────
         User::observe(UserRoleObserver::class);
+
+        // ── Triger email setelah review disimpan ───────────
+        Review::observe(ReviewObserver::class);
 
         // ── Spatie v6: auto-create author profile saat role author di-assign ──
         // Event RoleAssigned fired setiap kali assignRole() / syncRoles() dipanggil
