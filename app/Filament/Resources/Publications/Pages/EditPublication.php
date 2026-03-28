@@ -161,7 +161,8 @@ class EditPublication extends EditRecord
 
     /**
      * Kirim email ke semua author yang terlibat di publikasi ini.
-     * Mailable class diterima sebagai parameter agar reusable.
+     * Jika relasi authors belum terisi (misal baru pertama submit),
+     * fallback ke user yang sedang login.
      *
      * @param  string  $mailableClass  Fully-qualified class name dari Mailable
      */
@@ -332,6 +333,7 @@ class EditPublication extends EditRecord
                 $this->record->status === 'published' &&
                 ($this->record->wasChanged('status') || $this->record->wasChanged('published_at'))
             ) {
+                // ── In-app notification ke semua author ───────────────────────
                 $recipients = $this->authorRecipients();
                 if ($recipients->isNotEmpty()) {
                     \Illuminate\Support\Facades\Notification::send(
@@ -339,6 +341,11 @@ class EditPublication extends EditRecord
                         new \App\Notifications\PublicationScheduledToPublish($this->record)
                     );
                 }
+
+                // ── Email published ke semua author ───────────────────────────
+                // Jalur ini aktif jika reviewer mengubah status via form dropdown
+                // (bukan via tombol publishNaskah)
+                $this->sendEmailToAllAuthors(\App\Mail\ManuscriptPublished::class);
             }
             return;
         }
@@ -885,6 +892,9 @@ class EditPublication extends EditRecord
                             new \App\Notifications\PublicationScheduledToPublish($this->record)
                         );
                     }
+
+                    // ── Email published ke semua author ───────────────────────────
+                    $this->sendEmailToAllAuthors(\App\Mail\ManuscriptPublished::class);
 
                     $tanggal = \Carbon\Carbon::parse($data['published_at'])
                         ->timezone('Asia/Jakarta')
