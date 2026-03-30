@@ -1,11 +1,11 @@
 {{-- resources/views/components/navbar.blade.php --}}
 @props([
 'items' => [
-['label' => 'Beranda', 'route' => 'beranda'],
+['label' => 'Beranda', 'route' => 'home'],
 ['label' => 'Publikasi', 'route' => 'publikasi.index'],
+// ['label' => 'Event', 'route' => 'event'],
 ['label' => 'Tentang', 'route' => 'tentang'],
 ['label' => 'Kontak', 'route' => 'kontak'],
-],
 ],
 'ctaLabel' => 'Buka publikasi',
 'ctaRoute' => 'publikasi.index',
