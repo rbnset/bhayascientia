@@ -1,208 +1,289 @@
 <?php
 
-namespace App\Filament\Resources\Publications\Widgets;
+namespace App\Http\Controllers;
 
-use App\Models\Publication;
-use Filament\Widgets\StatsOverviewWidget as BaseWidget;
-use Filament\Widgets\StatsOverviewWidget\Stat;
-use Illuminate\Support\Facades\DB;
+use App\Models\PdfAnnotation;
+use App\Models\Review;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
-class PublicationStatsWidget extends BaseWidget
+/**
+ * FIX v2 — 3 perbaikan dari versi sebelumnya:
+ *
+ * FIX 1 — serialize() tidak mengembalikan arrow_x1/y1/x2/y2
+ *   Shape arrow & line tidak muncul setelah reload karena JS (rSH) butuh
+ *   a.arrow_x1 dst. Sekarang serialize() mengisi dari kolom langsung,
+ *   atau fallback ke path_points[[x1,y1],[x2,y2]] jika kolom belum ada.
+ *
+ * FIX 2 — store() fatal error jika publicationVersion null
+ *   $review->publicationVersion->publication_id melempar error jika relasi
+ *   tidak ter-load. Sekarang pakai null-safe ?-> dan fallback ke null.
+ *
+ * FIX 3 — store() tidak menyimpan arrow_x1/y1/x2/y2
+ *   JS mengirim arrow coords tapi controller tidak menerimanya.
+ *   Sekarang divalidasi dan disimpan jika kolom sudah ada di tabel.
+ *   Jika belum di-migrate, data tetap aman via path_points.
+ */
+class ReviewPdfAnnotationController extends Controller
 {
-    protected ?string $pollingInterval = '60s';
-
-    public static function canView(): bool
+    /**
+     * Ambil semua anotasi reviewer sendiri pada review ini.
+     */
+    public function index(int $reviewId): JsonResponse
     {
-        return true;
+        $review = Review::findOrFail($reviewId);
+
+        $this->authorizeReviewAccess($review);
+
+        $annotations = PdfAnnotation::where('review_id', $reviewId)
+            ->where('user_id', Auth::id())
+            ->orderBy('page')
+            ->orderBy('created_at')
+            ->get()
+            ->map(fn($a) => $this->serialize($a));
+
+        return response()->json(['data' => $annotations]);
     }
 
-    protected function getStats(): array
+    /**
+     * Endpoint READ-ONLY untuk author/admin melihat anotasi reviewer.
+     */
+    public function indexReadonly(int $reviewId): JsonResponse
     {
-        $user = auth()->user();
+        $review = Review::with('reviewer')->findOrFail($reviewId);
 
-        // Base query — author hanya lihat miliknya
-        $baseQuery = Publication::query();
-        if ($user->hasRole('author')) {
-            $baseQuery->whereHas('authors', fn($q) => $q->where('authors.user_id', $user->id));
-        }
+        $this->authorizeReadonlyAccess($review);
 
-        // Hitung per status sekaligus (1 query)
-        $counts = (clone $baseQuery)
-            ->select('status', DB::raw('count(*) as total'))
-            ->groupBy('status')
-            ->pluck('total', 'status');
+        $annotations = PdfAnnotation::where('review_id', $reviewId)
+            ->orderBy('page')
+            ->orderBy('created_at')
+            ->get()
+            ->map(fn($a) => $this->serialize($a));
 
-        $total     = $counts->sum();
-        $draft     = $counts->get('draft', 0);
-        $submitted = $counts->get('submitted', 0);
-        $inReview  = $counts->get('in_review', 0);
-        $revision  = $counts->get('revision_required', 0);
-        $accepted  = $counts->get('accepted', 0);
-        $published = $counts->get('published', 0);
-        $rejected  = $counts->get('rejected', 0);
+        return response()->json([
+            'data'     => $annotations,
+            'reviewer' => [
+                'id'   => $review->reviewer?->id,
+                'name' => $review->reviewer?->name,
+            ],
+        ]);
+    }
 
-        // Published bulan ini
-        $publishedThisMonth = (clone $baseQuery)
-            ->where('status', 'published')
-            ->whereMonth('published_at', now()->month)
-            ->whereYear('published_at', now()->year)
-            ->count();
+    /**
+     * Simpan anotasi baru.
+     */
+    public function store(Request $request, int $reviewId): JsonResponse
+    {
+        $review = Review::findOrFail($reviewId);
+        $this->authorizeReviewAccess($review);
 
-        // Trend 7 hari terakhir untuk sparkline
-        $weeklyTrend = (clone $baseQuery)
-            ->where('created_at', '>=', now()->subDays(6)->startOfDay())
-            ->select(DB::raw('DATE(created_at) as date'), DB::raw('count(*) as total'))
-            ->groupBy('date')
-            ->orderBy('date')
-            ->pluck('total', 'date');
+        $validated = $request->validate([
+            'page'          => 'required|integer|min:1',
+            'type'          => 'required|in:' . implode(',', PdfAnnotation::VALID_TYPES),
+            'color'         => 'required|in:' . implode(',', PdfAnnotation::VALID_COLORS),
+            'rect_x'        => 'nullable|numeric',
+            'rect_y'        => 'nullable|numeric',
+            'rect_w'        => 'nullable|numeric',
+            'rect_h'        => 'nullable|numeric',
+            'selected_text' => 'nullable|string|max:2000',
+            'comment'       => 'nullable|string|max:2000',
+            'path_points'   => 'nullable|array',
+            'path_points.*' => 'array',
+            'shape_type'    => 'nullable|in:' . implode(',', PdfAnnotation::VALID_SHAPE_TYPES),
+            'stroke_width'  => 'nullable|numeric|min:0.5|max:50',
+            'fill_opacity'  => 'nullable|numeric|min:0|max:1',
+            // FIX 3: terima arrow coords dari JS
+            'arrow_x1'      => 'nullable|numeric',
+            'arrow_y1'      => 'nullable|numeric',
+            'arrow_x2'      => 'nullable|numeric',
+            'arrow_y2'      => 'nullable|numeric',
+        ]);
 
-        $trendData = collect(range(6, 0))
-            ->map(fn($d) => $weeklyTrend->get(now()->subDays($d)->toDateString(), 0))
-            ->values()
-            ->toArray();
+        // FIX 2: null-safe — tidak melempar error jika relasi null
+        $publicationId = $review->publicationVersion?->publication_id
+            ?? $review->publication_version?->publication_id
+            ?? null;
 
-        // ── SUPER ADMIN & ADMIN ────────────────────────────────────────────
-        if ($user->hasAnyRole(['super_admin', 'admin'])) {
-            return [
-                Stat::make('Total Publications', number_format($total))
-                    ->description('All publications in system')
-                    ->descriptionIcon('heroicon-o-document-text')
-                    ->chart($trendData)
-                    ->color('primary'),
-
-                Stat::make('Needs Attention', number_format($submitted + $revision))
-                    ->description($submitted . ' submitted · ' . $revision . ' need revision')
-                    ->descriptionIcon('heroicon-o-exclamation-triangle')
-                    ->color($submitted + $revision > 0 ? 'warning' : 'success'),
-
-                Stat::make('In Review', number_format($inReview))
-                    ->description('Currently being reviewed')
-                    ->descriptionIcon('heroicon-o-magnifying-glass')
-                    ->color('info'),
-
-                Stat::make('Accepted', number_format($accepted))
-                    ->description('Ready to be published')
-                    ->descriptionIcon('heroicon-o-check-circle')
-                    ->color('success'),
-
-                Stat::make('Published', number_format($published))
-                    ->description($publishedThisMonth . ' new this month')
-                    ->descriptionIcon('heroicon-o-globe-alt')
-                    ->chart($trendData)
-                    ->color('success'),
-
-                Stat::make('Rejected', number_format($rejected))
-                    ->description('Total rejected')
-                    ->descriptionIcon('heroicon-o-x-circle')
-                    ->color($rejected > 0 ? 'danger' : 'gray'),
+        // FIX 3: hanya isi kolom arrow jika sudah ada di tabel
+        // (backward-compatible — tidak error jika migration belum jalan)
+        $arrowData = [];
+        if (\Illuminate\Support\Facades\Schema::hasColumn('pdf_annotations', 'arrow_x1')) {
+            $arrowData = [
+                'arrow_x1' => $validated['arrow_x1'] ?? null,
+                'arrow_y1' => $validated['arrow_y1'] ?? null,
+                'arrow_x2' => $validated['arrow_x2'] ?? null,
+                'arrow_y2' => $validated['arrow_y2'] ?? null,
             ];
         }
 
-        // ── EDITOR ────────────────────────────────────────────────────────
-        if ($user->hasRole('editor')) {
-            return [
-                Stat::make('Total Publications', number_format($total))
-                    ->description('All publications')
-                    ->descriptionIcon('heroicon-o-document-text')
-                    ->chart($trendData)
-                    ->color('primary'),
+        $annotation = PdfAnnotation::create([
+            'user_id'        => Auth::id(),
+            'publication_id' => $publicationId,
+            'review_id'      => $reviewId,
+            ...$validated,
+            ...$arrowData,
+        ]);
 
-                Stat::make('Submitted', number_format($submitted))
-                    ->description('Waiting for review')
-                    ->descriptionIcon('heroicon-o-paper-airplane')
-                    ->color($submitted > 0 ? 'warning' : 'gray'),
+        return response()->json(['data' => $this->serialize($annotation)], 201);
+    }
 
-                Stat::make('In Review', number_format($inReview))
-                    ->description('Currently in review')
-                    ->descriptionIcon('heroicon-o-magnifying-glass')
-                    ->color('info'),
+    /**
+     * Update anotasi (posisi sticky, warna, komentar, dll).
+     */
+    public function update(Request $request, int $reviewId, int $id): JsonResponse
+    {
+        $annotation = PdfAnnotation::where('id', $id)
+            ->where('review_id', $reviewId)
+            ->where('user_id', Auth::id())
+            ->firstOrFail();
 
-                Stat::make('Revision Required', number_format($revision))
-                    ->description('Authors need to revise')
-                    ->descriptionIcon('heroicon-o-pencil')
-                    ->color($revision > 0 ? 'danger' : 'gray'),
+        $validated = $request->validate([
+            'comment'      => 'nullable|string|max:2000',
+            'color'        => 'nullable|in:' . implode(',', PdfAnnotation::VALID_COLORS),
+            'stroke_width' => 'nullable|numeric|min:0.5|max:50',
+            'fill_opacity' => 'nullable|numeric|min:0|max:1',
+            'rect_x'       => 'nullable|numeric',
+            'rect_y'       => 'nullable|numeric',
+            'rect_w'       => 'nullable|numeric',
+            'rect_h'       => 'nullable|numeric',
+        ]);
 
-                Stat::make('Accepted', number_format($accepted))
-                    ->description('Ready to publish')
-                    ->descriptionIcon('heroicon-o-check-circle')
-                    ->color('success'),
+        $annotation->update($validated);
 
-                Stat::make('Published This Month', number_format($publishedThisMonth))
-                    ->description('Of ' . $published . ' total published')
-                    ->descriptionIcon('heroicon-o-globe-alt')
-                    ->color('success'),
-            ];
+        return response()->json(['data' => $this->serialize($annotation->fresh())]);
+    }
+
+    /**
+     * Hapus satu anotasi.
+     */
+    public function destroy(int $reviewId, int $id): JsonResponse
+    {
+        $annotation = PdfAnnotation::where('id', $id)
+            ->where('review_id', $reviewId)
+            ->where('user_id', Auth::id())
+            ->firstOrFail();
+
+        $annotation->delete();
+
+        return response()->json(['message' => 'Deleted']);
+    }
+
+    /**
+     * Hapus semua anotasi di satu halaman pada review ini.
+     */
+    public function destroyPage(int $reviewId, int $page): JsonResponse
+    {
+        PdfAnnotation::where('review_id', $reviewId)
+            ->where('user_id', Auth::id())
+            ->where('page', $page)
+            ->delete();
+
+        return response()->json(['message' => 'Page cleared']);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // Authorization Helpers
+    // ─────────────────────────────────────────────────────────────────
+
+    private function authorizeReviewAccess(Review $review): void
+    {
+        $user = Auth::user();
+
+        if ($user->hasAnyRole(['super_admin', 'admin', 'editor'])) {
+            return;
         }
 
-        // ── REVIEWER ──────────────────────────────────────────────────────
-        if ($user->hasRole('reviewer')) {
-            $pendingReview = Publication::whereIn('status', ['submitted', 'in_review'])->count();
+        abort_unless(
+            $review->reviewer_id === $user->id,
+            403,
+            'Anda tidak memiliki akses ke review ini.'
+        );
+    }
 
-            return [
-                Stat::make('Pending Review', number_format($pendingReview))
-                    ->description($submitted . ' submitted · ' . $inReview . ' in review')
-                    ->descriptionIcon('heroicon-o-clock')
-                    ->color($pendingReview > 0 ? 'warning' : 'success'),
+    private function authorizeReadonlyAccess(Review $review): void
+    {
+        $user = Auth::user();
 
-                Stat::make('In Review', number_format($inReview))
-                    ->description('Currently being reviewed')
-                    ->descriptionIcon('heroicon-o-magnifying-glass')
-                    ->color('info'),
-
-                Stat::make('Revision Required', number_format($revision))
-                    ->description('Waiting for author revision')
-                    ->descriptionIcon('heroicon-o-pencil-square')
-                    ->color($revision > 0 ? 'danger' : 'gray'),
-
-                Stat::make('Accepted', number_format($accepted))
-                    ->description('Reviewed & accepted')
-                    ->descriptionIcon('heroicon-o-check-badge')
-                    ->color('success'),
-            ];
+        if ($user->hasAnyRole(['super_admin', 'admin', 'editor'])) {
+            return;
         }
 
-        // ── AUTHOR ────────────────────────────────────────────────────────
-        if ($user->hasRole('author')) {
-            return [
-                Stat::make('My Publications', number_format($total))
-                    ->description('Total you have submitted')
-                    ->descriptionIcon('heroicon-o-document-text')
-                    ->chart($trendData)
-                    ->color('primary'),
-
-                Stat::make('Draft', number_format($draft))
-                    ->description('Not yet submitted')
-                    ->descriptionIcon('heroicon-o-pencil')
-                    ->color('gray'),
-
-                Stat::make('In Progress', number_format($submitted + $inReview))
-                    ->description($submitted . ' submitted · ' . $inReview . ' in review')
-                    ->descriptionIcon('heroicon-o-arrow-path')
-                    ->color('info'),
-
-                Stat::make('Needs Revision', number_format($revision))
-                    ->description('Please revise and resubmit')
-                    ->descriptionIcon('heroicon-o-exclamation-circle')
-                    ->color($revision > 0 ? 'danger' : 'gray'),
-
-                Stat::make('Published', number_format($published))
-                    ->description($publishedThisMonth . ' published this month')
-                    ->descriptionIcon('heroicon-o-globe-alt')
-                    ->color('success'),
-
-                Stat::make('Rejected', number_format($rejected))
-                    ->description('Can be revised & resubmitted')
-                    ->descriptionIcon('heroicon-o-x-circle')
-                    ->color($rejected > 0 ? 'danger' : 'gray'),
-            ];
+        if ($review->reviewer_id === $user->id) {
+            return;
         }
 
-        // Fallback
+        $publicationId = $review->publicationVersion?->publication_id;
+        if ($publicationId) {
+            $isAuthor = \App\Models\Author::where('user_id', $user->id)
+                ->whereHas('publications', fn($q) => $q->where('id', $publicationId))
+                ->exists();
+
+            if ($isAuthor) return;
+        }
+
+        abort(403, 'Anda tidak memiliki akses ke anotasi ini.');
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // Serializer
+    // ─────────────────────────────────────────────────────────────────
+
+    /**
+     * FIX 1: kembalikan arrow_x1/y1/x2/y2 agar JS (rSH) bisa render
+     * shape arrow & line setelah reload. Fallback ke path_points jika
+     * kolom arrow belum ada di tabel.
+     */
+    private function serialize(PdfAnnotation $a): array
+    {
+        // Ambil arrow coords dari kolom langsung jika ada
+        $arrowX1 = $a->arrow_x1 ?? null;
+        $arrowY1 = $a->arrow_y1 ?? null;
+        $arrowX2 = $a->arrow_x2 ?? null;
+        $arrowY2 = $a->arrow_y2 ?? null;
+
+        // Fallback: ekstrak dari path_points jika kolom kosong
+        if (
+            $arrowX1 === null &&
+            in_array($a->shape_type, ['arrow', 'line'], true) &&
+            is_array($a->path_points) &&
+            count($a->path_points) >= 2
+        ) {
+            $arrowX1 = (float) ($a->path_points[0][0] ?? 0);
+            $arrowY1 = (float) ($a->path_points[0][1] ?? 0);
+            $arrowX2 = (float) ($a->path_points[1][0] ?? 0);
+            $arrowY2 = (float) ($a->path_points[1][1] ?? 0);
+        }
+
         return [
-            Stat::make('Total Publications', number_format($total))
-                ->description('All publications')
-                ->descriptionIcon('heroicon-o-document-text')
-                ->color('primary'),
+            'id'            => $a->id,
+            'page'          => $a->page,
+            'type'          => $a->type,
+            'color'         => $a->color,
+            // Objek rect untuk kemudahan JS (a.rect.x)
+            'rect'          => ($a->rect_x !== null) ? [
+                'x' => $a->rect_x,
+                'y' => $a->rect_y,
+                'w' => $a->rect_w,
+                'h' => $a->rect_h,
+            ] : null,
+            // Flat juga untuk fallback JS
+            'rect_x'        => $a->rect_x,
+            'rect_y'        => $a->rect_y,
+            'rect_w'        => $a->rect_w,
+            'rect_h'        => $a->rect_h,
+            'selected_text' => $a->selected_text,
+            'comment'       => $a->comment,
+            'path_points'   => $a->path_points,
+            'shape_type'    => $a->shape_type,
+            'stroke_width'  => $a->stroke_width,
+            'fill_opacity'  => $a->fill_opacity,
+            // FIX 1: wajib ada agar rSH() di JS bisa render arrow/line
+            'arrow_x1'      => $arrowX1,
+            'arrow_y1'      => $arrowY1,
+            'arrow_x2'      => $arrowX2,
+            'arrow_y2'      => $arrowY2,
+            'created_at'    => $a->created_at?->toISOString(),
         ];
     }
 }
