@@ -632,53 +632,59 @@ class PublicationForm
                                     ->disabled(fn() => self::isFieldDisabled())
                                     ->columnSpan(1),
 
-                                // ── DOI — khusus Jurnal ───────────────────────
+                                // ── Identifier tunggal — label & helper berubah sesuai tipe ──────────
                                 TextInput::make('prior_identifier_value')
-                                    ->label('DOI (Digital Object Identifier)')
-                                    ->placeholder('10.1016/j.xxx.2024.01.001')
-                                    ->helperText('Wajib untuk jurnal. Format: 10.xxxx/yyyyy — tanpa awalan "https://doi.org/"')
-                                    ->prefix('https://doi.org/')
+                                    ->label(fn(Get $get) => match (self::publicationTypeSlug($get)) {
+                                        'jurnal' => 'DOI (Digital Object Identifier)',
+                                        'buku'   => 'ISBN (International Standard Book Number)',
+                                        'opini'  => 'Nama Media / Portal Tempat Opini Diterbitkan',
+                                        default  => 'Identifier Publikasi',
+                                    })
+                                    ->placeholder(fn(Get $get) => match (self::publicationTypeSlug($get)) {
+                                        'jurnal' => '10.1016/j.xxx.2024.01.001',
+                                        'buku'   => '978-602-XXXX-XX-X',
+                                        'opini'  => 'Contoh: Kompas, Tempo, Detik.com, Kumparan',
+                                        default  => '',
+                                    })
+                                    ->prefix(fn(Get $get) => match (self::publicationTypeSlug($get)) {
+                                        'jurnal' => 'https://doi.org/',
+                                        'buku'   => 'ISBN',
+                                        default  => null,
+                                    })
+                                    ->helperText(fn(Get $get) => match (self::publicationTypeSlug($get)) {
+                                        'jurnal' => 'Wajib untuk jurnal. Format: 10.xxxx/yyyyy — tanpa awalan "https://doi.org/"',
+                                        'buku'   => 'Wajib untuk buku. Format ISBN-13: 978-XXX-XXXX-XX-X',
+                                        'opini'  => 'Wajib untuk opini. Sebutkan nama media tempat opini pertama kali diterbitkan.',
+                                        default  => '',
+                                    })
                                     ->maxLength(255)
                                     ->required(fn(Get $get) => $get('is_previously_published') === '1')
                                     ->live(onBlur: true)
-                                    ->afterStateUpdated(fn(Set $set) => $set('prior_identifier_type', 'doi'))
-                                    ->visible(fn(Get $get) => self::publicationTypeSlug($get) === 'jurnal' && $get('is_previously_published') === '1')
-                                    ->disabled(fn() => self::isFieldDisabled())
+                                    ->afterStateUpdated(function (Get $get, Set $set) {
+                                        $slug = self::publicationTypeSlug($get);
+                                        $set('prior_identifier_type', match ($slug) {
+                                            'jurnal' => 'doi',
+                                            'buku'   => 'isbn',
+                                            'opini'  => 'media_name',
+                                            default  => null,
+                                        });
+                                    })
                                     ->suffixAction(
-                                        \Filament\Actions\Action::make('open_doi')
+                                        \Filament\Actions\Action::make('open_identifier_url')
                                             ->icon('heroicon-o-arrow-top-right-on-square')
-                                            ->url(fn(Get $get) => filled($get('prior_identifier_value'))
-                                                ? 'https://doi.org/' . $get('prior_identifier_value')
-                                                : null)
+                                            ->url(fn(Get $get) => match (self::publicationTypeSlug($get)) {
+                                                'jurnal' => filled($get('prior_identifier_value'))
+                                                    ? 'https://doi.org/' . $get('prior_identifier_value')
+                                                    : null,
+                                                default => null,
+                                            })
                                             ->openUrlInNewTab()
-                                            ->visible(fn(Get $get) => filled($get('prior_identifier_value')))
+                                            ->visible(
+                                                fn(Get $get) =>
+                                                self::publicationTypeSlug($get) === 'jurnal'
+                                                    && filled($get('prior_identifier_value'))
+                                            )
                                     )
-                                    ->columnSpan(1),
-
-                                // ── ISBN — khusus Buku ────────────────────────
-                                TextInput::make('prior_identifier_value')
-                                    ->label('ISBN (International Standard Book Number)')
-                                    ->placeholder('978-602-XXXX-XX-X')
-                                    ->helperText('Wajib untuk buku. Format ISBN-13: 978-XXX-XXXX-XX-X')
-                                    ->prefix('ISBN')
-                                    ->maxLength(255)
-                                    ->required(fn(Get $get) => $get('is_previously_published') === '1')
-                                    ->live(onBlur: true)
-                                    ->afterStateUpdated(fn(Set $set) => $set('prior_identifier_type', 'isbn'))
-                                    ->visible(fn(Get $get) => self::publicationTypeSlug($get) === 'buku' && $get('is_previously_published') === '1')
-                                    ->disabled(fn() => self::isFieldDisabled())
-                                    ->columnSpan(1),
-
-                                // ── Nama Media — khusus Opini ─────────────────
-                                TextInput::make('prior_identifier_value')
-                                    ->label('Nama Media / Portal Tempat Opini Diterbitkan')
-                                    ->placeholder('Contoh: Kompas, Tempo, Detik.com, Kumparan')
-                                    ->helperText('Wajib untuk opini. Sebutkan nama media tempat opini pertama kali diterbitkan.')
-                                    ->maxLength(255)
-                                    ->required(fn(Get $get) => $get('is_previously_published') === '1')
-                                    ->live(onBlur: true)
-                                    ->afterStateUpdated(fn(Set $set) => $set('prior_identifier_type', 'media_name'))
-                                    ->visible(fn(Get $get) => self::publicationTypeSlug($get) === 'opini' && $get('is_previously_published') === '1')
                                     ->disabled(fn() => self::isFieldDisabled())
                                     ->columnSpan(1),
 
@@ -793,7 +799,6 @@ class PublicationForm
                                         ->helperText('✅ Sudah dipilih di Step sebelumnya. Bisa diubah jika perlu.')
                                         ->disabled(fn() => self::isFieldDisabled())
                                         ->columnSpan(1),
-
 
                                     TextInput::make('title')
                                         ->label(fn($get) => match (self::publicationTypeSlug($get)) {
