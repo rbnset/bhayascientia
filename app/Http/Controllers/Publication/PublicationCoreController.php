@@ -10,7 +10,7 @@ use App\Models\PublicationType;
 use App\Models\Category;
 use Illuminate\Http\Request;
 
-class PublicationBrowseController extends Controller
+class PublicationCoreController extends Controller
 {
     use PublicationHelperTrait;
 
