@@ -22,7 +22,7 @@ Menghimpun gagasan dan karya insan Polri yang berkolaborasi dengan intelektual d
 
     {{-- ✅ Twitter --}}
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Selamat Datang - DABARKA">
+    <meta name="twitter:title" content="DABARKA - Portal Pengabdian Intelektual">
     <meta name="twitter:description" content="Platform Publikasi Ilmiah Indonesia Dabarka">
     <meta property="og:image" content="https://dabraka.org/assets/images/logos/logo-brand.png">
 
@@ -306,7 +306,7 @@ Menghimpun gagasan dan karya insan Polri yang berkolaborasi dengan intelektual d
                         Selamat Datang di <span class="text-[#FF6B18]">DABRAKA</span>!
                     </h1>
                     <p class="text-sm sm:text-base text-[#6B7280] leading-relaxed mb-6">
-                        <strong class="text-[#374151]">Darma Brata Buana Cendekia</strong> — wadah pengabdian
+                        <strong class="text-[#374151]">Darma Brata Buana Cendekia</strong> merupakan wadah pengabdian
                         intelektual yang menghimpun kontribusi pemikiran dari insan Bhayangkara dan akademisi untuk
                         pengembangan ilmu kepolisian Indonesia.
                     </p>
