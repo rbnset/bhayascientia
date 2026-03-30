@@ -2,11 +2,14 @@
 'title' => 'Pilih Jenis Publikasi',
 'helper' => 'Buku, Jurnal, atau Opini',
 'types' => [],
-'selectedType' => null
+'selectedType' => null,
+'filterSort' => 'latest',
+'hasActiveFilters' => false,
 ])
 
 @php
 $typeCount = count($types);
+$isAll = !$selectedType || $selectedType === 'all';
 @endphp
 
 <section id="publication-filter" class="mt-8 sm:mt-10" aria-label="Filter publikasi">
@@ -24,7 +27,7 @@ $typeCount = count($types);
             </div>
 
             {{-- Filter + type selector --}}
-            <div class="flex flex-wrap items-center justify-start gap-2 sm:gap-3 sm:justify-end"> {{-- mobile: kiri, sm ke atas: kanan --}}
+            <div class="flex flex-wrap items-center justify-start gap-2 sm:gap-3 sm:justify-end">
 
                 <span
                     class="px-3 py-2 sm:px-4 sm:py-2 font-bold sm:text-xs sm:leading-[18px] w-fit rounded-full bg-[#FFECE1] text-[10px] leading-[14px] text-[#FF6B18]"
@@ -39,10 +42,10 @@ $typeCount = count($types);
                         class="inline-flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-bold rounded-full bg-white ring-1 ring-[#EEF0F7] shadow-sm hover:bg-[#F4F6FB] hover:ring-[#FF6B18] transition-all"
                         aria-haspopup="true" :aria-expanded="open">
                         @php
-                        $active = collect($types)->firstWhere('slug', $selectedType) ?? $types[0] ?? null;
+                        $active = $isAll ? null : collect($types)->firstWhere('slug', $selectedType);
                         @endphp
                         <span class="truncate max-w-[130px] sm:max-w-[170px]">
-                            {{ $active?->name ?? 'Semua jenis' }}
+                            {{ $active?->name ?? 'Semua Publikasi' }}
                         </span>
                         <span
                             class="hidden sm:inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-bold rounded-full bg-[#FFECE1] text-[#FF6B18]">
@@ -58,12 +61,12 @@ $typeCount = count($types);
                         class="absolute right-0 mt-2 w-52 sm:w-64 bg-white rounded-2xl ring-1 ring-[#EEF0F7] shadow-xl z-20 overflow-hidden"
                         style="display:none;">
                         <div class="overflow-y-auto max-h-64">
-                            {{-- opsi semua --}}
+                            {{-- Opsi Semua --}}
                             <a href="{{ route('publikasi.index') }}"
-                                class="flex items-center justify-between px-4 py-2.5 text-xs sm:text-sm font-semibold {{ !$selectedType ? 'bg-[#FFF7F2] text-[#FF6B18]' : 'text-[#1A1A1A] hover:bg-[#F4F6FB]' }}"
+                                class="flex items-center justify-between px-4 py-2.5 text-xs sm:text-sm font-semibold {{ $isAll ? 'bg-[#FFF7F2] text-[#FF6B18]' : 'text-[#1A1A1A] hover:bg-[#F4F6FB]' }}"
                                 @click="open = false">
-                                <span>Semua publikasi</span>
-                                @if(!$selectedType)
+                                <span>Semua Publikasi</span>
+                                @if($isAll)
                                 <svg class="w-4 h-4 text-[#FF6B18]" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd"
                                         d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
@@ -76,10 +79,8 @@ $typeCount = count($types);
                             <div class="mx-4 h-px bg-[#EEF0F7] my-1"></div>
                             @endif
 
-                            @foreach($types as $index => $type)
-                            @php
-                            $isActive = $selectedType === $type->slug;
-                            @endphp
+                            @foreach($types as $type)
+                            @php $isActive = $selectedType === $type->slug; @endphp
                             <a href="{{ route('publikasi.index', ['type' => $type->slug]) }}"
                                 class="flex items-center justify-between px-4 py-2.5 text-xs sm:text-sm font-semibold {{ $isActive ? 'bg-[#FFF7F2] text-[#FF6B18]' : 'text-[#1A1A1A] hover:bg-[#F4F6FB]' }}"
                                 @click="open = false">
@@ -101,23 +102,30 @@ $typeCount = count($types);
                 <div id="pubTabs" role="tablist" aria-label="Jenis publikasi"
                     class="inline-flex flex-wrap gap-2 bg-white p-1.5 rounded-full ring-1 ring-[#EEF0F7] shadow-sm">
 
-                    @foreach($types as $index => $type)
-                    @php
-                    $isActive = $selectedType === $type->slug || (!$selectedType && $index === 0);
-                    @endphp
+                    {{-- Tab: Semua --}}
+                    <a href="{{ route('publikasi.index', ['type' => 'all']) }}" role="tab" id="tab-all"
+                        class="pub-tab group relative px-4 sm:px-5 py-2.5 text-xs sm:text-sm font-bold rounded-full transition-all duration-200 hover:bg-[#F4F6FB] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 focus-visible:ring-offset-white {{ $isAll ? 'bg-[#FFF7F2] text-[#FF6B18]' : 'text-[#1A1A1A]' }}"
+                        aria-selected="{{ $isAll ? 'true' : 'false' }}" tabindex="{{ $isAll ? '0' : '-1' }}">
+                        Semua
+                        @if($isAll)
+                        <span
+                            class="active-dot absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1 w-1.5 h-1.5 bg-[#FF6B18] rounded-full animate-pulse"></span>
+                        @endif
+                        <span
+                            class="absolute inset-x-0 -bottom-1 h-0.5 bg-[#FF6B18] scale-x-0 group-hover:scale-x-100 transition-transform duration-200 rounded-full"></span>
+                    </a>
 
+                    @foreach($types as $type)
+                    @php $isActive = $selectedType === $type->slug; @endphp
                     <a href="{{ route('publikasi.index', ['type' => $type->slug]) }}" role="tab"
                         id="tab-{{ $type->slug }}" data-type="{{ $type->slug }}"
                         class="pub-tab group relative px-4 sm:px-5 py-2.5 text-xs sm:text-sm font-bold rounded-full transition-all duration-200 hover:bg-[#F4F6FB] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 focus-visible:ring-offset-white {{ $isActive ? 'bg-[#FFF7F2] text-[#FF6B18]' : 'text-[#1A1A1A]' }}"
                         aria-selected="{{ $isActive ? 'true' : 'false' }}" tabindex="{{ $isActive ? '0' : '-1' }}">
-
                         {{ $type->name }}
-
                         @if($isActive)
                         <span
                             class="active-dot absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1 w-1.5 h-1.5 bg-[#FF6B18] rounded-full animate-pulse"></span>
                         @endif
-
                         <span
                             class="absolute inset-x-0 -bottom-1 h-0.5 bg-[#FF6B18] scale-x-0 group-hover:scale-x-100 transition-transform duration-200 rounded-full"></span>
                     </a>

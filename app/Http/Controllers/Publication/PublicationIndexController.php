@@ -45,12 +45,13 @@ class PublicationIndexController extends Controller
             ]);
         }
 
-        $selectedType = $request->query('type', $publicationTypes->first()->slug);
+        $selectedType = $request->query('type', 'all');
         $filterSort   = $request->query('sort', 'latest');
         $searchQuery  = null;
 
-        if (!$publicationTypes->contains('slug', $selectedType)) {
-            $selectedType = $publicationTypes->first()->slug;
+        // Validasi: harus 'all' atau slug yang valid
+        if ($selectedType !== 'all' && !$publicationTypes->contains('slug', $selectedType)) {
+            $selectedType = 'all';
         }
 
         $currentType = $publicationTypes->firstWhere('slug', $selectedType);
@@ -89,8 +90,15 @@ class PublicationIndexController extends Controller
             ->where('status', 'published')
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now())
-            ->whereHas('publicationType', fn($q) => $q->where('slug', $selectedType)->where('is_active', true))
-            ->groupBy('year')
+            ->when(
+                $selectedType !== 'all',
+                fn($q) =>
+                $q->whereHas(
+                    'publicationType',
+                    fn($q2) =>
+                    $q2->where('slug', $selectedType)->where('is_active', true)
+                )
+            )->groupBy('year')
             ->orderByDesc('year')
             ->pluck('year');
 
@@ -156,7 +164,10 @@ class PublicationIndexController extends Controller
             ];
         })->toArray();
 
-        $bestAuthors = $this->getBestAuthorsAction->execute($selectedType, 6);
+        $bestAuthors = $this->getBestAuthorsAction->execute(
+            $selectedType !== 'all' ? $selectedType : null,
+            6
+        );
 
         // ✅ FIX: viewLogs pakai viewed_at bukan created_at
         // Relasi viewLogs → tabel publication_view_logs, kolom timestamp = viewed_at
@@ -168,8 +179,15 @@ class PublicationIndexController extends Controller
             ->where('status', 'published')
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now())
-            ->whereHas('publicationType', fn($q) => $q->where('slug', $selectedType)->where('is_active', true))
-            ->orderByRaw('(total_views + total_downloads * 2) DESC')
+            ->when(
+                $selectedType !== 'all',
+                fn($q) =>
+                $q->whereHas(
+                    'publicationType',
+                    fn($q2) =>
+                    $q2->where('slug', $selectedType)->where('is_active', true)
+                )
+            )->orderByRaw('(total_views + total_downloads * 2) DESC')
             ->take(6)
             ->get();
 
