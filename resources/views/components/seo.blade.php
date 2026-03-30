@@ -1,8 +1,7 @@
 @props([
 'title' => 'DABRAKA — Portal Pengabdian Intelektual Kepolisian Indonesia',
 'description' => 'Darma Brata Buana Cendekia merupakan wadah pengabdian intelektual yang menghimpun kontribusi pemikiran
-dari
-insan Bhayangkara dan akademisi untuk pengembangan ilmu kepolisian Indonesia.',
+dari insan Bhayangkara dan akademisi untuk pengembangan ilmu kepolisian Indonesia.',
 'image' => null,
 'url' => null,
 'type' => 'website',
@@ -15,6 +14,17 @@ $siteName = 'DABRAKA';
 $image = $image ?? $siteUrl . '/assets/images/logos/logo-brand.png';
 $url = $url ?? request()->url();
 $fullTitle = str_contains($title, 'DABRAKA') ? $title : $title . ' — DABRAKA';
+
+$schema = json_encode([
+'@context' => 'https://schema.org',
+'@type' => 'Organization',
+'name' => 'DABRAKA',
+'alternateName' => 'Darma Brata Buana Cendekia',
+'url' => $siteUrl,
+'logo' => $siteUrl . '/assets/images/logos/logo.png',
+'description' => $description,
+'sameAs' => [],
+], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
 @endphp
 
 {{-- Primary --}}
@@ -43,14 +53,5 @@ $fullTitle = str_contains($title, 'DABRAKA') ? $title : $title . ' — DABRAKA';
 
 {{-- Schema.org Organization --}}
 <script type="application/ld+json">
-    {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    "name": "DABRAKA",
-    "alternateName": "Darma Brata Buana Cendekia",
-    "url": "{{ $siteUrl }}",
-    "logo": "{{ $siteUrl }}/assets/images/logos/logo.png",
-    "description": "{{ $description }}",
-    "sameAs": []
-}
+    {!! $schema !!}
 </script>
