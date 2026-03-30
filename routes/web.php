@@ -127,7 +127,7 @@ Route::post('/onboarding/complete', [OnboardingController::class, 'complete'])
 Route::get('/', fn() => redirect()->route('publikasi.index'))->name('home');
 
 // Beranda tetap bisa diakses via URL /beranda
-Route::get('/beranda', fn() => view('pages.home'))->name('beranda');
+Route::get('/beranda', fn() => view('pages.home'))->name('home');
 
 /*
 |--------------------------------------------------------------------------
