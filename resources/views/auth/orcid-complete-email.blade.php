@@ -1,6 +1,10 @@
-<x-layouts.auth> {{-- sesuaikan dengan layout auth kamu --}}
+@extends('layouts.app')
 
-    <div class="max-w-md p-6 mx-auto mt-10 bg-white shadow rounded-xl">
+@section('title', 'Lengkapi Akun ORCID')
+
+@section('content')
+<div class="flex items-center justify-center min-h-[70vh] px-4">
+    <div class="w-full max-w-md p-6 bg-white shadow rounded-xl">
 
         {{-- Logo ORCID --}}
         <div class="flex items-center gap-2 mb-6">
@@ -18,6 +22,12 @@
         @if ($errors->any())
         <div class="p-3 mb-4 text-sm text-red-600 rounded-lg bg-red-50">
             {{ $errors->first() }}
+        </div>
+        @endif
+
+        @if (session('info'))
+        <div class="p-3 mb-4 text-sm text-blue-600 rounded-lg bg-blue-50">
+            {{ session('info') }}
         </div>
         @endif
 
@@ -46,5 +56,5 @@
         </form>
 
     </div>
-
-</x-layouts.auth>
+</div>
+@endsection
