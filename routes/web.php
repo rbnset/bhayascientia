@@ -120,7 +120,7 @@ Route::post('/onboarding/complete', [OnboardingController::class, 'complete'])
 | Static Pages
 |--------------------------------------------------------------------------
 */
-Route::get('/', fn() => view('pages.home'))->name('home');
+Route::get('/', fn() => redirect()->route('publikasi.index'))->name('home');
 Route::get('/event', fn() => view('pages.event'))->name('event');
 
 /*
