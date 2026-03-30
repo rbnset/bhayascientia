@@ -120,8 +120,14 @@ Route::post('/onboarding/complete', [OnboardingController::class, 'complete'])
 | Static Pages
 |--------------------------------------------------------------------------
 */
-Route::get('/', fn() => view('pages.home'))->name('home');
-Route::get('/event', fn() => view('pages.event'))->name('event');
+// Route::get('/', fn() => view('pages.home'))->name('home');
+// Route::get('/event', fn() => view('pages.event'))->name('event');
+
+// '/' redirect ke publikasi (untuk pengunjung pertama)
+Route::get('/', fn() => redirect()->route('publikasi.index'))->name('home');
+
+// Beranda tetap bisa diakses via URL /beranda
+Route::get('/beranda', fn() => view('pages.home'))->name('beranda');
 
 /*
 |--------------------------------------------------------------------------
