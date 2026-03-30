@@ -25,7 +25,6 @@ class Publication extends Model
     public const STATUS_REJECTED          = 'rejected';
     public const STATUS_PUBLISHED         = 'published';
 
-    // ── Tipe identifier prior publication ──
     public const PRIOR_IDENTIFIER_DOI        = 'doi';
     public const PRIOR_IDENTIFIER_ISBN       = 'isbn';
     public const PRIOR_IDENTIFIER_MEDIA_NAME = 'media_name';
@@ -40,7 +39,6 @@ class Publication extends Model
         'published_at',
         'cover_image_path',
 
-        // ── Prior publication fields ──
         'is_previously_published',
         'prior_publisher_name',
         'prior_publisher_url',
@@ -50,7 +48,6 @@ class Publication extends Model
         'origin_license',
         'prior_published_date',
 
-        // ── LOA fields ──
         'loa_is_original_work',
         'loa_grants_display_rights',
         'loa_platform_not_liable',
@@ -62,16 +59,25 @@ class Publication extends Model
     ];
 
     protected $casts = [
-        'published_at'             => 'datetime',
-        'prior_published_date'     => 'date',
-        'loa_agreed_at'            => 'datetime',
-        'is_previously_published'  => 'boolean',
-        'is_open_access_origin'    => 'boolean',
-        'loa_is_original_work'     => 'boolean',
+        'published_at'              => 'datetime',
+        'prior_published_date'      => 'date',
+        'loa_agreed_at'             => 'datetime',
+
+        // ⚠️  is_previously_published SENGAJA TIDAK di-cast ke boolean.
+        // Filament Radio component menyimpan/membaca nilai sebagai string '0'/'1'.
+        // Jika di-cast boolean, Filament akan menerima false/true dari model
+        // dan perbandingan dengan string '1' di ->hidden() / ->required() selalu gagal.
+        // Konversi ke boolean tetap tersedia via helper isPreviouslyPublished() di form
+        // dan via accessor isTrulyPreviouslyPublished() di model ini.
+        //
+        // 'is_previously_published' => 'boolean',  // ← DIHAPUS, ini penyebab bug
+
+        'is_open_access_origin'     => 'boolean',
+        'loa_is_original_work'      => 'boolean',
         'loa_grants_display_rights' => 'boolean',
-        'loa_platform_not_liable'  => 'boolean',
+        'loa_platform_not_liable'   => 'boolean',
         'loa_agrees_takedown_policy' => 'boolean',
-        'loa_agreed'               => 'boolean',
+        'loa_agreed'                => 'boolean',
     ];
 
     protected $appends = [
@@ -185,6 +191,16 @@ class Publication extends Model
     |--------------------------------------------------------------------------
     */
 
+    /**
+     * Accessor boolean yang aman untuk digunakan di luar form Filament
+     * (misalnya di controller, blade, atau policy).
+     * Gunakan ini — bukan is_previously_published langsung — untuk logic backend.
+     */
+    public function getIsTrulyPreviouslyPublishedAttribute(): bool
+    {
+        return filter_var($this->attributes['is_previously_published'] ?? false, FILTER_VALIDATE_BOOLEAN);
+    }
+
     public function getCategoryNameAttribute()
     {
         if ($this->relationLoaded('categories')) {
@@ -279,8 +295,7 @@ class Publication extends Model
     }
 
     /**
-     * ✅ Apakah LOA sudah lengkap disetujui?
-     * Digunakan untuk validasi sebelum submit.
+     * Gunakan is_truly_previously_published (accessor) untuk logic backend.
      */
     public function isLoaComplete(): bool
     {
@@ -292,14 +307,11 @@ class Publication extends Model
             && $this->loa_agreed_at !== null;
     }
 
-    /**
-     * ✅ Apakah data prior publication sudah valid?
-     * Jika previously published → wajib mengisi identifier.
-     */
     public function isPriorPublicationComplete(): bool
     {
-        if (!$this->is_previously_published) {
-            return true; // karya baru → tidak perlu isi
+        // Gunakan accessor agar aman dari ambiguitas tipe
+        if (!$this->is_truly_previously_published) {
+            return true;
         }
 
         return filled($this->prior_publisher_name)
@@ -369,8 +381,8 @@ class Publication extends Model
 
         while (
             static::where('slug', $slug)
-            ->when($ignoreId, fn($q) => $q->where('id', '!=', $ignoreId))
-            ->exists()
+                ->when($ignoreId, fn($q) => $q->where('id', '!=', $ignoreId))
+                ->exists()
         ) {
             $slug = "{$baseSlug}-{$counter}";
             $counter++;
