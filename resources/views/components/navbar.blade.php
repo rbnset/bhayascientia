@@ -1,7 +1,7 @@
 {{-- resources/views/components/navbar.blade.php --}}
 @props([
 'items' => [
-['label' => 'Beranda', 'route' => 'home'],
+['label' => 'Beranda', 'route' => 'beranda'],
 ['label' => 'Publikasi', 'route' => 'publikasi.index'],
 // ['label' => 'Event', 'route' => 'event'],
 ['label' => 'Tentang', 'route' => 'tentang'],
