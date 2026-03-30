@@ -25,6 +25,11 @@ class Publication extends Model
     public const STATUS_REJECTED          = 'rejected';
     public const STATUS_PUBLISHED         = 'published';
 
+    // ── Tipe identifier prior publication ──
+    public const PRIOR_IDENTIFIER_DOI        = 'doi';
+    public const PRIOR_IDENTIFIER_ISBN       = 'isbn';
+    public const PRIOR_IDENTIFIER_MEDIA_NAME = 'media_name';
+
     protected $fillable = [
         'publication_type_id',
         'method_id',
@@ -34,10 +39,39 @@ class Publication extends Model
         'status',
         'published_at',
         'cover_image_path',
+
+        // ── Prior publication fields ──
+        'is_previously_published',
+        'prior_publisher_name',
+        'prior_publisher_url',
+        'prior_identifier_type',
+        'prior_identifier_value',
+        'is_open_access_origin',
+        'origin_license',
+        'prior_published_date',
+
+        // ── LOA fields ──
+        'loa_is_original_work',
+        'loa_grants_display_rights',
+        'loa_platform_not_liable',
+        'loa_agrees_takedown_policy',
+        'loa_agreed',
+        'loa_agreed_at',
+        'loa_agreed_ip',
+        'loa_agreed_user_agent',
     ];
 
     protected $casts = [
-        'published_at' => 'datetime',
+        'published_at'             => 'datetime',
+        'prior_published_date'     => 'date',
+        'loa_agreed_at'            => 'datetime',
+        'is_previously_published'  => 'boolean',
+        'is_open_access_origin'    => 'boolean',
+        'loa_is_original_work'     => 'boolean',
+        'loa_grants_display_rights' => 'boolean',
+        'loa_platform_not_liable'  => 'boolean',
+        'loa_agrees_takedown_policy' => 'boolean',
+        'loa_agreed'               => 'boolean',
     ];
 
     protected $appends = [
@@ -188,7 +222,6 @@ class Publication extends Model
 
     private function generatePlaceholderUrl(): string
     {
-        // ✅ Nama author sudah resolved via accessor di Author model
         $authorName = 'Anonymous';
         if ($this->relationLoaded('authors') && $this->authors->isNotEmpty()) {
             $authorName = $this->authors->pluck('name')->join(', ');
@@ -218,11 +251,6 @@ class Publication extends Model
         ]);
     }
 
-    public function getCoverUrlWithFallback()
-    {
-        return $this->cover_url ?? $this->generatePlaceholder();
-    }
-
     public function getViewsCountAttribute(): int
     {
         return \Cache::remember(
@@ -248,6 +276,35 @@ class Publication extends Model
             now()->addMinutes(10),
             fn() => $this->viewLogs()->distinct('ip_address')->count('ip_address')
         );
+    }
+
+    /**
+     * ✅ Apakah LOA sudah lengkap disetujui?
+     * Digunakan untuk validasi sebelum submit.
+     */
+    public function isLoaComplete(): bool
+    {
+        return $this->loa_is_original_work
+            && $this->loa_grants_display_rights
+            && $this->loa_platform_not_liable
+            && $this->loa_agrees_takedown_policy
+            && $this->loa_agreed
+            && $this->loa_agreed_at !== null;
+    }
+
+    /**
+     * ✅ Apakah data prior publication sudah valid?
+     * Jika previously published → wajib mengisi identifier.
+     */
+    public function isPriorPublicationComplete(): bool
+    {
+        if (!$this->is_previously_published) {
+            return true; // karya baru → tidak perlu isi
+        }
+
+        return filled($this->prior_publisher_name)
+            && filled($this->prior_identifier_value)
+            && filled($this->prior_identifier_type);
     }
 
     /*
@@ -286,22 +343,40 @@ class Publication extends Model
         });
     }
 
+    protected static function booted(): void
+    {
+        static::saving(function (Publication $publication) {
+            if (empty($publication->slug) || $publication->isDirty('title')) {
+                $publication->slug = static::generateUniqueSlug(
+                    $publication->title,
+                    $publication->id
+                );
+            }
+        });
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Helper Methods
     |--------------------------------------------------------------------------
     */
 
-    private function generatePlaceholder()
+    public static function generateUniqueSlug(string $title, ?int $ignoreId = null): string
     {
-        $categoryName = 'Publikasi';
-        if ($this->relationLoaded('categories') && $this->categories->isNotEmpty()) {
-            $categoryName = $this->categories->first()->name;
+        $baseSlug = Str::slug($title);
+        $slug     = $baseSlug;
+        $counter  = 2;
+
+        while (
+            static::where('slug', $slug)
+            ->when($ignoreId, fn($q) => $q->where('id', '!=', $ignoreId))
+            ->exists()
+        ) {
+            $slug = "{$baseSlug}-{$counter}";
+            $counter++;
         }
 
-        $titleShort = Str::limit($this->title, 20, '');
-
-        return 'https://placehold.co/400x600/FF6B18/white?text=' . urlencode($titleShort);
+        return $slug;
     }
 
     public function hasCover(): bool
@@ -328,7 +403,7 @@ class Publication extends Model
         return $this->formatBytes($bytes);
     }
 
-    private function formatBytes($bytes, $precision = 2)
+    private function formatBytes($bytes, $precision = 2): string
     {
         $units = ['B', 'KB', 'MB', 'GB'];
         $bytes = max($bytes, 0);
@@ -343,42 +418,5 @@ class Publication extends Model
         \Cache::forget("publication.{$this->id}.views_count");
         \Cache::forget("publication.{$this->id}.downloads_count");
         \Cache::forget("publication.{$this->id}.unique_views");
-    }
-
-
-    // duplicated error message
-    protected static function booted(): void
-    {
-        static::saving(function (Publication $publication) {
-            // Generate/regenerate slug otomatis
-            if (empty($publication->slug) || $publication->isDirty('title')) {
-                $publication->slug = static::generateUniqueSlug(
-                    $publication->title,
-                    $publication->id
-                );
-            }
-        });
-    }
-
-    /**
-     * ✅ Generate slug unik dengan suffix angka otomatis jika sudah ada.
-     * Contoh: "my-title" → "my-title-2" → "my-title-3" dst.
-     */
-    public static function generateUniqueSlug(string $title, ?int $ignoreId = null): string
-    {
-        $baseSlug = Str::slug($title);
-        $slug     = $baseSlug;
-        $counter  = 2;
-
-        while (
-            static::where('slug', $slug)
-            ->when($ignoreId, fn($q) => $q->where('id', '!=', $ignoreId))
-            ->exists()
-        ) {
-            $slug = "{$baseSlug}-{$counter}";
-            $counter++;
-        }
-
-        return $slug;
     }
 }
