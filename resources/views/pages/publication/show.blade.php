@@ -367,8 +367,51 @@
 
 @section('content')
 
-<x-seo-article :publication="$publication" :authors="$authors->toArray()" :coverUrl="$cover_url"
-    :keywords="$keywords" />
+{{-- ✅ SEO Article Schema --}}
+<x-seo-article :publication="$publication" :authors="is_array($authors) ? $authors : $authors->toArray()"
+    :coverUrl="$cover_url" :keywords="$keywords" />
+
+{{-- ✅ Breadcrumb Schema untuk Google --}}
+@php
+$breadcrumbSchema = json_encode([
+'@context' => 'https://schema.org',
+'@type' => 'BreadcrumbList',
+'itemListElement' => [
+[
+'@type' => 'ListItem',
+'position' => 1,
+'name' => 'Beranda',
+'item' => route('beranda'),
+],
+[
+'@type' => 'ListItem',
+'position' => 2,
+'name' => 'Publikasi',
+'item' => route('publikasi.index'),
+],
+[
+'@type' => 'ListItem',
+'position' => 3,
+'name' => $publication->title,
+'item' => route('publikasi.show', $publication->slug),
+],
+],
+], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+@endphp
+<script type="application/ld+json">
+    {!! $breadcrumbSchema !!}
+</script>
+
+{{-- ✅ Meta keywords tambahan untuk search engine --}}
+@if($keywords && count($keywords) > 0)
+<meta name="keywords" content="{{ implode(', ', $keywords) }}, DABRAKA, publikasi ilmiah, kepolisian Indonesia">
+@endif
+
+{{-- ✅ Meta author --}}
+@if(is_array($authors) ? count($authors) > 0 : $authors->count() > 0)
+<meta name="author"
+    content="{{ is_array($authors) ? ($authors[0]['name'] ?? '') : ($authors->first()['name'] ?? '') }}">
+@endif
 
 @php
 $latestVersion = $publication->versions->first();
@@ -1116,15 +1159,25 @@ $hasFile = $latestVersion && !empty($latestVersion->pdf_file_path);
     }
 
     function sharePublication() {
+        const title   = '{{ addslashes($publication->title) }}';
+        const authors = '{{ is_array($authors) ? ($authors[0]["name"] ?? "") : ($authors->first()["name"] ?? "") }}';
+        const desc    = '{{ Str::limit(strip_tags($publication->abstract ?? ""), 100) }}';
+        const url     = window.location.href;
+
+        // ✅ Teks share yang informatif untuk WhatsApp/sosmed
+        const shareText = `📄 *${title}*\n\n✍️ ${authors}\n\n${desc}\n\n🔗 Baca selengkapnya di DABRAKA:`;
+
         if (navigator.share) {
             navigator.share({
-                title: '{{ addslashes($publication->title) }}',
-                text: 'Lihat publikasi ilmiah ini',
-                url: window.location.href
+                title: title,
+                text:  shareText,
+                url:   url,
             }).catch(err => { if (err.name !== 'AbortError') console.log('Share error:', err); });
         } else {
-            navigator.clipboard.writeText(window.location.href)
-                .then(() => showNotification('Link berhasil disalin ke clipboard!', 'success'))
+            // Fallback: salin dengan teks lengkap
+            const fullText = `${shareText}\n${url}`;
+            navigator.clipboard.writeText(fullText)
+                .then(() => showNotification('Link & info publikasi berhasil disalin!', 'success'))
                 .catch(()  => showNotification('Gagal menyalin link', 'error'));
         }
     }
