@@ -172,7 +172,10 @@ class PublicationBrowseController extends Controller
             'filterYear',
             'filterSort',
             'perPage',
-            'stats'
-        ));
+            'stats',
+        ))->with([
+            'seoTitle'       => 'Jelajahi Semua Publikasi — DABRAKA',
+            'seoDescription' => 'Temukan jurnal, buku, dan opini ilmiah dari insan Bhayangkara. Filter berdasarkan kategori, tahun, dan kata kunci.',
+        ]);
     }
 }

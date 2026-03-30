@@ -22,6 +22,7 @@ $fullTitle = str_contains($title, 'DABRAKA') ? $title : $title . ' — DABRAKA';
 <meta name="description" content="{{ $description }}">
 <meta name="robots" content="{{ $noindex ? 'noindex,nofollow' : 'index,follow' }}">
 <link rel="canonical" href="{{ $url }}">
+<meta name="google-site-verification" content="izrAA6h2p_0rmT38OaogoIuNTErZzzhGhjSVhsqeDbI" />
 
 {{-- Open Graph --}}
 <meta property="og:type" content="{{ $type }}">

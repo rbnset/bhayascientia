@@ -187,6 +187,10 @@ class PublicationSearchController extends Controller
             'categories',
             'years',
             'topKeywords'
-        ));
+        ))->with([
+            'seoTitle'       => ($searchQuery ? '"' . $searchQuery . '" — ' : '') . 'Cari Publikasi — DABRAKA',
+            'seoDescription' => 'Hasil pencarian publikasi ilmiah di DABRAKA. Temukan karya ilmiah, jurnal, dan buku kepolisian Indonesia.',
+            'seoNoindex'     => true, // halaman search tidak perlu diindex Google
+        ]);
     }
 }

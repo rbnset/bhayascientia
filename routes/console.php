@@ -45,3 +45,6 @@ Schedule::command('otp:cleanup')->hourly();
 
 // Expired Revision
 Schedule::command('reviews:auto-reject-expired')->hourly();
+
+// SEO SITEMAP
+Schedule::command('sitemap:generate')->daily();

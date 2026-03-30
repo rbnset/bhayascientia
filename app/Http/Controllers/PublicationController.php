@@ -549,6 +549,13 @@ class PublicationController extends Controller
             'fileSizeFormatted' => $fileSizeFormatted,
             'downloadCount'     => $downloadCount,
             'viewsCount'        => $viewsCount,
+
+            // ✅ SEO
+            'seoTitle'       => $publication->title . ' — DABRAKA',
+            'seoDescription' => Str::limit(strip_tags($publication->abstract ?? $publication->title), 155),
+            'seoImage'       => $this->getCoverUrl($publication),
+            'seoType'        => 'article',
+            'seoUrl'         => route('publikasi.show', $publication->slug),
         ]);
     }
 

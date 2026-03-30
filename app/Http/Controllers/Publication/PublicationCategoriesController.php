@@ -152,6 +152,12 @@ class PublicationCategoriesController extends Controller
             'filterCategory'   => $filterCategory,
             'filterYear'       => $filterYear,
             'filterKeyword'    => $filterKeyword,
+
+            // ✅ SEO
+            'seoTitle'       => ($currentCategory ? $currentCategory->name . ' — ' : '') . 'Kategori Publikasi — DABRAKA',
+            'seoDescription' => $currentCategory
+                ? 'Publikasi ilmiah kategori ' . $currentCategory->name . ' di DABRAKA. Temukan karya ilmiah kepolisian Indonesia.'
+                : 'Jelajahi publikasi ilmiah berdasarkan kategori di DABRAKA. Jurnal, buku, dan opini kepolisian Indonesia.',
         ]);
     }
 }

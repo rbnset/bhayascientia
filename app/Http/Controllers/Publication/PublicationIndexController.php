@@ -277,6 +277,9 @@ class PublicationIndexController extends Controller
             'filterSort',
             'searchQuery',
             'showTour',
-        ));
+        ))->with([
+            'seoTitle'       => 'Publikasi Ilmiah Kepolisian Indonesia — DABRAKA',
+            'seoDescription' => 'Browse ribuan publikasi ilmiah, jurnal, buku, dan opini dari insan Bhayangkara dan akademisi Indonesia. Akses gratis di DABRAKA.',
+        ]);
     }
 }

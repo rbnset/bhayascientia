@@ -367,6 +367,9 @@
 
 @section('content')
 
+<x-seo-article :publication="$publication" :authors="$authors->toArray()" :coverUrl="$cover_url"
+    :keywords="$keywords" />
+
 @php
 $latestVersion = $publication->versions->first();
 $hasFile = $latestVersion && !empty($latestVersion->pdf_file_path);

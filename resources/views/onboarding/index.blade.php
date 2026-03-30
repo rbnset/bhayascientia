@@ -7,24 +7,9 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>DABRAKA - Portal Pengabdian intelektual</title>
 
-    {{-- ✅ Open Graph untuk WhatsApp --}}
-    <meta property="og:title" content="DABRAKA - Portal Pengabdian intelektual">
-    <meta property="og:description"
-        content="
-Menghimpun gagasan dan karya insan Polri yang berkolaborasi dengan intelektual di bidang kepolisian, keamanan, kebijakan publik, serta keilmuan terkait lainnya.">
-    <meta property="og:image" content="https://dabraka.org/assets/images/logos/logo-brand.png">
-    <meta property="og:url" content="https://dabraka.org/onboarding">
-    <meta property="og:type" content="website">
-    <meta property="og:site_name" content="DABARKA">
-
-    <meta property="og:image" content="https://dabraka.org/assets/images/logos/logo-brand.png">
-    <meta property="og:image:type" content="image/png">
-
-    {{-- ✅ Twitter --}}
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="DABARKA - Portal Pengabdian Intelektual">
-    <meta name="twitter:description" content="Platform Publikasi Ilmiah Indonesia Dabarka">
-    <meta property="og:image" content="https://dabraka.org/assets/images/logos/logo-brand.png">
+    <x-seo title="Selamat Datang di DABRAKA"
+        description="Darma Brata Buana Cendekia — Portal Pengabdian Intelektual Kepolisian Indonesia."
+        :noindex="true" />
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>

@@ -1,2 +1,17 @@
 User-agent: *
-Disallow:
+Allow: /
+
+# Halaman yang tidak perlu diindex
+Disallow: /onboarding
+Disallow: /login
+Disallow: /register
+Disallow: /dashboard
+Disallow: /profil-saya
+Disallow: /langganan
+Disallow: /api/
+Disallow: /admin/
+Disallow: /publikasi/search
+Disallow: /verify-email
+
+# Sitemap
+Sitemap: https://dabraka.org/sitemap.xml

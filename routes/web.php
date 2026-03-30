@@ -127,7 +127,10 @@ Route::post('/onboarding/complete', [OnboardingController::class, 'complete'])
 Route::get('/', fn() => redirect()->route('publikasi.index'))->name('home');
 
 // Beranda tetap bisa diakses via URL /beranda
-Route::get('/beranda', fn() => view('pages.home'))->name('beranda');
+Route::get('/beranda', fn() => view('pages.home', [
+    'seoTitle'       => 'Beranda — DABRAKA Portal Pengabdian Intelektual',
+    'seoDescription' => 'DABRAKA adalah portal pengabdian intelektual yang menghimpun karya ilmiah insan Bhayangkara dan akademisi untuk pengembangan ilmu kepolisian Indonesia.',
+]))->name('beranda');
 
 /*
 |--------------------------------------------------------------------------

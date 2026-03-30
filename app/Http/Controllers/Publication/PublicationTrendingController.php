@@ -130,6 +130,9 @@ class PublicationTrendingController extends Controller
             'period',
             'typeSlug',
             'typeStats'
-        ));
+        ))->with([
+            'seoTitle'       => 'Publikasi Trending — DABRAKA',
+            'seoDescription' => 'Publikasi paling banyak dibaca dan diunduh di DABRAKA. Temukan karya ilmiah terpopuler kepolisian Indonesia.',
+        ]);
     }
 }
