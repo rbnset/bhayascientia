@@ -42,6 +42,16 @@ class UsersTable
                     ->weight('medium')
                     ->description(fn($record) => $record->email),
 
+                TextColumn::make('orcid_id')
+                    ->label('ORCID')
+                    ->formatStateUsing(fn($state) => $state ?? '—')
+                    ->url(fn($record) => $record->orcid_url)
+                    ->openUrlInNewTab()
+                    ->icon('heroicon-o-identification')
+                    ->copyable()
+                    ->searchable()
+                    ->placeholder('—'),
+
                 // ── Role badges ─────────────────────────────────────────────
                 TextColumn::make('roles.name')
                     ->label('Peran')
