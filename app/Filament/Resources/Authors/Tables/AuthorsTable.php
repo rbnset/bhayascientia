@@ -81,6 +81,16 @@ class AuthorsTable
                     })
                     ->placeholder('—'),
 
+                TextColumn::make('orcid_id')
+                    ->label('ORCID')
+                    ->formatStateUsing(fn($state) => $state ?? '—')
+                    ->url(fn($record) => $record->orcid_url)
+                    ->openUrlInNewTab()
+                    ->icon('heroicon-o-identification')
+                    ->copyable()
+                    ->searchable()
+                    ->placeholder('—'),
+
                 // ── Status claim ────────────────────────────────────────────
                 TextColumn::make('claim_status')
                     ->label('Status')

@@ -19,6 +19,8 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Spatie\Permission\Events\RoleAssigned;
+use SocialiteProviders\Manager\SocialiteWasCalled;        // ← tambah
+use SocialiteProviders\Orcid\OrcidExtendSocialite;        // ← tambah
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -52,23 +54,17 @@ class AppServiceProvider extends ServiceProvider
         Review::observe(ReviewObserver::class);
 
         // ── Spatie v6: auto-create author profile saat role author di-assign ──
-        // Event RoleAssigned fired setiap kali assignRole() / syncRoles() dipanggil
-        // $event->role berisi object Role yang di-assign (ada property ->name)
         Event::listen(RoleAssigned::class, function (RoleAssigned $event) {
             $user = $event->model;
 
-            // Pastikan yang di-assign adalah User, bukan model lain
             if (! $user instanceof User) {
                 return;
             }
 
-            // Cek spesifik role 'author' yang di-assign — lebih efisien
-            // daripada refresh + hasRole() yang query ulang semua roles
             if ($event->role->name !== 'author') {
                 return;
             }
 
-            // Jangan buat duplikat jika author profile sudah ada
             if ($user->authorProfile()->exists()) {
                 return;
             }
@@ -81,6 +77,11 @@ class AppServiceProvider extends ServiceProvider
                 'bio'         => null,
                 'photo_path'  => null,
             ]);
+        });
+
+        // ── ORCID Socialite Provider ──────────────────────────────────────────
+        Event::listen(SocialiteWasCalled::class, function (SocialiteWasCalled $event) {
+            $event->extendSocialite('orcid', OrcidExtendSocialite::class);
         });
 
         // ── Library badge count via View Composer ─────────────────────────────
@@ -145,7 +146,7 @@ class AppServiceProvider extends ServiceProvider
                 });
         });
 
-        // Kontak: maks 5x per 10 menit per IP (cegah spam form kontak)
+        // Kontak: maks 5x per 10 menit per IP
         RateLimiter::for('kontak', function (Request $request) {
             return Limit::perMinutes(10, 5)
                 ->by($request->ip())

@@ -28,9 +28,12 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         'affiliation',
         'google_id',
         'facebook_id',
+        'orcid_id',
+        'orcid_verified_at',
         'avatar',
         'provider',
         'has_seen_onboarding',
+        'needs_email_completion',
     ];
 
     protected $hidden = [
@@ -42,9 +45,24 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
     {
         return [
             'email_verified_at' => 'datetime',
+            'orcid_verified_at'  => 'datetime',
             'password'          => 'hashed',
             'has_seen_onboarding'  => 'boolean',
+            'needs_email_completion' => 'boolean',
         ];
+    }
+
+    // Tambahkan accessor
+    public function getOrcidUrlAttribute(): ?string
+    {
+        return $this->orcid_id
+            ? "https://orcid.org/{$this->orcid_id}"
+            : null;
+    }
+
+    public function isOrcidVerified(): bool
+    {
+        return !is_null($this->orcid_verified_at);
     }
 
     // ========================================

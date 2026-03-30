@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Authors\Schemas;
 
 use App\Models\Author;
 use App\Models\User;
+use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
@@ -165,6 +166,27 @@ class AuthorForm
                                     )
                                     ->helperText('Opsional. Isi jika berbeda dari profil akun user.')
                                     ->prefixIcon('heroicon-o-building-office'),
+
+                                TextInput::make('orcid_id')
+                                    ->label('ORCID iD')
+                                    ->placeholder('0000-0000-0000-0000')
+                                    ->helperText('Format: 0000-0000-0000-0000')
+                                    ->maxLength(19)
+                                    ->regex('/^\d{4}-\d{4}-\d{4}-\d{3}[\dXx]$/')
+                                    ->validationMessages([
+                                        'regex' => 'Format ORCID tidak valid. Gunakan format: 0000-0000-0000-0000',
+                                    ])
+                                    ->suffixAction(
+                                        Action::make('open_orcid')
+                                            ->icon('heroicon-o-arrow-top-right-on-square')
+                                            ->url(
+                                                fn($get) => $get('orcid_id')
+                                                    ? 'https://orcid.org/' . $get('orcid_id')
+                                                    : null
+                                            )
+                                            ->openUrlInNewTab()
+                                            ->visible(fn($get) => filled($get('orcid_id')))
+                                    ),
 
                                 // ✅ Bio
                                 Textarea::make('bio')

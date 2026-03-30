@@ -18,6 +18,7 @@ class Author extends Model
 
     protected $fillable = [
         'user_id',
+        'orcid_id',
         'name',        // NULL jika linked ke user — dibaca dari users.name
         'email',       // NULL jika linked ke user — dibaca dari users.email
         'affiliation', // NULL = fallback ke users.affiliation / users.job_title
@@ -210,7 +211,18 @@ class Author extends Model
             'user_id' => $user->id,
             'name'    => null, // tidak perlu duplikasi, dibaca dari users.name
             'email'   => null, // tidak perlu duplikasi, dibaca dari users.email
+            // ✅ Sync ORCID dari author ke user jika user belum punya
+            'orcid_id' => $this->getRawOriginal('orcid_id') && !$user->orcid_id
+                ? null  // biarkan accessor baca dari user setelah sync
+                : $this->getRawOriginal('orcid_id'),
         ]);
+
+
+        // Jika author punya ORCID tapi user belum → pindahkan ke user
+        if ($this->getRawOriginal('orcid_id') && !$user->orcid_id) {
+            $user->update(['orcid_id' => $this->getRawOriginal('orcid_id')]);
+        }
+
 
         return [
             'success' => true,
@@ -352,5 +364,60 @@ class Author extends Model
     public function scopeLinked($query)
     {
         return $query->whereNotNull('user_id');
+    }
+
+    // ========================================
+// ORCID ACCESSORS & HELPERS
+// ========================================
+
+    /**
+     * ORCID: authors.orcid_id override, fallback ke user.orcid_id
+     */
+    public function getOrcidIdAttribute($value): ?string
+    {
+        if (!empty($value)) return $value;
+
+        if ($this->user_id) {
+            $user = $this->relationLoaded('user')
+                ? $this->user
+                : User::find($this->user_id);
+
+            return $user?->orcid_id;
+        }
+
+        return null;
+    }
+
+    /**
+     * URL lengkap ke profil ORCID
+     */
+    public function getOrcidUrlAttribute(): ?string
+    {
+        $id = $this->orcid_id;
+        return $id ? "https://orcid.org/{$id}" : null;
+    }
+
+    /**
+     * Validasi format ORCID: 0000-0000-0000-000X
+     */
+    public static function isValidOrcid(string $orcid): bool
+    {
+        // Format: 16 digit, dibagi 4 grup, digit terakhir bisa X
+        return (bool) preg_match(
+            '/^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$/',
+            strtoupper($orcid)
+        );
+    }
+
+    /**
+     * Normalize input: 0000000000000000 → 0000-0000-0000-0000
+     */
+    public static function normalizeOrcid(string $raw): ?string
+    {
+        $clean = preg_replace('/[^0-9X]/i', '', strtoupper($raw));
+
+        if (strlen($clean) !== 16) return null;
+
+        return implode('-', str_split($clean, 4));
     }
 }

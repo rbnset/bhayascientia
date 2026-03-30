@@ -3,6 +3,7 @@
 use App\Http\Controllers\AboutController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\GoogleAuthController;
+use App\Http\Controllers\Auth\OrcidController;
 use App\Http\Controllers\Auth\OtpController;
 use App\Http\Controllers\PublicationController;
 use App\Http\Controllers\AuthorController;
@@ -144,9 +145,14 @@ Route::middleware('guest')->group(function () {
     Route::get('auth/google',          [GoogleAuthController::class, 'redirectToGoogle'])->name('auth.google');
     Route::get('auth/google/callback', [GoogleAuthController::class, 'handleGoogleCallback'])->name('auth.google.callback');
 
-    // Facebook OAuth
-    Route::get('auth/facebook',          [GoogleAuthController::class, 'redirectToFacebook'])->name('auth.facebook');
-    Route::get('auth/facebook/callback', [GoogleAuthController::class, 'handleFacebookCallback'])->name('auth.facebook.callback');
+    Route::get('auth/orcid',          [OrcidController::class, 'redirectForLogin'])->name('auth.orcid');
+    Route::get('auth/orcid/callback', [OrcidController::class, 'handleLoginCallback'])->name('auth.orcid.callback');
+});
+
+// ── Email completion setelah login ORCID ──
+Route::middleware(['auth', 'email.completed'])->group(function () {
+    Route::get('/orcid/complete-email',  [OrcidController::class, 'showCompleteEmail'])->name('orcid.complete-email.show');
+    Route::post('/orcid/complete-email', [OrcidController::class, 'completeEmail'])->name('orcid.complete-email.store');
 });
 
 /*
@@ -208,6 +214,10 @@ Route::prefix('publikasi')->name('publikasi.')->group(function () {
 Route::middleware(['auth', 'verified.otp'])->group(function () {
     Route::post('/publikasi/{slug}/favorite', [PublicationController::class, 'toggleFavorite'])->name('publikasi.favorite');
     Route::post('/publikasi/{slug}/save',     [PublicationController::class, 'toggleSaved'])->name('publikasi.save');
+
+    Route::get('/auth/orcid/connect',    [OrcidController::class, 'redirectForConnect'])->name('auth.orcid.connect');
+    Route::get('/auth/orcid/connect/callback', [OrcidController::class, 'handleConnectCallback'])->name('auth.orcid.connect.callback');
+    Route::post('/auth/orcid/disconnect', [OrcidController::class, 'disconnect'])->name('auth.orcid.disconnect');
 });
 
 /*

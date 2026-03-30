@@ -119,16 +119,14 @@
                         </svg>
                     </a>
 
-                    {{-- Facebook Login --}}
-                    <a href="{{ route('auth.facebook') }}" id="facebookLoginBtn"
-                        class="inline-flex items-center justify-center gap-2 rounded-full border border-[#EEF0F7] bg-white px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition-all duration-300 hover:border-[#FF6B18]/30 hover:bg-[#F4F6FB] hover:shadow-sm focus:outline-none">
-                        <svg viewBox="0 0 24 24" class="w-5 h-5 text-[#1877F2] facebook-icon" aria-hidden="true">
-                            <path fill="currentColor"
-                                d="M22 12.06c0-5.52-4.48-10-10-10S2 6.54 2 12.06c0 4.99 3.66 9.13 8.44 9.88v-6.99H7.9v-2.89h2.54V9.85c0-2.5 1.49-3.89 3.77-3.89 1.09 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56v1.87h2.78l-.44 2.89h-2.34v6.99C18.34 21.19 22 17.05 22 12.06z" />
-                        </svg>
-                        <span class="hidden sm:inline facebook-text">Facebook</span>
-                        <span class="sm:hidden facebook-text">FB</span>
-                        <svg class="hidden w-4 h-4 animate-spin facebook-spinner" fill="none" viewBox="0 0 24 24">
+                    {{-- ORCID Login --}}
+                    <a href="{{ route('auth.orcid') }}" id="orcidLoginBtn"
+                        class="inline-flex items-center justify-center gap-2 rounded-full border border-[#EEF0F7] bg-white px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition-all duration-300 hover:border-[#A6CE39]/30 hover:bg-[#F4F6FB] hover:shadow-sm focus:outline-none">
+                        <img src="https://orcid.org/sites/default/files/images/orcid_16x16.png" alt="ORCID"
+                            class="w-5 h-5 orcid-icon">
+                        <span class="hidden sm:inline orcid-text">ORCID</span>
+                        <span class="sm:hidden orcid-text">ID</span>
+                        <svg class="hidden w-4 h-4 animate-spin orcid-spinner" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
                             </circle>
                             <path class="opacity-75" fill="currentColor"
@@ -486,7 +484,7 @@
                             </li>
                             <li class="flex items-start gap-2">
                                 <span class="text-[#FF6B18] mt-1">✓</span>
-                                <span><strong>Data OAuth:</strong> jika login via Google/Facebook, kami menerima nama,
+                                <span><strong>Data OAuth:</strong> jika login via Google/ORCID, kami menerima nama,
                                     email, dan foto profil dari provider tersebut.</span>
                             </li>
                             <li class="flex items-start gap-2">
@@ -771,7 +769,7 @@
     // ========================================
     (function() {
         const googleBtn   = document.getElementById("googleLoginBtn");
-        const facebookBtn = document.getElementById("facebookLoginBtn");
+        const orcidBtn = document.getElementById("orcidLoginBtn");
 
         function handleSocialClick(btn, iconSel, textSel, spinnerSel) {
             if (!btn) return;
@@ -788,7 +786,7 @@
         }
 
         handleSocialClick(googleBtn,   '.google-icon',   '.google-text',   '.google-spinner');
-        handleSocialClick(facebookBtn, '.facebook-icon', '.facebook-text', '.facebook-spinner');
+        handleSocialClick(orcidBtn, '.orcid-icon', '.orcid-text', '.orcid-spinner');
     })();
 
     // ========================================
