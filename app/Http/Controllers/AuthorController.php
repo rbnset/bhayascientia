@@ -191,9 +191,9 @@ class AuthorController extends Controller
             ]);
 
         // ── 9. SEO Meta ───────────────────────────────────────────────────
-        $latestPubYear = $publications->first()?->published_at?->year;
-        $pubTypeList   = $publications->getCollection()
-            ->pluck('publication_type')->unique()->implode(', ');
+        $latestPubYear = $formattedPublications->first()['year'] ?? null;
+        $pubTypeList   = $formattedPublications
+            ->pluck('publication_type')->unique()->filter()->implode(', ');
 
         $seoTitle = $name . ' — Profil Peneliti & Publikasi Ilmiah | DABRAKA';
 
