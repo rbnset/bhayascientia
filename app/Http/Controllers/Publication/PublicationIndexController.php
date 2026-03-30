@@ -31,7 +31,7 @@ class PublicationIndexController extends Controller
             return view('pages.publication.index', [
                 'latestPublications'  => collect(),
                 'publicationTypes'    => $publicationTypes,
-                'selectedType'        => null,
+                'selectedType'        => 'all',
                 'bestAuthors'         => collect(),
                 'popularPublications' => collect(),
                 'featuredPublication' => null,
@@ -75,13 +75,25 @@ class PublicationIndexController extends Controller
             $query->where('status', 'published')
                 ->whereNotNull('published_at')
                 ->where('published_at', '<=', now())
-                ->whereHas('publicationType', fn($q) => $q->where('slug', $selectedType)->where('is_active', true));
+                ->when(
+                    $selectedType !== 'all',
+                    fn($q) => $q->whereHas(
+                        'publicationType',
+                        fn($q2) => $q2->where('slug', $selectedType)->where('is_active', true)
+                    )
+                );
         })
             ->withCount(['publications' => function ($query) use ($selectedType) {
                 $query->where('status', 'published')
                     ->whereNotNull('published_at')
                     ->where('published_at', '<=', now())
-                    ->whereHas('publicationType', fn($q) => $q->where('slug', $selectedType)->where('is_active', true));
+                    ->when(
+                        $selectedType !== 'all',
+                        fn($q) => $q->whereHas(
+                            'publicationType',
+                            fn($q2) => $q2->where('slug', $selectedType)->where('is_active', true)
+                        )
+                    );
             }])
             ->orderBy('name')
             ->get();
@@ -92,13 +104,12 @@ class PublicationIndexController extends Controller
             ->where('published_at', '<=', now())
             ->when(
                 $selectedType !== 'all',
-                fn($q) =>
-                $q->whereHas(
+                fn($q) => $q->whereHas(
                     'publicationType',
-                    fn($q2) =>
-                    $q2->where('slug', $selectedType)->where('is_active', true)
+                    fn($q2) => $q2->where('slug', $selectedType)->where('is_active', true)
                 )
-            )->groupBy('year')
+            )
+            ->groupBy('year')
             ->orderByDesc('year')
             ->pluck('year');
 
@@ -106,13 +117,25 @@ class PublicationIndexController extends Controller
             $query->where('status', 'published')
                 ->whereNotNull('published_at')
                 ->where('published_at', '<=', now())
-                ->whereHas('publicationType', fn($q) => $q->where('slug', $selectedType)->where('is_active', true));
+                ->when(
+                    $selectedType !== 'all',
+                    fn($q) => $q->whereHas(
+                        'publicationType',
+                        fn($q2) => $q2->where('slug', $selectedType)->where('is_active', true)
+                    )
+                );
         })
             ->withCount(['publications' => function ($query) use ($selectedType) {
                 $query->where('status', 'published')
                     ->whereNotNull('published_at')
                     ->where('published_at', '<=', now())
-                    ->whereHas('publicationType', fn($q) => $q->where('slug', $selectedType)->where('is_active', true));
+                    ->when(
+                        $selectedType !== 'all',
+                        fn($q) => $q->whereHas(
+                            'publicationType',
+                            fn($q2) => $q2->where('slug', $selectedType)->where('is_active', true)
+                        )
+                    );
             }])
             ->orderByDesc('publications_count')
             ->limit(20)
@@ -122,7 +145,13 @@ class PublicationIndexController extends Controller
             ->where('status', 'published')
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now())
-            ->whereHas('publicationType', fn($q) => $q->where('slug', $selectedType)->where('is_active', true));
+            ->when(
+                $selectedType !== 'all',
+                fn($q) => $q->whereHas(
+                    'publicationType',
+                    fn($q2) => $q2->where('slug', $selectedType)->where('is_active', true)
+                )
+            );
 
         switch ($filterSort) {
             case 'popular':
@@ -169,11 +198,9 @@ class PublicationIndexController extends Controller
             6
         );
 
-        // ✅ FIX: viewLogs pakai viewed_at bukan created_at
-        // Relasi viewLogs → tabel publication_view_logs, kolom timestamp = viewed_at
         $popularPubs = Publication::with(['authors.user', 'publicationType', 'categories'])
             ->withCount([
-                'viewLogs as total_views',       // ← tanpa filter waktu = semua waktu
+                'viewLogs as total_views',
                 'downloadLogs as total_downloads',
             ])
             ->where('status', 'published')
@@ -181,13 +208,12 @@ class PublicationIndexController extends Controller
             ->where('published_at', '<=', now())
             ->when(
                 $selectedType !== 'all',
-                fn($q) =>
-                $q->whereHas(
+                fn($q) => $q->whereHas(
                     'publicationType',
-                    fn($q2) =>
-                    $q2->where('slug', $selectedType)->where('is_active', true)
+                    fn($q2) => $q2->where('slug', $selectedType)->where('is_active', true)
                 )
-            )->orderByRaw('(total_views + total_downloads * 2) DESC')
+            )
+            ->orderByRaw('(total_views + total_downloads * 2) DESC')
             ->take(6)
             ->get();
 
