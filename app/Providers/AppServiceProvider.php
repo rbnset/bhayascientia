@@ -68,14 +68,16 @@ class AppServiceProvider extends ServiceProvider
                 return;
             }
 
-            Author::create([
-                'user_id'     => $user->id,
-                'name'        => null,
-                'email'       => null,
-                'affiliation' => null,
-                'bio'         => null,
-                'photo_path'  => null,
-            ]);
+            Author::firstOrCreate(
+                ['user_id' => $user->id],  // cari berdasarkan user_id
+                [
+                    'name'        => null,
+                    'email'       => null,
+                    'affiliation' => null,
+                    'bio'         => null,
+                    'photo_path'  => null,
+                ]
+            );
         });
 
         // ── ORCID Socialite Provider ──────────────────────────────────────────
