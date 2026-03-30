@@ -134,13 +134,26 @@ class UserForm
                                             ->prefixIcon('heroicon-o-building-office')
                                             ->helperText('Dipakai sebagai affiliasi di profil author jika tidak diisi khusus.'),
 
-                                        TextInput::make('username')
-                                            ->label('Username')
-                                            ->placeholder('robinsetiyawan')
-                                            ->live(debounce: 500)
-                                            ->maxLength(255)
-                                            ->prefixIcon('heroicon-o-at-symbol')
-                                            ->unique(table: 'users', column: 'username', ignoreRecord: true),
+                                        TextInput::make('orcid_id')
+                                            ->label('ORCID iD')
+                                            ->placeholder('0000-0000-0000-0000')
+                                            ->helperText('Format: 0000-0000-0000-0000')
+                                            ->maxLength(19)
+                                            ->regex('/^\d{4}-\d{4}-\d{4}-\d{3}[\dXx]$/')
+                                            ->validationMessages([
+                                                'regex' => 'Format ORCID tidak valid. Gunakan format: 0000-0000-0000-0000',
+                                            ])
+                                            ->suffixAction(
+                                                Action::make('open_orcid')
+                                                    ->icon('heroicon-o-arrow-top-right-on-square')
+                                                    ->url(
+                                                        fn($get) => $get('orcid_id')
+                                                            ? 'https://orcid.org/' . $get('orcid_id')
+                                                            : null
+                                                    )
+                                                    ->openUrlInNewTab()
+                                                    ->visible(fn($get) => filled($get('orcid_id')))
+                                            ),
                                     ]),
 
                                 Textarea::make('bio')
