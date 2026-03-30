@@ -6,36 +6,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    {{-- ✅ Title --}}
-    <title>@yield('title', 'DABARKA') - Platform Publikasi Ilmiah Indonesia</title>
-
-    {{-- ✅ SEO Basic --}}
-    <meta name="description" content="@yield('description', 'Platform Publikasi Ilmiah Indonesia Dabarka')">
-
-    <meta property="og:image" content="https://dabraka.org/assets/images/preview.png">
-    <meta property="og:image:secure_url" content="https://dabraka.org/assets/images/preview.png">
-    <meta property="og:image:type" content="image/png">
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
+    {{-- ✅ SEO Component --}}
+    <x-seo :title="$seoTitle ?? null" :description="$seoDescription ?? null" :image="$seoImage ?? null"
+        :url="$seoUrl ?? null" :type="$seoType ?? 'website'" :noindex="$seoNoindex ?? false" />
 
     {{-- ✅ Favicon --}}
     <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
-    <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
     <link rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap">
 
-    {{-- ✅ Flickity CSS for Carousel --}}
+    {{-- ✅ Flickity CSS --}}
     <link rel="stylesheet" href="https://unpkg.com/flickity@2/dist/flickity.min.css">
 
     {{-- Alpine.js --}}
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
-    {{-- ✨ BASE STYLES untuk prevent horizontal scroll --}}
     <style>
-        /* Prevent horizontal scroll */
         html,
         body {
             max-width: 100vw;
@@ -46,23 +35,19 @@
             position: relative;
         }
 
-        /* Smooth scroll */
         html {
             scroll-behavior: smooth;
         }
 
-        /* Fix untuk element yang keluar viewport */
         * {
             box-sizing: border-box;
         }
 
-        /* Container default max width */
         .container-safe {
             max-width: 100%;
             overflow-x: hidden;
         }
 
-        /* ✅ Flickity carousel fixes */
         .flickity-enabled {
             position: relative;
         }
@@ -83,7 +68,6 @@
             height: 100%;
         }
 
-        /* Fix untuk gambar carousel tidak muncul */
         .main-carousel .featured-news-card {
             width: 100%;
             min-height: 420px;
@@ -96,7 +80,6 @@
             object-fit: cover;
         }
 
-        /* Custom flickity button styles */
         .flickity-button {
             background: transparent;
             border: none;
@@ -136,7 +119,6 @@
 </head>
 
 <body class="m-0 antialiased bg-F8F9FC font-Poppins text-0B0B0B">
-    {{-- Wrapper untuk prevent overflow --}}
     <div class="flex flex-col min-h-screen overflow-x-hidden">
 
         {{-- Navbar --}}
@@ -157,13 +139,11 @@
         @endif
     </div>
 
-    {{-- Bottom navigation stack --}}
     @stack('bottom_nav')
 
-    {{-- ✅ Flickity JS for Carousel (before custom scripts) --}}
+    {{-- ✅ Flickity JS --}}
     <script src="https://unpkg.com/flickity@2/dist/flickity.pkgd.min.js"></script>
 
-    {{-- Scripts --}}
     @stack('scripts')
 </body>
 
