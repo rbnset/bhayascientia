@@ -537,6 +537,7 @@ class PublicationController extends Controller
                 'is_corresponding' => $author->pivot->is_corresponding ?? false,
                 'profile_type'     => $author->user_id ? 'user' : 'author',
                 'profile_id'       => $author->id,
+                'slug'             => $author->slug,
             ];
         });
 

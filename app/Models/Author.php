@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class Author extends Model
 {
@@ -19,6 +20,7 @@ class Author extends Model
     protected $fillable = [
         'user_id',
         'orcid_id',
+        'slug',        // ✅ SEO-friendly URL identifier
         'name',        // NULL jika linked ke user — dibaca dari users.name
         'email',       // NULL jika linked ke user — dibaca dari users.email
         'affiliation', // NULL = fallback ke users.affiliation / users.job_title
@@ -27,14 +29,69 @@ class Author extends Model
     ];
 
     // ========================================
-    // ACCESSORS — Baca dari User jika linked
+    // BOOT — Auto-generate slug
+    // ========================================
+
+    protected static function booted(): void
+    {
+        static::creating(function (Author $author) {
+            if (empty($author->slug)) {
+                $author->slug = $author->generateUniqueSlug();
+            }
+        });
+
+        // ✅ Saat nama author berubah (misal edit profil external author),
+        //    slug TIDAK diubah otomatis agar URL tetap stabil.
+        //    Jika ingin update slug, lakukan secara eksplisit.
+    }
+
+    // ========================================
+    // SLUG HELPERS
     // ========================================
 
     /**
-     * ✅ Override accessor 'name':
-     * - Jika linked ke user → ambil dari users.name
-     * - Jika external → ambil dari authors.name
+     * Generate slug unik dari nama author.
+     * Untuk author linked ke user, nama diambil dari users.name.
      */
+    public function generateUniqueSlug(?string $fromName = null): string
+    {
+        // Prioritas: parameter → user.name → author.name
+        $name = $fromName
+            ?? ($this->user_id ? User::find($this->user_id)?->name : null)
+            ?? $this->getRawOriginal('name')
+            ?? 'author';
+
+        $base    = Str::slug($name);
+        if (empty($base)) $base = 'author';
+
+        $slug    = $base;
+        $counter = 1;
+
+        while (
+            static::withTrashed()
+            ->where('slug', $slug)
+            ->where('id', '!=', $this->id ?? 0)
+            ->exists()
+        ) {
+            $slug = $base . '-' . $counter++;
+        }
+
+        return $slug;
+    }
+
+    /**
+     * Route model binding pakai slug.
+     * Aktifkan ini agar Laravel bisa resolve Author::findOrFail($slug) via route.
+     */
+    public function getRouteKeyName(): string
+    {
+        return 'slug';
+    }
+
+    // ========================================
+    // ACCESSORS — Baca dari User jika linked
+    // ========================================
+
     public function getNameAttribute($value): string
     {
         if ($this->user_id) {
@@ -49,9 +106,6 @@ class Author extends Model
         return $value ?? 'Unknown Author';
     }
 
-    /**
-     * ✅ Override accessor 'email'
-     */
     public function getEmailAttribute($value): ?string
     {
         if ($this->user_id) {
@@ -66,9 +120,6 @@ class Author extends Model
         return $value;
     }
 
-    /**
-     * ✅ Affiliation: authors.affiliation override, fallback ke user
-     */
     public function getAffiliationAttribute($value): ?string
     {
         if (!empty($value)) return $value;
@@ -85,9 +136,6 @@ class Author extends Model
         return null;
     }
 
-    /**
-     * ✅ Bio: authors.bio override, fallback ke user
-     */
     public function getBioAttribute($value): ?string
     {
         if (!empty($value)) return $value;
@@ -103,12 +151,8 @@ class Author extends Model
         return null;
     }
 
-    /**
-     * ✅ Foto: photo_path author override, fallback ke user photo
-     */
     public function getPhotoUrlAttribute(): string
     {
-        // 1. Foto khusus author (foto formal/akademik)
         if ($this->getRawOriginal('photo_path')) {
             $cleanPath = $this->cleanPath($this->getRawOriginal('photo_path'));
 
@@ -117,7 +161,6 @@ class Author extends Model
             }
         }
 
-        // 2. Foto dari user yang terhubung
         if ($this->user_id) {
             $user = $this->relationLoaded('user')
                 ? $this->user
@@ -126,15 +169,11 @@ class Author extends Model
             if ($user) return $user->photo_url;
         }
 
-        // 3. Fallback UI Avatars
         $name = $this->getRawOriginal('name') ?? 'Author';
         return 'https://ui-avatars.com/api/?name=' . urlencode($name) .
             '&background=FF6B18&color=fff&size=160&bold=true&font-size=0.4&length=2';
     }
 
-    /**
-     * ✅ Initials — gunakan nama yang sudah di-resolve
-     */
     public function getInitialsAttribute(): string
     {
         $name  = $this->name;
@@ -147,48 +186,30 @@ class Author extends Model
         return strtoupper(substr($name, 0, 2));
     }
 
-    /**
-     * ✅ Short bio — gunakan bio yang sudah di-resolve
-     */
     public function getShortBioAttribute(): ?string
     {
         $bio = $this->bio;
 
-        if (!$bio) {
-            return $this->affiliation;
-        }
+        if (!$bio) return $this->affiliation;
 
-        return strlen($bio) > 150
-            ? substr($bio, 0, 147) . '...'
-            : $bio;
+        return strlen($bio) > 150 ? substr($bio, 0, 147) . '...' : $bio;
     }
 
     // ========================================
     // CLAIM AUTHORSHIP
     // ========================================
 
-    /**
-     * ✅ Cek apakah author sudah terhubung ke akun user
-     */
     public function isClaimed(): bool
     {
         return !is_null($this->user_id);
     }
 
     /**
-     * ✅ Claim author oleh user — support merge jika user sudah punya author profile lain
-     *
-     * Skenario 1: User belum punya author profile
-     *   → Langsung link authors.user_id = user.id
-     *
-     * Skenario 2: User sudah punya author profile (misal dari assign role)
-     *   → Pindahkan semua publikasi dari author external (ini) ke author profile user
-     *   → Hapus author external (ini) karena sudah tidak diperlukan
-     *   → Yang dipakai adalah author profile user yang sudah ada (data dari tabel users)
+     * ✅ Saat user claim author, slug di-regenerate dari users.name
+     *    supaya URL mencerminkan nama asli user (bukan nama lama external).
      */
     public function claimBy(User $user): array
     {
-        // Pastikan author external ini belum diklaim siapapun
         if ($this->isClaimed()) {
             return [
                 'success' => false,
@@ -196,33 +217,25 @@ class Author extends Model
             ];
         }
 
-        // Cek apakah user sudah punya author profile lain
         $existingAuthorProfile = $user->authorProfile()->first();
 
         if ($existingAuthorProfile) {
-            // ══ Skenario 2: Merge ══
-            // User sudah punya author profile → pindahkan publikasi lalu hapus author external ini
             return $this->mergeInto($existingAuthorProfile);
         }
 
-        // ══ Skenario 1: Claim biasa ══
-        // User belum punya author profile → link langsung
+        // Claim biasa: update user_id dan regenerate slug dari nama user
+        $newSlug = $this->generateUniqueSlug($user->name);
+
         $this->update([
             'user_id' => $user->id,
-            'name'    => null, // tidak perlu duplikasi, dibaca dari users.name
-            'email'   => null, // tidak perlu duplikasi, dibaca dari users.email
-            // ✅ Sync ORCID dari author ke user jika user belum punya
-            'orcid_id' => $this->getRawOriginal('orcid_id') && !$user->orcid_id
-                ? null  // biarkan accessor baca dari user setelah sync
-                : $this->getRawOriginal('orcid_id'),
+            'slug'    => $newSlug, // ✅ Slug di-refresh dengan nama user
+            'name'    => null,
+            'email'   => null,
         ]);
 
-
-        // Jika author punya ORCID tapi user belum → pindahkan ke user
         if ($this->getRawOriginal('orcid_id') && !$user->orcid_id) {
             $user->update(['orcid_id' => $this->getRawOriginal('orcid_id')]);
         }
-
 
         return [
             'success' => true,
@@ -230,60 +243,39 @@ class Author extends Model
         ];
     }
 
-    /**
-     * ✅ Merge: pindahkan semua publikasi dari author external (ini) ke $targetAuthor
-     * lalu hapus author external (ini)
-     *
-     * Yang dipakai setelah merge adalah $targetAuthor (author profile milik user)
-     * Data nama, email, foto → dari tabel users via accessor $targetAuthor
-     */
     private function mergeInto(Author $targetAuthor): array
     {
         DB::transaction(function () use ($targetAuthor) {
-
-            // Ambil semua publikasi milik author external ini
             $myPublicationIds = $this->publications()->pluck('publications.id')->toArray();
 
             foreach ($myPublicationIds as $publicationId) {
-
-                // Cek apakah target author sudah terhubung ke publikasi ini
-                // (hindari duplikat di pivot author_publication)
                 $alreadyLinked = $targetAuthor->publications()
                     ->where('publications.id', $publicationId)
                     ->exists();
 
                 if (!$alreadyLinked) {
-                    // Ambil data pivot dari author external (order, is_corresponding)
                     $pivotData = $this->authorPublications()
                         ->where('publication_id', $publicationId)
                         ->first();
 
-                    // Pindahkan ke target author dengan data pivot yang sama
                     $targetAuthor->publications()->attach($publicationId, [
-                        'order'              => $pivotData?->order ?? 99,
-                        'is_corresponding'   => $pivotData?->is_corresponding ?? false,
+                        'order'            => $pivotData?->order ?? 99,
+                        'is_corresponding' => $pivotData?->is_corresponding ?? false,
                     ]);
                 }
             }
 
-            // Hapus semua relasi pivot author external ini
-            // (baris di tabel author_publication)
             $this->publications()->detach();
-
-            // Hapus author external (soft delete agar bisa di-restore jika perlu)
             $this->delete();
         });
 
         return [
-            'success'  => true,
-            'message'  => 'Berhasil! Semua publikasi dari profil author lama telah digabungkan ke akun Anda.',
-            'merged'   => true,
+            'success' => true,
+            'message' => 'Berhasil! Semua publikasi dari profil author lama telah digabungkan ke akun Anda.',
+            'merged'  => true,
         ];
     }
 
-    /**
-     * ✅ Lepas claim — kembalikan data dari user ke authors agar tidak hilang
-     */
     public function unclaim(): void
     {
         $user = $this->user;
@@ -296,6 +288,7 @@ class Author extends Model
             'affiliation' => $this->getRawOriginal('affiliation')
                 ?? $user?->affiliation
                 ?? $user?->job_title,
+            // ✅ Pertahankan slug yang sudah ada saat unclaim
         ]);
     }
 
@@ -367,12 +360,9 @@ class Author extends Model
     }
 
     // ========================================
-// ORCID ACCESSORS & HELPERS
-// ========================================
+    // ORCID ACCESSORS & HELPERS
+    // ========================================
 
-    /**
-     * ORCID: authors.orcid_id override, fallback ke user.orcid_id
-     */
     public function getOrcidIdAttribute($value): ?string
     {
         if (!empty($value)) return $value;
@@ -388,30 +378,20 @@ class Author extends Model
         return null;
     }
 
-    /**
-     * URL lengkap ke profil ORCID
-     */
     public function getOrcidUrlAttribute(): ?string
     {
         $id = $this->orcid_id;
         return $id ? "https://orcid.org/{$id}" : null;
     }
 
-    /**
-     * Validasi format ORCID: 0000-0000-0000-000X
-     */
     public static function isValidOrcid(string $orcid): bool
     {
-        // Format: 16 digit, dibagi 4 grup, digit terakhir bisa X
         return (bool) preg_match(
             '/^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$/',
             strtoupper($orcid)
         );
     }
 
-    /**
-     * Normalize input: 0000000000000000 → 0000-0000-0000-0000
-     */
     public static function normalizeOrcid(string $raw): ?string
     {
         $clean = preg_replace('/[^0-9X]/i', '', strtoupper($raw));

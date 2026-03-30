@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Traits\PublicationHelperTrait; // ✅ Import trait
+use App\Http\Controllers\Traits\PublicationHelperTrait;
 use App\Models\Author;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -12,28 +12,46 @@ use Illuminate\Support\Str;
 
 class AuthorController extends Controller
 {
-    use PublicationHelperTrait; // ✅ Use trait untuk getCoverUrl() dan helper methods
+    use PublicationHelperTrait;
 
     /**
-     * Display the author's profile with their publications
-     * Support both Author model and User model
+     * Display the author's profile with their publications.
+     *
+     * Identifier priority (untuk backward-compatibility):
+     *   1. slug  (robin-setiyawan)       → utama, SEO-friendly
+     *   2. id    (7)                     → redirect permanen ke slug
      */
-    public function show($identifier)
+    public function show(Request $request, string $identifier)
     {
-        $author = null;
-        $user   = null;
+        // ── 1. Cari by slug dulu (kasus normal) ──────────────────────────
+        $author = Author::with('user')->where('slug', $identifier)->first();
 
-        // ✅ Selalu cari di tabel authors dulu
-        if (is_numeric($identifier)) {
-            $author = Author::with('user')->find($identifier);
+        // ── 2. Fallback: jika identifier adalah angka, cari by ID ────────
+        //       lalu redirect 301 ke URL slug agar link lama tetap bekerja
+        if (!$author && is_numeric($identifier)) {
+            $author = Author::with('user')->find((int) $identifier);
+
+            if ($author && !empty($author->slug)) {
+                return redirect()
+                    ->route('author.profile', $author->slug)
+                    ->setStatusCode(301); // ✅ 301 = permanen, bagus untuk SEO
+            }
         }
 
-        // ✅ Fallback: cari di tabel users (untuk kasus lama / direct link)
+        // ── 3. Fallback: cari di tabel users (kasus legacy / direct link) ──
+        $user = null;
         if (!$author) {
-            $user = User::find($identifier);
+            $user = is_numeric($identifier) ? User::find($identifier) : null;
+
             if ($user) {
-                // Cek apakah user ini punya author profile
                 $author = $user->authorProfile ?? null;
+
+                // Jika user punya author profile, redirect ke slug author
+                if ($author && !empty($author->slug)) {
+                    return redirect()
+                        ->route('author.profile', $author->slug)
+                        ->setStatusCode(301);
+                }
             }
         }
 
@@ -41,37 +59,16 @@ class AuthorController extends Controller
             abort(404, 'Author not found');
         }
 
-        // ✅ Jika author ditemukan (kasus utama sekarang)
-        if ($author) {
-            // Load user jika belum ter-load
-            if (!$author->relationLoaded('user')) {
-                $author->load('user');
-            }
-
-            $user        = $author->user; // bisa null jika external author
-            $name        = $author->name; // accessor resolved dari user jika ada
-            $email       = $author->email;
-            $bio         = $author->bio ?? ($user?->bio ?? null);
-            $affiliation = $author->affiliation ?? ($user?->job_title ?? null);
-            $photoUrl    = $author->photo_url;
-
-            $publicationsQuery = $author->publications();
-        } else {
-            // Fallback: user tanpa author profile
-            $name        = $user->name;
-            $email       = $user->email;
-            $bio         = $user->bio ?? null;
-            $affiliation = $user->affiliation ?? $user->job_title ?? null;
-            $photoUrl    = $user->photo_url;
-
+        // ── 4. Kasus: user tanpa author profile (sangat jarang) ──────────
+        if (!$author) {
             return view('author.profile', [
                 'user'                  => $user,
                 'author'                => null,
-                'name'                  => $name,
-                'email'                 => $email,
-                'bio'                   => $bio,
-                'affiliation'           => $affiliation,
-                'photoUrl'              => $photoUrl,
+                'name'                  => $user->name,
+                'email'                 => $user->email,
+                'bio'                   => $user->bio ?? null,
+                'affiliation'           => $user->affiliation ?? $user->job_title ?? null,
+                'photoUrl'              => $user->photo_url,
                 'publications'          => collect()->paginate(9),
                 'formattedPublications' => collect(),
                 'totalPublications'     => 0,
@@ -79,11 +76,28 @@ class AuthorController extends Controller
                 'totalDownloads'        => 0,
                 'coAuthors'             => collect(),
                 'isUserProfile'         => true,
+                // SEO
+                'seoTitle'              => $user->name . ' — Profil Author | DABRAKA',
+                'seoDescription'        => 'Profil dan publikasi ilmiah dari ' . $user->name . ' di DABRAKA.',
+                'seoUrl'                => request()->url(),
+                'seoImage'              => $user->photo_url ?? null,
             ]);
         }
 
-        // ✅ Get publications dengan pagination
-        $publications = $publicationsQuery
+        // ── 5. Author ditemukan — load user jika perlu ───────────────────
+        if (!$author->relationLoaded('user')) {
+            $author->load('user');
+        }
+
+        $user        = $author->user;
+        $name        = $author->name;
+        $email       = $author->email;
+        $bio         = $author->bio ?? ($user?->bio ?? null);
+        $affiliation = $author->affiliation ?? ($user?->job_title ?? null);
+        $photoUrl    = $author->photo_url;
+
+        // ── 6. Publications ──────────────────────────────────────────────
+        $publications = $author->publications()
             ->with(['publicationType', 'categories', 'authors.user', 'downloadLogs', 'viewLogs'])
             ->where('status', 'published')
             ->whereNotNull('published_at')
@@ -92,10 +106,8 @@ class AuthorController extends Controller
             ->paginate(9)
             ->withQueryString();
 
-        // ✅ Format publications
         $formattedPublications = $publications->getCollection()->transform(function ($publication) {
             $category = $publication->categories->first();
-
             $pubType  = $publication->publicationType?->name ?? 'Publikasi';
             $coverUrl = $this->getCoverUrl($publication);
 
@@ -128,7 +140,7 @@ class AuthorController extends Controller
             ];
         });
 
-        // ✅ Stats
+        // ── 7. Stats ─────────────────────────────────────────────────────
         $publicationIds = $author->publications()
             ->where('status', 'published')
             ->whereNotNull('published_at')
@@ -148,7 +160,7 @@ class AuthorController extends Controller
             ->whereIn('publication_id', $publicationIds)
             ->count();
 
-        // ✅ Co-authors
+        // ── 8. Co-authors ─────────────────────────────────────────────────
         $coAuthors = Author::whereHas('publications', function ($query) use ($author) {
             $query->whereIn('publications.id', function ($sub) use ($author) {
                 $sub->select('publication_id')
@@ -174,9 +186,28 @@ class AuthorController extends Controller
                 'photo_url'          => $coAuthor->photo_url,
                 'initials'           => $coAuthor->initials,
                 'publications_count' => $coAuthor->publications_count,
-                // ✅ FIXED: selalu gunakan author->id
-                'profile_url'        => route('author.profile', $coAuthor->id),
+                // ✅ Gunakan slug untuk URL co-author
+                'profile_url'        => route('author.profile', $coAuthor->slug),
             ]);
+
+        // ── 9. SEO Meta ───────────────────────────────────────────────────
+        $latestPubYear = $publications->first()?->published_at?->year;
+        $pubTypeList   = $publications->getCollection()
+            ->pluck('publication_type')->unique()->implode(', ');
+
+        $seoTitle = $name . ' — Profil Peneliti & Publikasi Ilmiah | DABRAKA';
+
+        $seoDescription = trim(
+            $name
+                . ($affiliation ? ', ' . $affiliation : '')
+                . '. Penulis ' . $totalPublications . ' publikasi ilmiah'
+                . ($latestPubYear ? ' (terakhir ' . $latestPubYear . ')' : '')
+                . ($pubTypeList ? ': ' . $pubTypeList : '')
+                . '. Temukan karya ilmiah lengkapnya di DABRAKA.'
+        );
+
+        // Canonical URL selalu pakai slug
+        $canonicalUrl = route('author.profile', $author->slug);
 
         return view('author.profile', [
             'author'                => $author,
@@ -193,6 +224,13 @@ class AuthorController extends Controller
             'totalDownloads'        => $totalDownloads,
             'coAuthors'             => $coAuthors,
             'isUserProfile'         => (bool) $author->user_id,
+            // ✅ SEO variables
+            'seoTitle'              => $seoTitle,
+            'seoDescription'        => $seoDescription,
+            'seoUrl'                => $canonicalUrl,
+            'seoImage'              => $photoUrl,
+            'seoAuthorName'         => $name,
+            'seoAffiliation'        => $affiliation,
         ]);
     }
 }

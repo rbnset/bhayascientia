@@ -490,7 +490,7 @@ $hasFile = $latestVersion && !empty($latestVersion->pdf_file_path);
             <p class="text-sm font-bold text-[#737373] uppercase tracking-wide mb-3">Authors</p>
             <div class="flex flex-wrap gap-3">
                 @foreach($authors->take(3) as $author)
-                <a href="{{ route('author.profile', $author['profile_id']) }}"
+                <a href="{{ route('author.profile', $author['slug']) }}"
                     class="inline-flex items-center gap-2.5 px-4 py-2.5 bg-[#F8F9FC] rounded-xl hover:bg-[#FFF7F2] hover:shadow-md hover:scale-105 transition-all duration-300 cursor-pointer group">
                     @if($author['photo'])
                     <img src="{{ $author['photo'] }}" alt="{{ $author['name'] }}"
@@ -965,7 +965,7 @@ $hasFile = $latestVersion && !empty($latestVersion->pdf_file_path);
             <div class="modal-body">
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                     @foreach($authors as $index => $author)
-                    <a href="{{ route('author.profile', $author['profile_id']) }}" class="block author-card-modal">
+                    <a href="{{ route('author.profile', $author['slug']) }}" class="block author-card-modal">
                         <div class="flex items-start gap-4">
                             <div class="flex-shrink-0">
                                 @if($author['photo'])

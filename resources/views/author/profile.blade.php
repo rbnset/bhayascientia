@@ -919,6 +919,85 @@
 
 @section('content')
 
+@section('title', $seoTitle ?? ($name . ' — Profil Author | DABRAKA'))
+@section('description', $seoDescription ?? ('Profil dan publikasi ilmiah dari ' . $name . ' di DABRAKA.'))
+
+@push('head')
+{{-- ✅ Canonical URL — selalu pakai slug --}}
+<link rel="canonical" href="{{ $seoUrl ?? request()->url() }}">
+
+{{-- ✅ Open Graph (WhatsApp, Facebook, LinkedIn preview) --}}
+<meta property="og:type" content="profile">
+<meta property="og:title" content="{{ $seoTitle ?? $name }}">
+<meta property="og:description" content="{{ $seoDescription ?? '' }}">
+<meta property="og:url" content="{{ $seoUrl ?? request()->url() }}">
+@if(!empty($seoImage))
+<meta property="og:image" content="{{ $seoImage }}">
+@endif
+<meta property="og:site_name" content="DABRAKA">
+@if(!empty($seoAuthorName))
+<meta property="profile:first_name" content="{{ Str::before($seoAuthorName, ' ') }}">
+<meta property="profile:last_name" content="{{ Str::after($seoAuthorName, ' ') }}">
+@endif
+
+{{-- ✅ Twitter Card --}}
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="{{ $seoTitle ?? $name }}">
+<meta name="twitter:description" content="{{ $seoDescription ?? '' }}">
+@if(!empty($seoImage))
+<meta name="twitter:image" content="{{ $seoImage }}">
+@endif
+
+{{-- ✅ Person Schema (Google Rich Results) --}}
+@php
+$personSchema = [
+'@context' => 'https://schema.org',
+'@type' => 'Person',
+'name' => $name,
+'url' => $seoUrl ?? request()->url(),
+];
+
+if (!empty($seoImage)) $personSchema['image'] = $seoImage;
+if (!empty($seoAffiliation)) $personSchema['affiliation'] = [
+'@type' => 'Organization',
+'name' => $seoAffiliation,
+];
+if (!empty($bio)) $personSchema['description'] = Str::limit(strip_tags($bio), 200);
+if (!empty($author?->orcid_url)) {
+$personSchema['sameAs'] = [$author->orcid_url];
+}
+
+// Tambahkan publikasi terbaru sebagai itemList
+if ($formattedPublications->isNotEmpty()) {
+$personSchema['author'] = $formattedPublications->take(5)->map(fn($pub) => [
+'@type' => 'ScholarlyArticle',
+'name' => $pub['title'],
+'url' => $pub['detail_url'],
+'datePublished' => $pub['formatted_date'] ?? null,
+])->filter()->values()->toArray();
+}
+@endphp
+<script type="application/ld+json">
+    {!! json_encode($personSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) !!}
+</script>
+
+{{-- ✅ BreadcrumbList Schema --}}
+@php
+$breadcrumbSchema = [
+'@context' => 'https://schema.org',
+'@type' => 'BreadcrumbList',
+'itemListElement' => [
+['@type' => 'ListItem', 'position' => 1, 'name' => 'Beranda', 'item' => route('beranda')],
+['@type' => 'ListItem', 'position' => 2, 'name' => 'Penulis', 'item' => url('/author')],
+['@type' => 'ListItem', 'position' => 3, 'name' => $name, 'item' => $seoUrl ?? request()->url()],
+],
+];
+@endphp
+<script type="application/ld+json">
+    {!! json_encode($breadcrumbSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}
+</script>
+@endpush
+
 {{-- ✨ Anchor scroll ke atas --}}
 <div id="top-anchor"></div>
 
