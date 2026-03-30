@@ -389,6 +389,20 @@ class PublicationForm
     // FIX UX: Tipe publikasi hanya diisi SATU KALI di step ini, tidak diulang di step berikutnya.
     // ══════════════════════════════════════════════════════════════════════════
 
+    // ══════════════════════════════════════════════════════════════════════════
+    // HELPER — normalisasi nilai is_previously_published
+    // Cast boolean di model menyebabkan nilai false/true/null/0/1/'0'/'1'
+    // semua bisa masuk ke $get(). Helper ini meng-handle semua kemungkinan.
+    // ══════════════════════════════════════════════════════════════════════════
+
+    private static function isPreviouslyPublished(Get $get): bool
+    {
+        $val = $get('is_previously_published');
+        // Handle: true, 1, '1', 'true' → true
+        // Handle: false, 0, '0', null, '' → false
+        return filter_var($val, FILTER_VALIDATE_BOOLEAN);
+    }
+
     private static function buildPriorPublicationStep(): Step
     {
         return Step::make('Tipe & Riwayat Karya')
@@ -398,7 +412,9 @@ class PublicationForm
             ->columns(2)
             ->schema([
 
-                // ── BAGIAN 1: Pilih Tipe Karya ────────────────────────────
+                // ══════════════════════════════════════════════════════════
+                // BAGIAN 1: Tipe Karya
+                // ══════════════════════════════════════════════════════════
                 Section::make('Tipe Karya')
                     ->description('Pilih jenis karya yang akan didaftarkan. Pilihan ini berlaku untuk seluruh form.')
                     ->icon('heroicon-o-document-text')
@@ -422,22 +438,20 @@ class PublicationForm
                             ->disabled(fn() => self::isFieldDisabled())
                             ->columnSpanFull(),
 
-                        // Info box tipe yang dipilih
                         Placeholder::make('type_info_box')
                             ->label('')
                             ->content(function (Get $get) {
                                 $slug = self::publicationTypeSlug($get);
-                                if (!$slug) return new \Illuminate\Support\HtmlString('');
-
+                                if (!$slug) return new \Illuminate\Support\HtmlString(
+                                    "<div style='color:#9CA3AF;font-size:13px;padding:8px 0;'>Pilih tipe karya untuk melihat detail yang diperlukan.</div>"
+                                );
                                 $map = [
-                                    'jurnal' => ['icon' => '📄', 'label' => 'Jurnal / Artikel Ilmiah', 'color' => '#1D4ED8', 'bg' => '#EFF6FF', 'border' => '#BFDBFE', 'id' => 'DOI', 'desc' => 'Membutuhkan: Abstrak · Keywords (3–7) · Metode Penelitian · DOI (jika sudah terbit)'],
-                                    'buku'   => ['icon' => '📚', 'label' => 'Buku', 'color' => '#166534', 'bg' => '#F0FDF4', 'border' => '#BBF7D0', 'id' => 'ISBN', 'desc' => 'Membutuhkan: Sinopsis · Tags · ISBN (jika sudah terbit)'],
-                                    'opini'  => ['icon' => '✍️', 'label' => 'Opini / Artikel Populer', 'color' => '#92400E', 'bg' => '#FFFBEB', 'border' => '#FDE68A', 'id' => 'Nama Media', 'desc' => 'Membutuhkan: Isi Opini · Topik · Nama Media (jika sudah terbit)'],
+                                    'jurnal' => ['icon' => '📄', 'label' => 'Jurnal / Artikel Ilmiah', 'color' => '#1D4ED8', 'bg' => '#EFF6FF', 'border' => '#BFDBFE', 'desc' => 'Membutuhkan: Abstrak · Keywords (3–7) · Metode Penelitian · DOI (jika sudah terbit)'],
+                                    'buku'   => ['icon' => '📚', 'label' => 'Buku', 'color' => '#166534', 'bg' => '#F0FDF4', 'border' => '#BBF7D0', 'desc' => 'Membutuhkan: Sinopsis · Tags · ISBN (jika sudah terbit)'],
+                                    'opini'  => ['icon' => '✍️', 'label' => 'Opini / Artikel Populer', 'color' => '#92400E', 'bg' => '#FFFBEB', 'border' => '#FDE68A', 'desc' => 'Membutuhkan: Isi Opini · Topik · Nama Media (jika sudah terbit)'],
                                 ];
-
                                 $cfg = $map[$slug] ?? null;
                                 if (!$cfg) return new \Illuminate\Support\HtmlString('');
-
                                 return new \Illuminate\Support\HtmlString("
                                     <div style='background:{$cfg['bg']};border:1px solid {$cfg['border']};border-left:4px solid {$cfg['color']};border-radius:8px;padding:12px 16px;font-size:13px;'>
                                         <div style='font-weight:700;color:{$cfg['color']};margin-bottom:4px;'>{$cfg['icon']} {$cfg['label']}</div>
@@ -445,18 +459,26 @@ class PublicationForm
                                     </div>
                                 ");
                             })
-                            ->visible(fn(Get $get) => filled($get('publication_type_id')))
                             ->columnSpanFull(),
                     ]),
 
-                // ── BAGIAN 2: Riwayat Publikasi ───────────────────────────
+                // ══════════════════════════════════════════════════════════
+                // BAGIAN 2: Radio pilihan + SEMUA field detail prior
+                // publication ada di satu Section yang TIDAK di-hidden.
+                // Visibilitas dikontrol per-field dengan ->hidden().
+                //
+                // KENAPA TIDAK hidden Section-nya:
+                // Jika Section di-hidden saat mount, Radio child-nya tidak
+                // ter-render → $get('is_previously_published') = null → semua
+                // field hidden selamanya meski Radio sudah diklik.
+                // ══════════════════════════════════════════════════════════
                 Section::make('Riwayat Publikasi')
                     ->description('Apakah karya ini pernah diterbitkan di tempat lain sebelumnya?')
                     ->icon('heroicon-o-document-magnifying-glass')
                     ->columnSpanFull()
-                    ->visible(fn(Get $get) => filled($get('publication_type_id')))
                     ->schema([
 
+                        // ── Radio: selalu visible ─────────────────────────
                         Radio::make('is_previously_published')
                             ->label('Status publikasi sebelumnya')
                             ->options([
@@ -482,172 +504,168 @@ class PublicationForm
                                     <p style='font-size:13px;color:#166534;margin:0;'>Pastikan karya belum dikirimkan ke platform atau jurnal lain secara bersamaan (<em>simultaneous submission</em>).</p>
                                 </div>
                             "))
-                            ->visible(fn(Get $get) => $get('is_previously_published') === '0')
+                            ->hidden(fn(Get $get) => self::isPreviouslyPublished($get))
+                            ->columnSpanFull(),
+
+                        // ── Header detail prior publication ───────────────
+                        Placeholder::make('prior_detail_header')
+                            ->label('')
+                            ->content(new \Illuminate\Support\HtmlString("
+                                <div style='background:#EFF6FF;border:1px solid #BFDBFE;border-left:4px solid #1D4ED8;border-radius:8px;padding:14px 18px;'>
+                                    <div style='font-size:14px;font-weight:700;color:#1D4ED8;margin-bottom:4px;'>🔗 Detail Publikasi Sebelumnya</div>
+                                    <div style='font-size:13px;color:#374151;'>Lengkapi semua informasi berikut dengan jujur dan akurat.</div>
+                                </div>
+                            "))
+                            ->hidden(fn(Get $get) => !self::isPreviouslyPublished($get))
+                            ->columnSpanFull(),
+
+                        // ── Nama platform/penerbit ────────────────────────
+                        TextInput::make('prior_publisher_name')
+                            ->label('Nama Platform / Penerbit Sebelumnya')
+                            ->placeholder('Contoh: ResearchGate, Elsevier, Gramedia, Kompas')
+                            ->required(fn(Get $get) => self::isPreviouslyPublished($get))
+                            ->maxLength(255)
+                            ->prefixIcon('heroicon-o-building-library')
+                            ->helperText('Nama platform, jurnal, atau penerbit tempat karya pertama kali diterbitkan.')
+                            ->hidden(fn(Get $get) => !self::isPreviouslyPublished($get))
+                            ->disabled(fn() => self::isFieldDisabled())
+                            ->columnSpan(1),
+
+                        // ── URL publikasi sebelumnya ──────────────────────
+                        TextInput::make('prior_publisher_url')
+                            ->label('URL / Link Karya Sebelumnya')
+                            ->placeholder('https://doi.org/10.xxxx/... atau https://researchgate.net/...')
+                            ->url()
+                            ->required(fn(Get $get) => self::isPreviouslyPublished($get))
+                            ->maxLength(500)
+                            ->prefixIcon('heroicon-o-link')
+                            ->helperText('URL langsung ke halaman karya. Akan diverifikasi oleh admin.')
+                            ->suffixAction(
+                                \Filament\Actions\Action::make('open_prior_url')
+                                    ->icon('heroicon-o-arrow-top-right-on-square')
+                                    ->url(fn(Get $get) => $get('prior_publisher_url'))
+                                    ->openUrlInNewTab()
+                                    ->hidden(fn(Get $get) => !filled($get('prior_publisher_url')))
+                            )
+                            ->hidden(fn(Get $get) => !self::isPreviouslyPublished($get))
+                            ->disabled(fn() => self::isFieldDisabled())
+                            ->columnSpan(1),
+
+                        // ── Identifier tunggal (DOI / ISBN / Nama Media) ──
+                        TextInput::make('prior_identifier_value')
+                            ->label(fn(Get $get) => match (self::publicationTypeSlug($get)) {
+                                'jurnal' => 'DOI (Digital Object Identifier)',
+                                'buku'   => 'ISBN (International Standard Book Number)',
+                                'opini'  => 'Nama Media / Portal Tempat Opini Diterbitkan',
+                                default  => 'Identifier Publikasi',
+                            })
+                            ->placeholder(fn(Get $get) => match (self::publicationTypeSlug($get)) {
+                                'jurnal' => '10.1016/j.xxx.2024.01.001',
+                                'buku'   => '978-602-XXXX-XX-X',
+                                'opini'  => 'Contoh: Kompas, Tempo, Detik.com, Kumparan',
+                                default  => '',
+                            })
+                            ->prefix(fn(Get $get) => match (self::publicationTypeSlug($get)) {
+                                'jurnal' => 'https://doi.org/',
+                                'buku'   => 'ISBN',
+                                default  => null,
+                            })
+                            ->helperText(fn(Get $get) => match (self::publicationTypeSlug($get)) {
+                                'jurnal' => 'Format: 10.xxxx/yyyyy — tanpa awalan "https://doi.org/"',
+                                'buku'   => 'Format ISBN-13: 978-XXX-XXXX-XX-X',
+                                'opini'  => 'Nama media tempat opini pertama kali diterbitkan.',
+                                default  => '',
+                            })
+                            ->maxLength(255)
+                            ->required(fn(Get $get) => self::isPreviouslyPublished($get))
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(function (Get $get, Set $set) {
+                                $set('prior_identifier_type', match (self::publicationTypeSlug($get)) {
+                                    'jurnal' => 'doi',
+                                    'buku'   => 'isbn',
+                                    'opini'  => 'media_name',
+                                    default  => null,
+                                });
+                            })
+                            ->suffixAction(
+                                \Filament\Actions\Action::make('open_doi_url')
+                                    ->icon('heroicon-o-arrow-top-right-on-square')
+                                    ->url(
+                                        fn(Get $get) =>
+                                        self::publicationTypeSlug($get) === 'jurnal' && filled($get('prior_identifier_value'))
+                                            ? 'https://doi.org/' . $get('prior_identifier_value')
+                                            : null
+                                    )
+                                    ->openUrlInNewTab()
+                                    ->hidden(
+                                        fn(Get $get) =>
+                                        self::publicationTypeSlug($get) !== 'jurnal'
+                                            || !filled($get('prior_identifier_value'))
+                                    )
+                            )
+                            ->hidden(fn(Get $get) => !self::isPreviouslyPublished($get))
+                            ->disabled(fn() => self::isFieldDisabled())
+                            ->columnSpan(1),
+
+                        // ── Hidden: identifier type (set otomatis) ────────
+                        TextInput::make('prior_identifier_type')
+                            ->hidden()
+                            ->dehydrated(),
+
+                        // ── Tanggal terbit pertama ────────────────────────
+                        DatePicker::make('prior_published_date')
+                            ->label('Tanggal Pertama Diterbitkan')
+                            ->required(fn(Get $get) => self::isPreviouslyPublished($get))
+                            ->maxDate(now())
+                            ->displayFormat('d F Y')
+                            ->helperText('Tanggal publikasi pertama di platform/media sebelumnya.')
+                            ->hidden(fn(Get $get) => !self::isPreviouslyPublished($get))
+                            ->disabled(fn() => self::isFieldDisabled())
+                            ->columnSpan(1),
+
+                        // ── Lisensi OA ────────────────────────────────────
+                        Select::make('origin_license')
+                            ->label('Lisensi Open Access di Sumber Asli')
+                            ->options([
+                                'CC BY 4.0'       => 'CC BY 4.0 — Atribusi (paling terbuka)',
+                                'CC BY-SA 4.0'    => 'CC BY-SA 4.0 — Atribusi-BerbagiSerupa',
+                                'CC BY-NC 4.0'    => 'CC BY-NC 4.0 — Atribusi-NonKomersial',
+                                'CC BY-NC-SA 4.0' => 'CC BY-NC-SA 4.0 — Atribusi-NonKomersial-BerbagiSerupa',
+                                'CC BY-ND 4.0'    => 'CC BY-ND 4.0 — Atribusi-TanpaModifikasi',
+                                'CC BY-NC-ND 4.0' => 'CC BY-NC-ND 4.0 — Atribusi-NonKomersial-TanpaModifikasi',
+                                'CC0 1.0'         => 'CC0 1.0 — Public Domain (tanpa syarat)',
+                                'other'           => 'Lisensi terbuka lainnya',
+                            ])
+                            ->required(fn(Get $get) => self::isPreviouslyPublished($get))
+                            ->searchable()
+                            ->helperText('Pilih lisensi CC yang berlaku di platform asal.')
+                            ->hidden(fn(Get $get) => !self::isPreviouslyPublished($get))
+                            ->disabled(fn() => self::isFieldDisabled())
+                            ->columnSpan(1),
+
+                        // ── Konfirmasi OA ─────────────────────────────────
+                        Checkbox::make('is_open_access_origin')
+                            ->label('✅ Saya mengkonfirmasi bahwa karya ini berstatus Open Access di platform/penerbit asal dan saya berhak mempublikasikan ulang karya ini.')
+                            ->required(fn(Get $get) => self::isPreviouslyPublished($get))
+                            ->accepted()
+                            ->validationMessages(['accepted' => 'Anda harus mengkonfirmasi status Open Access karya ini.'])
+                            ->helperText('Dengan mencentang ini, Anda menyatakan bahwa karya dapat dipublikasikan ulang secara legal.')
+                            ->hidden(fn(Get $get) => !self::isPreviouslyPublished($get))
+                            ->disabled(fn() => self::isFieldDisabled())
+                            ->columnSpanFull(),
+
+                        // ── Warning hukum ─────────────────────────────────
+                        Placeholder::make('oa_warning')
+                            ->label('')
+                            ->content(new \Illuminate\Support\HtmlString("
+                                <div style='background:#FEF9C3;border:1px solid #FDE047;border-left:4px solid #EAB308;border-radius:6px;padding:12px 16px;font-size:13px;color:#713F12;'>
+                                    ⚠️ <strong>Peringatan:</strong> Jika karya tidak berstatus Open Access di sumber aslinya dan Anda tidak memiliki izin redistribusi, tindakan tersebut dapat merupakan <strong>pelanggaran hak cipta</strong> sesuai <strong>UU No. 28 Tahun 2014</strong> (Pasal 113 — pidana penjara maks. 4 tahun dan/atau denda maks. Rp 1 miliar).
+                                </div>
+                            "))
+                            ->hidden(fn(Get $get) => !self::isPreviouslyPublished($get))
                             ->columnSpanFull(),
 
                     ]),
-
-                // ══════════════════════════════════════════════════════════
-                // FIX UTAMA: Field-field detail prior publication di-flatten
-                // di level yang sama, TIDAK di dalam Section nested.
-                // Ini agar ->visible() bereaksi langsung terhadap Livewire.
-                // ══════════════════════════════════════════════════════════
-
-                // Judul pemisah visual (hanya muncul jika "Ya")
-                Placeholder::make('prior_section_heading')
-                    ->label('')
-                    ->content(new \Illuminate\Support\HtmlString("
-                        <div style='background:#EFF6FF;border:1px solid #BFDBFE;border-left:4px solid #1D4ED8;border-radius:8px;padding:14px 18px;'>
-                            <div style='font-size:14px;font-weight:700;color:#1D4ED8;margin-bottom:4px;'>🔗 Detail Publikasi Sebelumnya</div>
-                            <div style='font-size:13px;color:#374151;'>Lengkapi informasi berikut dengan jujur dan akurat. Semua field wajib diisi.</div>
-                        </div>
-                    "))
-                    ->visible(fn(Get $get) => $get('is_previously_published') === '1')
-                    ->columnSpanFull(),
-
-                // Nama platform/penerbit
-                TextInput::make('prior_publisher_name')
-                    ->label('Nama Platform / Penerbit Sebelumnya')
-                    ->placeholder('Contoh: ResearchGate, Elsevier, Gramedia, Kompas')
-                    ->required(fn(Get $get) => $get('is_previously_published') === '1')
-                    ->maxLength(255)
-                    ->prefixIcon('heroicon-o-building-library')
-                    ->helperText('Nama platform, jurnal, atau penerbit tempat karya pertama kali diterbitkan.')
-                    ->visible(fn(Get $get) => $get('is_previously_published') === '1')
-                    ->disabled(fn() => self::isFieldDisabled())
-                    ->columnSpan(1),
-
-                // URL publikasi sebelumnya
-                TextInput::make('prior_publisher_url')
-                    ->label('URL / Link Karya Sebelumnya')
-                    ->placeholder('https://doi.org/10.xxxx/... atau https://researchgate.net/...')
-                    ->url()
-                    ->required(fn(Get $get) => $get('is_previously_published') === '1')
-                    ->maxLength(500)
-                    ->prefixIcon('heroicon-o-link')
-                    ->helperText('URL langsung ke halaman karya. Akan diverifikasi oleh admin.')
-                    ->suffixAction(
-                        \Filament\Actions\Action::make('open_prior_url')
-                            ->icon('heroicon-o-arrow-top-right-on-square')
-                            ->url(fn(Get $get) => $get('prior_publisher_url'))
-                            ->openUrlInNewTab()
-                            ->visible(fn(Get $get) => filled($get('prior_publisher_url')))
-                    )
-                    ->visible(fn(Get $get) => $get('is_previously_published') === '1')
-                    ->disabled(fn() => self::isFieldDisabled())
-                    ->columnSpan(1),
-
-                // Identifier tunggal — label & prefix berubah sesuai tipe karya
-                TextInput::make('prior_identifier_value')
-                    ->label(fn(Get $get) => match (self::publicationTypeSlug($get)) {
-                        'jurnal' => 'DOI (Digital Object Identifier)',
-                        'buku'   => 'ISBN (International Standard Book Number)',
-                        'opini'  => 'Nama Media / Portal Tempat Opini Diterbitkan',
-                        default  => 'Identifier Publikasi',
-                    })
-                    ->placeholder(fn(Get $get) => match (self::publicationTypeSlug($get)) {
-                        'jurnal' => '10.1016/j.xxx.2024.01.001',
-                        'buku'   => '978-602-XXXX-XX-X',
-                        'opini'  => 'Contoh: Kompas, Tempo, Detik.com, Kumparan',
-                        default  => '',
-                    })
-                    ->prefix(fn(Get $get) => match (self::publicationTypeSlug($get)) {
-                        'jurnal' => 'https://doi.org/',
-                        'buku'   => 'ISBN',
-                        default  => null,
-                    })
-                    ->helperText(fn(Get $get) => match (self::publicationTypeSlug($get)) {
-                        'jurnal' => 'Format: 10.xxxx/yyyyy — tanpa awalan "https://doi.org/"',
-                        'buku'   => 'Format ISBN-13: 978-XXX-XXXX-XX-X',
-                        'opini'  => 'Nama media tempat opini pertama kali diterbitkan.',
-                        default  => '',
-                    })
-                    ->maxLength(255)
-                    ->required(fn(Get $get) => $get('is_previously_published') === '1')
-                    ->live(onBlur: true)
-                    ->afterStateUpdated(function (Get $get, Set $set) {
-                        $set('prior_identifier_type', match (self::publicationTypeSlug($get)) {
-                            'jurnal' => 'doi',
-                            'buku'   => 'isbn',
-                            'opini'  => 'media_name',
-                            default  => null,
-                        });
-                    })
-                    ->suffixAction(
-                        \Filament\Actions\Action::make('open_doi_url')
-                            ->icon('heroicon-o-arrow-top-right-on-square')
-                            ->url(fn(Get $get) => self::publicationTypeSlug($get) === 'jurnal' && filled($get('prior_identifier_value'))
-                                ? 'https://doi.org/' . $get('prior_identifier_value')
-                                : null)
-                            ->openUrlInNewTab()
-                            ->visible(
-                                fn(Get $get) =>
-                                self::publicationTypeSlug($get) === 'jurnal'
-                                    && filled($get('prior_identifier_value'))
-                            )
-                    )
-                    ->visible(fn(Get $get) => $get('is_previously_published') === '1')
-                    ->disabled(fn() => self::isFieldDisabled())
-                    ->columnSpan(1),
-
-                // Hidden — identifier type
-                TextInput::make('prior_identifier_type')
-                    ->hidden()
-                    ->dehydrated(),
-
-                // Tanggal terbit pertama
-                DatePicker::make('prior_published_date')
-                    ->label('Tanggal Pertama Diterbitkan')
-                    ->required(fn(Get $get) => $get('is_previously_published') === '1')
-                    ->maxDate(now())
-                    ->displayFormat('d F Y')
-                    ->helperText('Tanggal publikasi pertama di platform/media sebelumnya.')
-                    ->visible(fn(Get $get) => $get('is_previously_published') === '1')
-                    ->disabled(fn() => self::isFieldDisabled())
-                    ->columnSpan(1),
-
-                // Lisensi OA
-                Select::make('origin_license')
-                    ->label('Lisensi Open Access di Sumber Asli')
-                    ->options([
-                        'CC BY 4.0'       => 'CC BY 4.0 — Atribusi (paling terbuka)',
-                        'CC BY-SA 4.0'    => 'CC BY-SA 4.0 — Atribusi-BerbagiSerupa',
-                        'CC BY-NC 4.0'    => 'CC BY-NC 4.0 — Atribusi-NonKomersial',
-                        'CC BY-NC-SA 4.0' => 'CC BY-NC-SA 4.0 — Atribusi-NonKomersial-BerbagiSerupa',
-                        'CC BY-ND 4.0'    => 'CC BY-ND 4.0 — Atribusi-TanpaModifikasi',
-                        'CC BY-NC-ND 4.0' => 'CC BY-NC-ND 4.0 — Atribusi-NonKomersial-TanpaModifikasi',
-                        'CC0 1.0'         => 'CC0 1.0 — Public Domain (tanpa syarat)',
-                        'other'           => 'Lisensi terbuka lainnya',
-                    ])
-                    ->required(fn(Get $get) => $get('is_previously_published') === '1')
-                    ->searchable()
-                    ->helperText('Pilih lisensi CC yang berlaku di platform asal.')
-                    ->visible(fn(Get $get) => $get('is_previously_published') === '1')
-                    ->disabled(fn() => self::isFieldDisabled())
-                    ->columnSpan(1),
-
-                // Konfirmasi OA
-                Checkbox::make('is_open_access_origin')
-                    ->label('✅ Saya mengkonfirmasi bahwa karya ini berstatus Open Access di platform/penerbit asal dan saya berhak mempublikasikan ulang karya ini.')
-                    ->required(fn(Get $get) => $get('is_previously_published') === '1')
-                    ->accepted()
-                    ->validationMessages(['accepted' => 'Anda harus mengkonfirmasi status Open Access karya ini.'])
-                    ->helperText('Dengan mencentang ini, Anda menyatakan bahwa karya dapat dipublikasikan ulang secara legal.')
-                    ->visible(fn(Get $get) => $get('is_previously_published') === '1')
-                    ->disabled(fn() => self::isFieldDisabled())
-                    ->columnSpanFull(),
-
-                // Warning hukum
-                Placeholder::make('oa_warning')
-                    ->label('')
-                    ->content(new \Illuminate\Support\HtmlString("
-                        <div style='background:#FEF9C3;border:1px solid #FDE047;border-left:4px solid #EAB308;border-radius:6px;padding:12px 16px;font-size:13px;color:#713F12;'>
-                            ⚠️ <strong>Peringatan:</strong> Jika karya tidak berstatus Open Access di sumber aslinya dan Anda tidak memiliki izin redistribusi, tindakan tersebut dapat merupakan <strong>pelanggaran hak cipta</strong> sesuai <strong>UU No. 28 Tahun 2014</strong> (Pasal 113 — pidana penjara maks. 4 tahun dan/atau denda maks. Rp 1 miliar).
-                        </div>
-                    "))
-                    ->visible(fn(Get $get) => $get('is_previously_published') === '1')
-                    ->columnSpanFull(),
-
             ]);
     }
 
