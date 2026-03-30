@@ -45,7 +45,7 @@ return [
         'client_id'     => env('ORCID_CLIENT_ID'),
         'client_secret' => env('ORCID_CLIENT_SECRET'),
         'redirect'      => env('ORCID_REDIRECT_URI'),
-        'base_uri'      => 'https://orcid.org',
+        'environment'   => env('ORCID_ENVIRONMENT', 'production'),
     ],
 
     'recaptcha' => [
