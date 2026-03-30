@@ -29,6 +29,9 @@ class OrcidController extends Controller
 
         Session::put('orcid_mode', 'login');
 
+        // ✅ Paksa pakai production ORCID
+        config(['services.orcid.base_uri' => 'https://orcid.org']);
+
         return Socialite::driver('orcid')
             ->scopes(['/authenticate'])
             ->redirect();
