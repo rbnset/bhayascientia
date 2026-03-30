@@ -19,8 +19,8 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Spatie\Permission\Events\RoleAssigned;
-use SocialiteProviders\Manager\SocialiteWasCalled;        // ← tambah
-use SocialiteProviders\Orcid\OrcidExtendSocialite;        // ← tambah
+use SocialiteProviders\Manager\SocialiteWasCalled;
+
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -81,7 +81,7 @@ class AppServiceProvider extends ServiceProvider
 
         // ── ORCID Socialite Provider ──────────────────────────────────────────
         Event::listen(SocialiteWasCalled::class, function (SocialiteWasCalled $event) {
-            $event->extendSocialite('orcid', OrcidExtendSocialite::class);
+            $event->extendSocialite('orcid', \SocialiteProviders\Orcid\Provider::class);
         });
 
         // ── Library badge count via View Composer ─────────────────────────────
