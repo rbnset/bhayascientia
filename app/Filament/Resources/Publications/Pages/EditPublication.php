@@ -146,13 +146,20 @@ class EditPublication extends EditRecord
 
     /**
      * Ambil semua User yang terdaftar sebagai author di publikasi ini.
-     * Digunakan untuk in-app notification maupun email blast.
+     *
+     * ✅ FIX: Selalu query fresh dari DB (tidak pakai relasi yang mungkin
+     * sudah stale di memory), karena method ini dipanggil setelah
+     * $this->record->update() yang tidak otomatis refresh relasi.
      */
     protected function authorRecipients()
     {
-        $authorUserIds = $this->record->authors()
+        $authorUserIds = \App\Models\Pivots\AuthorPublication::where('publication_id', $this->record->id)
+            ->join('authors', 'authors.id', '=', 'author_publication.author_id')
+            ->whereNotNull('authors.user_id')
             ->pluck('authors.user_id')
-            ->filter()->unique()->values();
+            ->filter()
+            ->unique()
+            ->values();
 
         if ($authorUserIds->isEmpty()) return collect();
 
@@ -161,22 +168,29 @@ class EditPublication extends EditRecord
 
     /**
      * Kirim email ke semua author yang terlibat di publikasi ini.
-     * Jika relasi authors belum terisi (misal baru pertama submit),
-     * fallback ke user yang sedang login.
+     *
+     * ✅ FIX: Fallback ke user login HANYA jika memang tidak ada author
+     * terdaftar sama sekali. Ini mencegah email nyasar ke reviewer
+     * saat reviewer meng-trigger action (publish, review, dll).
      *
      * @param  string  $mailableClass  Fully-qualified class name dari Mailable
      */
     protected function sendEmailToAllAuthors(string $mailableClass): void
     {
+        // Refresh record dulu agar relasi & data terbaru
+        $this->record->refresh();
+
         $authors = $this->authorRecipients();
 
-        // Fallback: jika relasi authors belum ada (misal baru submit pertama kali
-        // dan afterSave() belum jalan), kirim ke user yang sedang login.
         if ($authors->isEmpty()) {
-            $uploader = auth()->user();
-            if ($uploader && filled($uploader->email)) {
-                \Illuminate\Support\Facades\Mail::to($uploader->email, $uploader->name)
-                    ->queue(new $mailableClass($this->record));
+            // Fallback: hanya jika user login adalah author (bukan reviewer/admin)
+            // agar email tidak nyasar ke reviewer yang klik tombol publish
+            if ($this->isAuthor()) {
+                $uploader = auth()->user();
+                if ($uploader && filled($uploader->email)) {
+                    \Illuminate\Support\Facades\Mail::to($uploader->email, $uploader->name)
+                        ->queue(new $mailableClass($this->record));
+                }
             }
             return;
         }
@@ -343,8 +357,8 @@ class EditPublication extends EditRecord
                 }
 
                 // ── Email published ke semua author ───────────────────────────
-                // Jalur ini aktif jika reviewer mengubah status via form dropdown
-                // (bukan via tombol publishNaskah)
+                // Jalur ini aktif jika reviewer mengubah status via dropdown form
+                // (bukan via tombol publishNaskah — tombol itu handle sendiri)
                 $this->sendEmailToAllAuthors(\App\Mail\ManuscriptPublished::class);
             }
             return;
@@ -395,7 +409,6 @@ class EditPublication extends EditRecord
         $now      = now();
 
         if ($deadline->isPast()) {
-            // Sudah lewat — tampilkan pesan ditolak
             $html = new HtmlString('
             <div style="
                 background:#FEF2F2;border:1.5px solid #FCA5A5;border-left:5px solid #DC2626;
@@ -405,23 +418,19 @@ class EditPublication extends EditRecord
                 <strong style="font-size:14px;">🚫 Batas Waktu Revisi Telah Berakhir</strong><br>
                 Tenggat revisi sudah terlewat pada
                 <strong>' . $deadline->timezone('Asia/Jakarta')->isoFormat('D MMMM YYYY, HH:mm') . ' WIB</strong>.
-                Naskah ini akan segera ditolak otomatis oleh sistem. Hubungi editor jika ada situasi mendesak.
+                Naskah ini akan segera ditolak otomatis oleh sistem.
             </div>
         ');
         } else {
-            $diff        = $now->diff($deadline);
-            $sisaHari    = (int) $now->diffInDays($deadline);
-            $sisaJam     = (int) $now->copy()->addDays($sisaHari)->diffInHours($deadline);
+            $sisaHari  = (int) $now->diffInDays($deadline);
+            $sisaJam   = (int) $now->copy()->addDays($sisaHari)->diffInHours($deadline);
+            $sisaLabel = $sisaHari > 0 ? "{$sisaHari} hari {$sisaJam} jam lagi" : $deadline->diffForHumans($now, ['parts' => 2]);
 
-            $sisaLabel   = $sisaHari > 0
-                ? "{$sisaHari} hari {$sisaJam} jam lagi"
-                : $deadline->diffForHumans($now, ['parts' => 2]);
-
-            $warna = $sisaHari <= 2 ? '#7F1D1D' : '#78350F';
-            $bg    = $sisaHari <= 2 ? '#FEF2F2' : '#FFFBEB';
-            $bdr   = $sisaHari <= 2 ? '#FCA5A5' : '#FDE68A';
+            $warna  = $sisaHari <= 2 ? '#7F1D1D' : '#78350F';
+            $bg     = $sisaHari <= 2 ? '#FEF2F2' : '#FFFBEB';
+            $bdr    = $sisaHari <= 2 ? '#FCA5A5' : '#FDE68A';
             $accent = $sisaHari <= 2 ? '#DC2626' : '#D97706';
-            $icon  = $sisaHari <= 2 ? '🚨' : '⏰';
+            $icon   = $sisaHari <= 2 ? '🚨' : '⏰';
 
             $html = new HtmlString('
             <div style="
@@ -432,8 +441,7 @@ class EditPublication extends EditRecord
                 <strong style="font-size:14px;">' . $icon . ' Revisi Diperlukan — Tersisa ' . $sisaLabel . '</strong><br>
                 Unggah revisi Anda sebelum
                 <strong>' . $deadline->timezone('Asia/Jakarta')->isoFormat('D MMMM YYYY, HH:mm') . ' WIB</strong>.
-                Melewati tenggat ini, naskah akan <strong>otomatis ditolak</strong> oleh sistem dan
-                Anda perlu memulai pengiriman dari awal.
+                Melewati tenggat ini, naskah akan <strong>otomatis ditolak</strong>.
             </div>
         ');
         }
@@ -502,9 +510,10 @@ class EditPublication extends EditRecord
                         new \App\Notifications\PublicationSubmitted($this->record)
                     );
 
-                    // ── Email konfirmasi ke SEMUA author yang terlibat ────────
-                    // Fallback ke user yang login jika relasi authors belum terisi
-                    // (karena afterSave() belum jalan saat action ini dipanggil).
+                    // ── Email konfirmasi ke semua author ──────────────────────
+                    // Saat submit pertama kali, afterSave() sudah jalan duluan
+                    // (karena save form), jadi authorRecipients() sudah terisi.
+                    // Tapi jika kosong, fallback ke user yang login (si author).
                     $authors = $this->authorRecipients();
                     if ($authors->isEmpty()) {
                         $uploader = auth()->user();
@@ -570,7 +579,7 @@ class EditPublication extends EditRecord
                         new \App\Notifications\PublicationSubmitted($this->record)
                     );
 
-                    // ── Email konfirmasi ke SEMUA author yang terlibat ────────
+                    // ── Email konfirmasi ke semua author ──────────────────────
                     $authors = $this->authorRecipients();
                     if ($authors->isEmpty()) {
                         $uploader = auth()->user();
@@ -724,7 +733,6 @@ class EditPublication extends EditRecord
                             'reviewer_id'            => auth()->id(),
                         ]);
 
-                        // ── In-app notification ke semua author ───────────────
                         $recipients = $this->authorRecipients();
                         if ($recipients->isNotEmpty()) {
                             \Illuminate\Support\Facades\Notification::send(
@@ -733,7 +741,6 @@ class EditPublication extends EditRecord
                             );
                         }
 
-                        // ── Email ke SEMUA author yang terlibat ───────────────
                         $this->sendEmailToAllAuthors(\App\Mail\ManuscriptInReview::class);
 
                         Notification::make()
@@ -762,7 +769,6 @@ class EditPublication extends EditRecord
                         'reviewer_id'            => auth()->id(),
                     ]);
 
-                    // ── In-app notification ke semua author ───────────────────
                     $recipients = $this->authorRecipients();
                     if ($recipients->isNotEmpty()) {
                         \Illuminate\Support\Facades\Notification::send(
@@ -771,7 +777,6 @@ class EditPublication extends EditRecord
                         );
                     }
 
-                    // ── Email ke SEMUA author yang terlibat ───────────────────
                     $this->sendEmailToAllAuthors(\App\Mail\ManuscriptInReview::class);
 
                     Notification::make()
@@ -827,7 +832,6 @@ class EditPublication extends EditRecord
 
                     $this->record->update(['status' => 'in_review']);
 
-                    // ── In-app notification ke semua author ───────────────────
                     $recipients = $this->authorRecipients();
                     if ($recipients->isNotEmpty()) {
                         \Illuminate\Support\Facades\Notification::send(
@@ -836,7 +840,6 @@ class EditPublication extends EditRecord
                         );
                     }
 
-                    // ── Email ke SEMUA author yang terlibat ───────────────────
                     $this->sendEmailToAllAuthors(\App\Mail\ManuscriptInReview::class);
 
                     Notification::make()
@@ -885,6 +888,7 @@ class EditPublication extends EditRecord
                         'published_at' => $data['published_at'],
                     ]);
 
+                    // ── In-app notification ke semua author ───────────────────
                     $recipients = $this->authorRecipients();
                     if ($recipients->isNotEmpty()) {
                         \Illuminate\Support\Facades\Notification::send(
@@ -893,7 +897,10 @@ class EditPublication extends EditRecord
                         );
                     }
 
-                    // ── Email published ke semua author ───────────────────────────
+                    // ── ✅ FIX: Email published ke semua author ───────────────
+                    // sendEmailToAllAuthors() dipanggil SETELAH record->update()
+                    // dan di dalamnya ada $this->record->refresh() agar
+                    // published_at sudah terisi saat Mailable dirender.
                     $this->sendEmailToAllAuthors(\App\Mail\ManuscriptPublished::class);
 
                     $tanggal = \Carbon\Carbon::parse($data['published_at'])
@@ -983,6 +990,9 @@ class EditPublication extends EditRecord
 
                     $this->record->update(['status' => 'submitted']);
 
+                    // ════════════════════════════════════════════════════════
+                    // ✅ FIX: Kirim notifikasi ke reviewer (in-app + email)
+                    // ════════════════════════════════════════════════════════
                     $publication = $this->record;
                     $reviewerIds = $publication->reviews()
                         ->pluck('reviews.reviewer_id')
@@ -995,6 +1005,7 @@ class EditPublication extends EditRecord
                                 ->orderByDesc('reviews.id')
                                 ->value('reviews.id');
 
+                            // ── In-app notification ke reviewer ───────────────
                             if ($hasPdf && $nextVersion !== null) {
                                 $reviewer->notify(new \App\Notifications\AuthorSubmittedRevision(
                                     publication: $publication,
@@ -1004,13 +1015,34 @@ class EditPublication extends EditRecord
                             } else {
                                 $reviewer->notify(new \App\Notifications\PublicationSubmitted($publication));
                             }
+
+                            // ── ✅ FIX: Email ke reviewer ─────────────────────
+                            if (filled($reviewer->email)) {
+                                \Illuminate\Support\Facades\Mail::to($reviewer->email, $reviewer->name)
+                                    ->queue(new \App\Mail\ManuscriptSubmittedReviewer($this->record));
+                            }
                         }
                     } else {
+                        // Fallback: belum ada reviewer → broadcast ke semua reviewer
+                        $allReviewers = \App\Models\User::role('reviewer')->get();
+
                         \Illuminate\Support\Facades\Notification::send(
-                            \App\Models\User::role('reviewer')->get(),
+                            $allReviewers,
                             new \App\Notifications\PublicationSubmitted($publication)
                         );
+
+                        foreach ($allReviewers as $reviewer) {
+                            if (filled($reviewer->email)) {
+                                \Illuminate\Support\Facades\Mail::to($reviewer->email, $reviewer->name)
+                                    ->queue(new \App\Mail\ManuscriptSubmittedReviewer($this->record));
+                            }
+                        }
                     }
+
+                    // ════════════════════════════════════════════════════════
+                    // ✅ FIX: Kirim email konfirmasi ke semua author
+                    // ════════════════════════════════════════════════════════
+                    $this->sendEmailToAllAuthors(\App\Mail\ManuscriptSubmittedAuthor::class);
 
                     Notification::make()
                         ->success()
