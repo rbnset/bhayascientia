@@ -15,11 +15,70 @@ class ProfileController extends Controller
         $user = Auth::user();
 
         try {
-            $user->load(['authorProfile', 'publications', 'savedPublications', 'favoritePublications']);
+            $user->load(['authorProfile']);
 
-            $publicationsCount = $user->publications()->count();
-            $savedCount        = $user->savedPublications()->count();
-            $favoritesCount    = $user->favoritePublications()->count();
+            // ✅ FIXED: Query count pakai filter yang sama dengan PublicationLibraryController
+            // agar angka konsisten dan tidak 0
+
+            $publicationsCount = 0;
+            try {
+                // Coba lewat authorProfile dulu (jika user adalah author)
+                if ($user->authorProfile) {
+                    $publicationsCount = $user->authorProfile
+                        ->publications()
+                        ->where('status', 'published')
+                        ->whereNotNull('published_at')
+                        ->where('published_at', '<=', now())
+                        ->whereHas('publicationType', fn($q) => $q->where('is_active', true))
+                        ->count();
+                } else {
+                    // Fallback: lewat relasi publications langsung di user
+                    $publicationsCount = $user->publications()
+                        ->where('status', 'published')
+                        ->whereNotNull('published_at')
+                        ->where('published_at', '<=', now())
+                        ->whereHas('publicationType', fn($q) => $q->where('is_active', true))
+                        ->count();
+                }
+            } catch (\Exception $e) {
+                $publicationsCount = 0;
+            }
+
+            // ✅ FIXED: savedPublications dengan filter published + active type
+            $savedCount = 0;
+            try {
+                $savedCount = $user->savedPublications()
+                    ->where('status', 'published')
+                    ->whereNotNull('published_at')
+                    ->where('published_at', '<=', now())
+                    ->whereHas('publicationType', fn($q) => $q->where('is_active', true))
+                    ->count();
+            } catch (\Exception $e) {
+                // Fallback tanpa filter jika relasi belum ada
+                try {
+                    $savedCount = $user->savedPublications()->count();
+                } catch (\Exception $e2) {
+                    $savedCount = 0;
+                }
+            }
+
+            // ✅ FIXED: favoritePublications dengan filter published + active type
+            $favoritesCount = 0;
+            try {
+                $favoritesCount = $user->favoritePublications()
+                    ->where('status', 'published')
+                    ->whereNotNull('published_at')
+                    ->where('published_at', '<=', now())
+                    ->whereHas('publicationType', fn($q) => $q->where('is_active', true))
+                    ->count();
+            } catch (\Exception $e) {
+                // Fallback tanpa filter jika relasi belum ada
+                try {
+                    $favoritesCount = $user->favoritePublications()->count();
+                } catch (\Exception $e2) {
+                    $favoritesCount = 0;
+                }
+            }
         } catch (\Exception $e) {
             $publicationsCount = 0;
             $savedCount        = 0;
