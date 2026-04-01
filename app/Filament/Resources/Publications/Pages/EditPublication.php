@@ -354,7 +354,24 @@ class EditPublication extends EditRecord
                 // ── Email published ke semua author ───────────────────────────
                 // Jalur ini aktif jika reviewer mengubah status via dropdown form
                 // (bukan via tombol publishNaskah — tombol itu handle sendiri)
-                $this->sendEmailToAllAuthors(\App\Mail\ManuscriptPublished::class);
+                if ($this->isReviewer()) {
+                    if (
+                        $this->record->status === 'published' &&
+                        ($this->record->wasChanged('status') || $this->record->wasChanged('published_at'))
+                    ) {
+                        // In-app notification tetap di sini agar langsung muncul real-time
+                        $recipients = $this->authorRecipients();
+                        if ($recipients->isNotEmpty()) {
+                            \Illuminate\Support\Facades\Notification::send(
+                                $recipients,
+                                new \App\Notifications\PublicationScheduledToPublish($this->record)
+                            );
+                        }
+
+                        // ✅ Email sudah ditangani PublicationObserver — tidak perlu di sini
+                    }
+                    return;
+                }
             }
             return;
         }
@@ -892,11 +909,8 @@ class EditPublication extends EditRecord
                         );
                     }
 
-                    // ── ✅ FIX: Email published ke semua author ───────────────
-                    // sendEmailToAllAuthors() dipanggil SETELAH record->update()
-                    // dan di dalamnya ada $this->record->refresh() agar
-                    // published_at sudah terisi saat Mailable dirender.
-                    $this->sendEmailToAllAuthors(\App\Mail\ManuscriptPublished::class);
+                    // ✅ Email ManuscriptPublished sudah otomatis dikirim oleh PublicationObserver
+                    // saat record->update(['status' => 'published']) dipanggil di atas.
 
                     $tanggal = \Carbon\Carbon::parse($data['published_at'])
                         ->timezone('Asia/Jakarta')
