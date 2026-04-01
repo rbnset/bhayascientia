@@ -147,14 +147,15 @@ class EditPublication extends EditRecord
     /**
      * Ambil semua User yang terdaftar sebagai author di publikasi ini.
      *
-     * ✅ FIX: Selalu query fresh dari DB (tidak pakai relasi yang mungkin
-     * sudah stale di memory), karena method ini dipanggil setelah
-     * $this->record->update() yang tidak otomatis refresh relasi.
+     * ✅ FIX: Selalu refresh record dari DB dulu agar relasi tidak stale,
+     * lalu query lewat relasi authors() yang sudah benar di model Publication.
      */
     protected function authorRecipients()
     {
-        $authorUserIds = \App\Models\Pivots\AuthorPublication::where('publication_id', $this->record->id)
-            ->join('authors', 'authors.id', '=', 'author_publication.author_id')
+        // Refresh dulu agar relasi tidak pakai cache lama setelah record->update()
+        $this->record->refresh();
+
+        $authorUserIds = $this->record->authors()
             ->whereNotNull('authors.user_id')
             ->pluck('authors.user_id')
             ->filter()
@@ -168,18 +169,12 @@ class EditPublication extends EditRecord
 
     /**
      * Kirim email ke semua author yang terlibat di publikasi ini.
-     *
-     * ✅ FIX: Fallback ke user login HANYA jika memang tidak ada author
-     * terdaftar sama sekali. Ini mencegah email nyasar ke reviewer
-     * saat reviewer meng-trigger action (publish, review, dll).
+     * authorRecipients() sudah memanggil refresh() di dalamnya.
      *
      * @param  string  $mailableClass  Fully-qualified class name dari Mailable
      */
     protected function sendEmailToAllAuthors(string $mailableClass): void
     {
-        // Refresh record dulu agar relasi & data terbaru
-        $this->record->refresh();
-
         $authors = $this->authorRecipients();
 
         if ($authors->isEmpty()) {
