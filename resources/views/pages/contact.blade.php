@@ -761,8 +761,7 @@
         <iframe id="mapIframe" class="modal-iframe" src="" allowfullscreen="" loading="lazy"
             referrerpolicy="no-referrer-when-downgrade"></iframe>
         <div class="flex gap-3 mt-4">
-            <a href="https://www.google.com/maps/dir/?api=1&destination=-7.7753,110.3751" target="_blank"
-                rel="noopener noreferrer"
+            <a href="https://maps.app.goo.gl/H8tz9e4WqnuhGvyh8" target="_blank" rel="noopener noreferrer"
                 class="flex-1 px-4 py-3 bg-gradient-to-r from-[#FF6B18] to-[#E64627] text-white text-sm font-bold rounded-xl hover:shadow-lg transition-all flex items-center justify-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
