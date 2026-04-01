@@ -508,7 +508,26 @@ $hasFile = $latestVersion && !empty($latestVersion->pdf_file_path);
                             <span class="text-[#FF6B18]" title="Corresponding Author">*</span>
                             @endif
                         </p>
+
+                        {{-- ✅ ORCID iD — tampil di bawah nama, klikable --}}
+                        @if(!empty($author['orcid_id']))
+                        <span
+                            onclick="event.preventDefault(); event.stopPropagation(); window.open('https://orcid.org/{{ $author['orcid_id'] }}', '_blank', 'noopener,noreferrer')"
+                            class="inline-flex items-center gap-1 mt-0.5 text-xs font-medium text-green-700 hover:text-green-900 hover:underline transition-colors"
+                            title="Lihat profil ORCID: {{ $author['orcid_id'] }}">
+                            {{-- ORCID logo mini --}}
+                            <svg class="flex-shrink-0 w-3 h-3" viewBox="0 0 256 256" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="128" cy="128" r="128" fill="#A6CE39" />
+                                <path
+                                    d="M86.3 186.2H70.9V79.1h15.4v107.1zM108.9 79.1h41.6c39.6 0 57 28.3 57 53.6 0 27.5-21.5 53.6-56.8 53.6h-41.8V79.1zm15.4 93.3h24.5c34.9 0 42.9-26.5 42.9-39.7C191.7 111.2 178 93 148 93h-23.7v79.4zM88.7 56.8c0 5.5-4.5 10.1-10.1 10.1s-10.1-4.6-10.1-10.1c0-5.6 4.5-10.1 10.1-10.1s10.1 4.5 10.1 10.1z"
+                                    fill="white" />
+                            </svg>
+                            <span>{{ $author['orcid_id'] }}</span>
+                        </span>
+                        @else
                         <p class="text-xs text-[#737373] line-clamp-1">{{ $author['affiliation'] }}</p>
+                        @endif
                     </div>
                 </a>
                 @endforeach
@@ -1166,8 +1185,7 @@ $hasFile = $latestVersion && !empty($latestVersion->pdf_file_path);
                             <h3 class="text-2xl font-bold text-[#1A1A1A] mb-1">All Authors</h3>
                             <p class="text-sm text-[#737373]">
                                 {{ $authors->count() }} {{ $authors->count() > 1 ? 'contributors' : 'contributor' }} to
-                                this
-                                publication
+                                this publication
                             </p>
                         </div>
                         <button onclick="closeAuthorsModal()"
@@ -1197,7 +1215,7 @@ $hasFile = $latestVersion && !empty($latestVersion->pdf_file_path);
                                     @endif
                                 </div>
                                 <div class="flex-1 min-w-0">
-                                    <div class="flex items-start justify-between gap-2 mb-2">
+                                    <div class="flex items-start justify-between gap-2 mb-1">
                                         <h4
                                             class="text-base font-bold text-[#1A1A1A] leading-snug hover:text-[#FF6B18] transition-colors">
                                             {{ $author['name'] }}
@@ -1207,8 +1225,27 @@ $hasFile = $latestVersion && !empty($latestVersion->pdf_file_path);
                                             class="px-2 py-0.5 bg-[#FFF7F2] text-xs font-bold text-[#FF6B18] rounded-full flex-shrink-0">CA</span>
                                         @endif
                                     </div>
+
+                                    {{-- ✅ ORCID di modal — klikable, stop propagasi ke link author --}}
+                                    @if(!empty($author['orcid_id']))
+                                    <span
+                                        onclick="event.preventDefault(); event.stopPropagation(); window.open('https://orcid.org/{{ $author['orcid_id'] }}', '_blank', 'noopener,noreferrer')"
+                                        class="inline-flex items-center gap-1 mb-2 text-xs font-medium text-green-700 transition-colors cursor-pointer hover:text-green-900 hover:underline"
+                                        title="Lihat profil ORCID">
+                                        <svg class="flex-shrink-0 w-3.5 h-3.5" viewBox="0 0 256 256" fill="none"
+                                            xmlns="http://www.w3.org/2000/svg">
+                                            <circle cx="128" cy="128" r="128" fill="#A6CE39" />
+                                            <path
+                                                d="M86.3 186.2H70.9V79.1h15.4v107.1zM108.9 79.1h41.6c39.6 0 57 28.3 57 53.6 0 27.5-21.5 53.6-56.8 53.6h-41.8V79.1zm15.4 93.3h24.5c34.9 0 42.9-26.5 42.9-39.7C191.7 111.2 178 93 148 93h-23.7v79.4zM88.7 56.8c0 5.5-4.5 10.1-10.1 10.1s-10.1-4.6-10.1-10.1c0-5.6 4.5-10.1 10.1-10.1s10.1 4.5 10.1 10.1z"
+                                                fill="white" />
+                                        </svg>
+                                        <span>{{ $author['orcid_id'] }}</span>
+                                    </span>
+                                    @else
                                     <p class="text-sm text-[#737373] mb-2">{{ $author['affiliation'] }}</p>
-                                    <div class="flex items-center gap-2 mt-3 pt-3 border-t border-[#EEF0F7]">
+                                    @endif
+
+                                    <div class="flex items-center gap-2 mt-2 pt-2 border-t border-[#EEF0F7]">
                                         <svg class="w-4 h-4 text-[#FF6B18]" fill="none" stroke="currentColor"
                                             viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

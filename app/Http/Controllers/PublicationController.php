@@ -538,6 +538,7 @@ class PublicationController extends Controller
                 'profile_type'     => $author->user_id ? 'user' : 'author',
                 'profile_id'       => $author->id,
                 'slug'             => $author->slug,
+                'orcid_id'         => $author->orcid_id ?? ($userData?->orcid_id ?? null),
             ];
         });
 
