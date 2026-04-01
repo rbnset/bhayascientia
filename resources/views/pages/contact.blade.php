@@ -769,7 +769,7 @@
                 </svg>
                 Petunjuk Arah
             </a>
-            <a href="https://maps.google.com/?q=-7.7753,110.3751" target="_blank" rel="noopener noreferrer"
+            <a href="https://maps.app.goo.gl/H8tz9e4WqnuhGvyh8" target="_blank" rel="noopener noreferrer"
                 class="px-4 py-3 border-2 border-[#EEF0F7] text-[#737373] text-sm font-bold rounded-xl hover:border-[#FF6B18] hover:text-[#FF6B18] transition-all flex items-center justify-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
