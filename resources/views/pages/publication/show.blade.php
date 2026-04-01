@@ -573,51 +573,488 @@ $hasFile = $latestVersion && !empty($latestVersion->pdf_file_path);
         </div>
     </div>
 
-    @php
-    $pubTypeSlug = $publication->publicationType?->slug ?? '';
-    $abstractLabel = match($pubTypeSlug) {
-    'buku' => 'Sinopsis',
-    'opini' => 'Isi Opini',
-    default => 'Abstract',
-    };
-    $keywordLabel = match($pubTypeSlug) {
-    'buku' => 'Tags',
-    'opini' => 'Topik',
-    default => 'Keywords',
-    };
+    {{-- ══════════════════════════════════════════════════════════════════
+    SECTION: Riwayat Publikasi Sebelumnya
+    Hanya tampil jika is_previously_published = true/1
+    Taruh di dalam <article> setelah blok meta info (setelah penutup
+        div "Header Section"), sebelum @if($hasFile) ... grid layout.
+        ══════════════════════════════════════════════════════════════════ --}}
 
-    $words = array_filter(explode(' ', $publication->title));
-    $initials = '';
-    foreach (array_slice($words, 0, 2) as $word) {
-    $initials .= mb_strtoupper(mb_substr(trim($word), 0, 1));
-    }
-    if (empty($initials)) {
-    $initials = mb_strtoupper(mb_substr($publication->title, 0, 2));
-    }
-    $firstAuthor = $authors->count() > 0 ? ($authors->first()['name'] ?? 'Unknown') : 'Anonymous';
-    $publicationType = $publication->publicationType->name ?? 'Publikasi';
-    $placeholderUrl = route('placeholder.cover', [
-    'initials' => $initials,
-    'type' => $publicationType,
-    'title' => $publication->title,
-    'category' => $category,
-    'author' => $firstAuthor,
-    'v' => time(),
-    ]);
-    @endphp
+        @php
+        $isPrevPublished = (bool) $publication->is_previously_published;
+        $pubTypeSlug = $publication->publicationType?->slug ?? '';
 
-    @if($hasFile)
-    {{-- ══════════════════════════════════════════════════════
-    ADA FILE: Layout 2 kolom (konten kiri, sidebar kanan)
-    ══════════════════════════════════════════════════════ --}}
-    <div id="publication-detail-grid" class="has-file">
+        // Label identifier dinamis sesuai tipe karya
+        $identifierLabel = match($pubTypeSlug) {
+        'jurnal' => 'DOI',
+        'buku' => 'ISBN',
+        'opini' => 'Media / Portal',
+        default => 'Identifier',
+        };
 
-        {{-- LEFT: Abstract + Keywords --}}
-        <div class="space-y-6">
+        // Icon identifier
+        $identifierIcon = match($pubTypeSlug) {
+        'jurnal' => '
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+        ',
+        'buku' => '
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+        ',
+        'opini' => '
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+        ',
+        default => '
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+        ',
+        };
 
+        // URL identifier (khusus jurnal → buat link DOI)
+        $identifierUrl = null;
+        if ($pubTypeSlug === 'jurnal' && filled($publication->prior_identifier_value)) {
+        $identifierUrl = 'https://doi.org/' . ltrim($publication->prior_identifier_value, '/');
+        } elseif ($pubTypeSlug !== 'jurnal' && filled($publication->prior_publisher_url)) {
+        $identifierUrl = $publication->prior_publisher_url;
+        }
+
+        // Format tanggal prior_published_date
+        $priorDate = null;
+        if ($publication->prior_published_date) {
+        $priorDate = \Carbon\Carbon::parse($publication->prior_published_date)
+        ->locale('id')
+        ->isoFormat('D MMMM YYYY');
+        }
+        @endphp
+
+        @if($isPrevPublished)
+        <div
+            class="bg-white rounded-2xl border border-[#EEF0F7] p-6 md:p-8 mb-6 hover:shadow-lg transition-shadow duration-300">
+
+            {{-- Header --}}
+            <h2 class="text-xl font-bold text-[#1A1A1A] mb-1 flex items-center gap-2">
+                <svg class="w-6 h-6 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Riwayat Publikasi
+            </h2>
+            <p class="text-sm text-[#737373] mb-6">
+                Karya ini telah dipublikasikan sebelumnya dan berstatus
+                <span class="font-semibold text-green-700">Open Access</span> di sumber aslinya.
+            </p>
+
+            {{-- Grid info cards --}}
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+
+                {{-- Platform / Penerbit --}}
+                @if(filled($publication->prior_publisher_name))
+                <div
+                    class="flex items-start gap-3 p-4 bg-[#F8F9FC] rounded-xl border border-[#EEF0F7] hover:border-[#FF6B18] hover:bg-[#FFF7F2] transition-all duration-300">
+                    <div class="w-9 h-9 rounded-lg bg-[#FFF7F2] flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                        </svg>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-xs font-bold text-[#737373] uppercase tracking-wide mb-1">Platform / Penerbit</p>
+                        <p class="text-sm font-bold text-[#1A1A1A] break-words">{{ $publication->prior_publisher_name }}
+                        </p>
+                    </div>
+                </div>
+                @endif
+
+                {{-- Identifier: DOI / ISBN / Nama Media --}}
+                @if(filled($publication->prior_identifier_value))
+                <div
+                    class="flex items-start gap-3 p-4 bg-[#F8F9FC] rounded-xl border border-[#EEF0F7] hover:border-[#FF6B18] hover:bg-[#FFF7F2] transition-all duration-300">
+                    <div class="w-9 h-9 rounded-lg bg-[#FFF7F2] flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            {!! $identifierIcon !!}
+                        </svg>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-xs font-bold text-[#737373] uppercase tracking-wide mb-1">{{ $identifierLabel }}
+                        </p>
+                        @if($identifierUrl)
+                        <a href="{{ $identifierUrl }}" target="_blank" rel="noopener noreferrer"
+                            class="text-sm font-bold text-[#FF6B18] hover:text-[#E64627] hover:underline break-all flex items-center gap-1 group">
+                            <span>{{ $publication->prior_identifier_value }}</span>
+                            <svg class="w-3.5 h-3.5 flex-shrink-0 opacity-60 group-hover:opacity-100" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                        </a>
+                        @else
+                        <p class="text-sm font-bold text-[#1A1A1A] break-words">{{ $publication->prior_identifier_value
+                            }}</p>
+                        @endif
+                    </div>
+                </div>
+                @endif
+
+                {{-- Tanggal Pertama Diterbitkan --}}
+                @if($priorDate)
+                <div
+                    class="flex items-start gap-3 p-4 bg-[#F8F9FC] rounded-xl border border-[#EEF0F7] hover:border-[#FF6B18] hover:bg-[#FFF7F2] transition-all duration-300">
+                    <div class="w-9 h-9 rounded-lg bg-[#FFF7F2] flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-[#737373] uppercase tracking-wide mb-1">Pertama Diterbitkan</p>
+                        <p class="text-sm font-bold text-[#1A1A1A]">{{ $priorDate }}</p>
+                    </div>
+                </div>
+                @endif
+
+                {{-- Lisensi Open Access --}}
+                @if(filled($publication->origin_license))
+                <div
+                    class="flex items-start gap-3 p-4 bg-[#F8F9FC] rounded-xl border border-[#EEF0F7] hover:border-[#FF6B18] hover:bg-[#FFF7F2] transition-all duration-300">
+                    <div class="w-9 h-9 rounded-lg bg-[#FFF7F2] flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-xs font-bold text-[#737373] uppercase tracking-wide mb-1">Lisensi Open Access</p>
+                        <p class="text-sm font-bold text-[#1A1A1A]">{{ $publication->origin_license }}</p>
+                        @php
+                        $ccSlug = match($publication->origin_license) {
+                        'CC BY 4.0' => 'by/4.0',
+                        'CC BY-SA 4.0' => 'by-sa/4.0',
+                        'CC BY-NC 4.0' => 'by-nc/4.0',
+                        'CC BY-NC-SA 4.0' => 'by-nc-sa/4.0',
+                        'CC BY-ND 4.0' => 'by-nd/4.0',
+                        'CC BY-NC-ND 4.0' => 'by-nc-nd/4.0',
+                        'CC0 1.0' => 'zero/1.0',
+                        default => null,
+                        };
+                        @endphp
+                        @if($ccSlug)
+                        <a href="https://creativecommons.org/licenses/{{ $ccSlug }}/" target="_blank"
+                            rel="noopener noreferrer"
+                            class="text-xs text-[#FF6B18] hover:underline mt-0.5 inline-block">
+                            Lihat detail lisensi →
+                        </a>
+                        @endif
+                    </div>
+                </div>
+                @endif
+
+            </div>
+
+            {{-- URL sumber asli — tampil full width di bawah grid --}}
+            @if(filled($publication->prior_publisher_url))
+            <div class="mt-4 flex items-center gap-3 p-4 bg-[#F0FDF4] rounded-xl border border-[#DCFCE7]">
+                <svg class="flex-shrink-0 w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                </svg>
+                <div class="flex-1 min-w-0">
+                    <p class="text-xs font-bold text-green-700 uppercase tracking-wide mb-0.5">Sumber Asli (Open Access)
+                    </p>
+                    <a href="{{ $publication->prior_publisher_url }}" target="_blank" rel="noopener noreferrer"
+                        class="text-sm font-medium text-green-700 break-all hover:text-green-900 hover:underline">
+                        {{ $publication->prior_publisher_url }}
+                    </a>
+                </div>
+                <a href="{{ $publication->prior_publisher_url }}" target="_blank" rel="noopener noreferrer"
+                    class="flex-shrink-0 px-3 py-1.5 bg-green-600 text-white text-xs font-bold rounded-lg hover:bg-green-700 transition-colors flex items-center gap-1">
+                    Buka
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                </a>
+            </div>
+            @endif
+
+        </div>
+        @endif
+
+        @php
+        $pubTypeSlug = $publication->publicationType?->slug ?? '';
+        $abstractLabel = match($pubTypeSlug) {
+        'buku' => 'Sinopsis',
+        'opini' => 'Isi Opini',
+        default => 'Abstract',
+        };
+        $keywordLabel = match($pubTypeSlug) {
+        'buku' => 'Tags',
+        'opini' => 'Topik',
+        default => 'Keywords',
+        };
+
+        $words = array_filter(explode(' ', $publication->title));
+        $initials = '';
+        foreach (array_slice($words, 0, 2) as $word) {
+        $initials .= mb_strtoupper(mb_substr(trim($word), 0, 1));
+        }
+        if (empty($initials)) {
+        $initials = mb_strtoupper(mb_substr($publication->title, 0, 2));
+        }
+        $firstAuthor = $authors->count() > 0 ? ($authors->first()['name'] ?? 'Unknown') : 'Anonymous';
+        $publicationType = $publication->publicationType->name ?? 'Publikasi';
+        $placeholderUrl = route('placeholder.cover', [
+        'initials' => $initials,
+        'type' => $publicationType,
+        'title' => $publication->title,
+        'category' => $category,
+        'author' => $firstAuthor,
+        'v' => time(),
+        ]);
+        @endphp
+
+        @if($hasFile)
+        {{-- ══════════════════════════════════════════════════════
+        ADA FILE: Layout 2 kolom (konten kiri, sidebar kanan)
+        ══════════════════════════════════════════════════════ --}}
+        <div id="publication-detail-grid" class="has-file">
+
+            {{-- LEFT: Abstract + Keywords --}}
+            <div class="space-y-6">
+
+                @if($publication->abstract)
+                <div
+                    class="bg-white rounded-2xl border border-[#EEF0F7] p-6 md:p-8 hover:shadow-lg transition-shadow duration-300">
+                    <h2 class="text-xl font-bold text-[#1A1A1A] mb-4 flex items-center gap-2">
+                        <svg class="w-6 h-6 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        {{ $abstractLabel }}
+                    </h2>
+                    <div class="prose prose-sm md:prose-base max-w-none text-[#1A1A1A] leading-relaxed text-justify">
+                        {!! $publication->abstract !!}
+                    </div>
+                </div>
+                @endif
+
+                @if($keywords && count($keywords) > 0)
+                <div
+                    class="bg-white rounded-2xl border border-[#EEF0F7] p-6 md:p-8 hover:shadow-lg transition-shadow duration-300">
+                    <h2 class="text-xl font-bold text-[#1A1A1A] mb-4 flex items-center gap-2">
+                        <svg class="w-6 h-6 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                        </svg>
+                        {{ $keywordLabel }}
+                    </h2>
+                    <div class="flex flex-wrap gap-2">
+                        @foreach($keywords as $keyword)
+                        <span
+                            class="px-4 py-2 bg-[#F8F9FC] text-sm font-medium text-[#1A1A1A] rounded-full hover:bg-[#FFF7F2] hover:text-[#FF6B18] hover:shadow-md hover:scale-105 transition-all duration-300 cursor-pointer">
+                            {{ $keyword }}
+                        </span>
+                        @endforeach
+                    </div>
+                </div>
+                @endif
+
+            </div>
+
+            {{-- RIGHT: Cover + Action Buttons + Version Badge --}}
+            <aside id="publication-sidebar">
+                <div class="sticky-cover">
+
+                    {{-- Cover Image --}}
+                    <div class="mb-6 cover-image-wrapper aspect-[2/3] relative overflow-hidden rounded-xl">
+                        @if($cover_url)
+                        <img src="{{ $cover_url }}" alt="Cover {{ $publication->title }}"
+                            class="object-cover w-full h-full"
+                            onerror="this.onerror=null; this.src='{{ $placeholderUrl }}';">
+                        <div
+                            class="absolute inset-0 z-20 flex items-end justify-center p-6 transition-opacity duration-500 opacity-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent hover:opacity-100 rounded-xl">
+                            <button onclick="viewCoverFullscreen()"
+                                class="px-6 py-3 bg-white/95 backdrop-blur-sm text-[#1A1A1A] text-sm font-bold rounded-lg hover:bg-white transition-all duration-300 transform hover:scale-105 shadow-xl flex items-center gap-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                                </svg>
+                                View Full Size
+                            </button>
+                        </div>
+                        @else
+                        <img src="{{ $placeholderUrl }}" alt="Cover {{ $publication->title }}"
+                            class="object-cover w-full h-full">
+                        @endif
+                    </div>
+
+                    {{-- Action Buttons — ada file --}}
+                    <div class="action-buttons-container">
+
+                        {{-- Baca Sekarang / Preview Gratis --}}
+                        @auth
+                        <a href="{{ route('publikasi.read', $publication->slug) }}"
+                            class="btn-ripple w-full px-5 py-3.5 bg-gradient-to-r from-[#FF6B18] to-[#E64627] text-white font-bold text-base rounded-xl hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 flex items-center justify-center gap-3 group">
+                            <svg class="w-5 h-5 transition-transform duration-300 group-hover:rotate-12" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            <span>Baca Sekarang</span>
+                        </a>
+                        @else
+                        <a href="{{ route('publikasi.read', $publication->slug) }}"
+                            class="btn-ripple w-full px-5 py-3.5 bg-gradient-to-r from-[#FF6B18] to-[#E64627] text-white font-bold text-base rounded-xl hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 flex items-center justify-center gap-3 group">
+                            <svg class="w-5 h-5 transition-transform duration-300 group-hover:rotate-12" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            <span>Preview Gratis</span>
+                        </a>
+                        <div class="flex items-center gap-2 px-3 py-2 bg-[#FFF7F2] rounded-lg border border-[#FFD6B8]">
+                            <svg class="w-4 h-4 text-[#FF6B18] flex-shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <p class="text-xs text-[#FF6B18] font-medium">
+                                Preview dengan watermark.
+                                <a href="{{ route('login') }}"
+                                    class="font-bold underline hover:text-[#E64627]">Login</a>
+                                untuk akses penuh.
+                            </p>
+                        </div>
+                        @endauth
+
+                        {{-- Download PDF --}}
+                        @auth
+                        <a href="{{ route('publikasi.download', $publication->slug) }}"
+                            class="btn-ripple w-full px-5 py-3.5 bg-white border-2 border-[#FF6B18] text-[#FF6B18] font-bold text-base rounded-xl hover:bg-[#FF6B18] hover:text-white hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 flex items-center justify-center gap-3 group">
+                            <svg class="w-5 h-5 download-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            <span>Download PDF</span>
+                        </a>
+                        @else
+                        <button type="button" onclick="showLoginModal('download')"
+                            class="btn-ripple w-full px-5 py-3.5 bg-white border-2 border-[#FF6B18] text-[#FF6B18] font-bold text-base rounded-xl hover:bg-[#FFF7F2] hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-3 group">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            <span>Download PDF</span>
+                            <svg class="w-4 h-4 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
+                        </button>
+                        @endauth
+
+                    </div>
+
+                    {{-- Version Badge --}}
+                    @if($latestVersion)
+                    <div class="version-badge">
+                        <div class="flex items-start justify-between mb-3 pb-3 border-b border-[#EEF0F7]">
+                            <div class="flex items-center gap-2">
+                                <div
+                                    class="w-8 h-8 rounded-full bg-gradient-to-br from-[#FF6B18] to-[#E64627] flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p class="text-xs font-bold text-[#737373] uppercase tracking-wide">Version</p>
+                                    <p class="text-lg font-bold text-[#1A1A1A]">v{{ $latestVersion->version_number }}
+                                    </p>
+                                </div>
+                            </div>
+                            <span
+                                class="px-3 py-1 bg-[#FFF7F2] text-xs font-bold text-[#FF6B18] rounded-full">Published</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="bg-[#FAFBFC] p-3 rounded-lg border border-[#EEF0F7]">
+                                <p class="text-xs text-[#737373] font-semibold mb-1.5 flex items-center gap-1">
+                                    <svg class="w-4 h-4 text-[#FF6B18]" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                    </svg>
+                                    Format
+                                </p>
+                                <p class="text-sm font-bold text-[#1A1A1A]">PDF</p>
+                            </div>
+                            <div class="bg-[#FAFBFC] p-3 rounded-lg border border-[#EEF0F7]">
+                                <p class="text-xs text-[#737373] font-semibold mb-1.5 flex items-center gap-1">
+                                    <svg class="w-4 h-4 text-[#FF6B18]" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+                                    </svg>
+                                    Size
+                                </p>
+                                <p class="text-sm font-bold text-[#1A1A1A]">{{ $fileSizeFormatted ?? 'N/A' }}</p>
+                            </div>
+                            <div class="bg-[#FAFBFC] p-3 rounded-lg border border-[#EEF0F7]">
+                                <p class="text-xs text-[#737373] font-semibold mb-1.5 flex items-center gap-1">
+                                    <svg class="w-4 h-4 text-[#FF6B18]" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                    </svg>
+                                    Downloads
+                                </p>
+                                <p class="text-sm font-bold text-[#1A1A1A]">{{ number_format($downloadCount ?? 0) }}</p>
+                            </div>
+                            <div class="bg-[#FAFBFC] p-3 rounded-lg border border-[#EEF0F7]">
+                                <p class="text-xs text-[#737373] font-semibold mb-1.5 flex items-center gap-1">
+                                    <svg class="w-4 h-4 text-[#FF6B18]" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    Added
+                                </p>
+                                <p class="text-sm font-bold text-[#1A1A1A]">
+                                    {{ $latestVersion->created_at->locale('id_ID')->isoFormat('D MMM YY') }}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="mt-3 pt-3 border-t border-[#EEF0F7]">
+                            <div
+                                class="flex items-center gap-2 px-3 py-2 bg-[#F0FDF4] rounded-lg border border-[#DCFCE7]">
+                                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                                <span class="text-xs font-semibold text-green-700">File ready for download</span>
+                            </div>
+                        </div>
+                    </div>
+                    @endif
+
+                </div>
+            </aside>
+
+        </div>
+
+        @else
+        {{-- ══════════════════════════════════════════════════════
+        TIDAK ADA FILE: Layout 1 kolom penuh
+        Hanya tampilkan abstract & keywords, tanpa cover/info card
+        ══════════════════════════════════════════════════════ --}}
+        <div id="publication-detail-grid">
+
+            {{-- Abstract — full width --}}
             @if($publication->abstract)
-            <div
-                class="bg-white rounded-2xl border border-[#EEF0F7] p-6 md:p-8 hover:shadow-lg transition-shadow duration-300">
+            <div class="bg-white rounded-2xl border border-[#EEF0F7] p-6 md:p-8 hover:shadow-lg transition-shadow duration-300"
+                style="width:100%">
                 <h2 class="text-xl font-bold text-[#1A1A1A] mb-4 flex items-center gap-2">
                     <svg class="w-6 h-6 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -625,15 +1062,18 @@ $hasFile = $latestVersion && !empty($latestVersion->pdf_file_path);
                     </svg>
                     {{ $abstractLabel }}
                 </h2>
-                <div class="prose prose-sm md:prose-base max-w-none text-[#1A1A1A] leading-relaxed text-justify">
+                {{-- max-w-none + style override untuk pastikan prose tidak dibatasi lebar apapun --}}
+                <div class="prose prose-sm md:prose-base text-[#1A1A1A] leading-relaxed text-justify"
+                    style="max-width:100% !important; width:100% !important">
                     {!! $publication->abstract !!}
                 </div>
             </div>
             @endif
 
+            {{-- Keywords — full width --}}
             @if($keywords && count($keywords) > 0)
-            <div
-                class="bg-white rounded-2xl border border-[#EEF0F7] p-6 md:p-8 hover:shadow-lg transition-shadow duration-300">
+            <div class="bg-white rounded-2xl border border-[#EEF0F7] p-6 md:p-8 hover:shadow-lg transition-shadow duration-300"
+                style="width:100%">
                 <h2 class="text-xl font-bold text-[#1A1A1A] mb-4 flex items-center gap-2">
                     <svg class="w-6 h-6 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -653,371 +1093,150 @@ $hasFile = $latestVersion && !empty($latestVersion->pdf_file_path);
             @endif
 
         </div>
+        @endif
 
-        {{-- RIGHT: Cover + Action Buttons + Version Badge --}}
-        <aside id="publication-sidebar">
-            <div class="sticky-cover">
+    </article>
 
-                {{-- Cover Image --}}
-                <div class="mb-6 cover-image-wrapper aspect-[2/3] relative overflow-hidden rounded-xl">
-                    @if($cover_url)
-                    <img src="{{ $cover_url }}" alt="Cover {{ $publication->title }}" class="object-cover w-full h-full"
-                        onerror="this.onerror=null; this.src='{{ $placeholderUrl }}';">
-                    <div
-                        class="absolute inset-0 z-20 flex items-end justify-center p-6 transition-opacity duration-500 opacity-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent hover:opacity-100 rounded-xl">
-                        <button onclick="viewCoverFullscreen()"
-                            class="px-6 py-3 bg-white/95 backdrop-blur-sm text-[#1A1A1A] text-sm font-bold rounded-lg hover:bg-white transition-all duration-300 transform hover:scale-105 shadow-xl flex items-center gap-2">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    {{-- Login Required Modal --}}
+    <div id="loginRequiredModal">
+        <div id="loginModalBackdrop" onclick="closeLoginModal()"></div>
+        <div id="loginModalContainer">
+            <div class="relative w-full max-w-sm p-8 overflow-hidden text-center bg-white shadow-2xl rounded-2xl"
+                onclick="event.stopPropagation()">
+                <div class="absolute -top-8 -left-8 w-32 h-32 rounded-full bg-[#FFF7F2] opacity-60 pointer-events-none">
+                </div>
+                <div
+                    class="absolute -bottom-8 -right-8 w-24 h-24 rounded-full bg-[#FFF7F2] opacity-60 pointer-events-none">
+                </div>
+                <button onclick="closeLoginModal()"
+                    class="absolute top-4 right-4 p-1.5 rounded-full hover:bg-[#F8F9FC] transition-colors group z-10">
+                    <svg class="w-5 h-5 text-[#737373] group-hover:text-[#FF6B18]" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+                <div
+                    class="relative z-10 w-20 h-20 bg-gradient-to-br from-[#FFF7F2] to-[#FFE8D6] rounded-full flex items-center justify-center mx-auto mb-5 shadow-inner">
+                    <svg id="loginModalIcon" class="w-10 h-10 text-[#FF6B18]" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                </div>
+                <h3 id="loginModalTitle" class="relative z-10 text-xl font-bold text-[#1A1A1A] mb-2">Masuk untuk
+                    melanjutkan
+                </h3>
+                <p id="loginModalDesc" class="relative z-10 text-[#737373] text-sm mb-7 leading-relaxed px-2">Yuk login
+                    dulu
+                    untuk menggunakan fitur ini!</p>
+                <div class="relative z-10 flex flex-col gap-3">
+                    <a id="loginModalBtn" href="{{ route('login') }}"
+                        class="w-full py-3.5 bg-gradient-to-r from-[#FF6B18] to-[#E64627] text-white font-bold rounded-xl hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                        </svg>
+                        Masuk Sekarang
+                    </a>
+                    <a href="{{ route('register') }}"
+                        class="w-full py-3.5 border-2 border-[#FF6B18] text-[#FF6B18] hover:bg-[#FFF7F2] font-bold rounded-xl transition-all duration-200 flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                        </svg>
+                        Daftar Gratis
+                    </a>
+                    <button onclick="closeLoginModal()"
+                        class="text-[#737373] hover:text-[#1A1A1A] text-sm font-medium transition-colors py-1">
+                        Nanti saja
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Authors Modal --}}
+    <div id="authorsModal" class="modal-overlay" style="display: none;" onclick="closeAuthorsModal(event)">
+        <div class="modal-container">
+            <div class="modal-content" onclick="event.stopPropagation()">
+                <div class="modal-header">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-2xl font-bold text-[#1A1A1A] mb-1">All Authors</h3>
+                            <p class="text-sm text-[#737373]">
+                                {{ $authors->count() }} {{ $authors->count() > 1 ? 'contributors' : 'contributor' }} to
+                                this
+                                publication
+                            </p>
+                        </div>
+                        <button onclick="closeAuthorsModal()"
+                            class="p-2 rounded-full hover:bg-[#FFF7F2] transition-colors duration-300 group">
+                            <svg class="w-6 h-6 text-[#737373] group-hover:text-[#FF6B18]" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                                    d="M6 18L18 6M6 6l12 12" />
                             </svg>
-                            View Full Size
                         </button>
                     </div>
-                    @else
-                    <img src="{{ $placeholderUrl }}" alt="Cover {{ $publication->title }}"
-                        class="object-cover w-full h-full">
-                    @endif
                 </div>
-
-                {{-- Action Buttons — ada file --}}
-                <div class="action-buttons-container">
-
-                    {{-- Baca Sekarang / Preview Gratis --}}
-                    @auth
-                    <a href="{{ route('publikasi.read', $publication->slug) }}"
-                        class="btn-ripple w-full px-5 py-3.5 bg-gradient-to-r from-[#FF6B18] to-[#E64627] text-white font-bold text-base rounded-xl hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 flex items-center justify-center gap-3 group">
-                        <svg class="w-5 h-5 transition-transform duration-300 group-hover:rotate-12" fill="none"
-                            stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                        <span>Baca Sekarang</span>
-                    </a>
-                    @else
-                    <a href="{{ route('publikasi.read', $publication->slug) }}"
-                        class="btn-ripple w-full px-5 py-3.5 bg-gradient-to-r from-[#FF6B18] to-[#E64627] text-white font-bold text-base rounded-xl hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 flex items-center justify-center gap-3 group">
-                        <svg class="w-5 h-5 transition-transform duration-300 group-hover:rotate-12" fill="none"
-                            stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                        <span>Preview Gratis</span>
-                    </a>
-                    <div class="flex items-center gap-2 px-3 py-2 bg-[#FFF7F2] rounded-lg border border-[#FFD6B8]">
-                        <svg class="w-4 h-4 text-[#FF6B18] flex-shrink-0" fill="none" stroke="currentColor"
-                            viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <p class="text-xs text-[#FF6B18] font-medium">
-                            Preview dengan watermark.
-                            <a href="{{ route('login') }}" class="font-bold underline hover:text-[#E64627]">Login</a>
-                            untuk akses penuh.
-                        </p>
-                    </div>
-                    @endauth
-
-                    {{-- Download PDF --}}
-                    @auth
-                    <a href="{{ route('publikasi.download', $publication->slug) }}"
-                        class="btn-ripple w-full px-5 py-3.5 bg-white border-2 border-[#FF6B18] text-[#FF6B18] font-bold text-base rounded-xl hover:bg-[#FF6B18] hover:text-white hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 flex items-center justify-center gap-3 group">
-                        <svg class="w-5 h-5 download-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                        </svg>
-                        <span>Download PDF</span>
-                    </a>
-                    @else
-                    <button type="button" onclick="showLoginModal('download')"
-                        class="btn-ripple w-full px-5 py-3.5 bg-white border-2 border-[#FF6B18] text-[#FF6B18] font-bold text-base rounded-xl hover:bg-[#FFF7F2] hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-3 group">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                        </svg>
-                        <span>Download PDF</span>
-                        <svg class="w-4 h-4 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                        </svg>
-                    </button>
-                    @endauth
-
-                </div>
-
-                {{-- Version Badge --}}
-                @if($latestVersion)
-                <div class="version-badge">
-                    <div class="flex items-start justify-between mb-3 pb-3 border-b border-[#EEF0F7]">
-                        <div class="flex items-center gap-2">
-                            <div
-                                class="w-8 h-8 rounded-full bg-gradient-to-br from-[#FF6B18] to-[#E64627] flex items-center justify-center flex-shrink-0">
-                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                            </div>
-                            <div>
-                                <p class="text-xs font-bold text-[#737373] uppercase tracking-wide">Version</p>
-                                <p class="text-lg font-bold text-[#1A1A1A]">v{{ $latestVersion->version_number }}</p>
-                            </div>
-                        </div>
-                        <span
-                            class="px-3 py-1 bg-[#FFF7F2] text-xs font-bold text-[#FF6B18] rounded-full">Published</span>
-                    </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div class="bg-[#FAFBFC] p-3 rounded-lg border border-[#EEF0F7]">
-                            <p class="text-xs text-[#737373] font-semibold mb-1.5 flex items-center gap-1">
-                                <svg class="w-4 h-4 text-[#FF6B18]" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                                </svg>
-                                Format
-                            </p>
-                            <p class="text-sm font-bold text-[#1A1A1A]">PDF</p>
-                        </div>
-                        <div class="bg-[#FAFBFC] p-3 rounded-lg border border-[#EEF0F7]">
-                            <p class="text-xs text-[#737373] font-semibold mb-1.5 flex items-center gap-1">
-                                <svg class="w-4 h-4 text-[#FF6B18]" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
-                                </svg>
-                                Size
-                            </p>
-                            <p class="text-sm font-bold text-[#1A1A1A]">{{ $fileSizeFormatted ?? 'N/A' }}</p>
-                        </div>
-                        <div class="bg-[#FAFBFC] p-3 rounded-lg border border-[#EEF0F7]">
-                            <p class="text-xs text-[#737373] font-semibold mb-1.5 flex items-center gap-1">
-                                <svg class="w-4 h-4 text-[#FF6B18]" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                </svg>
-                                Downloads
-                            </p>
-                            <p class="text-sm font-bold text-[#1A1A1A]">{{ number_format($downloadCount ?? 0) }}</p>
-                        </div>
-                        <div class="bg-[#FAFBFC] p-3 rounded-lg border border-[#EEF0F7]">
-                            <p class="text-xs text-[#737373] font-semibold mb-1.5 flex items-center gap-1">
-                                <svg class="w-4 h-4 text-[#FF6B18]" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                                Added
-                            </p>
-                            <p class="text-sm font-bold text-[#1A1A1A]">
-                                {{ $latestVersion->created_at->locale('id_ID')->isoFormat('D MMM YY') }}
-                            </p>
-                        </div>
-                    </div>
-                    <div class="mt-3 pt-3 border-t border-[#EEF0F7]">
-                        <div class="flex items-center gap-2 px-3 py-2 bg-[#F0FDF4] rounded-lg border border-[#DCFCE7]">
-                            <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                            <span class="text-xs font-semibold text-green-700">File ready for download</span>
-                        </div>
-                    </div>
-                </div>
-                @endif
-
-            </div>
-        </aside>
-
-    </div>
-
-    @else
-    {{-- ══════════════════════════════════════════════════════
-    TIDAK ADA FILE: Layout 1 kolom penuh
-    Hanya tampilkan abstract & keywords, tanpa cover/info card
-    ══════════════════════════════════════════════════════ --}}
-    <div id="publication-detail-grid">
-
-        {{-- Abstract — full width --}}
-        @if($publication->abstract)
-        <div class="bg-white rounded-2xl border border-[#EEF0F7] p-6 md:p-8 hover:shadow-lg transition-shadow duration-300"
-            style="width:100%">
-            <h2 class="text-xl font-bold text-[#1A1A1A] mb-4 flex items-center gap-2">
-                <svg class="w-6 h-6 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                {{ $abstractLabel }}
-            </h2>
-            {{-- max-w-none + style override untuk pastikan prose tidak dibatasi lebar apapun --}}
-            <div class="prose prose-sm md:prose-base text-[#1A1A1A] leading-relaxed text-justify"
-                style="max-width:100% !important; width:100% !important">
-                {!! $publication->abstract !!}
-            </div>
-        </div>
-        @endif
-
-        {{-- Keywords — full width --}}
-        @if($keywords && count($keywords) > 0)
-        <div class="bg-white rounded-2xl border border-[#EEF0F7] p-6 md:p-8 hover:shadow-lg transition-shadow duration-300"
-            style="width:100%">
-            <h2 class="text-xl font-bold text-[#1A1A1A] mb-4 flex items-center gap-2">
-                <svg class="w-6 h-6 text-[#FF6B18]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                </svg>
-                {{ $keywordLabel }}
-            </h2>
-            <div class="flex flex-wrap gap-2">
-                @foreach($keywords as $keyword)
-                <span
-                    class="px-4 py-2 bg-[#F8F9FC] text-sm font-medium text-[#1A1A1A] rounded-full hover:bg-[#FFF7F2] hover:text-[#FF6B18] hover:shadow-md hover:scale-105 transition-all duration-300 cursor-pointer">
-                    {{ $keyword }}
-                </span>
-                @endforeach
-            </div>
-        </div>
-        @endif
-
-    </div>
-    @endif
-
-</article>
-
-{{-- Login Required Modal --}}
-<div id="loginRequiredModal">
-    <div id="loginModalBackdrop" onclick="closeLoginModal()"></div>
-    <div id="loginModalContainer">
-        <div class="relative w-full max-w-sm p-8 overflow-hidden text-center bg-white shadow-2xl rounded-2xl"
-            onclick="event.stopPropagation()">
-            <div class="absolute -top-8 -left-8 w-32 h-32 rounded-full bg-[#FFF7F2] opacity-60 pointer-events-none">
-            </div>
-            <div class="absolute -bottom-8 -right-8 w-24 h-24 rounded-full bg-[#FFF7F2] opacity-60 pointer-events-none">
-            </div>
-            <button onclick="closeLoginModal()"
-                class="absolute top-4 right-4 p-1.5 rounded-full hover:bg-[#F8F9FC] transition-colors group z-10">
-                <svg class="w-5 h-5 text-[#737373] group-hover:text-[#FF6B18]" fill="none" stroke="currentColor"
-                    viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-            </button>
-            <div
-                class="relative z-10 w-20 h-20 bg-gradient-to-br from-[#FFF7F2] to-[#FFE8D6] rounded-full flex items-center justify-center mx-auto mb-5 shadow-inner">
-                <svg id="loginModalIcon" class="w-10 h-10 text-[#FF6B18]" fill="none" stroke="currentColor"
-                    viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-            </div>
-            <h3 id="loginModalTitle" class="relative z-10 text-xl font-bold text-[#1A1A1A] mb-2">Masuk untuk melanjutkan
-            </h3>
-            <p id="loginModalDesc" class="relative z-10 text-[#737373] text-sm mb-7 leading-relaxed px-2">Yuk login dulu
-                untuk menggunakan fitur ini!</p>
-            <div class="relative z-10 flex flex-col gap-3">
-                <a id="loginModalBtn" href="{{ route('login') }}"
-                    class="w-full py-3.5 bg-gradient-to-r from-[#FF6B18] to-[#E64627] text-white font-bold rounded-xl hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-                    </svg>
-                    Masuk Sekarang
-                </a>
-                <a href="{{ route('register') }}"
-                    class="w-full py-3.5 border-2 border-[#FF6B18] text-[#FF6B18] hover:bg-[#FFF7F2] font-bold rounded-xl transition-all duration-200 flex items-center justify-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                    </svg>
-                    Daftar Gratis
-                </a>
-                <button onclick="closeLoginModal()"
-                    class="text-[#737373] hover:text-[#1A1A1A] text-sm font-medium transition-colors py-1">
-                    Nanti saja
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-{{-- Authors Modal --}}
-<div id="authorsModal" class="modal-overlay" style="display: none;" onclick="closeAuthorsModal(event)">
-    <div class="modal-container">
-        <div class="modal-content" onclick="event.stopPropagation()">
-            <div class="modal-header">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h3 class="text-2xl font-bold text-[#1A1A1A] mb-1">All Authors</h3>
-                        <p class="text-sm text-[#737373]">
-                            {{ $authors->count() }} {{ $authors->count() > 1 ? 'contributors' : 'contributor' }} to this
-                            publication
-                        </p>
-                    </div>
-                    <button onclick="closeAuthorsModal()"
-                        class="p-2 rounded-full hover:bg-[#FFF7F2] transition-colors duration-300 group">
-                        <svg class="w-6 h-6 text-[#737373] group-hover:text-[#FF6B18]" fill="none" stroke="currentColor"
-                            viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                </div>
-            </div>
-            <div class="modal-body">
-                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    @foreach($authors as $index => $author)
-                    <a href="{{ route('author.profile', $author['slug']) }}" class="block author-card-modal">
-                        <div class="flex items-start gap-4">
-                            <div class="flex-shrink-0">
-                                @if($author['photo'])
-                                <img src="{{ $author['photo'] }}" alt="{{ $author['name'] }}"
-                                    class="object-cover w-16 h-16 rounded-full shadow-md ring-2 ring-white">
-                                @else
-                                <div
-                                    class="w-16 h-16 bg-gradient-to-br from-[#FF6B18] to-[#E64627] rounded-full flex items-center justify-center text-white text-lg font-bold ring-2 ring-white shadow-md">
-                                    {{ $author['initials'] }}
-                                </div>
-                                @endif
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <div class="flex items-start justify-between gap-2 mb-2">
-                                    <h4
-                                        class="text-base font-bold text-[#1A1A1A] leading-snug hover:text-[#FF6B18] transition-colors">
-                                        {{ $author['name'] }}
-                                    </h4>
-                                    @if($author['is_corresponding'])
-                                    <span
-                                        class="px-2 py-0.5 bg-[#FFF7F2] text-xs font-bold text-[#FF6B18] rounded-full flex-shrink-0">CA</span>
+                <div class="modal-body">
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        @foreach($authors as $index => $author)
+                        <a href="{{ route('author.profile', $author['slug']) }}" class="block author-card-modal">
+                            <div class="flex items-start gap-4">
+                                <div class="flex-shrink-0">
+                                    @if($author['photo'])
+                                    <img src="{{ $author['photo'] }}" alt="{{ $author['name'] }}"
+                                        class="object-cover w-16 h-16 rounded-full shadow-md ring-2 ring-white">
+                                    @else
+                                    <div
+                                        class="w-16 h-16 bg-gradient-to-br from-[#FF6B18] to-[#E64627] rounded-full flex items-center justify-center text-white text-lg font-bold ring-2 ring-white shadow-md">
+                                        {{ $author['initials'] }}
+                                    </div>
                                     @endif
                                 </div>
-                                <p class="text-sm text-[#737373] mb-2">{{ $author['affiliation'] }}</p>
-                                <div class="flex items-center gap-2 mt-3 pt-3 border-t border-[#EEF0F7]">
-                                    <svg class="w-4 h-4 text-[#FF6B18]" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
-                                    </svg>
-                                    <span class="text-xs font-semibold text-[#737373]">Author #{{ $index + 1 }}</span>
-                                    <svg class="w-4 h-4 text-[#FF6B18] ml-auto" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M9 5l7 7-7 7" />
-                                    </svg>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-start justify-between gap-2 mb-2">
+                                        <h4
+                                            class="text-base font-bold text-[#1A1A1A] leading-snug hover:text-[#FF6B18] transition-colors">
+                                            {{ $author['name'] }}
+                                        </h4>
+                                        @if($author['is_corresponding'])
+                                        <span
+                                            class="px-2 py-0.5 bg-[#FFF7F2] text-xs font-bold text-[#FF6B18] rounded-full flex-shrink-0">CA</span>
+                                        @endif
+                                    </div>
+                                    <p class="text-sm text-[#737373] mb-2">{{ $author['affiliation'] }}</p>
+                                    <div class="flex items-center gap-2 mt-3 pt-3 border-t border-[#EEF0F7]">
+                                        <svg class="w-4 h-4 text-[#FF6B18]" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                                        </svg>
+                                        <span class="text-xs font-semibold text-[#737373]">Author #{{ $index + 1
+                                            }}</span>
+                                        <svg class="w-4 h-4 text-[#FF6B18] ml-auto" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M9 5l7 7-7 7" />
+                                        </svg>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </a>
-                    @endforeach
+                        </a>
+                        @endforeach
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-@endsection
+    @endsection
 
-@push('scripts')
-<script>
-    const csrfToken  = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    @push('scripts')
+    <script>
+        const csrfToken  = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     const isLoggedIn = {{ auth()->check() ? 'true' : 'false' }};
 
     const loginMessages = {
@@ -1280,5 +1499,5 @@ $hasFile = $latestVersion && !empty($latestVersion->pdf_file_path);
         }
     `;
     document.head.appendChild(style);
-</script>
-@endpush
+    </script>
+    @endpush
