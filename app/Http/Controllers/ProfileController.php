@@ -10,50 +10,59 @@ use Illuminate\Validation\Rules\Password;
 
 class ProfileController extends Controller
 {
-    /**
-     * Tampilkan halaman profil user
-     */
     public function index()
     {
         $user = Auth::user();
 
-        // Load relationships dengan error handling
         try {
             $user->load(['authorProfile', 'publications', 'savedPublications', 'favoritePublications']);
 
             $publicationsCount = $user->publications()->count();
-            $savedCount = $user->savedPublications()->count();
-            $favoritesCount = $user->favoritePublications()->count();
+            $savedCount        = $user->savedPublications()->count();
+            $favoritesCount    = $user->favoritePublications()->count();
         } catch (\Exception $e) {
-            // Jika ada error saat load relationships, set default 0
             $publicationsCount = 0;
-            $savedCount = 0;
-            $favoritesCount = 0;
+            $savedCount        = 0;
+            $favoritesCount    = 0;
         }
 
         return view('profilesaya', [
-            'user' => $user,
+            'user'              => $user,
             'publicationsCount' => $publicationsCount,
-            'savedCount' => $savedCount,
-            'favoritesCount' => $favoritesCount,
+            'savedCount'        => $savedCount,
+            'favoritesCount'    => $favoritesCount,
         ]);
     }
 
-    /**
-     * Update profil user
-     */
     public function update(Request $request)
     {
         $user = Auth::user();
 
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email,' . $user->id],
-            'whatsapp_number' => ['nullable', 'string', 'max:20'],
-            'job_title' => ['nullable', 'string', 'max:100'],
-            'affiliation' => ['nullable', 'string', 'max:255'],
-            'bio' => ['nullable', 'string', 'max:500'],
+            'name'             => ['required', 'string', 'max:255'],
+            'email'            => ['required', 'email', 'max:255', 'unique:users,email,' . $user->id],
+            'whatsapp_number'  => ['nullable', 'string', 'max:20'],
+            'job_title'        => ['nullable', 'string', 'max:100'],
+            'affiliation'      => ['nullable', 'string', 'max:255'],
+            'bio'              => ['nullable', 'string', 'max:500'],
+
+            // ✅ ORCID iD — opsional, validasi format jika diisi
+            'orcid_id'         => [
+                'nullable',
+                'string',
+                'regex:/^\d{4}-\d{4}-\d{4}-\d{3}[\dXx]$/',
+                'max:19',
+            ],
+        ], [
+            'orcid_id.regex' => 'Format ORCID tidak valid. Gunakan format: 0000-0000-0000-0000 (digit terakhir bisa huruf X).',
         ]);
+
+        // Normalisasi ORCID: uppercase digit terakhir jika X, hapus jika kosong
+        if (!empty($validated['orcid_id'])) {
+            $validated['orcid_id'] = strtoupper($validated['orcid_id']);
+        } else {
+            $validated['orcid_id'] = null;
+        }
 
         try {
             $user->update($validated);
@@ -63,9 +72,6 @@ class ProfileController extends Controller
         }
     }
 
-    /**
-     * Update foto profil
-     */
     public function updatePhoto(Request $request)
     {
         $user = Auth::user();
@@ -75,7 +81,6 @@ class ProfileController extends Controller
         ]);
 
         try {
-            // Hapus foto lama jika ada (hanya foto upload, bukan avatar social login)
             if ($user->profile_photo) {
                 $cleanPath = str_starts_with($user->profile_photo, 'public/')
                     ? substr($user->profile_photo, 7)
@@ -86,12 +91,8 @@ class ProfileController extends Controller
                 }
             }
 
-            // Upload foto baru
             $path = $request->file('profile_photo')->store('profile-photos', 'public');
-
-            $user->update([
-                'profile_photo' => $path,
-            ]);
+            $user->update(['profile_photo' => $path]);
 
             return redirect()->route('profil.saya')->with('success', 'Foto profil berhasil diperbarui!');
         } catch (\Exception $e) {
@@ -99,9 +100,6 @@ class ProfileController extends Controller
         }
     }
 
-    /**
-     * Hapus foto profil
-     */
     public function deletePhoto()
     {
         $user = Auth::user();
@@ -125,28 +123,21 @@ class ProfileController extends Controller
         }
     }
 
-    /**
-     * Update password
-     */
     public function updatePassword(Request $request)
     {
         $user = Auth::user();
 
-        // Cek apakah user login via social media
         if (!$user->hasPassword()) {
             return redirect()->route('profil.saya')->with('error', 'Anda login menggunakan ' . $user->provider_name . ', tidak dapat mengubah password.');
         }
 
         $request->validate([
             'current_password' => ['required', 'current_password'],
-            'password' => ['required', 'confirmed', Password::defaults()],
+            'password'         => ['required', 'confirmed', Password::defaults()],
         ]);
 
         try {
-            $user->update([
-                'password' => Hash::make($request->password),
-            ]);
-
+            $user->update(['password' => Hash::make($request->password)]);
             return redirect()->route('profil.saya')->with('success', 'Password berhasil diperbarui!');
         } catch (\Exception $e) {
             return redirect()->route('profil.saya')->with('error', 'Gagal memperbarui password: ' . $e->getMessage());

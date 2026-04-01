@@ -27,7 +27,6 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         'bio',
         'affiliation',
         'google_id',
-        'facebook_id',
         'orcid_id',
         'orcid_verified_at',
         'avatar',

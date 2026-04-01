@@ -97,7 +97,6 @@
                 <div class="absolute inset-0 opacity-20"
                     style="background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')">
                 </div>
-                {{-- Decorative circles --}}
                 <div class="absolute w-20 h-20 rounded-full top-4 right-8 bg-white/10"></div>
                 <div class="absolute w-32 h-32 rounded-full -top-4 right-24 bg-white/5"></div>
             </div>
@@ -146,6 +145,29 @@
                                 </svg>
                                 {{ $user->affiliation }}
                             </span>
+                            @endif
+                            {{-- ✅ ORCID badge di overview card --}}
+                            @if($user->orcid_id)
+                            <a href="https://orcid.org/{{ $user->orcid_id }}" target="_blank" rel="noopener noreferrer"
+                                class="inline-flex items-center gap-1.5 px-3 py-1 bg-[#F0FDF4] text-green-700
+                                rounded-full text-xs font-semibold border border-[#BBF7D0] hover:bg-[#DCFCE7] transition-colors">
+                                {{-- ORCID logo icon --}}
+                                <svg class="w-3.5 h-3.5" viewBox="0 0 256 256" fill="none"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="128" cy="128" r="128" fill="#A6CE39" />
+                                    <path
+                                        d="M86.3 186.2H70.9V79.1h15.4v107.1zM108.9 79.1h41.6c39.6 0 57 28.3 57 53.6 0 27.5-21.5 53.6-56.8 53.6h-41.8V79.1zm15.4 93.3h24.5c34.9 0 42.9-26.5 42.9-39.7C191.7 111.2 178 93 148 93h-23.7v79.4zM88.7 56.8c0 5.5-4.5 10.1-10.1 10.1s-10.1-4.6-10.1-10.1c0-5.6 4.5-10.1 10.1-10.1s10.1 4.5 10.1 10.1z"
+                                        fill="white" />
+                                </svg>
+                                {{ $user->orcid_id }}
+                                @if($user->isOrcidVerified())
+                                <svg class="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd"
+                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                        clip-rule="evenodd" />
+                                </svg>
+                                @endif
+                            </a>
                             @endif
                         </div>
                     </div>
@@ -208,7 +230,6 @@
 
                             <span>{{ $nav['label'] }}</span>
 
-                            {{-- Active indicator arrow --}}
                             <svg x-show="activeTab === '{{ $nav['tab'] }}'" class="w-4 h-4 ml-auto text-[#FF6B18]"
                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -218,7 +239,6 @@
                         @endforeach
                     </nav>
 
-                    {{-- Divider --}}
                     <div class="mx-3 my-3 border-t border-[#EEF0F7]"></div>
 
                     {{-- Quick Info --}}
@@ -238,6 +258,16 @@
                             <span class="text-[#A3A6AE]">Bergabung</span>
                             <span class="font-semibold text-[#1A1A1A]">{{ $user->created_at->format('M Y') }}</span>
                         </div>
+                        {{-- ✅ ORCID status di sidebar --}}
+                        @if($user->orcid_id)
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="text-[#A3A6AE]">ORCID</span>
+                            <span
+                                class="font-semibold {{ $user->isOrcidVerified() ? 'text-green-600' : 'text-yellow-600' }}">
+                                {{ $user->isOrcidVerified() ? '✓ Terhubung' : '○ Diisi' }}
+                            </span>
+                        </div>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -376,6 +406,122 @@
                             @enderror
                         </div>
 
+                        {{-- ✅ ORCID iD — FIELD BARU --}}
+                        <div x-data="orcidField()"
+                            class="p-4 rounded-xl border border-[#EEF0F7] bg-[#F8FFFE] space-y-3">
+
+                            {{-- Header ORCID --}}
+                            <div class="flex items-center gap-2 mb-1">
+                                {{-- ORCID logo --}}
+                                <svg class="flex-shrink-0 w-5 h-5" viewBox="0 0 256 256" fill="none"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="128" cy="128" r="128" fill="#A6CE39" />
+                                    <path
+                                        d="M86.3 186.2H70.9V79.1h15.4v107.1zM108.9 79.1h41.6c39.6 0 57 28.3 57 53.6 0 27.5-21.5 53.6-56.8 53.6h-41.8V79.1zm15.4 93.3h24.5c34.9 0 42.9-26.5 42.9-39.7C191.7 111.2 178 93 148 93h-23.7v79.4zM88.7 56.8c0 5.5-4.5 10.1-10.1 10.1s-10.1-4.6-10.1-10.1c0-5.6 4.5-10.1 10.1-10.1s10.1 4.5 10.1 10.1z"
+                                        fill="white" />
+                                </svg>
+                                <label class="text-xs font-bold text-[#1A1A1A] uppercase tracking-wide">
+                                    ORCID iD
+                                </label>
+                                <a href="https://orcid.org/register" target="_blank" rel="noopener noreferrer"
+                                    class="ml-auto text-xs font-medium text-green-700 hover:text-green-900 hover:underline">
+                                    Belum punya? Daftar gratis →
+                                </a>
+                            </div>
+
+                            {{-- Input ORCID --}}
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                                    <span class="text-xs font-bold text-[#A3A6AE]">orcid.org/</span>
+                                </div>
+                                <input type="text" name="orcid_id" value="{{ old('orcid_id', $user->orcid_id) }}"
+                                    placeholder="0000-0000-0000-0000" maxlength="19" x-model="orcidValue"
+                                    @input="formatOrcid($event); validateOrcid()" class="w-full pl-[84px] pr-12 py-3 text-sm bg-white border rounded-xl
+                                        focus:ring-2 focus:ring-green-500/30 focus:bg-white
+                                        transition-all duration-200 outline-none font-mono tracking-wider
+                                        @error('orcid_id') border-red-400 bg-red-50 @else border-[#EEF0F7] @enderror"
+                                    :class="{
+                                        'border-green-400 focus:border-green-500': isValid && orcidValue,
+                                        'border-red-400 focus:border-red-500': !isValid && orcidValue && orcidValue.length > 0,
+                                        'border-[#EEF0F7] focus:border-green-500': !orcidValue
+                                    }">
+
+                                {{-- Status icon di kanan input --}}
+                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                    {{-- Valid --}}
+                                    <svg x-show="isValid && orcidValue" class="w-5 h-5 text-green-500"
+                                        fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd"
+                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                            clip-rule="evenodd" />
+                                    </svg>
+                                    {{-- Invalid --}}
+                                    <svg x-show="!isValid && orcidValue && orcidValue.length > 0"
+                                        class="w-5 h-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd"
+                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                                            clip-rule="evenodd" />
+                                    </svg>
+                                </div>
+                            </div>
+
+                            {{-- Helper text & link verifikasi --}}
+                            <div class="flex items-start justify-between gap-2">
+                                <div>
+                                    @error('orcid_id')
+                                    <p class="flex items-center gap-1 text-xs text-red-500">
+                                        <svg class="flex-shrink-0 w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd"
+                                                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                                                clip-rule="evenodd" />
+                                        </svg>
+                                        {{ $message }}
+                                    </p>
+                                    @else
+                                    <p class="text-xs text-[#A3A6AE]">
+                                        Format: <span class="font-mono">0000-0000-0000-0000</span>
+                                        — digit terakhir bisa huruf X
+                                    </p>
+                                    @enderror
+                                    <p x-show="isValid && orcidValue" class="text-xs text-green-700 font-medium mt-0.5">
+                                        ✓ Format ORCID valid
+                                    </p>
+                                    <p x-show="!isValid && orcidValue && orcidValue.length > 0"
+                                        class="text-xs text-red-500 mt-0.5">
+                                        Format tidak valid. Contoh: 0000-0001-5000-0007
+                                    </p>
+                                </div>
+
+                                {{-- Tombol buka ORCID profile --}}
+                                <a x-show="isValid && orcidValue" :href="'https://orcid.org/' + orcidValue"
+                                    target="_blank" rel="noopener noreferrer"
+                                    class="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white text-xs font-bold rounded-lg hover:bg-green-700 transition-colors">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                    </svg>
+                                    Lihat Profil
+                                </a>
+                            </div>
+
+                            {{-- Info box ORCID --}}
+                            <div class="flex items-start gap-2 p-3 border border-green-100 rounded-lg bg-green-50">
+                                <svg class="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" fill="currentColor"
+                                    viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd"
+                                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                                        clip-rule="evenodd" />
+                                </svg>
+                                <p class="text-xs leading-relaxed text-green-800">
+                                    <strong>ORCID iD</strong> adalah identifikasi peneliti global yang unik.
+                                    Menghubungkan ORCID membantu karya Anda lebih mudah ditemukan dan dikreditkan secara
+                                    akademik.
+                                </p>
+                            </div>
+
+                        </div>
+                        {{-- ✅ END ORCID iD --}}
+
                         {{-- Bio --}}
                         <div>
                             <label class="block text-xs font-bold text-[#1A1A1A] mb-1.5 uppercase tracking-wide">
@@ -450,8 +596,6 @@
 
                         {{-- Preview Area --}}
                         <div class="flex flex-col items-center gap-6 mb-6 sm:flex-row sm:items-start">
-
-                            {{-- Avatar Preview --}}
                             <div class="relative flex-shrink-0">
                                 <div
                                     class="relative w-36 h-36 rounded-2xl overflow-hidden border-4 border-[#EEF0F7] shadow-lg">
@@ -464,7 +608,6 @@
                                     <img :src="preview || '{{ $currentPhotoUrl }}'" id="previewPhoto"
                                         alt="{{ $user->name }}" referrerpolicy="no-referrer"
                                         class="object-cover w-full h-full">
-                                    {{-- Overlay saat hover --}}
                                     <label for="photoInput"
                                         class="absolute inset-0 flex flex-col items-center justify-center transition-all duration-200 cursor-pointer bg-black/0 hover:bg-black/40 group">
                                         <svg class="text-white transition-opacity opacity-0 w-7 h-7 group-hover:opacity-100"
@@ -475,13 +618,9 @@
                                                 d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                                         </svg>
                                         <span
-                                            class="mt-1 text-xs font-bold text-white transition-opacity opacity-0 group-hover:opacity-100">
-                                            Ganti
-                                        </span>
+                                            class="mt-1 text-xs font-bold text-white transition-opacity opacity-0 group-hover:opacity-100">Ganti</span>
                                     </label>
                                 </div>
-
-                                {{-- Delete button --}}
                                 @if($user->profile_photo)
                                 <button type="button" @click="showDeleteModal = true"
                                     class="absolute flex items-center justify-center transition-all duration-200 bg-red-500 border-2 border-white rounded-full shadow-lg -top-2 -right-2 w-7 h-7 hover:bg-red-600 hover:scale-110"
@@ -495,7 +634,6 @@
                                 @endif
                             </div>
 
-                            {{-- Upload Info --}}
                             <div class="flex-1 text-center sm:text-left">
                                 <h4 class="font-bold text-[#1A1A1A] mb-1">{{ $user->name }}</h4>
                                 <p class="text-sm text-[#737373] mb-4">{{ $user->email }}</p>
@@ -519,18 +657,14 @@
                         {{-- Upload Form --}}
                         <form action="{{ route('profil.updatePhoto') }}" method="POST" enctype="multipart/form-data">
                             @csrf
-
-                            {{-- Drop Zone --}}
                             <div class="relative border-2 border-dashed border-[#EEF0F7] rounded-2xl p-6 text-center
                                     hover:border-[#FF6B18] hover:bg-[#FFF7F2]/50 transition-all duration-200 cursor-pointer"
                                 @dragover.prevent="isDragging = true" @dragleave.prevent="isDragging = false"
                                 @drop.prevent="handleDrop($event)"
                                 :class="isDragging ? 'border-[#FF6B18] bg-[#FFF7F2]/50 scale-[1.01]' : ''"
                                 @click="$refs.fileInput.click()">
-
                                 <input type="file" name="profile_photo" accept="image/*" required id="photoInput"
                                     x-ref="fileInput" @change="handleFile($event)" class="hidden">
-
                                 <div x-show="!selectedFile">
                                     <div
                                         class="w-12 h-12 mx-auto mb-3 bg-[#FFF7F2] rounded-xl flex items-center justify-center">
@@ -540,12 +674,10 @@
                                                 d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                                         </svg>
                                     </div>
-                                    <p class="text-sm font-semibold text-[#1A1A1A] mb-1">
-                                        Klik atau drag & drop foto di sini
-                                    </p>
+                                    <p class="text-sm font-semibold text-[#1A1A1A] mb-1">Klik atau drag & drop foto di
+                                        sini</p>
                                     <p class="text-xs text-[#A3A6AE]">JPEG, PNG, WEBP hingga 2MB</p>
                                 </div>
-
                                 <div x-show="selectedFile" class="flex items-center justify-center gap-3">
                                     <div class="flex items-center justify-center w-10 h-10 bg-green-100 rounded-xl">
                                         <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
@@ -636,19 +768,18 @@
                                         <p class="text-xs text-[#737373]">Tindakan ini tidak dapat dibatalkan</p>
                                     </div>
                                 </div>
-                                <p class="text-sm text-[#737373] mb-5">
-                                    Foto akan diganti dengan avatar default berdasarkan nama Anda.
-                                </p>
+                                <p class="text-sm text-[#737373] mb-5">Foto akan diganti dengan avatar default
+                                    berdasarkan nama Anda.</p>
                                 <div class="flex gap-3">
-                                    <button @click="showDeleteModal = false" class="flex-1 px-4 py-2.5 bg-[#F8F9FC] text-[#1A1A1A] text-sm
-                                            font-semibold rounded-xl hover:bg-[#EEF0F7] transition-all">
+                                    <button @click="showDeleteModal = false"
+                                        class="flex-1 px-4 py-2.5 bg-[#F8F9FC] text-[#1A1A1A] text-sm font-semibold rounded-xl hover:bg-[#EEF0F7] transition-all">
                                         Batal
                                     </button>
                                     <form action="{{ route('profil.deletePhoto') }}" method="POST" class="flex-1">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="w-full px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white
-                                                text-sm font-bold rounded-xl transition-all">
+                                        <button type="submit"
+                                            class="w-full px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white text-sm font-bold rounded-xl transition-all">
                                             Ya, Hapus
                                         </button>
                                     </form>
@@ -671,8 +802,8 @@
                     <div class="bg-white rounded-2xl shadow-sm border border-[#EEF0F7] overflow-hidden">
                         <div class="px-6 py-4 border-b border-[#EEF0F7] bg-gradient-to-r from-[#FFF7F2] to-white">
                             <div class="flex items-center gap-3">
-                                <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FF6B18] to-[#E64627]
-                                    flex items-center justify-center shadow-sm">
+                                <div
+                                    class="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FF6B18] to-[#E64627] flex items-center justify-center shadow-sm">
                                     <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor"
                                         viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -692,7 +823,6 @@
                                 class="space-y-5">
                                 @csrf
 
-                                {{-- Current Password --}}
                                 <div>
                                     <label
                                         class="block text-xs font-bold text-[#1A1A1A] mb-1.5 uppercase tracking-wide">
@@ -701,9 +831,9 @@
                                     <div class="relative">
                                         <input :type="showCurrent ? 'text' : 'password'" name="current_password"
                                             required placeholder="Masukkan password saat ini" class="w-full pl-4 pr-12 py-3 text-sm bg-[#F8F9FC] border border-[#EEF0F7] rounded-xl
-            focus:ring-2 focus:ring-[#FF6B18]/30 focus:border-[#FF6B18] focus:bg-white
-            transition-all duration-200 outline-none
-            @error('current_password') border-red-400 bg-red-50 @enderror">
+                                                focus:ring-2 focus:ring-[#FF6B18]/30 focus:border-[#FF6B18] focus:bg-white
+                                                transition-all duration-200 outline-none
+                                                @error('current_password') border-red-400 bg-red-50 @enderror">
                                         <button type="button" @click="showCurrent = !showCurrent"
                                             class="absolute inset-y-0 right-0 flex items-center px-4 text-[#A3A6AE] hover:text-[#FF6B18] transition-colors">
                                             <svg x-show="!showCurrent" class="w-4 h-4" fill="none" stroke="currentColor"
@@ -721,18 +851,10 @@
                                         </button>
                                     </div>
                                     @error('current_password')
-                                    <p class="flex items-center gap-1 mt-1 text-xs text-red-500">
-                                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd"
-                                                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                                                clip-rule="evenodd" />
-                                        </svg>
-                                        {{ $message }}
-                                    </p>
+                                    <p class="flex items-center gap-1 mt-1 text-xs text-red-500">{{ $message }}</p>
                                     @enderror
                                 </div>
 
-                                {{-- New Password --}}
                                 <div>
                                     <label
                                         class="block text-xs font-bold text-[#1A1A1A] mb-1.5 uppercase tracking-wide">
@@ -761,8 +883,6 @@
                                             </svg>
                                         </button>
                                     </div>
-
-                                    {{-- Password Strength --}}
                                     <div x-show="strength > 0" class="mt-2 space-y-1.5">
                                         <div class="flex gap-1">
                                             <div class="flex-1 h-1 transition-all duration-300 rounded-full"
@@ -776,19 +896,15 @@
                                             <div class="flex-1 h-1 transition-all duration-300 rounded-full"
                                                 :class="strength >= 4 ? 'bg-green-500' : 'bg-[#EEF0F7]'"></div>
                                         </div>
-                                        <p class="text-xs font-medium" :class="{
-                                                'text-red-500': strength <= 1,
-                                                'text-yellow-500': strength === 2,
-                                                'text-green-500': strength >= 3
-                                            }" x-text="strengthLabel"></p>
+                                        <p class="text-xs font-medium"
+                                            :class="{'text-red-500': strength <= 1,'text-yellow-500': strength === 2,'text-green-500': strength >= 3}"
+                                            x-text="strengthLabel"></p>
                                     </div>
-
                                     @error('password')
                                     <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
                                     @enderror
                                 </div>
 
-                                {{-- Confirm Password --}}
                                 <div>
                                     <label
                                         class="block text-xs font-bold text-[#1A1A1A] mb-1.5 uppercase tracking-wide">
@@ -801,8 +917,8 @@
                                                 transition-all duration-200 outline-none">
                                         <button type="button" @click="showConfirm = !showConfirm"
                                             class="absolute inset-y-0 right-0 flex items-center px-4 text-[#A3A6AE] hover:text-[#FF6B18] transition-colors">
-                                            <svg x-show=" !showConfirm" class="w-4 h-4" fill="none"
-                                                stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg x-show="!showConfirm" class="w-4 h-4" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                     d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -873,7 +989,7 @@
                             => 'text-[#1A1A1A]'],
                             ['label' => 'Bergabung', 'value' => $user->created_at->locale('id')->isoFormat('D MMMM
                             YYYY'), 'color' => 'text-[#1A1A1A]'],
-                            ['label' => 'Terakhir Login','value' => $user->updated_at->locale('id')->diffForHumans(),
+                            ['label' => 'Terakhir Login', 'value' => $user->updated_at->locale('id')->diffForHumans(),
                             'color' => 'text-[#1A1A1A]'],
                             ] as $info)
                             <div class="flex items-center justify-between py-3 border-b border-[#F8F9FC] last:border-0">
@@ -881,6 +997,26 @@
                                 <span class="text-sm font-semibold {{ $info['color'] }}">{{ $info['value'] }}</span>
                             </div>
                             @endforeach
+
+                            {{-- ✅ ORCID row di account info --}}
+                            <div class="flex items-center justify-between py-3">
+                                <span class="text-sm text-[#737373]">ORCID iD</span>
+                                @if($user->orcid_id)
+                                <a href="https://orcid.org/{{ $user->orcid_id }}" target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="flex items-center gap-1.5 text-sm font-semibold text-green-700 hover:text-green-900 hover:underline">
+                                    <svg class="flex-shrink-0 w-4 h-4" viewBox="0 0 256 256" fill="none">
+                                        <circle cx="128" cy="128" r="128" fill="#A6CE39" />
+                                        <path
+                                            d="M86.3 186.2H70.9V79.1h15.4v107.1zM108.9 79.1h41.6c39.6 0 57 28.3 57 53.6 0 27.5-21.5 53.6-56.8 53.6h-41.8V79.1zm15.4 93.3h24.5c34.9 0 42.9-26.5 42.9-39.7C191.7 111.2 178 93 148 93h-23.7v79.4zM88.7 56.8c0 5.5-4.5 10.1-10.1 10.1s-10.1-4.6-10.1-10.1c0-5.6 4.5-10.1 10.1-10.1s10.1 4.5 10.1 10.1z"
+                                            fill="white" />
+                                    </svg>
+                                    {{ $user->orcid_id }}
+                                </a>
+                                @else
+                                <span class="text-sm text-[#A3A6AE]">Belum diisi</span>
+                                @endif
+                            </div>
                         </div>
                     </div>
 
@@ -892,33 +1028,25 @@
     </div>
 </div>
 
-{{-- ✨ Scroll to Top --}}
 <x-scroll-to-top />
 
-
 @push('scripts')
-
-{{-- ✨ Scroll to Top Script --}}
 <x-scroll-to-top-script />
 
 <script>
-    // ✅ Detect tab dari session (setelah redirect error validasi)
     function profilePage() {
         return {
             activeTab: '{{ session("active_tab", "info") }}',
             setTab(tab) {
                 this.activeTab = tab;
-                // Update URL hash untuk bookmark
                 history.replaceState(null, '', '#' + tab);
             },
             init() {
-                // Baca hash dari URL
                 const hash = window.location.hash.replace('#', '');
                 if (['info', 'photo', 'security'].includes(hash)) {
                     this.activeTab = hash;
                 }
-                // Jika ada error validasi, buka tab yang sesuai
-                @if($errors->hasAny(['name', 'email', 'job_title', 'affiliation', 'whatsapp_number', 'bio']))
+                @if($errors->hasAny(['name', 'email', 'job_title', 'affiliation', 'whatsapp_number', 'bio', 'orcid_id']))
                     this.activeTab = 'info';
                 @elseif($errors->has('profile_photo'))
                     this.activeTab = 'photo';
@@ -929,7 +1057,41 @@
         }
     }
 
-    // ✅ Photo uploader
+    // ✅ ORCID field Alpine component
+    function orcidField() {
+        return {
+            orcidValue: '{{ old('orcid_id', $user->orcid_id ?? '') }}',
+            isValid: false,
+            init() {
+                // Validasi saat load jika sudah ada nilai
+                if (this.orcidValue) {
+                    this.validateOrcid();
+                }
+            },
+            // Auto-format: tambah dash setiap 4 digit
+            formatOrcid(event) {
+                let val = event.target.value.replace(/[^0-9Xx]/g, '').toUpperCase();
+                let formatted = '';
+                for (let i = 0; i < val.length && i < 16; i++) {
+                    if (i > 0 && i % 4 === 0) formatted += '-';
+                    formatted += val[i];
+                }
+                this.orcidValue = formatted;
+                event.target.value = formatted;
+            },
+            // Validasi format ORCID: 0000-0000-0000-000X
+            validateOrcid() {
+                if (!this.orcidValue) {
+                    this.isValid = false;
+                    return;
+                }
+                // ORCID format: 4 grup angka dipisah dash, digit terakhir bisa X
+                const pattern = /^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$/i;
+                this.isValid = pattern.test(this.orcidValue);
+            }
+        }
+    }
+
     function photoUploader() {
         return {
             preview: null,
@@ -946,7 +1108,6 @@
                 this.isDragging = false;
                 const file = event.dataTransfer.files[0];
                 if (!file) return;
-                // Inject ke input file
                 const dt = new DataTransfer();
                 dt.items.add(file);
                 this.$refs.fileInput.files = dt.files;
@@ -958,7 +1119,6 @@
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     this.preview = e.target.result;
-                    // Update header avatar juga
                     const headerAvatar = document.getElementById('headerAvatar');
                     if (headerAvatar) headerAvatar.src = e.target.result;
                 };
@@ -972,7 +1132,6 @@
         }
     }
 
-    // ✅ Password form
     function passwordForm() {
         return {
             showCurrent: false,
@@ -994,7 +1153,6 @@
         }
     }
 
-    // ✅ Char counter bio
     function charCounter(max) {
         return {
             remaining: max,
