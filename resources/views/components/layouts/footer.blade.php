@@ -25,10 +25,10 @@ adaptif, dan berstandar global.',
 ],
 
 'contactEmail' => 'hallodabraka@dabraka.org',
-'contactWhatsapp' => '+62 812-3456-7890',
-'contactWhatsappLink' => 'https://wa.me/6281234567890',
-'contactAddress' => 'Depok, Sleman, Yogyakarta',
-'contactAddressLink' => 'https://maps.google.com/?q=Depok,Sleman,Yogyakarta', // ✨ Google Maps link
+'contactWhatsapp' => '+62 812-6956-3333',
+'contactWhatsappLink' => 'https://wa.me/628126956333',
+'contactAddress' => 'JL. Trunojoyo No.3 Kebayoran Baru, Jakarta Selatan Indonesia',
+'contactAddressLink' => 'https://maps.app.goo.gl/H8tz9e4WqnuhGvyh8',
 
 'socialLinks' => [
 ['label' => 'Instagram', 'text' => 'IG', 'href' => 'https://instagram.com', 'icon' => 'instagram'],

@@ -361,7 +361,7 @@
                 </div>
                 <div class="flex-1 min-w-0 text-left">
                     <p class="text-[10px] sm:text-xs text-white/70 font-semibold mb-1">WHATSAPP</p>
-                    <p class="text-xs font-bold text-white sm:text-sm">+62 812-0000-0000</p>
+                    <p class="text-xs font-bold text-white sm:text-sm">+62 812-6956-3333</p>
                 </div>
             </a>
 
@@ -378,7 +378,7 @@
                 </div>
                 <div class="flex-1 min-w-0 text-left">
                     <p class="text-[10px] sm:text-xs text-white/70 font-semibold mb-1">ALAMAT</p>
-                    <p class="text-xs font-bold text-white truncate sm:text-sm">Depok, Yogyakarta</p>
+                    <p class="text-xs font-bold text-white truncate sm:text-sm">Kebayoran Baru, Jakarta Selatan</p>
                 </div>
                 <svg class="flex-shrink-0 w-5 h-5 transition-colors text-white/70 group-hover:text-white" fill="none"
                     stroke="currentColor" viewBox="0 0 24 24">
