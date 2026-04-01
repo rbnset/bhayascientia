@@ -27,7 +27,7 @@ adaptif, dan berstandar global.',
 'contactEmail' => 'hallodabraka@dabraka.org',
 'contactWhatsapp' => '+62 812-6956-3333',
 'contactWhatsappLink' => 'https://wa.me/628126956333',
-'contactAddress' => 'JL. Trunojoyo No.3 Kebayoran Baru, Jakarta Selatan Indonesia',
+'contactAddress' => 'Kebayoran Baru, Jakarta Selatan Indonesia',
 'contactAddressLink' => 'https://maps.app.goo.gl/H8tz9e4WqnuhGvyh8',
 
 'socialLinks' => [

@@ -749,7 +749,8 @@
         <div class="flex items-center justify-between mb-4">
             <div>
                 <h3 class="text-lg sm:text-xl font-black text-[#1A1A1A]">📍 Lokasi Kami</h3>
-                <p class="text-xs sm:text-sm text-[#737373] mt-1">Jl. Contoh No. 123, Depok, Yogyakarta</p>
+                <p class="text-xs sm:text-sm text-[#737373] mt-1">JL. Trunojoyo No.3 Kebayoran Baru, Jakarta Selatan
+                    Indonesia</p>
             </div>
             <button onclick="closeMapModal()"
                 class="w-8 h-8 sm:w-10 sm:h-10 bg-[#EEF0F7] hover:bg-[#FF6B18] hover:text-white rounded-xl flex items-center justify-center transition-colors flex-shrink-0">
