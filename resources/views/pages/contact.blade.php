@@ -820,7 +820,7 @@
         const iframe  = document.getElementById('mapIframe');
 
         if (modal && content && iframe) {
-            iframe.src = 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3953.0!2d110.3751!3d-7.7753!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zN8KwNDYnMzEuMSJTIDExMMKwMjInMzAuNCJF!5e0!3m2!1sen!2sid!4v1234567890123';
+            iframe.src = 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3966.191332919311!2d106.79848370929113!3d-6.238494493723705!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e69f169e258ce55%3A0x31ad92f9eef04e62!2sJl.%20Trunojoyo%20No.3%2C%20RT.2%2FRW.1%2C%20Selong%2C%20Kec.%20Kby.%20Baru%2C%20Kota%20Jakarta%20Selatan%2C%20Daerah%20Khusus%20Ibukota%20Jakarta%2012110!5e0!3m2!1sid!2sid!4v1775038410113!5m2!1sid!2sid';
             modal.classList.add('active');
             setTimeout(() => content.classList.add('active'), 10);
             document.body.style.overflow = 'hidden';
