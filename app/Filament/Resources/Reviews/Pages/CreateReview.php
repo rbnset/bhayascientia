@@ -64,4 +64,9 @@ class CreateReview extends CreateRecord
             new ReviewDecisionForAuthor($review)
         );
     }
+
+    protected function getCreateAnotherFormAction(): \Filament\Actions\Action
+    {
+        return parent::getCreateAnotherFormAction()->hidden();
+    }
 }
