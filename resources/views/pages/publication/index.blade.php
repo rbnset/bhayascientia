@@ -134,7 +134,8 @@
 <div id="tour-popular">
     <x-publication.popular-section :featuredTypeContent="$featuredTypeContent ?? null"
         :featuredPublication="$featuredPublication ?? null" :publications="$popularPublications ?? collect([])"
-        :selectedType="$selectedType" :exploreAllUrl="route('publikasi.browse', ['type' => $selectedType])" />
+        :selectedType="$selectedType"
+        :exploreAllUrl="route('publikasi.browse', $selectedType !== 'all' ? ['type' => $selectedType] : [])" />
 </div>
 
 {{-- ✨ Scroll to Top --}}

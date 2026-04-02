@@ -103,7 +103,7 @@ $isAll = !$selectedType || $selectedType === 'all';
                     class="inline-flex flex-wrap gap-2 bg-white p-1.5 rounded-full ring-1 ring-[#EEF0F7] shadow-sm">
 
                     {{-- Tab: Semua --}}
-                    <a href="{{ route('publikasi.index', ['type' => 'all']) }}" role="tab" id="tab-all"
+                    <a href="{{ route('publikasi.index') }}" role="tab" id="tab-all"
                         class="pub-tab group relative px-4 sm:px-5 py-2.5 text-xs sm:text-sm font-bold rounded-full transition-all duration-200 hover:bg-[#F4F6FB] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B18] focus-visible:ring-offset-2 focus-visible:ring-offset-white {{ $isAll ? 'bg-[#FFF7F2] text-[#FF6B18]' : 'text-[#1A1A1A]' }}"
                         aria-selected="{{ $isAll ? 'true' : 'false' }}" tabindex="{{ $isAll ? '0' : '-1' }}">
                         Semua

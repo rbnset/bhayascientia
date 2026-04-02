@@ -21,7 +21,7 @@
             </h2>
         </div>
 
-        @if($selectedType)
+        @if($selectedType && $selectedType !== 'all')
         <p class="text-sm text-[#6B7280]">
             Menampilkan penulis terbaik untuk kategori:
             <span class="font-bold text-[#FF6B18]">{{ ucfirst($selectedType) }}</span>
