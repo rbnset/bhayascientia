@@ -105,4 +105,12 @@ class CreatePublication extends CreateRecord
     {
         return PublicationResource::getUrl('edit', ['record' => $this->record]);
     }
+
+    protected function getCreateFormActions(): array
+    {
+        return [
+            $this->getCreateFormAction(),
+            $this->getCancelFormAction(),
+        ];
+    }
 }
