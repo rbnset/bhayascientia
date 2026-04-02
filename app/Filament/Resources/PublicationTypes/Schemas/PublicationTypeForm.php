@@ -62,14 +62,13 @@ class PublicationTypeForm
                         Toggle::make('requires_review')
                             ->label('Requires Review')
                             ->helperText('Apakah publikasi ini memerlukan proses review?')
-                            ->default(true)
-                            ->required(),
+                            ->default(true),
 
                         Toggle::make('is_active')
                             ->label('Active')
                             ->helperText('Aktifkan agar dapat digunakan dalam sistem.')
-                            ->default(true)
-                            ->required(),
+                            ->default(true),
+
                     ])
                     ->columns([
                         'default' => 1,
