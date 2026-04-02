@@ -54,21 +54,26 @@ class PublicationIndexController extends Controller
             $selectedType = 'all';
         }
 
-        $currentType = $publicationTypes->firstWhere('slug', $selectedType);
+        $currentType = $selectedType !== 'all'
+            ? $publicationTypes->firstWhere('slug', $selectedType)
+            : null;
 
-        $featuredTypeContent = null;
-        if ($currentType && $currentType->content) {
-            $featuredTypeContent = [
-                'title'            => $currentType->content->title ?? $currentType->name,
-                'cover_url'        => $this->getTypeContentCover($currentType->content),
-                'category'         => $currentType->name,
-                'publication_type' => $currentType->name,
-                'type'             => $currentType->name,
-                'abstract'         => $currentType->content->description,
-                'download_count'   => 0,
-                'detail_url'       => '',
-                'slug'             => $currentType->slug,
+        if ($selectedType === 'all') {
+            $featuredTypeContent = (object) [
+                'title'           => 'Koleksi Karya Populer Terpadu dan Terpercaya',
+                'description'     => 'Akses berbagai karya pilihan yang mencakup buku, jurnal ilmiah, dan artikel opini yang disusun secara terintegrasi untuk mendukung kebutuhan literasi, referensi akademik, serta pengembangan wawasan secara komprehensif.',
+                'image_url'       => asset('images/featured-all.jpg'),
+                'publicationType' => null,
             ];
+        } elseif ($currentType && $currentType->content) {
+            $featuredTypeContent = (object) [
+                'title'           => $currentType->content->title ?? $currentType->name,
+                'image_url'       => $this->getTypeContentCover($currentType->content),
+                'description'     => $currentType->content->description,
+                'publicationType' => $currentType,
+            ];
+        } else {
+            $featuredTypeContent = null;
         }
 
         $categories = Category::whereHas('publications', function ($query) use ($selectedType) {

@@ -32,8 +32,7 @@ $hasFeaturedContent = $featuredTypeContent && (
         <div>
             <h2 id="popular-heading"
                 class="font-bold text-[18px] leading-[26px] sm:text-[22px] sm:leading-[32px] lg:text-[26px] lg:leading-[39px]">
-                {{ ucfirst($selectedType) }} Populer <br />
-                Untuk Kamu
+                {{ $selectedType === 'all' ? 'Semua Publikasi' : ucfirst($selectedType) }} Populer <br />
             </h2>
             <span
                 class="inline-flex items-center gap-1.5 mt-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-[#FFF5ED] text-[#FF6B18] border border-[#FFD4B8]">
