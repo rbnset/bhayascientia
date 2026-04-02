@@ -101,18 +101,18 @@
                 <div class="absolute w-32 h-32 rounded-full -top-4 right-24 bg-white/5"></div>
             </div>
 
-            <div class="px-4 pb-5 sm:px-6 -mt-14 sm:-mt-16">
-                <div class="flex flex-col gap-4 sm:flex-row sm:items-end">
-
+            <div class="px-4 pb-6 sm:px-6">
+                {{-- Avatar row --}}
+                <div class="flex items-end justify-between mb-4 -mt-10 sm:-mt-12">
                     {{-- Avatar --}}
                     <div class="relative flex-shrink-0">
                         <img src="{{ $user->profile_photo ? asset('storage/' . $user->profile_photo) : ($user->avatar ?: 'https://ui-avatars.com/api/?name=' . urlencode($user->name) . '&background=FF6B18&color=fff&size=128&bold=true') }}"
                             alt="{{ $user->name }}" id="headerAvatar" referrerpolicy="no-referrer"
-                            class="object-cover w-24 h-24 bg-white border-4 border-white shadow-xl sm:w-32 sm:h-32 rounded-2xl">
+                            class="object-cover w-20 h-20 bg-white border-4 border-white shadow-xl sm:w-24 sm:h-24 rounded-2xl">
                         @if($user->isEmailVerified())
-                        <div class="absolute flex items-center justify-center w-6 h-6 bg-green-500 border-2 border-white rounded-full shadow sm:w-7 sm:h-7 bottom-1 right-1"
+                        <div class="absolute flex items-center justify-center w-5 h-5 bg-green-500 border-2 border-white rounded-full shadow bottom-1 right-1"
                             title="Email Terverifikasi">
-                            <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <svg class="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd"
                                     d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
                                     clip-rule="evenodd" />
@@ -121,72 +121,73 @@
                         @endif
                     </div>
 
-                    {{-- User Info --}}
-                    <div class="flex-1 min-w-0 sm:pb-1">
-                        <h2 class="text-xl sm:text-2xl font-black text-[#1A1A1A] mb-0.5 truncate">{{ $user->name }}</h2>
-                        <p class="text-sm text-[#737373] mb-2 truncate">{{ $user->email }}</p>
-                        <div class="flex flex-wrap gap-2">
-                            @if($user->job_title)
-                            <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-[#FFF7F2] text-[#FF6B18]
-                                rounded-full text-xs font-semibold border border-[#FFE2D2]">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                </svg>
-                                {{ $user->job_title }}
-                            </span>
-                            @endif
-                            @if($user->affiliation)
-                            <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-[#F8F9FC] text-[#737373]
-                                rounded-full text-xs font-semibold border border-[#EEF0F7]">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                </svg>
-                                {{ $user->affiliation }}
-                            </span>
-                            @endif
-                            {{-- ✅ ORCID badge di overview card --}}
-                            @if($user->orcid_id)
-                            <a href="https://orcid.org/{{ $user->orcid_id }}" target="_blank" rel="noopener noreferrer"
-                                class="inline-flex items-center gap-1.5 px-3 py-1 bg-[#F0FDF4] text-green-700
-                                rounded-full text-xs font-semibold border border-[#BBF7D0] hover:bg-[#DCFCE7] transition-colors">
-                                {{-- ORCID logo icon --}}
-                                <svg class="w-3.5 h-3.5" viewBox="0 0 256 256" fill="none"
-                                    xmlns="http://www.w3.org/2000/svg">
-                                    <circle cx="128" cy="128" r="128" fill="#A6CE39" />
-                                    <path
-                                        d="M86.3 186.2H70.9V79.1h15.4v107.1zM108.9 79.1h41.6c39.6 0 57 28.3 57 53.6 0 27.5-21.5 53.6-56.8 53.6h-41.8V79.1zm15.4 93.3h24.5c34.9 0 42.9-26.5 42.9-39.7C191.7 111.2 178 93 148 93h-23.7v79.4zM88.7 56.8c0 5.5-4.5 10.1-10.1 10.1s-10.1-4.6-10.1-10.1c0-5.6 4.5-10.1 10.1-10.1s10.1 4.5 10.1 10.1z"
-                                        fill="white" />
-                                </svg>
-                                {{ $user->orcid_id }}
-                                @if($user->isOrcidVerified())
-                                <svg class="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd"
-                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                        clip-rule="evenodd" />
-                                </svg>
-                                @endif
-                            </a>
-                            @endif
-                        </div>
-                    </div>
-
-                    {{-- Stats --}}
-                    <div class="flex gap-1 sm:gap-2 sm:ml-auto sm:pb-1">
+                    {{-- Stats (pojok kanan, sejajar bawah avatar) --}}
+                    <div class="flex gap-2 pb-1">
                         @foreach([
                         ['value' => $publicationsCount, 'label' => 'Publikasi'],
                         ['value' => $savedCount, 'label' => 'Tersimpan'],
                         ['value' => $favoritesCount, 'label' => 'Favorit'],
                         ] as $stat)
                         <div
-                            class="flex-1 sm:flex-none text-center px-3 sm:px-4 py-2 bg-[#FFF7F2] rounded-xl border border-[#FFE2D2]">
-                            <div class="text-lg sm:text-2xl font-black text-[#FF6B18]">{{ $stat['value'] }}</div>
-                            <div class="text-[10px] sm:text-xs text-[#737373] font-medium">{{ $stat['label'] }}</div>
+                            class="text-center px-3 sm:px-4 py-2 bg-[#FFF7F2] rounded-xl border border-[#FFE2D2] min-w-[64px]">
+                            <div class="text-base sm:text-xl font-black text-[#FF6B18]">{{ $stat['value'] }}</div>
+                            <div class="text-[10px] text-[#737373] font-medium">{{ $stat['label'] }}</div>
                         </div>
                         @endforeach
                     </div>
+                </div>
 
+                {{-- User Info (di bawah avatar, tidak tertutup cover) --}}
+                <div class="min-w-0">
+                    <h2 class="text-base sm:text-lg font-black text-[#1A1A1A] mb-0.5 truncate">{{ $user->name }}</h2>
+                    <p class="text-xs sm:text-sm text-[#737373] mb-3 truncate">{{ $user->email }}</p>
+
+                    {{-- Badges --}}
+                    <div class="flex flex-wrap gap-2">
+                        @if($user->job_title)
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-[#FFF7F2] text-[#FF6B18]
+                rounded-full text-xs font-semibold border border-[#FFE2D2]">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                            {{ $user->job_title }}
+                        </span>
+                        @endif
+
+                        @if($user->affiliation)
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-[#F8F9FC] text-[#737373]
+                rounded-full text-xs font-semibold border border-[#EEF0F7]">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                            {{ $user->affiliation }}
+                        </span>
+                        @endif
+
+                        @if($user->orcid_id)
+                        <a href="https://orcid.org/{{ $user->orcid_id }}" target="_blank" rel="noopener noreferrer"
+                            class="inline-flex items-center gap-1.5 px-3 py-1 bg-[#F0FDF4] text-green-700
+                rounded-full text-xs font-semibold border border-[#BBF7D0] hover:bg-[#DCFCE7] transition-colors">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 256 256" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="128" cy="128" r="128" fill="#A6CE39" />
+                                <path
+                                    d="M86.3 186.2H70.9V79.1h15.4v107.1zM108.9 79.1h41.6c39.6 0 57 28.3 57 53.6 0 27.5-21.5 53.6-56.8 53.6h-41.8V79.1zm15.4 93.3h24.5c34.9 0 42.9-26.5 42.9-39.7C191.7 111.2 178 93 148 93h-23.7v79.4zM88.7 56.8c0 5.5-4.5 10.1-10.1 10.1s-10.1-4.6-10.1-10.1c0-5.6 4.5-10.1 10.1-10.1s10.1 4.5 10.1 10.1z"
+                                    fill="white" />
+                            </svg>
+                            {{ $user->orcid_id }}
+                            @if($user->isOrcidVerified())
+                            <svg class="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd"
+                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            @endif
+                        </a>
+                        @endif
+                    </div>
                 </div>
             </div>
         </div>
