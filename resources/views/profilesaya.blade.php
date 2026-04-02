@@ -92,116 +92,127 @@
 
         {{-- ===================== PROFILE OVERVIEW CARD ===================== --}}
         <div class="mb-6 bg-white rounded-2xl shadow-sm border border-[#EEF0F7] overflow-hidden">
+
             {{-- Cover --}}
-            <div class="relative h-28 sm:h-36 bg-gradient-to-r from-[#FF6B18] to-[#E64627]">
+            <div class="relative h-24 sm:h-32 bg-gradient-to-r from-[#FF6B18] to-[#E64627]">
                 <div class="absolute inset-0 opacity-20"
                     style="background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')">
                 </div>
-                <div class="absolute w-20 h-20 rounded-full top-4 right-8 bg-white/10"></div>
-                <div class="absolute w-32 h-32 rounded-full -top-4 right-24 bg-white/5"></div>
+                <div class="absolute w-16 h-16 rounded-full top-3 right-6 bg-white/10"></div>
+                <div class="absolute rounded-full w-28 h-28 -top-4 right-20 bg-white/5"></div>
             </div>
 
-            <div class="px-4 pb-6 sm:px-6">
-                {{-- Row: Avatar + Info + Stats --}}
-                <div class="flex flex-col gap-4 -mt-10 sm:flex-row sm:items-end sm:justify-between sm:-mt-12">
+            {{-- Content --}}
+            <div class="px-4 pb-5 sm:px-6">
 
-                    {{-- Kiri: Avatar + Info --}}
-                    <div class="flex items-end gap-3 sm:gap-4">
-                        {{-- Avatar (setengah keluar dari cover) --}}
-                        <div class="relative flex-shrink-0">
-                            <img src="{{ $user->profile_photo ? asset('storage/' . $user->profile_photo) : ($user->avatar ?: 'https://ui-avatars.com/api/?name=' . urlencode($user->name) . '&background=FF6B18&color=fff&size=128&bold=true') }}"
-                                alt="{{ $user->name }}" id="headerAvatar" referrerpolicy="no-referrer"
-                                class="object-cover w-20 h-20 bg-white border-4 border-white shadow-xl sm:w-24 sm:h-24 rounded-2xl">
-                            @if($user->isEmailVerified())
-                            <div class="absolute flex items-center justify-center w-5 h-5 bg-green-500 border-2 border-white rounded-full shadow bottom-1 right-1"
-                                title="Email Terverifikasi">
-                                <svg class="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                {{-- Main row: Avatar + Info + Stats (desktop) --}}
+                <div class="flex items-start gap-3 sm:gap-5 -mt-9 sm:-mt-11">
+
+                    {{-- Avatar --}}
+                    <div class="relative flex-shrink-0">
+                        <img src="{{ $user->profile_photo ? asset('storage/' . $user->profile_photo) : ($user->avatar ?: 'https://ui-avatars.com/api/?name=' . urlencode($user->name) . '&background=FF6B18&color=fff&size=128&bold=true') }}"
+                            alt="{{ $user->name }}" id="headerAvatar" referrerpolicy="no-referrer"
+                            class="object-cover w-[68px] h-[68px] sm:w-[88px] sm:h-[88px] bg-white border-4 border-white shadow-xl rounded-2xl">
+                        @if($user->isEmailVerified())
+                        <div class="absolute flex items-center justify-center w-5 h-5 bg-green-500 border-2 border-white rounded-full shadow -bottom-1 -right-1"
+                            title="Email Terverifikasi">
+                            <svg class="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd"
+                                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        @endif
+                    </div>
+
+                    {{-- Info: Nama, Email, Badges --}}
+                    <div class="flex-1 min-w-0 pt-3 sm:pt-4">
+                        <h2 class="text-sm sm:text-base font-black text-[#1A1A1A] leading-tight mb-0.5">
+                            {{ $user->name }}
+                        </h2>
+                        <p class="text-[11px] sm:text-xs text-[#737373] mb-2 break-all sm:break-normal">
+                            {{ $user->email }}
+                        </p>
+
+                        {{-- Badges --}}
+                        <div class="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:gap-1.5">
+                            @if($user->job_title)
+                            <span
+                                class="inline-flex items-center gap-1 px-2 py-1 bg-[#FFF7F2] text-[#FF6B18] rounded-lg text-[10px] sm:text-[11px] font-semibold border border-[#FFE2D2] w-fit">
+                                <svg class="flex-shrink-0 w-3 h-3" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                </svg>
+                                {{ $user->job_title }}
+                            </span>
+                            @endif
+
+                            @if($user->affiliation)
+                            <span
+                                class="inline-flex items-center gap-1 px-2 py-1 bg-[#F8F9FC] text-[#555] rounded-lg text-[10px] sm:text-[11px] font-semibold border border-[#EEF0F7] w-fit">
+                                <svg class="flex-shrink-0 w-3 h-3" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                </svg>
+                                {{ $user->affiliation }}
+                            </span>
+                            @endif
+
+                            @if($user->orcid_id)
+                            <a href="https://orcid.org/{{ $user->orcid_id }}" target="_blank" rel="noopener noreferrer"
+                                class="inline-flex items-center gap-1 px-2 py-1 bg-[#F0FDF4] text-green-700 rounded-lg text-[10px] sm:text-[11px] font-semibold border border-[#BBF7D0] hover:bg-[#DCFCE7] transition-colors w-fit">
+                                <svg class="flex-shrink-0 w-3 h-3" viewBox="0 0 256 256" fill="none">
+                                    <circle cx="128" cy="128" r="128" fill="#A6CE39" />
+                                    <path
+                                        d="M86.3 186.2H70.9V79.1h15.4v107.1zM108.9 79.1h41.6c39.6 0 57 28.3 57 53.6 0 27.5-21.5 53.6-56.8 53.6h-41.8V79.1zm15.4 93.3h24.5c34.9 0 42.9-26.5 42.9-39.7C191.7 111.2 178 93 148 93h-23.7v79.4zM88.7 56.8c0 5.5-4.5 10.1-10.1 10.1s-10.1-4.6-10.1-10.1c0-5.6 4.5-10.1 10.1-10.1s10.1 4.5 10.1 10.1z"
+                                        fill="white" />
+                                </svg>
+                                {{ $user->orcid_id }}
+                                @if($user->isOrcidVerified())
+                                <svg class="flex-shrink-0 w-3 h-3 text-green-600" fill="currentColor"
+                                    viewBox="0 0 20 20">
                                     <path fill-rule="evenodd"
-                                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
                                         clip-rule="evenodd" />
                                 </svg>
-                            </div>
+                                @endif
+                            </a>
                             @endif
-                        </div>
-
-                        {{-- Info: Nama, Email, Badges --}}
-                        <div class="flex-1 min-w-0 pb-1">
-                            <h2 class="text-base sm:text-lg font-black text-[#1A1A1A] truncate leading-tight">
-                                {{ $user->name }}
-                            </h2>
-                            <p class="text-xs sm:text-sm text-[#737373] truncate mb-2">
-                                {{ $user->email }}
-                            </p>
-
-                            {{-- Badges --}}
-                            <div class="flex flex-wrap gap-1.5">
-                                @if($user->job_title)
-                                <span
-                                    class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#FFF7F2] text-[#FF6B18] rounded-full text-[11px] font-semibold border border-[#FFE2D2]">
-                                    <svg class="flex-shrink-0 w-3 h-3" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                    </svg>
-                                    <span class="truncate max-w-[120px] sm:max-w-[200px]">{{ $user->job_title }}</span>
-                                </span>
-                                @endif
-
-                                @if($user->affiliation)
-                                <span
-                                    class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#F8F9FC] text-[#737373] rounded-full text-[11px] font-semibold border border-[#EEF0F7]">
-                                    <svg class="flex-shrink-0 w-3 h-3" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                    </svg>
-                                    <span class="truncate max-w-[400px] sm:max-w-[200px]">{{ $user->affiliation
-                                        }}</span>
-                                </span>
-                                @endif
-
-                                @if($user->orcid_id)
-                                <a href="https://orcid.org/{{ $user->orcid_id }}" target="_blank"
-                                    rel="noopener noreferrer"
-                                    class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#F0FDF4] text-green-700 rounded-full text-[11px] font-semibold border border-[#BBF7D0] hover:bg-[#DCFCE7] transition-colors">
-                                    <svg class="flex-shrink-0 w-3 h-3" viewBox="0 0 256 256" fill="none">
-                                        <circle cx="128" cy="128" r="128" fill="#A6CE39" />
-                                        <path
-                                            d="M86.3 186.2H70.9V79.1h15.4v107.1zM108.9 79.1h41.6c39.6 0 57 28.3 57 53.6 0 27.5-21.5 53.6-56.8 53.6h-41.8V79.1zm15.4 93.3h24.5c34.9 0 42.9-26.5 42.9-39.7C191.7 111.2 178 93 148 93h-23.7v79.4zM88.7 56.8c0 5.5-4.5 10.1-10.1 10.1s-10.1-4.6-10.1-10.1c0-5.6 4.5-10.1 10.1-10.1s10.1 4.5 10.1 10.1z"
-                                            fill="white" />
-                                    </svg>
-                                    <span class="truncate max-w-[100px]">{{ $user->orcid_id }}</span>
-                                    @if($user->isOrcidVerified())
-                                    <svg class="flex-shrink-0 w-3 h-3 text-green-600" fill="currentColor"
-                                        viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd"
-                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                            clip-rule="evenodd" />
-                                    </svg>
-                                    @endif
-                                </a>
-                                @endif
-                            </div>
                         </div>
                     </div>
 
-                    {{-- Kanan: Stats --}}
-                    <div class="flex gap-2 sm:pb-1 sm:flex-shrink-0">
+                    {{-- Stats — hanya tampil di desktop (sm ke atas) --}}
+                    <div class="flex-shrink-0 hidden gap-2 pt-3 sm:flex">
                         @foreach([
                         ['value' => $publicationsCount, 'label' => 'Publikasi'],
                         ['value' => $savedCount, 'label' => 'Tersimpan'],
                         ['value' => $favoritesCount, 'label' => 'Favorit'],
                         ] as $stat)
-                        <div
-                            class="flex-1 sm:flex-none text-center px-3 sm:px-4 py-2 bg-[#FFF7F2] rounded-xl border border-[#FFE2D2] min-w-[60px]">
-                            <div class="text-base sm:text-xl font-black text-[#FF6B18]">{{ $stat['value'] }}</div>
-                            <div class="text-[10px] text-[#737373] font-medium whitespace-nowrap">{{ $stat['label'] }}
-                            </div>
+                        <div class="text-center px-3 py-2 bg-[#FFF7F2] rounded-xl border border-[#FFE2D2] min-w-[64px]">
+                            <div class="text-base font-black text-[#FF6B18]">{{ $stat['value'] }}</div>
+                            <div class="text-[10px] text-[#737373] font-medium">{{ $stat['label'] }}</div>
                         </div>
                         @endforeach
                     </div>
 
                 </div>
+
+                {{-- Stats — hanya tampil di mobile, di BAWAH info --}}
+                <div class="flex gap-1.5 mt-3 sm:hidden">
+                    @foreach([
+                    ['value' => $publicationsCount, 'label' => 'Publikasi'],
+                    ['value' => $savedCount, 'label' => 'Simpan'],
+                    ['value' => $favoritesCount, 'label' => 'Favorit'],
+                    ] as $stat)
+                    <div class="text-center px-2.5 py-1.5 bg-[#FFF7F2] rounded-xl border border-[#FFE2D2] flex-1">
+                        <div class="text-sm font-black text-[#FF6B18]">{{ $stat['value'] }}</div>
+                        <div class="text-[9px] text-[#737373] font-medium">{{ $stat['label'] }}</div>
+                    </div>
+                    @endforeach
+                </div>
+
             </div>
         </div>
 
