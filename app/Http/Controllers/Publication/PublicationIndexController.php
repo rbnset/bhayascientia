@@ -62,7 +62,7 @@ class PublicationIndexController extends Controller
             $featuredTypeContent = (object) [
                 'title'           => 'Koleksi Karya Populer Terpadu dan Terpercaya',
                 'description'     => 'Akses berbagai karya pilihan yang mencakup buku, jurnal ilmiah, dan artikel opini yang disusun secara terintegrasi untuk mendukung kebutuhan literasi, referensi akademik, serta pengembangan wawasan secara komprehensif.',
-                'image_url'       => asset('images/featured-all.jpg'),
+                'image_url'       => asset('images/feature-all.jpg'),
                 'publicationType' => null,
             ];
         } elseif ($currentType && $currentType->content) {
