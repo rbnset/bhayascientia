@@ -103,9 +103,9 @@ class PublicationForm
                 ->label($labelField)
                 ->required()
                 ->maxLength(100)
+                ->live(onBlur: true)
                 ->unique(table: 'keywords', column: 'name', ignoreRecord: true)
-                ->afterStateUpdated(fn($state, callable $set) => $set('slug', Str::slug($state)))
-                 >lazy(),
+                ->afterStateUpdated(fn($state, callable $set) => $set('slug', Str::slug($state))),
 
             TextInput::make('slug')
                 ->label('Slug')
@@ -877,7 +877,7 @@ class PublicationForm
                                         ->relationship('categories', 'name', fn($query) => $query->orderBy('name'))
                                         ->multiple()->maxItems(1)->searchable()->preload()->required()
                                         ->createOptionForm([
-                                            TextInput::make('name')->label('Nama Kategori')->required()->maxLength(100)->lazy()->unique(table: 'categories', column: 'name', ignoreRecord: true)->afterStateUpdated(fn($state, callable $set) => $set('slug', Str::slug($state))),
+                                            TextInput::make('name')->label('Nama Kategori')->required()->maxLength(100)->live(onBlur: true)->unique(table: 'categories', column: 'name', ignoreRecord: true)->afterStateUpdated(fn($state, callable $set) => $set('slug', Str::slug($state))),
                                             TextInput::make('slug')->label('Slug')->required()->disabled()->dehydrated()->visible(fn() => auth()->user()?->hasAnyRole(['admin', 'super_admin'])),
                                         ])
                                         ->createOptionUsing(fn(array $data) => Category::create($data)->getKey())
@@ -903,7 +903,7 @@ class PublicationForm
                                         ->visible(fn(Get $get) => self::publicationTypeSlug($get) !== 'opini')
                                         ->required(fn(Get $get) => self::publicationTypeSlug($get) === 'jurnal')
                                         ->createOptionForm([
-                                            TextInput::make('name')->label('Nama Metode')->required()->maxLength(100)->lazy()->unique(table: 'methods', column: 'name', ignoreRecord: true)->afterStateUpdated(fn($state, callable $set) => $set('slug', Str::slug($state))),
+                                            TextInput::make('name')->label('Nama Metode')->required()->maxLength(100)->live(onBlur: true)->unique(table: 'methods', column: 'name', ignoreRecord: true)->afterStateUpdated(fn($state, callable $set) => $set('slug', Str::slug($state))),
                                             TextInput::make('slug')->label('Slug')->required()->disabled()->dehydrated()->visible(fn() => auth()->user()?->hasAnyRole(['admin', 'super_admin'])),
                                         ])
                                         ->createOptionUsing(fn(array $data) => Method::create($data)->getKey())
