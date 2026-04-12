@@ -806,6 +806,11 @@ class PublicationForm
                                         ->required(fn(Get $get) => self::publicationTypeSlug($get) === 'jurnal')
                                         ->createOptionForm(self::keywordCreateOptionForm('Keyword'))
                                         ->createOptionUsing(fn(array $data) => Keyword::create($data)->getKey())
+                                        ->createOptionAction(fn($action) => $action
+                                            ->modalWidth('lg')
+                                            ->closeModalByClickingAway(false)
+                                            ->modalSubmitActionLabel('Buat')
+                                        )
                                         ->helperText('Wajib. Pilih minimal 3 dan maksimal 7 keyword.')
                                         ->disabled(fn() => self::isFieldDisabled())
                                         ->columnSpanFull(),
@@ -821,6 +826,11 @@ class PublicationForm
                                         ->required(false)
                                         ->createOptionForm(self::keywordCreateOptionForm('Tag'))
                                         ->createOptionUsing(fn(array $data) => Keyword::create($data)->getKey())
+                                        ->createOptionAction(fn($action) => $action
+                                            ->modalWidth('lg')
+                                            ->closeModalByClickingAway(false)
+                                            ->modalSubmitActionLabel('Buat')
+                                        )
                                         ->helperText('Opsional. Maksimal 3 tag.')
                                         ->disabled(fn() => self::isFieldDisabled())
                                         ->columnSpanFull(),
@@ -836,6 +846,11 @@ class PublicationForm
                                         ->required(false)
                                         ->createOptionForm(self::keywordCreateOptionForm('Topik'))
                                         ->createOptionUsing(fn(array $data) => Keyword::create($data)->getKey())
+                                        ->createOptionAction(fn($action) => $action
+                                            ->modalWidth('lg')
+                                            ->closeModalByClickingAway(false)
+                                            ->modalSubmitActionLabel('Buat')
+                                        )
                                         ->helperText('Opsional. Maksimal 3 topik.')
                                         ->disabled(fn() => self::isFieldDisabled())
                                         ->columnSpanFull(),
@@ -866,6 +881,11 @@ class PublicationForm
                                             TextInput::make('slug')->label('Slug')->required()->disabled()->dehydrated()->visible(fn() => auth()->user()?->hasAnyRole(['admin', 'super_admin'])),
                                         ])
                                         ->createOptionUsing(fn(array $data) => Category::create($data)->getKey())
+                                        ->createOptionAction(fn($action) => $action  // ← tambahkan ini
+                                            ->modalWidth('lg')
+                                            ->closeModalByClickingAway(false)
+                                            ->modalSubmitActionLabel('Buat')
+                                        )
                                         ->helperText('Pilih 1 kategori.')
                                         ->disabled(fn() => self::isFieldDisabled())
                                         ->columnSpan(1),
@@ -887,6 +907,11 @@ class PublicationForm
                                             TextInput::make('slug')->label('Slug')->required()->disabled()->dehydrated()->visible(fn() => auth()->user()?->hasAnyRole(['admin', 'super_admin'])),
                                         ])
                                         ->createOptionUsing(fn(array $data) => Method::create($data)->getKey())
+                                        ->createOptionAction(fn($action) => $action  // ← tambahkan ini
+                                            ->modalWidth('lg')
+                                            ->closeModalByClickingAway(false)
+                                            ->modalSubmitActionLabel('Buat')
+                                        )
                                         ->helperText(fn(Get $get) => match (self::publicationTypeSlug($get)) {
                                             'jurnal' => 'Wajib. Pilih metode penelitian.',
                                             'buku'   => 'Opsional.',
