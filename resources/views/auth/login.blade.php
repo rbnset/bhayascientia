@@ -337,7 +337,7 @@
                             </li>
                             <li class="flex items-start gap-2">
                                 <span class="text-[#FF6B18] mt-1">✓</span>
-                                <span>Platform ini beroperasi di bawah domain <strong>dabraka.rbnset.me</strong> dan
+                                <span>Platform ini beroperasi di bawah domain <strong>dabraka.org</strong> dan
                                     tunduk pada hukum yang berlaku di Republik Indonesia.</span>
                             </li>
                             <li class="flex items-start gap-2">
