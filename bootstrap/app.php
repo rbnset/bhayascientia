@@ -31,7 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
             // 2. Onboarding gate — cek apakah user sudah lihat onboarding
             //    Butuh: session (sudah siap), cookie (sudah didekripsi)
             //    Harus setelah semua middleware web bawaan Laravel
-            \App\Http\Middleware\EnsureOnboardingComplete::class,
+            // \App\Http\Middleware\EnsureOnboardingComplete::class,
 
         ]);
     })
