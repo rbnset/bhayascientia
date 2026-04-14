@@ -5,3 +5,16 @@
 
 @source '../../../../vendor/diogogpinto/filament-auth-ui-enhancer/resources/**/*.blade.php';
 @source '../../../../vendor/jeffgreco13/filament-breezy/resources/**/*';
+
+@media (max-width: 768px) {
+    .fi-header-heading {
+        font-size: 1rem !important;
+        line-height: 1.4 !important;
+        word-break: break-word;
+    }
+
+    .fi-simple-header-heading {
+        font-size: 1rem !important;
+        line-height: 1.4 !important;
+    }
+}
