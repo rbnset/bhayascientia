@@ -695,9 +695,25 @@ class PublicationController extends Controller
             abort(404, 'File tidak ditemukan di storage');
         }
 
-        $fileName = \Illuminate\Support\Str::slug($publication->title) . '.pdf';
+        $fileName     = \Illuminate\Support\Str::slug($publication->title) . '.pdf';
+        $absolutePath = Storage::disk('public')->path($filePath);
 
-        return Storage::disk('public')->download($filePath, $fileName);
+        // Stamp PDF sebelum download (footer + QR tetap ada di file yang diunduh)
+        try {
+            $latestVersion->setRelation('publication', $publication);
+            $stampedContent = \App\Support\PdfStamper::stamp($absolutePath, $latestVersion, false);
+
+            return response($stampedContent, 200, [
+                'Content-Type'        => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+                'Content-Length'      => strlen($stampedContent),
+                'Cache-Control'       => 'no-store, no-cache, must-revalidate, max-age=0',
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('PdfStamper download fallback: ' . $e->getMessage());
+            // Fallback: download file asli jika stamp gagal
+            return Storage::disk('public')->download($filePath, $fileName);
+        }
     }
 
     /**
