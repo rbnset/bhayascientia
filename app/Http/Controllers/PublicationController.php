@@ -773,7 +773,7 @@ class PublicationController extends Controller
 
         // Guest page limit
         $typeSlug   = $publication->publicationType?->slug ?? '';
-        $pageLimits = ['jurnal' => 3, 'buku' => 10, 'opini' => 1];
+        $pageLimits = ['jurnal' => 3, 'buku' => 10, 'opini' => 2];
         $pageLimit  = $isGuest ? ($pageLimits[$typeSlug] ?? 3) : null;
 
         return view('pages.publication.read', [
