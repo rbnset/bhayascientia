@@ -19,6 +19,18 @@ class EditPublication extends EditRecord
 {
     protected static string $resource = PublicationResource::class;
 
+    // Tambahkan ini — override judul agar tidak pakai "Ubah"
+    public function getTitle(): string|\Illuminate\Contracts\Support\Htmlable
+    {
+        return $this->record->title;
+    }
+
+    // Tambahkan ini — hilangkan breadcrumb "Ubah" juga
+    public function getBreadcrumb(): string
+    {
+        return 'Edit';
+    }
+
     // ─────────────────────────────────────────────────────────────
     // Mount
     // ─────────────────────────────────────────────────────────────
