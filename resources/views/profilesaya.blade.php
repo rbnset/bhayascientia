@@ -91,7 +91,6 @@
         </div>
 
         {{-- ===================== PROFILE OVERVIEW CARD ===================== --}}
-        {{-- ===================== PROFILE OVERVIEW CARD ===================== --}}
         <div class="mb-6 bg-white rounded-2xl shadow-sm border border-[#EEF0F7] overflow-hidden">
 
             {{-- Cover --}}
@@ -102,29 +101,38 @@
                 <div class="absolute w-16 h-16 rounded-full top-3 right-6 bg-white/10"></div>
                 <div class="absolute rounded-full w-28 h-28 -top-4 right-20 bg-white/5"></div>
 
-                {{-- ✅ Nama & Email di dalam cover (teks putih) --}}
-                <div class="absolute bottom-3 left-[96px] sm:bottom-4 sm:left-[136px] right-4 sm:right-[220px]">
-                    <h2 class="text-sm sm:text-base font-black text-white leading-tight drop-shadow mb-0.5 truncate">
-                        {{ $user->name }}
-                    </h2>
-                    <p class="text-[11px] sm:text-xs text-white/80 drop-shadow truncate">
-                        {{ $user->email }}
-                    </p>
-                </div>
+                {{-- ✅ Flex row: spacer avatar | nama+email | stats --}}
+                <div class="absolute inset-x-0 bottom-0 flex items-end gap-3 px-4 pb-3 sm:px-6 sm:pb-4 sm:gap-4">
 
-                {{-- ✅ Stats desktop di dalam cover (pojok kanan bawah) --}}
-                <div class="absolute hidden gap-2 bottom-3 right-4 sm:bottom-4 sm:right-6 sm:flex">
-                    @foreach([
-                    ['value' => $publicationsCount, 'label' => 'Publikasi'],
-                    ['value' => $savedCount, 'label' => 'Tersimpan'],
-                    ['value' => $favoritesCount, 'label' => 'Favorit'],
-                    ] as $stat)
-                    <div
-                        class="text-center px-3 py-1.5 bg-white/20 backdrop-blur-sm rounded-xl border border-white/30 min-w-[64px]">
-                        <div class="text-base font-black text-white">{{ $stat['value'] }}</div>
-                        <div class="text-[10px] text-white/80 font-medium">{{ $stat['label'] }}</div>
+                    {{-- Spacer selebar avatar (mobile: 68px, desktop: 88px) --}}
+                    <div class="flex-shrink-0 w-[68px] sm:w-[88px]"></div>
+
+                    {{-- Nama & Email --}}
+                    <div class="flex-1 min-w-0">
+                        <h2
+                            class="text-sm sm:text-base font-black text-white leading-tight drop-shadow mb-0.5 truncate">
+                            {{ $user->name }}
+                        </h2>
+                        <p class="text-[11px] sm:text-xs text-white/80 drop-shadow truncate">
+                            {{ $user->email }}
+                        </p>
                     </div>
-                    @endforeach
+
+                    {{-- Stats desktop --}}
+                    <div class="flex-shrink-0 hidden gap-2 sm:flex">
+                        @foreach([
+                        ['value' => $publicationsCount, 'label' => 'Publikasi'],
+                        ['value' => $savedCount, 'label' => 'Tersimpan'],
+                        ['value' => $favoritesCount, 'label' => 'Favorit'],
+                        ] as $stat)
+                        <div
+                            class="text-center px-3 py-1.5 bg-white/20 backdrop-blur-sm rounded-xl border border-white/30 min-w-[64px]">
+                            <div class="text-base font-black text-white">{{ $stat['value'] }}</div>
+                            <div class="text-[10px] text-white/80 font-medium">{{ $stat['label'] }}</div>
+                        </div>
+                        @endforeach
+                    </div>
+
                 </div>
             </div>
 
@@ -151,7 +159,7 @@
                         @endif
                     </div>
 
-                    {{-- ✅ Hanya Badges di sini (nama & email sudah pindah ke cover) --}}
+                    {{-- Badges --}}
                     <div class="flex-1 min-w-0 pt-2 pb-1">
                         <div class="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:gap-1.5">
                             @if($user->job_title)
@@ -203,7 +211,7 @@
 
                 </div>
 
-                {{-- ✅ Stats mobile tetap di bawah --}}
+                {{-- Stats mobile --}}
                 <div class="flex gap-1.5 mt-3 sm:hidden">
                     @foreach([
                     ['value' => $publicationsCount, 'label' => 'Publikasi'],
