@@ -103,11 +103,11 @@
                 <div class="absolute rounded-full w-28 h-28 -top-4 right-20 bg-white/5"></div>
 
                 {{-- ✅ Nama & Email di dalam cover (teks putih) --}}
-                <div class="absolute bottom-3 left-4 sm:bottom-4 sm:left-6">
-                    <h2 class="text-sm sm:text-base font-black text-white leading-tight drop-shadow mb-0.5">
+                <div class="absolute bottom-3 left-[96px] sm:bottom-4 sm:left-[136px] right-4 sm:right-[220px]">
+                    <h2 class="text-sm sm:text-base font-black text-white leading-tight drop-shadow mb-0.5 truncate">
                         {{ $user->name }}
                     </h2>
-                    <p class="text-[11px] sm:text-xs text-white/80 break-all sm:break-normal drop-shadow">
+                    <p class="text-[11px] sm:text-xs text-white/80 drop-shadow truncate">
                         {{ $user->email }}
                     </p>
                 </div>
