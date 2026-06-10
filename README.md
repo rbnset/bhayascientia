@@ -373,14 +373,6 @@ If you discover a security vulnerability, please report it responsibly through t
 
 ---
 
-## License
-
-DABRAKA is released under the MIT License.
-
-See the LICENSE file for details.
-
----
-
 ## Acknowledgements
 
 DABRAKA is developed to support knowledge-driven policing, public security research, and collaborative intellectual contributions within Indonesia's policing and academic communities.
@@ -399,22 +391,9 @@ Special thanks to all contributors, researchers, practitioners, and members of t
 
 ## Production Usage
 
-BhayaScientia is currently deployed and actively used through:
+The platform currently supports publication management, intellectual contribution workflows, document dissemination, and collaborative knowledge sharing for policing and public security communities.
 
-- Dabraka
-- https://dabraka.org
-
-The platform supports real-world academic publishing workflows and continues to receive ongoing feature development and maintenance.
-
-## Contributing
-
-Contributions are welcome.
-
-Please create an issue before submitting major changes.
-
-1. Fork repository
-2. Create feature branch
-3. Submit pull request
+DABRAKA continues to receive ongoing development, feature enhancements, and long-term maintenance.
 
 ## Maintainer
 
@@ -423,3 +402,10 @@ Robin Setiyawan
 Software Engineer focused on Laravel, Filament, AI-assisted development, and scalable web applications.
 
 GitHub: https://github.com/rbnset
+LinkedIn: https://linkedin.com/in/robin-setiyawan
+
+## License
+
+This project is licensed under the MIT License.
+
+See the LICENSE file for more information.
